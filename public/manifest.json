@@ -1,0 +1,21 @@
+{
+  "name": "秘書AI 清瀬リンク",
+  "short_name": "清瀬リンク",
+  "description": "朝夜に話しかける秘書AI＋タスクボード",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f3fb",
+  "theme_color": "#7a6dd6",
+  "icons": [
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

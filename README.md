@@ -1,36 +1,67 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 秘書AI 清瀬リンク (Next.js 版)
 
-## Getting Started
+朝夜に話しかけてくる秘書AI + タスクボード + 月間カレンダー。
+Next.js 16 + Vercel + Supabase + Google OAuth + Gemini API。
 
-First, run the development server:
+## 受取人のセットアップ（無料SaaS版）
+
+1. このアプリのURLにアクセス
+2. **Google アカウントでログイン**（Calendar / Tasks / Gmail / Drive に接続）
+3. 設定画面で **Gemini APIキー** を入力（[Google AI Studio で無料発行](https://aistudio.google.com/apikey)・1,000回/日まで無料）
+4. 自分のカレンダー/タスクが読み込まれて秘書AIが起動
+
+## 主な機能
+
+- 🗂️ **タスクボード**: 4カテゴリ（🔴 今すぐ / 🟡 重要だが後で / 🟢 自分時間 / 🔵 作業時間別）
+- 💬 **チャット**: 秘書AI「清瀬リンク」と会話、時刻バッジ付き時間割
+- 📅 **月間カレンダー**: Google カレンダーを月単位で表示
+- 📎 **画像→タスク**: メールスクショ等をアップ → Gemini Vision で自動抽出
+- 🤖 **自動判別**: 朝/夜モードを時刻で自動切替
+- 🗣 **入れといて自動追加**: 「これ入れといて」と言うとGoogleタスクに自動追加
+- 📲 **PWA対応**: ホーム画面に追加してアプリ化
+
+## 運営者向けセットアップ（このサービスをホストする側）
+
+### 1. Supabase プロジェクト作成
+- https://supabase.com → New project
+- Project URL と service_role キーをメモ
+- SQL Editor で `supabase/schema.sql` を実行
+
+### 2. Google Cloud で OAuth クライアント作成
+- https://console.cloud.google.com → APIとサービス → 認証情報
+- OAuth 2.0 クライアント ID（種類: ウェブアプリ）
+- 承認済みリダイレクト URI: `https://<your-app>.vercel.app/api/auth/callback/google`
+- Client ID と Secret をメモ
+- 必要な API を有効化: Calendar / Tasks / Gmail / Drive
+
+### 3. Vercel デプロイ
+- このリポを GitHub に push → Vercel で Import
+- 環境変数を設定（`.env.example` 参照）：
+  - `AUTH_SECRET` ← `openssl rand -base64 32`
+  - `NEXTAUTH_URL` ← Vercel のURL
+  - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET`
+  - `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY`
+  - `GEMINI_API_KEY` ← 任意（個人ユーザーはBYO）
+
+## ローカル開発
 
 ```bash
+npm install
+cp .env.example .env.local
+# .env.local を編集
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## アーキテクチャ
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+[ブラウザ/スマホ PWA]
+     ↓
+[Next.js App on Vercel]
+     ↓
+[Supabase (Postgres)] ← ユーザー設定/会話履歴/タスクラベル
+[Google APIs] ← 各ユーザーの認証で
+[Gemini API] ← 各ユーザーのAPIキーで
+[ntfy.sh] ← 通知（任意）
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.

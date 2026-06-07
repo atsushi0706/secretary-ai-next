@@ -1,26 +1,76 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --bg: #f5f3fb;
+  --bg-grad: linear-gradient(160deg, #fafbff 0%, #f3f0fa 60%, #ecf2fb 100%);
+  --fg: #2c2c2e;
+  --accent: #7a6dd6;
+  --accent-dark: #6358c5;
+  --card-bg: #ffffff;
+  --card-border: rgba(200, 200, 230, 0.4);
+  --card-shadow: 0 4px 18px rgba(80, 80, 130, 0.06);
+  --muted: #8a8a90;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background: var(--bg);
+  --color-foreground: var(--fg);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+  font-family: 'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg-grad);
+  min-height: 100vh;
 }
+
+/* タスクカード */
+.card {
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+  padding: 14px 16px;
+}
+
+/* チャット吹き出し */
+.bubble {
+  max-width: 82%;
+  padding: 12px 16px;
+  border-radius: 18px;
+  line-height: 1.75;
+  font-size: 0.95rem;
+  box-shadow: 0 2px 8px rgba(80, 80, 130, 0.06);
+}
+.bubble-bot { background: #fff; color: var(--fg); border-top-left-radius: 6px; border: 1px solid var(--card-border); }
+.bubble-me  { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; border-top-right-radius: 6px; }
+
+/* スロット（時刻バッジ付き行） */
+.slot { display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  background: #f7f5ff; border-left: 3px solid var(--accent); border-radius: 8px;
+  margin: 6px 0; font-size: .9rem; }
+.slot .time { background: #ede8f9; color: #5a4ab8; padding: 3px 9px;
+  border-radius: 6px; font-weight: 700; font-size: .78rem; min-width: 96px;
+  text-align: center; font-variant-numeric: tabular-nums; }
+
+/* 月間カレンダー */
+.month-cal { background: #fff; border-radius: 12px; padding: 10px 12px;
+  border: 1px solid var(--card-border); }
+.month-cal .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.month-cal .dow { font-size: .72rem; color: var(--muted); text-align: center;
+  padding: 4px 0; font-weight: 600; }
+.month-cal .dow.sat { color: #5b88c2; }
+.month-cal .dow.sun { color: #c25b5b; }
+.month-cal .cell { min-height: 60px; padding: 4px 6px; border-radius: 8px;
+  background: #fafafd; font-size: .7rem; line-height: 1.3; overflow: hidden;
+  border: 1px solid rgba(200,200,230,.3); }
+.month-cal .cell.today { background: #f0eefa; border-color: var(--accent); }
+.month-cal .cell.other { opacity: .35; }
+.month-cal .cell .dnum { font-weight: 700; font-size: .78rem; }
+.month-cal .cell .ev { display: block; margin-top: 2px; color: #5a4ab8;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

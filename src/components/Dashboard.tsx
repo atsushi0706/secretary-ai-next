@@ -182,10 +182,14 @@ export function Dashboard({ userName }: { userName: string }) {
 }
 
 // 重み (分): 完了の進捗バーで使う
+// 旧キー(today/days)が残っていても対応できるよう全部マップ
 const TIME_WEIGHT_MIN: Record<string, number> = {
-  quick: 15,
-  today: 180,
-  days: 480,
+  quick: 15,    // すぐ終わる
+  mid: 45,      // 30分〜1時間
+  long: 120,    // 1〜3時間
+  // 旧キー互換
+  today: 45,
+  days: 120,
 };
 
 type Commit = {
@@ -272,9 +276,11 @@ function DailyProgress({
     setCommit(loadCommit(targetDay));
   }, [targetDay, tick]);
 
+  // 「今日着手」候補: personalは除外、長期(long/days)も除外
   const candidates = tasks.filter((t) => {
     if (t.bucket === "personal") return false;
-    if (t.label?.time === "days") return false;
+    const tk = t.label?.time as string | undefined;
+    if (tk === "long" || tk === "days") return false;
     return true;
   });
 

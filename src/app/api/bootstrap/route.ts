@@ -62,7 +62,7 @@ export async function GET(req: Request) {
 カテゴリ category: work(仕事) / personal(趣味・自己投資)
 緊急度 urgency: high / low
 重要度 importance: high / low
-所要時間 time: quick(5-30分) / today(半日〜1日) / days(1〜3日)
+所要時間 time: quick(すぐ終わる, 〜30分) / mid(30分〜1時間) / long(1〜3時間)
 
 必ずJSONオブジェクトのみで返却(フェンス禁止):
 {"タスクid":{"category":"...","urgency":"...","importance":"...","time":"...","reason":"30字以内"}}

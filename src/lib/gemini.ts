@@ -3,22 +3,32 @@ import { getUserSettings } from "./supabase";
 
 export const URGENCY = ["high", "low"] as const;
 export const IMPORTANCE = ["high", "low"] as const;
-export const TIME_KEYS = ["quick", "today", "days"] as const;
+export const TIME_KEYS = ["quick", "mid", "long"] as const;
 export const CATEGORY_KEYS = ["work", "personal"] as const;
+
+export type TimeKey = "quick" | "mid" | "long";
+
+// 旧キー(today/days) を新キーに変換して既存データを吸収
+export function normalizeTime(t: string | undefined | null): TimeKey {
+  if (t === "quick") return "quick";
+  if (t === "mid" || t === "today") return "mid";
+  if (t === "long" || t === "days") return "long";
+  return "mid";
+}
 
 export type Label = {
   category: "work" | "personal";
   urgency: "high" | "low";
   importance: "high" | "low";
-  time: "quick" | "today" | "days";
+  time: TimeKey;
   reason?: string;
   manual?: boolean;
 };
 
 export const TIME_LABEL = {
   quick: "⚡すぐ終わる",
-  today: "📅半日〜1日",
-  days: "🗓1〜3日",
+  mid: "📅30分〜1時間",
+  long: "🗓1〜3時間",
 } as const;
 
 export const CATEGORY_LABEL = {

@@ -50,7 +50,7 @@ body {
 .bubble-bot { background: rgba(255,255,255,.95); color: var(--fg); border-top-left-radius: 6px; border: 1px solid var(--card-border); backdrop-filter: blur(6px); }
 .bubble-me  { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; border-top-right-radius: 6px; }
 
-/* キャラ立ち絵入りチャットステージ（Xroid風: 森背景+立ち絵中央） */
+/* キャラ立ち絵入りチャットステージ（青空背景+立ち絵中央） */
 .chat-stage {
   position: relative;
   border-radius: 16px;
@@ -58,16 +58,17 @@ body {
   border: 1px solid var(--card-border);
   box-shadow: var(--card-shadow);
   background:
-    radial-gradient(ellipse at 30% 20%, rgba(255,255,200,.35), transparent 50%),
-    radial-gradient(ellipse at 80% 35%, rgba(255,240,180,.25), transparent 55%),
-    linear-gradient(180deg, #3d6b3b 0%, #5a8a52 30%, #7ba66f 65%, #9bbf85 100%);
+    linear-gradient(180deg, #7ec0ee 0%, #9ed1f3 35%, #c5e2f7 65%, #e7f3fb 100%);
 }
 .chat-stage::before {
+  /* ふんわり雲 */
   content: "";
   position: absolute; inset: 0; z-index: 0;
   background:
-    repeating-linear-gradient(95deg, rgba(20,40,15,.10) 0 2px, transparent 2px 60px),
-    repeating-linear-gradient(85deg, rgba(20,40,15,.08) 0 1px, transparent 1px 45px);
+    radial-gradient(ellipse 180px 60px at 18% 18%, rgba(255,255,255,.85), rgba(255,255,255,0) 70%),
+    radial-gradient(ellipse 240px 70px at 78% 28%, rgba(255,255,255,.75), rgba(255,255,255,0) 70%),
+    radial-gradient(ellipse 160px 50px at 35% 45%, rgba(255,255,255,.55), rgba(255,255,255,0) 75%),
+    radial-gradient(ellipse 200px 55px at 90% 55%, rgba(255,255,255,.50), rgba(255,255,255,0) 75%);
   pointer-events: none;
 }
 .chat-stage .stage-avatar {

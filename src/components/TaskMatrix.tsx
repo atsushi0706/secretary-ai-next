@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 
+type TimeKey = "quick" | "mid" | "long";
+
 type Task = {
   id: string;
   tasklist_id: string;
@@ -39,11 +41,21 @@ const CAT_FIXED = {
   by_time: { urgency: "low", importance: "low", category: "work" },
 } as const;
 
-const TIME_LABEL = {
+const TIME_LABEL: Record<string, string> = {
   quick: "⚡すぐ終わる",
-  today: "📅半日〜1日",
-  days: "🗓1〜3日",
-} as const;
+  mid: "📅30分〜1時間",
+  long: "🗓1〜3時間",
+  // 旧データ表示用フォールバック
+  today: "📅30分〜1時間",
+  days: "🗓1〜3時間",
+};
+
+function normalizeTime(t: string | undefined): "quick" | "mid" | "long" {
+  if (t === "quick") return "quick";
+  if (t === "mid" || t === "today") return "mid";
+  if (t === "long" || t === "days") return "long";
+  return "mid";
+}
 
 export function TaskMatrix({
   tasks, onRefresh,
@@ -73,7 +85,7 @@ function CategoryCard({
 }) {
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
-  const [newTime, setNewTime] = useState<"quick" | "today" | "days">("today");
+  const [newTime, setNewTime] = useState<TimeKey>("mid");
   const [hasDue, setHasDue] = useState(false);
   const [newDue, setNewDue] = useState("");
 
@@ -126,7 +138,7 @@ function CategoryCard({
     onRefresh();
   }
 
-  async function changeTime(t: Task, time: "quick" | "today" | "days") {
+  async function changeTime(t: Task, time: TimeKey) {
     await fetch("/api/tasks", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -142,12 +154,11 @@ function CategoryCard({
   }
 
   const groupedByTime = catKey === "by_time"
-    ? { quick: [] as Task[], today: [] as Task[], days: [] as Task[] }
+    ? { quick: [] as Task[], mid: [] as Task[], long: [] as Task[] }
     : null;
   if (groupedByTime) {
     for (const t of items) {
-      const k = (t.label.time as "quick" | "today" | "days") in groupedByTime
-        ? (t.label.time as "quick" | "today" | "days") : "today";
+      const k = normalizeTime(t.label.time);
       groupedByTime[k].push(t);
     }
   }
@@ -182,12 +193,12 @@ function CategoryCard({
           <div className="flex gap-2 items-center">
             <select
               value={newTime}
-              onChange={(e) => setNewTime(e.target.value as any)}
+              onChange={(e) => setNewTime(e.target.value as TimeKey)}
               className="text-xs p-1 border rounded"
             >
-              <option value="quick">⚡すぐ</option>
-              <option value="today">📅半日〜1日</option>
-              <option value="days">🗓1〜3日</option>
+              <option value="quick">⚡すぐ終わる</option>
+              <option value="mid">📅30分〜1時間</option>
+              <option value="long">🗓1〜3時間</option>
             </select>
             <label className="text-xs flex items-center gap-1">
               <input
@@ -217,7 +228,7 @@ function CategoryCard({
         <div className="text-xs text-gray-400">なし</div>
       ) : groupedByTime ? (
         <>
-          {(["quick", "today", "days"] as const).map((tk) => groupedByTime[tk].length > 0 && (
+          {(["quick", "mid", "long"] as const).map((tk) => groupedByTime[tk].length > 0 && (
             <div key={tk}>
               <div className="text-xs font-bold text-purple-700 mt-2 mb-1">
                 {TIME_LABEL[tk]}
@@ -246,9 +257,10 @@ function TaskRow({
   onComplete: (t: Task) => void;
   onDelete: (t: Task) => void;
   onMove: (t: Task, target: keyof typeof CAT_LABEL) => void;
-  onChangeTime: (t: Task, time: "quick" | "today" | "days") => void;
+  onChangeTime: (t: Task, time: TimeKey) => void;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const tkey = normalizeTime(task.label.time);
 
   return (
     <div className="flex items-center gap-2 text-sm py-1 group relative">
@@ -259,7 +271,7 @@ function TaskRow({
       />
       <span className="flex-1 truncate" title={task.title}>{task.title}</span>
       <span className="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
-        {TIME_LABEL[task.label.time as "quick" | "today" | "days"] ?? "📅"}
+        {TIME_LABEL[tkey] ?? "📅"}
       </span>
       {task.due && (
         <span className="text-xs bg-red-50 text-red-700 px-1.5 py-0.5 rounded">
@@ -300,14 +312,14 @@ function TaskRow({
               </button>
             ))}
             <div className="font-bold text-purple-700 mt-2 mb-1 pt-2 border-t">所要時間を変更</div>
-            {(["quick", "today", "days"] as const).map((tk) => (
+            {(["quick", "mid", "long"] as const).map((tk) => (
               <button
                 key={tk}
                 onClick={() => { onChangeTime(task, tk); setMenuOpen(false); }}
-                disabled={tk === task.label.time}
+                disabled={tk === tkey}
                 className="w-full text-left px-2 py-1.5 rounded hover:bg-purple-50 disabled:opacity-40 disabled:bg-purple-50 disabled:font-bold"
               >
-                {TIME_LABEL[tk]} {tk === task.label.time && "（現在）"}
+                {TIME_LABEL[tk]} {tk === tkey && "（現在）"}
               </button>
             ))}
           </div>

@@ -38,7 +38,8 @@ ${hint ? "【補足ヒント】" + hint + "\n" : ""}
 - 該当なしは []
 
 JSONのみ:
-[{"title":"...","notes":"差出人や出所","category":"work|personal","urgency":"high|low","importance":"high|low","time":"quick|today|days","due":"${targetDay}|"}]`;
+[{"title":"...","notes":"差出人や出所","category":"work|personal","urgency":"high|low","importance":"high|low","time":"quick|mid|long","due":"${targetDay}|"}]
+※ time: quick=すぐ終わる(〜30分) / mid=30分〜1時間 / long=1〜3時間`;
 
     const r = await client.messages.create({
       model: CLAUDE_MODEL,
@@ -69,7 +70,7 @@ JSONのみ:
             category: ["work", "personal"].includes(c.category) ? c.category : "work",
             urgency: ["high", "low"].includes(c.urgency) ? c.urgency : "low",
             importance: ["high", "low"].includes(c.importance) ? c.importance : "high",
-            time_label: ["quick", "today", "days"].includes(c.time) ? c.time : "today",
+            time_label: ["quick", "mid", "long"].includes(c.time) ? c.time : "mid",
             reason: "画像から抽出",
           });
           added.push(title);

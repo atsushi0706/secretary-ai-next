@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { TaskMatrix } from "./TaskMatrix";
@@ -22,6 +22,9 @@ type Bootstrap = {
   quickmemo: string;
 };
 
+// PC開きっぱなしで情報が古くなったときの判定しきい値
+const STALE_AFTER_MS = 5 * 60 * 1000; // 5分
+
 export function Dashboard({ userName }: { userName: string }) {
   const [data, setData] = useState<Bootstrap | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
@@ -29,13 +32,20 @@ export function Dashboard({ userName }: { userName: string }) {
   const [mode, setMode] = useState<"auto" | "morning" | "evening">("auto");
   const [reloadKey, setReloadKey] = useState(0);
   const [calTab, setCalTab] = useState<"week" | "month">("week");
+  const [lastLoadedAt, setLastLoadedAt] = useState<number>(0);
+  const lastLoadedRef = useRef<number>(0);
 
   const load = useCallback(() => {
     setRefreshing(true);
     const q = mode === "auto" ? "" : `?mode=${mode}`;
     fetch(`/api/bootstrap${q}`)
       .then((r) => r.json())
-      .then((d) => setData(d))
+      .then((d) => {
+        setData(d);
+        const t = Date.now();
+        setLastLoadedAt(t);
+        lastLoadedRef.current = t;
+      })
       .finally(() => {
         setRefreshing(false);
         setInitialLoading(false);
@@ -43,6 +53,25 @@ export function Dashboard({ userName }: { userName: string }) {
   }, [mode, reloadKey]);
 
   useEffect(() => { load(); }, [load]);
+
+  // タブが visible に戻った/フォーカスが返ったとき、5分以上経ってたら自動で最新化
+  useEffect(() => {
+    function maybeRefresh() {
+      if (document.visibilityState !== "visible") return;
+      const last = lastLoadedRef.current;
+      if (!last) return;
+      const elapsed = Date.now() - last;
+      if (elapsed > STALE_AFTER_MS) {
+        setReloadKey((k) => k + 1);
+      }
+    }
+    document.addEventListener("visibilitychange", maybeRefresh);
+    window.addEventListener("focus", maybeRefresh);
+    return () => {
+      document.removeEventListener("visibilitychange", maybeRefresh);
+      window.removeEventListener("focus", maybeRefresh);
+    };
+  }, []);
 
   if (initialLoading) {
     return (
@@ -127,6 +156,9 @@ export function Dashboard({ userName }: { userName: string }) {
                 ⚙️
               </Link>
             </div>
+            {lastLoadedAt > 0 && (
+              <LastLoadedBadge ts={lastLoadedAt} stale={Date.now() - lastLoadedAt > STALE_AFTER_MS} />
+            )}
           </section>
 
           {/* 月/週 タブ切替カレンダー */}
@@ -225,6 +257,28 @@ function clearCommit(date: string) {
 }
 
 const WALK_ROUTINE_TITLE = "ウォーキング30分";
+
+// 「最終更新 HH:MM」バッジ。古ければ赤くする。30秒ごとに自分で再描画
+function LastLoadedBadge({ ts, stale }: { ts: number; stale: boolean }) {
+  const [, force] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => force((x) => x + 1), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const d = new Date(ts);
+  const hh = String(d.getHours()).padStart(2, "0");
+  const mm = String(d.getMinutes()).padStart(2, "0");
+  const elapsedMs = Date.now() - ts;
+  const elapsedMin = Math.floor(elapsedMs / 60000);
+  const isStaleNow = stale || elapsedMs > 5 * 60 * 1000;
+  return (
+    <div className={`mt-2 text-[10px] ${isStaleNow ? "text-red-500" : "text-gray-400"}`}>
+      最終更新 {hh}:{mm}
+      {elapsedMin > 0 && <span className="ml-1">（{elapsedMin}分前）</span>}
+      {isStaleNow && <span className="ml-1">← 古いかも</span>}
+    </div>
+  );
+}
 
 // SVG 円形プログレスリング
 function ProgressRing({

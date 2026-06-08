@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
-import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS } from "@/lib/gemini";
+import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, normalizeTime } from "@/lib/gemini";
 import { getClaudeForUser, CLAUDE_MODEL, extractJson } from "@/lib/claude";
 import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings } from "@/lib/supabase";
 
@@ -43,11 +43,20 @@ export async function GET(req: Request) {
     ]);
 
     // タスク分類: manual 優先、無ければ Claude に投げる
+    // manual_labels テーブルのカラムは time_label だが、Label 型は time。明示マッピングする。
     const labels: Record<string, Label> = {};
     const toClassify: any[] = [];
     for (const t of tasks) {
-      if (manualLabels[t.id]) {
-        labels[t.id] = manualLabels[t.id] as Label;
+      const ml = manualLabels[t.id];
+      if (ml) {
+        labels[t.id] = {
+          category: (ml.category === "personal" ? "personal" : "work") as Label["category"],
+          urgency: (ml.urgency === "high" ? "high" : "low") as Label["urgency"],
+          importance: (ml.importance === "high" ? "high" : "low") as Label["importance"],
+          time: normalizeTime(ml.time_label),
+          reason: ml.reason ?? undefined,
+          manual: true,
+        };
       } else {
         toClassify.push(t);
       }

@@ -330,8 +330,11 @@ function DailyProgress({
     setCommit(loadCommit(targetDay));
   }, [targetDay, tick]);
 
-  // 「今日着手」候補: personalは除外、長期(long/days)も除外
+  // 「今日着手」候補: 新軸 window === "today" を最優先、無ければ従来基準
   const candidates = tasks.filter((t) => {
+    if (t.window === "today") return true;
+    if (t.window) return false; // window があって today 以外なら除外
+    // window が無い古いデータへのフォールバック
     if (t.bucket === "personal") return false;
     const tk = t.label?.time as string | undefined;
     if (tk === "long" || tk === "days") return false;

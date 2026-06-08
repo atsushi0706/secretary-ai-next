@@ -5,7 +5,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
-import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, normalizeTime } from "@/lib/gemini";
+import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, normalizeTime, windowOf } from "@/lib/gemini";
 import { getClaudeForUser, CLAUDE_MODEL, extractJson } from "@/lib/claude";
 import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings } from "@/lib/supabase";
 
@@ -114,11 +114,15 @@ ${taskBlock}`;
       targetLabel,
       isMorning,
       events,
-      tasks: tasks.map((t) => ({
-        ...t,
-        label: labels[t.id] ?? { category: "work", urgency: "low", importance: "low", time: "today" },
-        bucket: categorize(labels[t.id]),
-      })),
+      tasks: tasks.map((t) => {
+        const lab = labels[t.id] ?? { category: "work" as const, urgency: "low" as const, importance: "low" as const, time: "mid" as const };
+        return {
+          ...t,
+          label: lab,
+          bucket: categorize(lab),       // 既存4軸: 色分けやデフォ追加先に使用
+          window: windowOf(lab, t.due),  // 新3軸: タスクボードの主軸
+        };
+      }),
       schedule,
       messages,
       quickmemo,

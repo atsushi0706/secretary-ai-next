@@ -55,6 +55,56 @@ export function categorize(label: Partial<Label> | undefined): keyof typeof CATE
   return "by_time";
 }
 
+// 新軸: 着手タイミング window (today/this_week/this_month)
+export type Window3 = "today" | "this_week" | "this_month";
+
+export const WINDOW_LABEL: Record<Window3, string> = {
+  today: "🔥 今日終わらす",
+  this_week: "📅 今週",
+  this_month: "🗓 今月",
+};
+
+export const WINDOW_COLOR: Record<Window3, string> = {
+  today: "#e2574c",
+  this_week: "#e0a82e",
+  this_month: "#3a78c2",
+};
+
+// due 日付と label から「いつ着手」を決める
+// - due が今日以前 → today
+// - due が今週(日曜まで)以内 → this_week
+// - due がそれ以降 → this_month
+// - due 無し: urgency=high or importance=high → today、それ以外 → this_week
+export function windowOf(label: Partial<Label> | undefined, due: string | null | undefined): Window3 {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  if (!due) {
+    if ((label?.urgency ?? "low") === "high" || (label?.importance ?? "low") === "high") return "today";
+    return "this_week";
+  }
+  try {
+    const d = new Date(due);
+    d.setHours(0, 0, 0, 0);
+    if (d.getTime() <= today.getTime()) return "today";
+    // 週末(日曜)まで
+    const dow = today.getDay(); // 0=日,1=月,..,6=土
+    const daysToSun = (7 - dow) % 7;
+    const sunEnd = new Date(today);
+    sunEnd.setDate(sunEnd.getDate() + daysToSun);
+    if (d.getTime() <= sunEnd.getTime()) return "this_week";
+    return "this_month";
+  } catch {
+    return "this_week";
+  }
+}
+
+// 並び順スコア: urgency=high & importance=high が最上位
+export function priorityScore(label: Partial<Label> | undefined): number {
+  const u = label?.urgency === "high" ? 1 : 0;
+  const i = label?.importance === "high" ? 1 : 0;
+  return u * 2 + i; // 3=最上位, 2=重要, 1=緊急, 0=その他
+}
+
 export async function getGeminiKey(userId: string): Promise<string> {
   const s = await getUserSettings(userId);
   const k = s?.gemini_api_key || process.env.GEMINI_API_KEY;

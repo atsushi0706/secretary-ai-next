@@ -47,8 +47,100 @@ body {
   font-size: 0.95rem;
   box-shadow: 0 2px 8px rgba(80, 80, 130, 0.06);
 }
-.bubble-bot { background: #fff; color: var(--fg); border-top-left-radius: 6px; border: 1px solid var(--card-border); }
+.bubble-bot { background: rgba(255,255,255,.95); color: var(--fg); border-top-left-radius: 6px; border: 1px solid var(--card-border); backdrop-filter: blur(6px); }
 .bubble-me  { background: linear-gradient(135deg, var(--accent), var(--accent-dark)); color: #fff; border-top-right-radius: 6px; }
+
+/* キャラ立ち絵入りチャットステージ（Xroid風: 森背景+立ち絵中央） */
+.chat-stage {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid var(--card-border);
+  box-shadow: var(--card-shadow);
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,200,.35), transparent 50%),
+    radial-gradient(ellipse at 80% 35%, rgba(255,240,180,.25), transparent 55%),
+    linear-gradient(180deg, #3d6b3b 0%, #5a8a52 30%, #7ba66f 65%, #9bbf85 100%);
+}
+.chat-stage::before {
+  content: "";
+  position: absolute; inset: 0; z-index: 0;
+  background:
+    repeating-linear-gradient(95deg, rgba(20,40,15,.10) 0 2px, transparent 2px 60px),
+    repeating-linear-gradient(85deg, rgba(20,40,15,.08) 0 1px, transparent 1px 45px);
+  pointer-events: none;
+}
+.chat-stage .stage-avatar {
+  position: absolute;
+  left: 50%;
+  bottom: 22%;
+  transform: translateX(-50%);
+  width: clamp(180px, 42%, 280px);
+  height: auto;
+  z-index: 1;
+  pointer-events: none;
+  filter: drop-shadow(0 8px 18px rgba(0,0,0,.35));
+}
+.chat-stage .stage-header {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(8px);
+  border-bottom: 1px solid rgba(200,200,230,.4);
+}
+.chat-stage .stage-header .name { font-weight: 700; font-size: .92rem; color: var(--fg); }
+.chat-stage .stage-header .status { font-size: .68rem; color: #2bb673; }
+.chat-stage .stage-thinking {
+  position: absolute; top: 26%; left: 50%; transform: translateX(-50%);
+  z-index: 2;
+  display: flex; gap: 6px;
+}
+.chat-stage .stage-thinking span {
+  display: block; width: 10px; height: 10px; border-radius: 50%;
+  background: rgba(60, 60, 90, .85);
+  box-shadow: 0 2px 6px rgba(0,0,0,.18);
+  animation: stage-bounce 1.1s infinite;
+}
+.chat-stage .stage-thinking span:nth-child(2) { animation-delay: .15s; }
+.chat-stage .stage-thinking span:nth-child(3) { animation-delay: .30s; }
+@keyframes stage-bounce {
+  0%, 60%, 100% { transform: translateY(0); opacity: .55; }
+  30% { transform: translateY(-5px); opacity: 1; }
+}
+.chat-stage .stage-messages {
+  position: relative;
+  z-index: 3;
+  padding: 16px 14px 8px;
+  overflow-y: auto;
+  flex: 1;
+}
+.chat-stage .stage-messages .bubble-bot {
+  background: rgba(255,255,255,.95);
+  box-shadow: 0 4px 14px rgba(0,0,0,.18);
+  border: none;
+  backdrop-filter: blur(2px);
+}
+.chat-stage .stage-messages .bubble-me {
+  box-shadow: 0 4px 14px rgba(0,0,0,.20);
+}
+.chat-stage .stage-input {
+  position: relative;
+  z-index: 3;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(8px);
+  padding: 8px 10px;
+  border-top: 1px solid rgba(200,200,230,.4);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+@media (max-width: 640px) {
+  .chat-stage .stage-avatar { width: 50%; top: 6%; }
+}
 
 /* スロット（時刻バッジ付き行） */
 .slot { display: flex; align-items: center; gap: 10px; padding: 6px 10px;

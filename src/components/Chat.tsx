@@ -35,7 +35,6 @@ async function readSse(
     const { value, done } = await reader.read();
     if (done) break;
     buf += decoder.decode(value, { stream: true });
-    // SSE は \n\n でイベント区切り
     const chunks = buf.split("\n\n");
     buf = chunks.pop() ?? "";
     for (const chunk of chunks) {
@@ -69,6 +68,7 @@ export function Chat({
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [thinking, setThinking] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
   const greetedRef = useRef(false);
 
@@ -76,20 +76,21 @@ export function Chat({
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [messages]);
 
-  // 初回ロード時、挨拶＋時間割を SSE で流す
+  // 初回ロード: 挨拶＋時間割をSSEで流す
   useEffect(() => {
     if (!autoGreet || greetedRef.current) return;
     greetedRef.current = true;
     let cancelled = false;
     (async () => {
+      setThinking(true);
       try {
         const resp = await fetch(`/api/greet?isMorning=${isMorning}`);
         if (!resp.ok) return;
-        // 空の assistant メッセージを足して、deltaで埋めていく
         setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
         await readSse(resp, (event, data) => {
           if (cancelled) return;
           if (event === "delta") {
+            setThinking(false);
             setMessages((prev) => {
               const arr = [...prev];
               const last = arr[arr.length - 1];
@@ -101,6 +102,7 @@ export function Chat({
           }
         });
       } catch (e) { console.error("greet failed", e); }
+      finally { if (!cancelled) setThinking(false); }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -112,9 +114,9 @@ export function Chat({
     if (!text && !file) return;
 
     setSending(true);
+    setThinking(true);
     try {
       if (file) {
-        // 画像送信（こちらは従来通り）
         const fd = new FormData();
         fd.append("file", file);
         fd.append("hint", text);
@@ -156,6 +158,7 @@ export function Chat({
         let needsRefresh = false;
         await readSse(r, (event, data) => {
           if (event === "delta") {
+            setThinking(false);
             setMessages((prev) => {
               const arr = [...prev];
               const last = arr[arr.length - 1];
@@ -186,15 +189,49 @@ export function Chat({
       }
     } finally {
       setSending(false);
+      setThinking(false);
       setSearching(false);
     }
   }
 
   return (
-    <div className="card flex flex-col" style={{ height: 520 }}>
-      <div ref={scroller} className="flex-1 overflow-y-auto space-y-3 pr-1 pb-2">
+    <div className="chat-stage flex flex-col" style={{ height: 600 }}>
+      {/* 中央に大きなキャラ立ち絵 */}
+      <Image
+        src="/kiyose.png"
+        alt="清瀬リンク"
+        width={260}
+        height={260}
+        className="stage-avatar"
+        priority
+      />
+
+      {/* 上部ヘッダー（半透明白バー） */}
+      <div className="stage-header">
+        <Image
+          src="/kiyose.png"
+          alt=""
+          width={28}
+          height={28}
+          className="rounded-full border border-purple-200"
+        />
+        <div className="flex-1">
+          <div className="name">清瀬リンク</div>
+          <div className="status">● オンライン</div>
+        </div>
+      </div>
+
+      {/* 考え中ドット（キャラ前面に重ねる） */}
+      {thinking && (
+        <div className="stage-thinking" aria-hidden>
+          <span /><span /><span />
+        </div>
+      )}
+
+      {/* メッセージリスト */}
+      <div ref={scroller} className="stage-messages space-y-3">
         {messages.length === 0 && (
-          <div className="text-center text-gray-400 text-sm pt-8">
+          <div className="text-center text-gray-500 text-sm pt-8 drop-shadow-sm">
             清瀬リンクとの会話がここに表示されます
           </div>
         )}
@@ -207,9 +244,9 @@ export function Chat({
               <Image
                 src="/kiyose.png"
                 alt="清瀬リンク"
-                width={36}
-                height={36}
-                className="rounded-full border border-purple-200 shrink-0"
+                width={32}
+                height={32}
+                className="rounded-full border border-purple-200 shrink-0 bg-white"
               />
             )}
             <div
@@ -223,20 +260,20 @@ export function Chat({
           </div>
         ))}
         {searching && (
-          <div className="text-xs text-purple-600 flex items-center gap-1">
+          <div className="text-xs text-purple-700 flex items-center gap-1 bg-white/70 inline-flex px-2 py-1 rounded-full">
             🔎 Web を検索中…
           </div>
         )}
       </div>
 
+      {/* 入力欄 */}
       {file && (
-        <div className="bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-xs flex items-center gap-2 mb-2">
+        <div className="bg-purple-50 border border-purple-200 rounded-lg mx-2 px-3 py-2 text-xs flex items-center gap-2">
           📎 {file.name}
           <button onClick={() => setFile(null)} className="ml-auto text-gray-500">×</button>
         </div>
       )}
-
-      <div className="flex gap-2 items-end pt-2 border-t">
+      <div className="stage-input">
         <label className="cursor-pointer p-2 hover:bg-purple-50 rounded-lg" title="画像を添付">
           📎
           <input
@@ -252,9 +289,9 @@ export function Chat({
               e.preventDefault(); send();
             }
           }}
-          placeholder={isMorning ? "今日の優先順位や、入れといて欲しいタスクなど…" : "明日のことを話そう…"}
+          placeholder={isMorning ? "話しかける…（タスク追加、入れといて、相談）" : "明日のことを話そう…"}
           rows={1}
-          className="flex-1 resize-none p-2 border rounded-lg text-sm min-h-[40px] max-h-32"
+          className="flex-1 resize-none p-2 border rounded-lg text-sm min-h-[40px] max-h-32 bg-white/80"
         />
         <button
           onClick={send} disabled={sending}

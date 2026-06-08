@@ -13,6 +13,8 @@ const SCOPES = [
 ].join(" ");
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
+  debug: false,
   providers: [
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,

@@ -1,0 +1,42 @@
+name: Secretary Checkin Cron
+
+# JST 10:00 / 13:00 / 15:30 / 17:00 に清瀬リンクが ntfy で能動的に声がけ
+# GitHub Actions は UTC 基準
+on:
+  schedule:
+    - cron: '0 1 * * *'    # JST 10:00 morning
+    - cron: '0 4 * * *'    # JST 13:00 midday
+    - cron: '30 6 * * *'   # JST 15:30 afternoon
+    - cron: '0 8 * * *'    # JST 17:00 evening
+  workflow_dispatch:
+    inputs:
+      slot:
+        description: 'Slot (morning|midday|afternoon|evening)'
+        required: true
+        default: 'midday'
+
+jobs:
+  checkin:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine slot from cron
+        id: slot
+        run: |
+          if [ -n "${{ github.event.inputs.slot }}" ]; then
+            echo "slot=${{ github.event.inputs.slot }}" >> $GITHUB_OUTPUT
+          else
+            HOUR=$(date -u +%H)
+            MIN=$(date -u +%M)
+            if [ "$HOUR" = "01" ]; then echo "slot=morning" >> $GITHUB_OUTPUT
+            elif [ "$HOUR" = "04" ]; then echo "slot=midday" >> $GITHUB_OUTPUT
+            elif [ "$HOUR" = "06" ] && [ "$MIN" = "30" ]; then echo "slot=afternoon" >> $GITHUB_OUTPUT
+            elif [ "$HOUR" = "08" ]; then echo "slot=evening" >> $GITHUB_OUTPUT
+            else echo "slot=midday" >> $GITHUB_OUTPUT
+            fi
+          fi
+      - name: Call Vercel checkin endpoint
+        run: |
+          curl -sS -X GET \
+            "https://secretary-ai-next.vercel.app/api/cron/checkin?slot=${{ steps.slot.outputs.slot }}" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -w "\nHTTP %{http_code}\n"

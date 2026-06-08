@@ -66,14 +66,30 @@ body {
   padding: 4px 0; font-weight: 600; }
 .month-cal .dow.sat { color: #5b88c2; }
 .month-cal .dow.sun { color: #c25b5b; }
-.month-cal .cell { min-height: 60px; padding: 4px 6px; border-radius: 8px;
-  background: #fafafd; font-size: .7rem; line-height: 1.3; overflow: hidden;
-  border: 1px solid rgba(200,200,230,.3); }
+.month-cal .cell {
+  min-height: 38px; padding: 4px 0; border-radius: 8px;
+  background: #fafafd; font-size: .72rem; line-height: 1.2;
+  border: 1px solid rgba(200,200,230,.3);
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+  cursor: pointer; transition: background .15s;
+}
+.month-cal .cell:hover { background: #ede8f9; }
 .month-cal .cell.today { background: #f0eefa; border-color: var(--accent); }
-.month-cal .cell.other { opacity: .35; }
-.month-cal .cell .dnum { font-weight: 700; font-size: .78rem; }
-.month-cal .cell .ev { display: block; margin-top: 2px; color: #5a4ab8;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.month-cal .cell.selected { background: var(--accent); color: #fff; border-color: var(--accent); }
+.month-cal .cell.selected .dnum { color: #fff; }
+.month-cal .cell.selected .dot { background: #fff; }
+.month-cal .cell.selected .dot-extra { color: #fff; }
+.month-cal .cell.other { opacity: 0; pointer-events: none; }
+.month-cal .cell .dnum { font-weight: 700; font-size: .82rem; color: var(--fg); }
+.month-cal .cell .dots {
+  display: flex; gap: 2px; margin-top: 2px; align-items: center; min-height: 6px;
+}
+.month-cal .cell .dot {
+  width: 4px; height: 4px; border-radius: 50%; background: var(--accent);
+}
+.month-cal .cell .dot-extra {
+  font-size: .6rem; line-height: 1; color: var(--accent); margin-left: 1px; font-weight: 700;
+}
 
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }

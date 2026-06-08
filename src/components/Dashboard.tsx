@@ -23,22 +23,26 @@ type Bootstrap = {
 
 export function Dashboard({ userName }: { userName: string }) {
   const [data, setData] = useState<Bootstrap | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [mode, setMode] = useState<"auto" | "morning" | "evening">("auto");
   const [reloadKey, setReloadKey] = useState(0);
 
   const load = useCallback(() => {
-    setLoading(true);
+    setRefreshing(true);
     const q = mode === "auto" ? "" : `?mode=${mode}`;
     fetch(`/api/bootstrap${q}`)
       .then((r) => r.json())
       .then((d) => setData(d))
-      .finally(() => setLoading(false));
+      .finally(() => {
+        setRefreshing(false);
+        setInitialLoading(false);
+      });
   }, [mode, reloadKey]);
 
   useEffect(() => { load(); }, [load]);
 
-  if (loading) {
+  if (initialLoading) {
     return (
       <main className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-3 text-gray-500">
@@ -110,9 +114,10 @@ export function Dashboard({ userName }: { userName: string }) {
             <div className="flex gap-2 mt-3 w-full">
               <button
                 onClick={() => setReloadKey((k) => k + 1)}
-                className="flex-1 text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg"
+                disabled={refreshing}
+                className="flex-1 text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg disabled:opacity-60"
               >
-                🔄 更新
+                {refreshing ? "更新中…" : "🔄 更新"}
               </button>
               <Link
                 href="/settings"

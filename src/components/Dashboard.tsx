@@ -8,6 +8,7 @@ import { TaskMatrix } from "./TaskMatrix";
 import { Chat } from "./Chat";
 import { MonthCalendar } from "./MonthCalendar";
 import { WeekCalendarCompact } from "./WeekCalendarCompact";
+import { syncTodayProgress, type TodayProgress } from "@/lib/todayProgress";
 
 type Bootstrap = {
   setupNeeded?: boolean;
@@ -108,6 +109,8 @@ export function Dashboard({ userName }: { userName: string }) {
   if (!data) return null;
 
   const autoGreet = data.messages.length === 0;
+  // 今日進捗: 上(DailyProgress)と下(TaskMatrix today枠)で同じ値を使う
+  const todayProgress: TodayProgress = syncTodayProgress(data.tasks);
 
   return (
     <main className="min-h-screen">
@@ -205,8 +208,8 @@ export function Dashboard({ userName }: { userName: string }) {
             <EveningBriefingCard briefing={data.eveningBriefing} />
           )}
 
-          {/* 今日のタスク進捗（リング表示） */}
-          <DailyProgress targetDay={data.targetDay} tasks={data.tasks} onRefresh={() => setReloadKey((k) => k + 1)} />
+          {/* 今日のタスク進捗（リング表示・100%超え可） */}
+          <DailyProgress progress={todayProgress} onRefresh={() => setReloadKey((k) => k + 1)} />
 
           {/* 清瀬リンクとの会話（森背景＋立ち絵） */}
           <section>
@@ -223,55 +226,12 @@ export function Dashboard({ userName }: { userName: string }) {
           {/* タスクボード */}
           <section>
             <h2 className="font-bold text-base mb-2">🗂️ タスクボード</h2>
-            <TaskMatrix tasks={data.tasks} onRefresh={() => setReloadKey((k) => k + 1)} />
+            <TaskMatrix tasks={data.tasks} todayProgress={todayProgress} onRefresh={() => setReloadKey((k) => k + 1)} />
           </section>
         </div>
       </div>
     </main>
   );
-}
-
-// 重み (分): 完了の進捗バーで使う
-// 旧キー(today/days)が残っていても対応できるよう全部マップ
-const TIME_WEIGHT_MIN: Record<string, number> = {
-  quick: 15,    // すぐ終わる
-  mid: 45,      // 30分〜1時間
-  long: 120,    // 1〜3時間
-  // 旧キー互換
-  today: 45,
-  days: 120,
-};
-
-type Commit = {
-  date: string;
-  items: Record<string, { weight: number; title: string }>;
-};
-
-function commitKey(date: string) {
-  return `secretary-ai-next.commit.${date}`;
-}
-
-function loadCommit(date: string): Commit | null {
-  if (typeof window === "undefined") return null;
-  try {
-    const raw = localStorage.getItem(commitKey(date));
-    if (!raw) return null;
-    const c = JSON.parse(raw) as Commit;
-    if (c.date !== date) return null;
-    return c;
-  } catch {
-    return null;
-  }
-}
-
-function saveCommit(c: Commit) {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(commitKey(c.date), JSON.stringify(c));
-}
-
-function clearCommit(date: string) {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(commitKey(date));
 }
 
 const WALK_ROUTINE_TITLE = "ウォーキング30分";
@@ -341,214 +301,92 @@ function LastLoadedBadge({ ts, stale }: { ts: number; stale: boolean }) {
   );
 }
 
-// SVG 円形プログレスリング
+// SVG 円形プログレスリング (100%超え時はゴールド色)
 function ProgressRing({
-  percent, size = 120, stroke = 12,
-}: { percent: number; size?: number; stroke?: number }) {
+  percent, size = 120, stroke = 12, centerLabel, accentOver,
+}: {
+  percent: number;
+  size?: number;
+  stroke?: number;
+  centerLabel?: string;
+  accentOver?: boolean;
+}) {
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(100, percent));
   const offset = c * (1 - clamped / 100);
+  const gradId = `pg-grad-${size}-${accentOver ? "over" : "norm"}`;
   return (
     <svg width={size} height={size} className="shrink-0">
       <defs>
-        <linearGradient id={`pg-grad-${size}`} x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="var(--accent)" />
-          <stop offset="100%" stopColor="var(--accent-dark)" />
+        <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+          {accentOver ? (
+            <>
+              <stop offset="0%" stopColor="#f6c84c" />
+              <stop offset="100%" stopColor="#e69500" />
+            </>
+          ) : (
+            <>
+              <stop offset="0%" stopColor="var(--accent)" />
+              <stop offset="100%" stopColor="var(--accent-dark)" />
+            </>
+          )}
         </linearGradient>
       </defs>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#ece8f7" strokeWidth={stroke} />
       <circle
         cx={size / 2} cy={size / 2} r={r}
-        fill="none" stroke={`url(#pg-grad-${size})`} strokeWidth={stroke}
+        fill="none" stroke={`url(#${gradId})`} strokeWidth={stroke}
         strokeLinecap="round" strokeDasharray={c} strokeDashoffset={offset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: "stroke-dashoffset .5s ease" }}
       />
       <text
         x="50%" y="50%" textAnchor="middle" dominantBaseline="central"
-        fill="var(--accent-dark)" fontSize={size * 0.26} fontWeight={800}
+        fill={accentOver ? "#b87600" : "var(--accent-dark)"}
+        fontSize={size * 0.26} fontWeight={800}
       >
-        {clamped}%
+        {centerLabel ?? `${clamped}%`}
       </text>
     </svg>
   );
 }
 
 function DailyProgress({
-  targetDay, tasks, onRefresh,
+  progress, onRefresh,
 }: {
-  targetDay: string;
-  tasks: any[];
+  progress: TodayProgress;
   onRefresh: () => void;
 }) {
-  const [commit, setCommit] = useState<Commit | null>(null);
-  const [tick, setTick] = useState(0);
-  const [includeWalk, setIncludeWalk] = useState(true);
-  const [committing, setCommitting] = useState(false);
-
-  useEffect(() => {
-    setCommit(loadCommit(targetDay));
-  }, [targetDay, tick]);
-
-  // 「今日着手」候補: 新軸 window === "today" を最優先、無ければ従来基準
-  const candidates = tasks.filter((t) => {
-    if (t.window === "today") return true;
-    if (t.window) return false; // window があって today 以外なら除外
-    // window が無い古いデータへのフォールバック
-    if (t.bucket === "personal") return false;
-    const tk = t.label?.time as string | undefined;
-    if (tk === "long" || tk === "days") return false;
-    return true;
-  });
-
-  const hasWalkTask = tasks.some((t) => /ウォーキング/i.test(t.title ?? ""));
-
-  async function ensureWalkTask(): Promise<{ id: string; title: string } | null> {
-    if (hasWalkTask) {
-      const existing = tasks.find((t) => /ウォーキング/i.test(t.title ?? ""));
-      return existing ? { id: existing.id, title: existing.title } : null;
-    }
-    try {
-      const r = await fetch("/api/tasks", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "add",
-          title: WALK_ROUTINE_TITLE,
-          notes: "毎日の必須ルーチン。音声学習や音声入力と組み合わせ可。",
-          due: targetDay,
-          category: "personal",
-          urgency: "low",
-          importance: "high",
-          time: "quick",
-        }),
-      });
-      const data = await r.json();
-      if (data?.task?.id) return { id: data.task.id, title: WALK_ROUTINE_TITLE };
-    } catch (e) { console.error("ensureWalkTask failed", e); }
-    return null;
-  }
-
-  async function doCommit() {
-    if (committing) return;
-    setCommitting(true);
-    try {
-      const items: Commit["items"] = {};
-      for (const t of candidates) {
-        const w = TIME_WEIGHT_MIN[t.label?.time as string] ?? 60;
-        items[t.id] = { weight: w, title: t.title };
-      }
-      if (includeWalk) {
-        const walk = await ensureWalkTask();
-        if (walk) {
-          items[walk.id] = { weight: 30, title: walk.title };
-        }
-      }
-      if (Object.keys(items).length === 0) {
-        alert("今日のタスクが見当たらない。タスクボードで先に1つ以上追加してね。");
-        return;
-      }
-      const c: Commit = { date: targetDay, items };
-      saveCommit(c);
-      onRefresh();
-      setTick((x) => x + 1);
-    } finally {
-      setCommitting(false);
-    }
-  }
-
-  function resetCommit() {
-    if (!confirm("今日の確定をやり直す？")) return;
-    clearCommit(targetDay);
-    setTick((x) => x + 1);
-  }
-
-  let pctTask = 0, pctWeight = 0, doneCount = 0, totalCount = 0, doneMin = 0, totalMin = 0;
-  if (commit) {
-    const stillOpen = new Set(tasks.map((t) => t.id));
-    const entries = Object.entries(commit.items);
-    totalCount = entries.length;
-    totalMin = entries.reduce((a, [, v]) => a + v.weight, 0);
-    for (const [id, v] of entries) {
-      if (!stillOpen.has(id)) {
-        doneCount++;
-        doneMin += v.weight;
-      }
-    }
-    pctTask = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
-    pctWeight = totalMin > 0 ? Math.round((doneMin / totalMin) * 100) : 0;
-  }
-
-  if (!commit) {
-    const totalCand = candidates.length;
-    const totalCandMin = candidates.reduce(
-      (a, t) => a + (TIME_WEIGHT_MIN[t.label?.time as string] ?? 60), 0
-    );
-    return (
-      <section className="card flex items-center gap-4">
-        <ProgressRing percent={0} size={108} />
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-base">🎯 今日のタスクを確定する</div>
-          <div className="text-xs text-gray-500 mt-1">
-            候補 {totalCand}件 / 見積 {Math.floor(totalCandMin / 60)}h{totalCandMin % 60}m
-            （長期=daysは除外）
-          </div>
-          <label className="flex items-center gap-2 mt-2 text-xs text-gray-600 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={includeWalk}
-              onChange={(e) => setIncludeWalk(e.target.checked)}
-            />
-            🚶 ウォーキング30分も入れる
-            {hasWalkTask && <span className="text-purple-600">— 既に登録済み</span>}
-          </label>
-          <button
-            onClick={doCommit}
-            disabled={committing || (candidates.length === 0 && !includeWalk)}
-            className="mt-3 bg-[var(--accent)] text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50"
-          >
-            {committing ? "確定中…" : "これで確定する"}
-          </button>
-        </div>
-      </section>
-    );
-  }
-
+  const { pct, pctClamped, baselineMin, completedMin, baselineCount, completedCount } = progress;
+  const isOver = pct > 100;
   return (
     <section className="card flex items-center gap-4 flex-wrap">
-      <ProgressRing percent={pctWeight} size={120} />
+      <ProgressRing
+        percent={pctClamped}
+        size={120}
+        centerLabel={`${pct}%`}
+        accentOver={isOver}
+      />
       <div className="flex-1 min-w-0">
         <div className="font-bold text-base">
           🎯 今日の進捗
+          {isOver && <span className="ml-2 text-xs text-amber-600 font-normal">🎉 ベース超え！</span>}
         </div>
         <div className="text-xs text-gray-600 mt-1">
-          {doneCount}/{totalCount} 完了 ／ {Math.floor(doneMin / 60)}h{doneMin % 60}m済
-          ／ 見積 {Math.floor(totalMin / 60)}h{totalMin % 60}m
+          {completedCount}/{baselineCount} 完了
+          ／ {Math.floor(completedMin / 60)}h{completedMin % 60}m 済
+          ／ ベース {Math.floor(baselineMin / 60)}h{baselineMin % 60}m
         </div>
-        <div className="mt-2">
-          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
-            <span>件数ベース</span>
-            <span className="tabular-nums">{pctTask}%</span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-dark)] transition-all"
-              style={{ width: `${pctTask}%` }}
-            />
-          </div>
+        <div className="text-[11px] text-gray-400 mt-1">
+          ※「今日終わらす」タスクと自動連動・1日マイでリセット
         </div>
         <div className="flex gap-2 mt-3">
           <button
-            onClick={() => { onRefresh(); setTick((x) => x + 1); }}
+            onClick={onRefresh}
             className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded"
           >
             🔄 反映
-          </button>
-          <button
-            onClick={resetCommit}
-            className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded"
-          >
-            やり直し
           </button>
         </div>
       </div>

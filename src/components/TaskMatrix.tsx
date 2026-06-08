@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import type { TodayProgress } from "@/lib/todayProgress";
 
 type TimeKey = "quick" | "mid" | "long";
 type Win3 = "today" | "this_week" | "this_month";
@@ -81,36 +82,50 @@ function priorityScore(t: Task): number {
   return u * 2 + i;
 }
 
-// 丸メーター（中央に数字）
-function CategoryRing({ percent, color, size = 56 }: { percent: number; color: string; size?: number }) {
+// 丸メーター（中央に数字、100%超え時はゴールド）
+function CategoryRing({
+  percent, color, size = 56, centerLabel, overflow,
+}: {
+  percent: number;
+  color: string;
+  size?: number;
+  centerLabel?: string;
+  overflow?: boolean;
+}) {
   const stroke = 6;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
   const clamped = Math.max(0, Math.min(100, percent));
   const offset = c * (1 - clamped / 100);
+  const ringColor = overflow ? "#e69500" : color;
+  const textColor = overflow ? "#b87600" : "#2c2c2e";
   return (
     <svg width={size} height={size} className="shrink-0">
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="rgba(255,255,255,.7)" strokeWidth={stroke} />
       <circle
         cx={size / 2} cy={size / 2} r={r} fill="none"
-        stroke={color} strokeWidth={stroke} strokeLinecap="round"
+        stroke={ringColor} strokeWidth={stroke} strokeLinecap="round"
         strokeDasharray={c} strokeDashoffset={offset}
         transform={`rotate(-90 ${size / 2} ${size / 2})`}
         style={{ transition: "stroke-dashoffset .5s ease" }}
       />
       <text
         x="50%" y="50%" textAnchor="middle" dominantBaseline="central"
-        fontSize={size * 0.36} fontWeight={800} fill="#2c2c2e"
+        fontSize={size * (centerLabel && centerLabel.length >= 3 ? 0.30 : 0.36)} fontWeight={800} fill={textColor}
       >
-        {clamped}
+        {centerLabel ?? String(clamped)}
       </text>
     </svg>
   );
 }
 
 export function TaskMatrix({
-  tasks, onRefresh,
-}: { tasks: Task[]; onRefresh: () => void }) {
+  tasks, onRefresh, todayProgress,
+}: {
+  tasks: Task[];
+  onRefresh: () => void;
+  todayProgress?: TodayProgress;
+}) {
   const groups: Record<Win3, Task[]> = { today: [], this_week: [], this_month: [] };
   for (const t of tasks) {
     const w = (t.window ?? "this_week") as Win3;
@@ -130,18 +145,25 @@ export function TaskMatrix({
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
       {(["today", "this_week", "this_month"] as Win3[]).map((wk) => (
-        <CategoryCard key={wk} winKey={wk} items={groups[wk]} onRefresh={onRefresh} />
+        <CategoryCard
+          key={wk}
+          winKey={wk}
+          items={groups[wk]}
+          onRefresh={onRefresh}
+          todayProgress={wk === "today" ? todayProgress : undefined}
+        />
       ))}
     </div>
   );
 }
 
 function CategoryCard({
-  winKey, items, onRefresh,
+  winKey, items, onRefresh, todayProgress,
 }: {
   winKey: Win3;
   items: Task[];
   onRefresh: () => void;
+  todayProgress?: TodayProgress;
 }) {
   const [adding, setAdding] = useState(false);
   const [newTitle, setNewTitle] = useState("");
@@ -151,7 +173,9 @@ function CategoryCard({
   const [seen, setSeen] = useState<Seen>({});
 
   // 「今日この枠で見た」スナップショットを更新（追加されたら蓄積、日付変わると別キーで0から）
+  // ※today枠は todayProgress が外部から来るので、seen は使わない
   useEffect(() => {
+    if (winKey === "today") return;
     const s = loadSeen(winKey);
     let changed = false;
     for (const t of items) {
@@ -165,14 +189,29 @@ function CategoryCard({
     setSeen(s);
   }, [items, winKey]);
 
-  // 完了率（重み付き）: seen のうち、現在 items にいないもの = 完了 or 削除
-  const currentIds = new Set(items.map((t) => t.id));
-  let doneMin = 0, totalMin = 0;
-  for (const [id, info] of Object.entries(seen)) {
-    totalMin += info.weight;
-    if (!currentIds.has(id)) doneMin += info.weight;
+  // 完了率算出: today枠は外部の todayProgress を使う、それ以外は seen ベース
+  let pct: number;
+  let pctClamped: number;
+  let doneMin: number;
+  let totalMin: number;
+  let overflow: boolean;
+  if (winKey === "today" && todayProgress) {
+    pct = todayProgress.pct;
+    pctClamped = todayProgress.pctClamped;
+    doneMin = todayProgress.completedMin;
+    totalMin = todayProgress.baselineMin;
+    overflow = pct > 100;
+  } else {
+    const currentIds = new Set(items.map((t) => t.id));
+    doneMin = 0; totalMin = 0;
+    for (const [id, info] of Object.entries(seen)) {
+      totalMin += info.weight;
+      if (!currentIds.has(id)) doneMin += info.weight;
+    }
+    pct = totalMin > 0 ? Math.round((doneMin / totalMin) * 100) : 0;
+    pctClamped = Math.max(0, Math.min(100, pct));
+    overflow = false;
   }
-  const pct = totalMin > 0 ? Math.round((doneMin / totalMin) * 100) : 0;
 
   // 期限の自動補完（今日/今週末/今月末）
   function defaultDue(): string {
@@ -296,13 +335,20 @@ function CategoryCard({
     >
       {/* ヘッダ */}
       <div className="flex items-center gap-3 px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/80">
-        <CategoryRing percent={pct} color={WIN_COLOR[winKey]} size={54} />
+        <CategoryRing
+          percent={pctClamped}
+          color={WIN_COLOR[winKey]}
+          size={54}
+          centerLabel={overflow ? `${pct}` : `${pctClamped}`}
+          overflow={overflow}
+        />
         <div className="flex-1 min-w-0">
           <div className="font-bold text-sm" style={{ color: WIN_COLOR[winKey] }}>
             {WIN_LABEL[winKey]}
+            {overflow && <span className="ml-1 text-[10px] text-amber-600 font-normal">🎉</span>}
           </div>
           <div className="text-[11px] text-gray-500 mt-0.5">
-            {items.length}件 残り ／ {Math.floor((totalMin - doneMin) / 60)}h{(totalMin - doneMin) % 60}m
+            {items.length}件 残り ／ {Math.floor(Math.max(0, totalMin - doneMin) / 60)}h{Math.max(0, totalMin - doneMin) % 60}m
           </div>
         </div>
         <button

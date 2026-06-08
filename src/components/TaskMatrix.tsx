@@ -401,11 +401,30 @@ function TaskRow({
         onChange={() => onComplete(task)}
       />
       <div className="flex-1 min-w-0">
-        {/* 1行目: タイトル + 緊急/重要バッジ */}
-        <div className="flex items-center gap-1">
-          <span className="flex-1 truncate text-sm" title={task.title}>{task.title}</span>
-          {isUrgent && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 rounded-full font-bold shrink-0">急</span>}
-          {isImportant && <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 rounded-full font-bold shrink-0">重</span>}
+        {/* 1行目: 緊急/重要ドット + タイトル */}
+        <div className="flex items-center gap-1.5">
+          {(isUrgent || isImportant) && (
+            <span className="flex gap-0.5 shrink-0">
+              {isUrgent && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-red-500"
+                  title="緊急: 高"
+                />
+              )}
+              {isImportant && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full bg-amber-500"
+                  title="重要: 高"
+                />
+              )}
+            </span>
+          )}
+          <span
+            className={`flex-1 truncate text-sm ${isUrgent ? "font-bold" : ""}`}
+            title={task.title}
+          >
+            {task.title}
+          </span>
         </div>
         {/* 2行目: 所要時間 + 期限 */}
         <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-500">

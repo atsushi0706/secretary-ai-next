@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { signOut } from "next-auth/react";
 import { TaskMatrix } from "./TaskMatrix";
 import { Chat } from "./Chat";
 import { MonthCalendar } from "./MonthCalendar";
@@ -153,10 +154,21 @@ export function Dashboard({ userName }: { userName: string }) {
               <Link
                 href="/settings"
                 className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-lg"
+                title="設定"
               >
                 ⚙️
               </Link>
             </div>
+            <button
+              onClick={() => {
+                if (confirm("ログアウトする？")) {
+                  signOut({ callbackUrl: "/login" });
+                }
+              }}
+              className="mt-2 w-full text-xs text-gray-500 hover:text-red-600 py-1.5 border border-gray-200 hover:border-red-200 rounded-lg transition"
+            >
+              ⤴ ログアウト
+            </button>
             {lastLoadedAt > 0 && (
               <LastLoadedBadge ts={lastLoadedAt} stale={Date.now() - lastLoadedAt > STALE_AFTER_MS} />
             )}

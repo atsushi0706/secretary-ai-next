@@ -1,6 +1,5 @@
-import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getGemini, SECRETARY_PERSONA, extractJson } from "@/lib/gemini";
+import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA, extractJson } from "@/lib/claude";
 import {
   saveMessage, loadMessages, setManualLabel,
 } from "@/lib/supabase";
@@ -13,41 +12,56 @@ const ADD_INTENT_KEYWORDS = [
   "登録しといて", "登録しておいて",
 ];
 
+function sseEvent(name: string, data: any): Uint8Array {
+  const payload = `event: ${name}\ndata: ${JSON.stringify(data)}\n\n`;
+  return new TextEncoder().encode(payload);
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
-  if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  if (!userId) {
+    return new Response(JSON.stringify({ error: "unauthenticated" }), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    });
+  }
 
-  try {
-    const body = await req.json();
-    const text: string = (body.text ?? "").trim();
-    const isMorning: boolean = body.isMorning ?? true;
-    if (!text) return NextResponse.json({ error: "empty" }, { status: 400 });
+  const body = await req.json();
+  const text: string = (body.text ?? "").trim();
+  const isMorning: boolean = body.isMorning ?? true;
+  if (!text) {
+    return new Response(JSON.stringify({ error: "empty" }), {
+      status: 400, headers: { "Content-Type": "application/json" },
+    });
+  }
 
-    const now = jstNow();
-    const today = jstDateStr();
-    const targetDay = isMorning ? today : jstDateStr(new Date(Date.now() + 86400000));
-    const targetLabel = isMorning ? "今日" : "明日";
-    const mode = isMorning ? "morning" : "evening";
-
-    // ユーザー発言を保存
-    await saveMessage(userId, today, mode, "user", text);
-
-    // 「入れといて」自動検出
-    const intentAdd = ADD_INTENT_KEYWORDS.some((k) => text.includes(k));
-    let addedTitles: string[] = [];
-
-    if (intentAdd) {
+  const stream = new ReadableStream({
+    async start(controller) {
+      const send = (name: string, data: any) => controller.enqueue(sseEvent(name, data));
       try {
-        // 既存タスク取得
-        const tasks = await getTasks(userId);
-        const existingTitles = tasks.map((t) => t.title);
-        const allMsgs = await loadMessages(userId, today, mode);
-        const userLines = allMsgs.filter((m) => m.role === "user")
-          .map((m) => `- ${m.content.slice(0, 400)}`).join("\n") || `- ${text}`;
+        const now = jstNow();
+        const today = jstDateStr();
+        const targetDay = isMorning ? today : jstDateStr(new Date(Date.now() + 86400000));
+        const targetLabel = isMorning ? "今日" : "明日";
+        const mode = isMorning ? "morning" : "evening";
 
-        const gem = await getGemini(userId, "gemini-2.5-flash");
-        const exPrompt = `あなたは秘書。${targetLabel}(${targetDay})に着手すべきタスクを抽出。
+        await saveMessage(userId, today, mode, "user", text);
+
+        const client = await getClaudeForUser(userId);
+
+        // 「入れといて」自動検出 → タスク追加
+        const intentAdd = ADD_INTENT_KEYWORDS.some((k) => text.includes(k));
+        const addedTitles: string[] = [];
+
+        if (intentAdd) {
+          try {
+            const tasks = await getTasks(userId);
+            const existingTitles = tasks.map((t) => t.title);
+            const allMsgs = await loadMessages(userId, today, mode);
+            const userLines = allMsgs.filter((m) => m.role === "user")
+              .map((m) => `- ${m.content.slice(0, 400)}`).join("\n") || `- ${text}`;
+
+            const exPrompt = `あなたは秘書。${targetLabel}(${targetDay})に着手すべきタスクを抽出。
 
 【絶対ルール】
 - 会話で本人が新規に追加したいと言ったものだけ
@@ -62,83 +76,130 @@ ${userLines}
 
 JSONのみ:
 [{"title":"30字","notes":"出所","category":"work|personal","urgency":"high|low","importance":"high|low","time":"quick|today|days","due":"${targetDay}|"}]`;
-        const r = await gem.generateContent(exPrompt);
-        const cands = extractJson<any[]>(r.response.text()) ?? [];
-        const existingLower = new Set(existingTitles.map((t) => t.toLowerCase().trim()));
-        for (const c of cands) {
-          const title = String(c.title ?? "").trim();
-          if (!title || existingLower.has(title.toLowerCase())) continue;
-          try {
-            const created = await addTask(userId, title, {
-              notes: c.notes ?? "",
-              due: c.due || null,
+
+            const r = await client.messages.create({
+              model: CLAUDE_MODEL,
+              max_tokens: 1024,
+              messages: [{ role: "user", content: exPrompt }],
             });
-            if (created.id) {
-              await setManualLabel(userId, created.id, {
-                category: ["work","personal"].includes(c.category) ? c.category : "work",
-                urgency: ["high","low"].includes(c.urgency) ? c.urgency : "low",
-                importance: ["high","low"].includes(c.importance) ? c.importance : "high",
-                time_label: ["quick","today","days"].includes(c.time) ? c.time : "today",
-                reason: "自動追加",
-              });
-              addedTitles.push(title);
+            const raw = r.content
+              .filter((b: any) => b.type === "text")
+              .map((b: any) => b.text).join("\n");
+            const cands = extractJson<any[]>(raw) ?? [];
+            const existingLower = new Set(existingTitles.map((t) => t.toLowerCase().trim()));
+            for (const c of cands) {
+              const title = String(c.title ?? "").trim();
+              if (!title || existingLower.has(title.toLowerCase())) continue;
+              try {
+                const created = await addTask(userId, title, {
+                  notes: c.notes ?? "",
+                  due: c.due || null,
+                });
+                if (created.id) {
+                  await setManualLabel(userId, created.id, {
+                    category: ["work", "personal"].includes(c.category) ? c.category : "work",
+                    urgency: ["high", "low"].includes(c.urgency) ? c.urgency : "low",
+                    importance: ["high", "low"].includes(c.importance) ? c.importance : "high",
+                    time_label: ["quick", "today", "days"].includes(c.time) ? c.time : "today",
+                    reason: "自動追加",
+                  });
+                  addedTitles.push(title);
+                }
+              } catch (e) {
+                console.error("addTask failed:", e);
+              }
             }
           } catch (e) {
-            console.error("addTask failed:", e);
+            console.error("auto-add failed:", e);
+          }
+          if (addedTitles.length > 0) {
+            send("added", { titles: addedTitles });
           }
         }
-      } catch (e) {
-        console.error("auto-add failed:", e);
+
+        // 会話コンテキストを組み立て
+        const [events, tasks] = await Promise.all([
+          getCalendarEvents(userId, 1),
+          getTasks(userId),
+        ]);
+        const targetDate = new Date(targetDay + "T00:00:00+09:00");
+        const sched = computeSchedule(events, targetDate, 9, 17, isMorning ? now : undefined);
+        const ctxLines = [
+          `【現在時刻】${now.toISOString().slice(0, 16).replace("T", " ")}`,
+          `日付の対象: ${targetLabel}（稼働は9〜17時）`,
+          `■固定の予定:\n${sched.busy_text}`,
+          `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
+        ];
+        if (sched.after_hours_text) {
+          ctxLines.push("■夜の予定（参考）:\n" + sched.after_hours_text);
+        }
+        const taskLines = tasks.map((t) => `- ${t.title}（期限:${t.due ?? "なし"}）`).join("\n");
+        ctxLines.push("未完了タスク:\n" + (taskLines || "なし"));
+
+        if (addedTitles.length > 0) {
+          ctxLines.push(
+            `[システム注記] 以下のタスクをGoogleタスクに自動追加済み: ${addedTitles.map((t) => `「${t}」`).join(" / ")}。返答ではこの追加を自然に確認だけ伝えて。`
+          );
+        }
+
+        const allMessages = await loadMessages(userId, today, mode);
+        // 最新が今追加した user メッセージ → 30件取って Claude 形式へ
+        const history = allMessages.slice(-30).map((m) => ({
+          role: m.role === "assistant" ? "assistant" as const : "user" as const,
+          content: m.content,
+        }));
+        // 末尾が user で終わるよう正規化
+        if (history.length === 0 || history[history.length - 1].role !== "user") {
+          history.push({ role: "user", content: text });
+        }
+
+        const systemText = SECRETARY_PERSONA + "\n\n# いまの状況\n" + ctxLines.join("\n\n");
+
+        // Claude streaming + web_search
+        let fullReply = "";
+        const sdkStream = client.messages.stream({
+          model: CLAUDE_MODEL,
+          max_tokens: 2048,
+          temperature: 0.6,
+          system: systemText,
+          messages: history,
+          tools: [
+            { type: "web_search_20250305", name: "web_search", max_uses: 3 } as any,
+          ],
+        });
+
+        for await (const event of sdkStream) {
+          if (event.type === "content_block_delta") {
+            const delta: any = event.delta;
+            if (delta.type === "text_delta" && delta.text) {
+              fullReply += delta.text;
+              send("delta", { text: delta.text });
+            }
+          } else if (event.type === "content_block_start") {
+            const cb: any = event.content_block;
+            if (cb?.type === "server_tool_use" && cb?.name === "web_search") {
+              send("tool", { name: "web_search" });
+            }
+          }
+        }
+
+        await saveMessage(userId, today, mode, "assistant", fullReply);
+        send("done", { addedTitles });
+      } catch (e: any) {
+        console.error("chat stream error:", e);
+        send("error", { message: String(e?.message ?? e) });
+      } finally {
+        controller.close();
       }
-    }
+    },
+  });
 
-    // 会話のコンテキストを組み立て
-    const [events, tasks] = await Promise.all([
-      getCalendarEvents(userId, 1),
-      getTasks(userId),
-    ]);
-    const targetDate = new Date(targetDay + "T00:00:00+09:00");
-    const sched = computeSchedule(events, targetDate, 9, 17, isMorning ? now : undefined);
-    const ctxLines = [
-      `【現在時刻】${now.toISOString().slice(0,16).replace("T"," ")}`,
-      `日付の対象: ${targetLabel}（稼働は9〜17時）`,
-      `■固定の予定:\n${sched.busy_text}`,
-      `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
-    ];
-    if (sched.after_hours_text) {
-      ctxLines.push("■夜の予定（参考）:\n" + sched.after_hours_text);
-    }
-    const taskLines = tasks.map((t) => `- ${t.title}（期限:${t.due ?? "なし"}）`).join("\n");
-    ctxLines.push("未完了タスク:\n" + (taskLines || "なし"));
-
-    if (addedTitles.length > 0) {
-      ctxLines.push(
-        `[システム注記] 以下のタスクをGoogleタスクに自動追加済み: ${addedTitles.map((t) => `「${t}」`).join(" / ")}。返答ではこの追加を自然に確認だけ伝えて。`
-      );
-    }
-
-    const allMessages = await loadMessages(userId, today, mode);
-    const history = allMessages.slice(-30).map((m) => ({
-      role: m.role === "assistant" ? "model" : "user",
-      parts: [{ text: m.content }],
-    }));
-    if (history.length === 0 || history[0].role === "model") {
-      history.unshift({ role: "user", parts: [{ text: "(秘書業務を開始)" }] });
-    }
-
-    const gem = await getGemini(userId, "gemini-2.5-flash");
-    const chat = gem.startChat({
-      history: history.slice(0, -1),
-      systemInstruction: SECRETARY_PERSONA + "\n\n# いまの状況\n" + ctxLines.join("\n\n"),
-      generationConfig: { temperature: 0.6 },
-    });
-    const lastUser = history[history.length - 1].parts[0].text;
-    const r = await chat.sendMessage(lastUser);
-    const reply = r.response.text();
-    await saveMessage(userId, today, mode, "assistant", reply);
-
-    return NextResponse.json({ reply, addedTitles });
-  } catch (e: any) {
-    return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
-  }
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+    },
+  });
 }

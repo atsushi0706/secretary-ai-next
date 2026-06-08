@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 
 type Message = { role: "user" | "assistant"; content: string };
 
 function slotify(text: string): string {
-  // 19:30-20:00 ◯◯ → カード化
   return text.replace(
     /^[\s・\-\*●○◇◆]*(\d{1,2}:\d{2})\s*[-〜~–—]\s*(\d{1,2}:\d{2})\s*[:：]?\s*(.+?)\s*$/gm,
     (_, t1, t2, lbl) =>
@@ -14,7 +14,6 @@ function slotify(text: string): string {
 }
 
 function mdToHtml(text: string): string {
-  // 超簡易 Markdown レンダラ（**bold**, *italic*, 改行）
   let s = slotify(text);
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
@@ -24,24 +23,88 @@ function mdToHtml(text: string): string {
   return s;
 }
 
+async function readSse(
+  resp: Response,
+  onEvent: (event: string, data: any) => void,
+) {
+  if (!resp.body) return;
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buf += decoder.decode(value, { stream: true });
+    // SSE は \n\n でイベント区切り
+    const chunks = buf.split("\n\n");
+    buf = chunks.pop() ?? "";
+    for (const chunk of chunks) {
+      if (!chunk.trim()) continue;
+      let eventName = "message";
+      let dataStr = "";
+      for (const line of chunk.split("\n")) {
+        if (line.startsWith("event:")) eventName = line.slice(6).trim();
+        else if (line.startsWith("data:")) dataStr += line.slice(5).trim();
+      }
+      if (!dataStr) continue;
+      try { onEvent(eventName, JSON.parse(dataStr)); }
+      catch { /* ignore */ }
+    }
+  }
+}
+
 export function Chat({
   initialMessages,
   isMorning,
   onTasksUpdated,
+  autoGreet,
 }: {
   initialMessages: Message[];
   isMorning: boolean;
   onTasksUpdated: () => void;
+  autoGreet: boolean;
 }) {
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
+  const [searching, setSearching] = useState(false);
   const scroller = useRef<HTMLDivElement>(null);
+  const greetedRef = useRef(false);
 
   useEffect(() => {
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
   }, [messages]);
+
+  // 初回ロード時、挨拶＋時間割を SSE で流す
+  useEffect(() => {
+    if (!autoGreet || greetedRef.current) return;
+    greetedRef.current = true;
+    let cancelled = false;
+    (async () => {
+      try {
+        const resp = await fetch(`/api/greet?isMorning=${isMorning}`);
+        if (!resp.ok) return;
+        // 空の assistant メッセージを足して、deltaで埋めていく
+        setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+        await readSse(resp, (event, data) => {
+          if (cancelled) return;
+          if (event === "delta") {
+            setMessages((prev) => {
+              const arr = [...prev];
+              const last = arr[arr.length - 1];
+              if (last?.role === "assistant") {
+                arr[arr.length - 1] = { ...last, content: last.content + data.text };
+              }
+              return arr;
+            });
+          }
+        });
+      } catch (e) { console.error("greet failed", e); }
+    })();
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autoGreet, isMorning]);
 
   async function send() {
     if (sending) return;
@@ -51,52 +114,84 @@ export function Chat({
     setSending(true);
     try {
       if (file) {
-        // 画像送信
+        // 画像送信（こちらは従来通り）
         const fd = new FormData();
         fd.append("file", file);
         fd.append("hint", text);
         fd.append("isMorning", String(isMorning));
         const userMsg: Message = {
           role: "user",
-          content: `📎 画像「${file.name}」を共有${text ? "（補足: " + text + "）" : ""}`,
+          content: `画像「${file.name}」を共有${text ? "（補足: " + text + "）" : ""}`,
         };
         setMessages((prev) => [...prev, userMsg]);
         const r = await fetch("/api/extract-image", { method: "POST", body: fd });
         const data = await r.json();
         const added = (data.added ?? []) as string[];
         const reply = added.length > 0
-          ? `画像から ${added.length}件 抜き出した → 自動で追加したよ: ${added.map((t) => `「${t}」`).join(" / ")}`
+          ? `画像から ${added.length}件 抜き出した。Googleタスクに追加したよ: ${added.map((t) => `「${t}」`).join(" / ")}`
           : data.error
             ? `画像読み取りでエラー: ${data.error}`
-            : "画像見たけど、新しく追加すべきタスクは見つからなかったよ。";
+            : "画像見たけど、新しく追加すべきタスクは見つからなかった。";
         setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
         setInput(""); setFile(null);
         if (added.length > 0) onTasksUpdated();
       } else {
         const userMsg: Message = { role: "user", content: text };
-        setMessages((prev) => [...prev, userMsg]);
+        setMessages((prev) => [...prev, userMsg, { role: "assistant", content: "" }]);
+        setInput("");
+
         const r = await fetch("/api/chat", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text, isMorning }),
         });
-        const data = await r.json();
-        if (data.error) {
-          setMessages((prev) => [...prev, {
-            role: "assistant", content: `（エラー: ${data.error}）`,
-          }]);
-        } else {
-          setMessages((prev) => [...prev, { role: "assistant", content: data.reply }]);
-          if (data.addedTitles?.length > 0) onTasksUpdated();
+        if (!r.ok) {
+          const err = await r.json().catch(() => ({ error: r.statusText }));
+          setMessages((prev) => {
+            const arr = [...prev];
+            arr[arr.length - 1] = { role: "assistant", content: `（エラー: ${err.error}）` };
+            return arr;
+          });
+          return;
         }
-        setInput("");
+        let needsRefresh = false;
+        await readSse(r, (event, data) => {
+          if (event === "delta") {
+            setMessages((prev) => {
+              const arr = [...prev];
+              const last = arr[arr.length - 1];
+              if (last?.role === "assistant") {
+                arr[arr.length - 1] = { ...last, content: last.content + data.text };
+              }
+              return arr;
+            });
+          } else if (event === "tool") {
+            if (data.name === "web_search") setSearching(true);
+          } else if (event === "added") {
+            needsRefresh = true;
+          } else if (event === "done") {
+            setSearching(false);
+            if (data.addedTitles?.length > 0) needsRefresh = true;
+          } else if (event === "error") {
+            setMessages((prev) => {
+              const arr = [...prev];
+              const last = arr[arr.length - 1];
+              if (last?.role === "assistant" && !last.content) {
+                arr[arr.length - 1] = { role: "assistant", content: `（エラー: ${data.message}）` };
+              }
+              return arr;
+            });
+          }
+        });
+        if (needsRefresh) onTasksUpdated();
       }
     } finally {
       setSending(false);
+      setSearching(false);
     }
   }
 
   return (
-    <div className="card flex flex-col" style={{ height: 460 }}>
+    <div className="card flex flex-col" style={{ height: 520 }}>
       <div ref={scroller} className="flex-1 overflow-y-auto space-y-3 pr-1 pb-2">
         {messages.length === 0 && (
           <div className="text-center text-gray-400 text-sm pt-8">
@@ -106,16 +201,31 @@ export function Chat({
         {messages.map((m, i) => (
           <div
             key={i}
-            className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}
+            className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
           >
+            {m.role === "assistant" && (
+              <Image
+                src="/kiyose.png"
+                alt="清瀬リンク"
+                width={36}
+                height={36}
+                className="rounded-full border border-purple-200 shrink-0"
+              />
+            )}
             <div
               className={`bubble ${m.role === "user" ? "bubble-me" : "bubble-bot"}`}
-              dangerouslySetInnerHTML={{ __html: mdToHtml(m.content) }}
+              dangerouslySetInnerHTML={{
+                __html: m.content
+                  ? mdToHtml(m.content)
+                  : '<span class="typing-dots"><span></span><span></span><span></span></span>',
+              }}
             />
           </div>
         ))}
-        {sending && (
-          <div className="text-xs text-gray-400">清瀬リンクが考えてます…</div>
+        {searching && (
+          <div className="text-xs text-purple-600 flex items-center gap-1">
+            🔎 Web を検索中…
+          </div>
         )}
       </div>
 

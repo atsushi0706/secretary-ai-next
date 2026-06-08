@@ -5,7 +5,8 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
-import { categorize, getGemini, extractJson, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS } from "@/lib/gemini";
+import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS } from "@/lib/gemini";
+import { getClaudeForUser, CLAUDE_MODEL, extractJson } from "@/lib/claude";
 import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings } from "@/lib/supabase";
 
 export async function GET(req: Request) {
@@ -14,7 +15,9 @@ export async function GET(req: Request) {
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const settings = await getUserSettings(userId);
-  const setupNeeded = !settings?.gemini_api_key || !settings?.google_refresh_token;
+  // Claude(共通) or 個人 Anthropic キーがあればOK。Google接続は必須。
+  const hasAnthropic = !!(settings?.anthropic_api_key) || !!process.env.ANTHROPIC_API_KEY;
+  const setupNeeded = !hasAnthropic || !settings?.google_refresh_token;
   if (setupNeeded) {
     return NextResponse.json({ setupNeeded: true, settings });
   }
@@ -24,8 +27,7 @@ export async function GET(req: Request) {
     const modeParam = url.searchParams.get("mode");
     const now = jstNow();
     const hour = now.getHours();
-    const isMorning = modeParam ? modeParam === "morning"
-      : hour < 15;
+    const isMorning = modeParam ? modeParam === "morning" : hour < 15;
     const today = jstDateStr();
     const targetDay = isMorning ? today
       : jstDateStr(new Date(Date.now() + 24 * 60 * 60 * 1000));
@@ -40,7 +42,7 @@ export async function GET(req: Request) {
       loadQuickmemo(userId),
     ]);
 
-    // タスク分類: manual 優先、無ければ Gemini に投げる
+    // タスク分類: manual 優先、無ければ Claude に投げる
     const labels: Record<string, Label> = {};
     const toClassify: any[] = [];
     for (const t of tasks) {
@@ -52,7 +54,7 @@ export async function GET(req: Request) {
     }
     if (toClassify.length > 0) {
       try {
-        const gem = await getGemini(userId, "gemini-2.5-flash");
+        const client = await getClaudeForUser(userId);
         const taskBlock = toClassify.map((t) =>
           `- id: ${t.id}\n  タイトル: ${t.title}\n  期限: ${t.due ?? "期限なし"}`
         ).join("\n");
@@ -67,22 +69,29 @@ export async function GET(req: Request) {
 
 タスク:
 ${taskBlock}`;
-        const r = await gem.generateContent(prompt);
-        const data = extractJson<Record<string, any>>(r.response.text());
+        const r = await client.messages.create({
+          model: CLAUDE_MODEL,
+          max_tokens: 2048,
+          messages: [{ role: "user", content: prompt }],
+        });
+        const raw = r.content
+          .filter((b: any) => b.type === "text")
+          .map((b: any) => b.text).join("\n");
+        const data = extractJson<Record<string, any>>(raw);
         if (data) {
           for (const [tid, v] of Object.entries(data)) {
             if (typeof v !== "object" || !v) continue;
             labels[tid] = {
-              category: CATEGORY_KEYS.includes(v.category) ? v.category : "work",
-              urgency: URGENCY.includes(v.urgency) ? v.urgency : "low",
-              importance: IMPORTANCE.includes(v.importance) ? v.importance : "low",
-              time: TIME_KEYS.includes(v.time) ? v.time : "today",
+              category: (CATEGORY_KEYS as readonly string[]).includes(v.category) ? v.category : "work",
+              urgency: (URGENCY as readonly string[]).includes(v.urgency) ? v.urgency : "low",
+              importance: (IMPORTANCE as readonly string[]).includes(v.importance) ? v.importance : "low",
+              time: (TIME_KEYS as readonly string[]).includes(v.time) ? v.time : "today",
               reason: String(v.reason ?? "").slice(0, 40),
             };
           }
         }
       } catch (e) {
-        console.error("Gemini classify failed:", e);
+        console.error("Claude classify failed:", e);
       }
     }
 

@@ -330,11 +330,11 @@ function CategoryCard({
 
   return (
     <div
-      className="rounded-2xl border border-purple-100 shadow-sm overflow-hidden"
+      className="rounded-2xl border border-purple-100 shadow-sm"
       style={{ background: WIN_BG[winKey] }}
     >
       {/* ヘッダ */}
-      <div className="flex items-center gap-3 px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/80">
+      <div className="flex items-center gap-3 px-4 py-3 bg-white/60 backdrop-blur-sm border-b border-white/80 rounded-t-2xl">
         <CategoryRing
           percent={pctClamped}
           color={WIN_COLOR[winKey]}

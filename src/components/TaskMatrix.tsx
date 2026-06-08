@@ -394,27 +394,33 @@ function TaskRow({
   const isImportant = task.label.importance === "high";
 
   return (
-    <div className="group flex items-center gap-2 text-sm py-1.5 px-2 rounded-lg hover:bg-white/80 transition relative">
+    <div className="group flex items-start gap-2 text-sm py-1.5 px-2 rounded-lg hover:bg-white/80 transition relative">
       <input
         type="checkbox"
-        className="rounded shrink-0 cursor-pointer"
+        className="rounded shrink-0 cursor-pointer mt-1"
         onChange={() => onComplete(task)}
       />
-      <div className="flex-1 min-w-0 flex items-center gap-1.5">
-        <span className="truncate" title={task.title}>{task.title}</span>
-        {isUrgent && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 rounded-full font-bold shrink-0">急</span>}
-        {isImportant && <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 rounded-full font-bold shrink-0">重</span>}
+      <div className="flex-1 min-w-0">
+        {/* 1行目: タイトル + 緊急/重要バッジ */}
+        <div className="flex items-center gap-1">
+          <span className="flex-1 truncate text-sm" title={task.title}>{task.title}</span>
+          {isUrgent && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 rounded-full font-bold shrink-0">急</span>}
+          {isImportant && <span className="text-[10px] bg-amber-100 text-amber-800 px-1.5 rounded-full font-bold shrink-0">重</span>}
+        </div>
+        {/* 2行目: 所要時間 + 期限 */}
+        <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-500">
+          <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
+            {TIME_LABEL[tkey] ?? "📅"}
+          </span>
+          {task.due && (
+            <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
+              〆{task.due.slice(5, 10)}
+            </span>
+          )}
+        </div>
       </div>
-      <span className="text-[10px] bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded shrink-0">
-        {TIME_LABEL[tkey] ?? "📅"}
-      </span>
-      {task.due && (
-        <span className="text-[10px] bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded shrink-0">
-          〆{task.due.slice(5, 10)}
-        </span>
-      )}
       <button
-        className="text-gray-400 hover:text-purple-600 px-1 opacity-60 group-hover:opacity-100 shrink-0"
+        className="text-gray-400 hover:text-purple-600 px-1 mt-1 opacity-60 group-hover:opacity-100 shrink-0"
         onClick={() => setMenuOpen((v) => !v)}
         title="メニュー"
       >

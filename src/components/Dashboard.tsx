@@ -20,6 +20,7 @@ type Bootstrap = {
   schedule: any;
   messages: { role: "user" | "assistant"; content: string }[];
   quickmemo: string;
+  eveningBriefing?: { body: string; created_at: string } | null;
 };
 
 // PC開きっぱなしで情報が古くなったときの判定しきい値
@@ -187,6 +188,11 @@ export function Dashboard({ userName }: { userName: string }) {
 
         {/* ── メイン列 ── */}
         <div className="space-y-4 min-w-0">
+          {/* 昨夜決めた明日の流れ（朝モード時、briefingがあれば） */}
+          {data.isMorning && data.eveningBriefing?.body && (
+            <EveningBriefingCard briefing={data.eveningBriefing} />
+          )}
+
           {/* 今日のタスク進捗（リング表示） */}
           <DailyProgress targetDay={data.targetDay} tasks={data.tasks} onRefresh={() => setReloadKey((k) => k + 1)} />
 
@@ -257,6 +263,49 @@ function clearCommit(date: string) {
 }
 
 const WALK_ROUTINE_TITLE = "ウォーキング30分";
+
+// 昨夜の briefing 表示
+function EveningBriefingCard({
+  briefing,
+}: {
+  briefing: { body: string; created_at: string };
+}) {
+  const [collapsed, setCollapsed] = useState(false);
+  const created = new Date(briefing.created_at);
+  const m = `${created.getMonth() + 1}/${created.getDate()} ${String(created.getHours()).padStart(2, "0")}:${String(created.getMinutes()).padStart(2, "0")}`;
+  // 簡易: 時刻範囲行をハイライト
+  const html = briefing.body
+    .replace(
+      /^[\s・\-\*●○◇◆|]*(\d{1,2}:\d{2})\s*[-–〜~]\s*(\d{1,2}:\d{2})\s*[:：|]*\s*(.+?)\s*$/gm,
+      (_, t1, t2, lbl) =>
+        `<div class="slot" style="margin:4px 0;"><span class="time">${t1}–${t2}</span><span>${lbl.replace(/^\|\s*/, "")}</span></div>`,
+    )
+    .replace(/^\| .+$/gm, "")
+    .replace(/^\|[-:]+\|.*$/gm, "")
+    .replace(/\n/g, "<br/>");
+  return (
+    <section className="card border-l-4 border-purple-500 bg-gradient-to-br from-purple-50 via-white to-indigo-50">
+      <div className="flex items-center justify-between mb-2">
+        <div className="font-bold text-sm text-purple-700">
+          📋 昨夜決めた今日の流れ
+          <span className="text-xs text-gray-500 ml-2 font-normal">（{m} 作成）</span>
+        </div>
+        <button
+          onClick={() => setCollapsed((v) => !v)}
+          className="text-xs bg-white hover:bg-purple-50 border border-purple-200 px-2 py-1 rounded"
+        >
+          {collapsed ? "▼ 開く" : "▲ 閉じる"}
+        </button>
+      </div>
+      {!collapsed && (
+        <div
+          className="text-sm leading-relaxed"
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+      )}
+    </section>
+  );
+}
 
 // 「最終更新 HH:MM」バッジ。古ければ赤くする。30秒ごとに自分で再描画
 function LastLoadedBadge({ ts, stale }: { ts: number; stale: boolean }) {

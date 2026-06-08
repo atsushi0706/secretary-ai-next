@@ -4,7 +4,7 @@
  */
 import { auth } from "@/auth";
 import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA } from "@/lib/claude";
-import { saveMessage } from "@/lib/supabase";
+import { saveMessage, saveBriefing } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
 
 function sse(name: string, data: any): Uint8Array {
@@ -75,6 +75,17 @@ export async function GET(req: Request) {
           }
         }
         await saveMessage(userId, today, mode, "assistant", full);
+
+        // 時間割を含む応答なら briefing として targetDay に保存
+        const timeMatches = full.match(/\d{1,2}:\d{2}\s*[-–〜~]\s*\d{1,2}:\d{2}/g);
+        if (timeMatches && timeMatches.length >= 3) {
+          try {
+            await saveBriefing(userId, targetDay, mode, full);
+          } catch (e) {
+            console.error("saveBriefing failed:", e);
+          }
+        }
+
         send("done", {});
       } catch (e: any) {
         send("error", { message: String(e?.message ?? e) });

@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA, extractJson } from "@/lib/claude";
 import {
-  saveMessage, loadMessages, setManualLabel,
+  saveMessage, loadMessages, setManualLabel, saveBriefing,
 } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, addTask } from "@/lib/google";
 
@@ -185,6 +185,19 @@ JSONのみ:
         }
 
         await saveMessage(userId, today, mode, "assistant", fullReply);
+
+        // 時間割っぽい応答(時刻範囲が3個以上)なら briefing として保存
+        // 翌日のダッシュボードで参照できるよう、夜モードは target=明日(targetDay)に保存
+        // 朝モードは target=今日(today)
+        const timeMatches = fullReply.match(/\d{1,2}:\d{2}\s*[-–〜~]\s*\d{1,2}:\d{2}/g);
+        if (timeMatches && timeMatches.length >= 3) {
+          try {
+            await saveBriefing(userId, targetDay, mode, fullReply);
+          } catch (e) {
+            console.error("saveBriefing failed:", e);
+          }
+        }
+
         send("done", { addedTitles });
       } catch (e: any) {
         console.error("chat stream error:", e);

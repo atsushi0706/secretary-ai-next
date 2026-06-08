@@ -116,3 +116,26 @@ export async function saveQuickmemo(userId: string, body: string) {
     user_id: userId, body, updated_at: new Date().toISOString(),
   });
 }
+
+// briefings: 朝/夜の本文を保存して、翌日のダッシュボードでも参照できるようにする
+// schema: user_id, date, mode, body  (unique: user_id, date, mode)
+export async function saveBriefing(
+  userId: string, date: string, mode: "morning" | "evening", body: string,
+) {
+  if (!body || body.length < 20) return; // 短すぎるのは保存しない
+  const supa = supabaseAdmin();
+  await supa.from("briefings").upsert(
+    { user_id: userId, date, mode, body },
+    { onConflict: "user_id,date,mode" },
+  );
+}
+
+export async function loadBriefing(
+  userId: string, date: string, mode: "morning" | "evening",
+) {
+  const supa = supabaseAdmin();
+  const { data } = await supa.from("briefings").select("body, created_at")
+    .eq("user_id", userId).eq("date", date).eq("mode", mode)
+    .maybeSingle();
+  return data ?? null;
+}

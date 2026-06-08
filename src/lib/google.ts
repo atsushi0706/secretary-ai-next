@@ -123,6 +123,32 @@ export async function deleteTask(userId: string, tasklistId: string, taskId: str
   });
 }
 
+export async function addCalendarEvent(
+  userId: string,
+  args: {
+    title: string;
+    startISO: string; // 例: "2026-06-08T14:00:00+09:00"
+    endISO: string;
+    description?: string;
+    calendarId?: string; // 省略時は primary
+    colorId?: string;
+  },
+) {
+  const auth = await getOAuthClient(userId);
+  const cal = google.calendar({ version: "v3", auth });
+  const r = await cal.events.insert({
+    calendarId: args.calendarId ?? "primary",
+    requestBody: {
+      summary: args.title,
+      description: args.description,
+      start: { dateTime: args.startISO, timeZone: "Asia/Tokyo" },
+      end: { dateTime: args.endISO, timeZone: "Asia/Tokyo" },
+      colorId: args.colorId,
+    },
+  });
+  return r.data;
+}
+
 export async function addTask(
   userId: string, title: string, opts: { notes?: string; due?: string | null } = {},
   tasklistId = "@default",

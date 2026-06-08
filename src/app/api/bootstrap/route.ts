@@ -7,7 +7,7 @@ import { auth } from "@/auth";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
 import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, normalizeTime, windowOf } from "@/lib/gemini";
 import { getClaudeForUser, CLAUDE_MODEL, extractJson } from "@/lib/claude";
-import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings } from "@/lib/supabase";
+import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings, loadBriefing } from "@/lib/supabase";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -34,12 +34,14 @@ export async function GET(req: Request) {
     const targetLabel = isMorning ? "今日" : "明日";
     const targetDate = new Date(targetDay + "T00:00:00+09:00");
 
-    const [events, tasks, manualLabels, messages, quickmemo] = await Promise.all([
+    const [events, tasks, manualLabels, messages, quickmemo, eveningBriefing] = await Promise.all([
       getCalendarEvents(userId, 1),
       getTasks(userId, false),
       getManualLabels(userId),
       loadMessages(userId, today, isMorning ? "morning" : "evening"),
       loadQuickmemo(userId),
+      // 朝モードのとき: 昨夜(yesterday の evening)で targetDay=今日 として保存された briefing を取りに行く
+      isMorning ? loadBriefing(userId, today, "evening") : Promise.resolve(null),
     ]);
 
     // タスク分類: manual 優先、無ければ Claude に投げる
@@ -126,6 +128,7 @@ ${taskBlock}`;
       schedule,
       messages,
       quickmemo,
+      eveningBriefing, // 朝モード時、昨夜の時間割提案
     });
   } catch (e: any) {
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

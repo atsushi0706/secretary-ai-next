@@ -6,7 +6,8 @@ const SCOPES = [
   "openid",
   "email",
   "profile",
-  "https://www.googleapis.com/auth/calendar.readonly",
+  // calendar 書き込みも入れる（清瀬リンクが予定を勝手に入れられるように）
+  "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/tasks",
   "https://www.googleapis.com/auth/drive.readonly",
   "https://www.googleapis.com/auth/gmail.readonly",

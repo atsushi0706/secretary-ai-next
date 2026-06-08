@@ -401,33 +401,29 @@ function TaskRow({
         onChange={() => onComplete(task)}
       />
       <div className="flex-1 min-w-0">
-        {/* 1行目: 緊急/重要ドット + タイトル */}
-        <div className="flex items-center gap-1.5">
+        {/* 1行目: 緊急/重要ドット + タイトル(2行まで折り返し可) */}
+        <div className="flex items-start gap-1.5">
           {(isUrgent || isImportant) && (
-            <span className="flex gap-0.5 shrink-0">
-              {isUrgent && (
-                <span
-                  className="w-1.5 h-1.5 rounded-full bg-red-500"
-                  title="緊急: 高"
-                />
-              )}
-              {isImportant && (
-                <span
-                  className="w-1.5 h-1.5 rounded-full bg-amber-500"
-                  title="重要: 高"
-                />
-              )}
+            <span className="flex gap-0.5 shrink-0 mt-[7px]">
+              {isUrgent && <span className="w-1.5 h-1.5 rounded-full bg-red-500" title="緊急: 高" />}
+              {isImportant && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" title="重要: 高" />}
             </span>
           )}
           <span
-            className={`flex-1 truncate text-sm ${isUrgent ? "font-bold" : ""}`}
+            className={`flex-1 text-sm leading-snug break-words ${isUrgent ? "font-bold" : ""}`}
+            style={{
+              display: "-webkit-box",
+              WebkitLineClamp: 2,
+              WebkitBoxOrient: "vertical",
+              overflow: "hidden",
+            }}
             title={task.title}
           >
             {task.title}
           </span>
         </div>
-        {/* 2行目: 所要時間 + 期限 */}
-        <div className="flex items-center gap-1 mt-0.5 text-[10px] text-gray-500">
+        {/* 2行目: 所要時間 + 期限 + ⋯メニュー */}
+        <div className="flex items-center gap-1 mt-1 text-[10px] text-gray-500">
           <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
             {TIME_LABEL[tkey] ?? "📅"}
           </span>
@@ -436,15 +432,15 @@ function TaskRow({
               〆{task.due.slice(5, 10)}
             </span>
           )}
+          <button
+            className="ml-auto text-gray-400 hover:text-purple-600 px-1 opacity-60 group-hover:opacity-100"
+            onClick={() => setMenuOpen((v) => !v)}
+            title="メニュー"
+          >
+            ⋯
+          </button>
         </div>
       </div>
-      <button
-        className="text-gray-400 hover:text-purple-600 px-1 mt-1 opacity-60 group-hover:opacity-100 shrink-0"
-        onClick={() => setMenuOpen((v) => !v)}
-        title="メニュー"
-      >
-        ⋯
-      </button>
 
       {menuOpen && (
         <>

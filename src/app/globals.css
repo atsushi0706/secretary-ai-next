@@ -91,6 +91,67 @@ body {
   font-size: .6rem; line-height: 1; color: var(--accent); margin-left: 1px; font-weight: 700;
 }
 
+/* 週間カレンダー */
+.week-cal { background: #fff; border-radius: 12px; padding: 12px;
+  border: 1px solid var(--card-border); overflow-x: auto; }
+.week-cal .week-grid {
+  display: grid;
+  grid-template-columns: 48px repeat(7, minmax(80px, 1fr));
+  grid-template-rows: auto 1fr;
+  gap: 0;
+  min-width: 600px;
+}
+.week-cal .time-col-head { grid-row: 1; }
+.week-cal .day-head {
+  grid-row: 1;
+  border-bottom: 1px solid var(--card-border);
+  padding: 4px 6px;
+  text-align: center;
+  background: #fafafd;
+}
+.week-cal .day-head.today { background: #f0eefa; color: var(--accent-dark); }
+.week-cal .day-head.weekend .dow { color: #c25b5b; }
+.week-cal .day-head .dow { font-size: .72rem; font-weight: 700; }
+.week-cal .day-head .date { font-size: .82rem; font-weight: 700; }
+.week-cal .day-head .all-day {
+  font-size: .65rem; color: #5a4ab8;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-top: 2px; background: #ede8f9; border-radius: 4px; padding: 1px 4px;
+}
+.week-cal .time-col {
+  grid-row: 2; position: relative;
+  border-right: 1px solid var(--card-border);
+}
+.week-cal .time-col .time-tick {
+  position: absolute; right: 4px; left: 0; text-align: right;
+  font-size: .65rem; color: var(--muted); transform: translateY(-50%);
+}
+.week-cal .day-col {
+  grid-row: 2;
+  position: relative;
+  border-right: 1px solid rgba(200,200,230,.25);
+  background: #fff;
+}
+.week-cal .day-col.today { background: #faf8ff; }
+.week-cal .day-col.weekend { background: #fafafd; }
+.week-cal .day-col .hour-line {
+  position: absolute; left: 0; right: 0; height: 1px;
+  background: rgba(200,200,230,.35);
+}
+.week-cal .day-col .event-block {
+  position: absolute; left: 2px; right: 2px;
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+  color: #fff; border-radius: 6px; padding: 3px 5px;
+  font-size: .68rem; line-height: 1.15;
+  overflow: hidden; box-shadow: 0 1px 4px rgba(122,109,214,.3);
+  cursor: pointer;
+}
+.week-cal .day-col .event-block .ev-time { font-weight: 700; opacity: .9; font-size: .62rem; }
+.week-cal .day-col .event-block .ev-title {
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  font-weight: 600;
+}
+
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
 .typing-dots span {

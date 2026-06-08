@@ -6,6 +6,7 @@ import Image from "next/image";
 import { TaskMatrix } from "./TaskMatrix";
 import { Chat } from "./Chat";
 import { MonthCalendar } from "./MonthCalendar";
+import { WeekCalendar } from "./WeekCalendar";
 
 type Bootstrap = {
   setupNeeded?: boolean;
@@ -141,15 +142,10 @@ export function Dashboard({ userName }: { userName: string }) {
           {/* 今日のタスク進捗 */}
           <DailyProgress targetDay={data.targetDay} tasks={data.tasks} onRefresh={() => setReloadKey((k) => k + 1)} />
 
-          {/* 今日/明日の流れ（固定予定を時系列で見せる） */}
-          <section className="card">
-            <h2 className="font-bold text-base mb-2">
-              📆 {data.targetLabel}の流れ
-              <span className="text-xs text-gray-500 ml-2 font-normal">
-                ({data.targetDay} / 稼働9–17時)
-              </span>
-            </h2>
-            <Timeline schedule={data.schedule} events={data.events} targetDay={data.targetDay} />
+          {/* 週間カレンダー（時間軸 × 7日） */}
+          <section>
+            <h2 className="font-bold text-base mb-2">📆 週間カレンダー</h2>
+            <WeekCalendar />
           </section>
 
           {/* 清瀬リンクとの会話 */}
@@ -215,6 +211,8 @@ function clearCommit(date: string) {
   localStorage.removeItem(commitKey(date));
 }
 
+const WALK_ROUTINE_TITLE = "ウォーキング30分";
+
 // 本日のタスク「確定」 + 進捗バー
 function DailyProgress({
   targetDay, tasks, onRefresh,
@@ -225,6 +223,8 @@ function DailyProgress({
 }) {
   const [commit, setCommit] = useState<Commit | null>(null);
   const [tick, setTick] = useState(0);
+  const [includeWalk, setIncludeWalk] = useState(true);
+  const [committing, setCommitting] = useState(false);
 
   // クライアントマウント後に localStorage 読む
   useEffect(() => {
@@ -239,19 +239,60 @@ function DailyProgress({
     return true;
   });
 
-  function doCommit() {
-    const items: Commit["items"] = {};
-    for (const t of candidates) {
-      const w = TIME_WEIGHT_MIN[t.label?.time as string] ?? 60;
-      items[t.id] = { weight: w, title: t.title };
+  // 既にウォーキング系タスクがあるか
+  const hasWalkTask = tasks.some((t) => /ウォーキング/i.test(t.title ?? ""));
+
+  async function ensureWalkTask(): Promise<{ id: string; title: string } | null> {
+    if (hasWalkTask) {
+      const existing = tasks.find((t) => /ウォーキング/i.test(t.title ?? ""));
+      return existing ? { id: existing.id, title: existing.title } : null;
     }
-    if (Object.keys(items).length === 0) {
-      alert("今日のタスクが見当たらない。タスクボードで先に1つ以上追加してね。");
-      return;
+    try {
+      const r = await fetch("/api/tasks", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "add",
+          title: WALK_ROUTINE_TITLE,
+          notes: "毎日の必須ルーチン。音声学習や音声入力と組み合わせ可。",
+          due: targetDay,
+          category: "personal",
+          urgency: "low",
+          importance: "high",
+          time: "quick",
+        }),
+      });
+      const data = await r.json();
+      if (data?.task?.id) return { id: data.task.id, title: WALK_ROUTINE_TITLE };
+    } catch (e) { console.error("ensureWalkTask failed", e); }
+    return null;
+  }
+
+  async function doCommit() {
+    if (committing) return;
+    setCommitting(true);
+    try {
+      const items: Commit["items"] = {};
+      for (const t of candidates) {
+        const w = TIME_WEIGHT_MIN[t.label?.time as string] ?? 60;
+        items[t.id] = { weight: w, title: t.title };
+      }
+      if (includeWalk) {
+        const walk = await ensureWalkTask();
+        if (walk) {
+          items[walk.id] = { weight: 30, title: walk.title };
+        }
+      }
+      if (Object.keys(items).length === 0) {
+        alert("今日のタスクが見当たらない。タスクボードで先に1つ以上追加してね。");
+        return;
+      }
+      const c: Commit = { date: targetDay, items };
+      saveCommit(c);
+      onRefresh();
+      setTick((x) => x + 1);
+    } finally {
+      setCommitting(false);
     }
-    const c: Commit = { date: targetDay, items };
-    saveCommit(c);
-    setTick((x) => x + 1);
   }
 
   function resetCommit() {
@@ -284,21 +325,32 @@ function DailyProgress({
       (a, t) => a + (TIME_WEIGHT_MIN[t.label?.time as string] ?? 60), 0
     );
     return (
-      <section className="card flex items-center gap-3 flex-wrap">
-        <div className="flex-1 min-w-0">
-          <div className="font-bold text-sm">🎯 今日のタスクを確定する</div>
-          <div className="text-xs text-gray-500 mt-0.5">
-            候補 {totalCand}件 / 見積 {Math.floor(totalCandMin / 60)}h{totalCandMin % 60}m
-            （長期=daysは除外）
+      <section className="card">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <div className="font-bold text-sm">🎯 今日のタスクを確定する</div>
+            <div className="text-xs text-gray-500 mt-0.5">
+              候補 {totalCand}件 / 見積 {Math.floor(totalCandMin / 60)}h{totalCandMin % 60}m
+              （長期=daysは除外）
+            </div>
           </div>
+          <button
+            onClick={doCommit}
+            disabled={committing || (candidates.length === 0 && !includeWalk)}
+            className="bg-[var(--accent)] text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50"
+          >
+            {committing ? "確定中…" : "これで確定する"}
+          </button>
         </div>
-        <button
-          onClick={doCommit}
-          disabled={candidates.length === 0}
-          className="bg-[var(--accent)] text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50"
-        >
-          これで確定する
-        </button>
+        <label className="flex items-center gap-2 mt-3 text-xs text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={includeWalk}
+            onChange={(e) => setIncludeWalk(e.target.checked)}
+          />
+          🚶 ウォーキング30分も入れる（音声学習や音声入力と組み合わせOK）
+          {hasWalkTask && <span className="text-purple-600">— 既に登録済み</span>}
+        </label>
       </section>
     );
   }

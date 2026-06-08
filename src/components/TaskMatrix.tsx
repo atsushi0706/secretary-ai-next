@@ -18,6 +18,13 @@ const CAT_LABEL = {
   by_time: "🔵 作業時間別",
 } as const;
 
+const CAT_SHORT = {
+  urgent_work: "🔴 緊急×重要",
+  important_work: "🟡 重要だが後で",
+  personal: "🟢 自分時間",
+  by_time: "🔵 作業時間別",
+} as const;
+
 const CAT_COLOR = {
   urgent_work: "#e2574c",
   important_work: "#e0a82e",
@@ -104,6 +111,36 @@ function CategoryCard({
     onRefresh();
   }
 
+  async function moveTo(t: Task, target: keyof typeof CAT_LABEL) {
+    if (target === t.bucket) return;
+    const fixed = CAT_FIXED[target];
+    await fetch("/api/tasks", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "label",
+        taskId: t.id,
+        ...fixed,
+        time: t.label.time,
+      }),
+    });
+    onRefresh();
+  }
+
+  async function changeTime(t: Task, time: "quick" | "today" | "days") {
+    await fetch("/api/tasks", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        action: "label",
+        taskId: t.id,
+        category: t.label.category,
+        urgency: t.label.urgency,
+        importance: t.label.importance,
+        time,
+      }),
+    });
+    onRefresh();
+  }
+
   const groupedByTime = catKey === "by_time"
     ? { quick: [] as Task[], today: [] as Task[], days: [] as Task[] }
     : null;
@@ -186,7 +223,7 @@ function CategoryCard({
                 {TIME_LABEL[tk]}
               </div>
               {groupedByTime[tk].map((t) => (
-                <TaskRow key={t.id} task={t} onComplete={complete} onDelete={del} />
+                <TaskRow key={t.id} task={t} onComplete={complete} onDelete={del} onMove={moveTo} onChangeTime={changeTime} />
               ))}
             </div>
           ))}
@@ -194,7 +231,7 @@ function CategoryCard({
       ) : (
         <div className="space-y-1">
           {items.map((t) => (
-            <TaskRow key={t.id} task={t} onComplete={complete} onDelete={del} />
+            <TaskRow key={t.id} task={t} onComplete={complete} onDelete={del} onMove={moveTo} onChangeTime={changeTime} />
           ))}
         </div>
       )}
@@ -203,20 +240,24 @@ function CategoryCard({
 }
 
 function TaskRow({
-  task, onComplete, onDelete,
+  task, onComplete, onDelete, onMove, onChangeTime,
 }: {
   task: Task;
   onComplete: (t: Task) => void;
   onDelete: (t: Task) => void;
+  onMove: (t: Task, target: keyof typeof CAT_LABEL) => void;
+  onChangeTime: (t: Task, time: "quick" | "today" | "days") => void;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
-    <div className="flex items-center gap-2 text-sm py-1 group">
+    <div className="flex items-center gap-2 text-sm py-1 group relative">
       <input
         type="checkbox"
         className="rounded"
         onChange={() => onComplete(task)}
       />
-      <span className="flex-1 truncate">{task.title}</span>
+      <span className="flex-1 truncate" title={task.title}>{task.title}</span>
       <span className="text-xs bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
         {TIME_LABEL[task.label.time as "quick" | "today" | "days"] ?? "📅"}
       </span>
@@ -226,11 +267,52 @@ function TaskRow({
         </span>
       )}
       <button
+        className="text-gray-400 hover:text-purple-600 px-1 opacity-60 group-hover:opacity-100"
+        onClick={() => setMenuOpen((v) => !v)}
+        title="移動・優先度変更"
+      >
+        ⋯
+      </button>
+      <button
         className="text-xs text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100"
         onClick={() => onDelete(task)}
+        title="削除"
       >
         🗑
       </button>
+
+      {menuOpen && (
+        <>
+          <div
+            className="fixed inset-0 z-10"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-purple-200 rounded-lg shadow-lg p-2 w-56 text-xs">
+            <div className="font-bold text-purple-700 mb-1">優先度を変更</div>
+            {(Object.keys(CAT_SHORT) as Array<keyof typeof CAT_SHORT>).map((k) => (
+              <button
+                key={k}
+                onClick={() => { onMove(task, k); setMenuOpen(false); }}
+                disabled={k === task.bucket}
+                className="w-full text-left px-2 py-1.5 rounded hover:bg-purple-50 disabled:opacity-40 disabled:bg-purple-50 disabled:font-bold"
+              >
+                {CAT_SHORT[k]} {k === task.bucket && "（現在）"}
+              </button>
+            ))}
+            <div className="font-bold text-purple-700 mt-2 mb-1 pt-2 border-t">所要時間を変更</div>
+            {(["quick", "today", "days"] as const).map((tk) => (
+              <button
+                key={tk}
+                onClick={() => { onChangeTime(task, tk); setMenuOpen(false); }}
+                disabled={tk === task.label.time}
+                className="w-full text-left px-2 py-1.5 rounded hover:bg-purple-50 disabled:opacity-40 disabled:bg-purple-50 disabled:font-bold"
+              >
+                {TIME_LABEL[tk]} {tk === task.label.time && "（現在）"}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

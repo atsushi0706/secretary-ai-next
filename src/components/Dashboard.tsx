@@ -138,6 +138,9 @@ export function Dashboard({ userName }: { userName: string }) {
 
         {/* ── メイン列 ── */}
         <div className="space-y-4 min-w-0">
+          {/* 今日のタスク進捗 */}
+          <DailyProgress targetDay={data.targetDay} tasks={data.tasks} onRefresh={() => setReloadKey((k) => k + 1)} />
+
           {/* 今日/明日の流れ（固定予定を時系列で見せる） */}
           <section className="card">
             <h2 className="font-bold text-base mb-2">
@@ -169,6 +172,189 @@ export function Dashboard({ userName }: { userName: string }) {
         </div>
       </div>
     </main>
+  );
+}
+
+// 重み (分): 完了の進捗バーで使う
+const TIME_WEIGHT_MIN: Record<string, number> = {
+  quick: 15,
+  today: 180,
+  days: 480,
+};
+
+type Commit = {
+  date: string;
+  // taskId -> weight (minutes)
+  items: Record<string, { weight: number; title: string }>;
+};
+
+function commitKey(date: string) {
+  return `secretary-ai-next.commit.${date}`;
+}
+
+function loadCommit(date: string): Commit | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = localStorage.getItem(commitKey(date));
+    if (!raw) return null;
+    const c = JSON.parse(raw) as Commit;
+    if (c.date !== date) return null;
+    return c;
+  } catch {
+    return null;
+  }
+}
+
+function saveCommit(c: Commit) {
+  if (typeof window === "undefined") return;
+  localStorage.setItem(commitKey(c.date), JSON.stringify(c));
+}
+
+function clearCommit(date: string) {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem(commitKey(date));
+}
+
+// 本日のタスク「確定」 + 進捗バー
+function DailyProgress({
+  targetDay, tasks, onRefresh,
+}: {
+  targetDay: string;
+  tasks: any[];
+  onRefresh: () => void;
+}) {
+  const [commit, setCommit] = useState<Commit | null>(null);
+  const [tick, setTick] = useState(0);
+
+  // クライアントマウント後に localStorage 読む
+  useEffect(() => {
+    setCommit(loadCommit(targetDay));
+  }, [targetDay, tick]);
+
+  // 「今日着手する」とみなすタスクの候補（確定前のプレビュー）
+  // - urgent_work / important_work / by_time の今日着手分（label.time != "days"）+ 期限が今日以前
+  const candidates = tasks.filter((t) => {
+    if (t.bucket === "personal") return false;
+    if (t.label?.time === "days") return false;
+    return true;
+  });
+
+  function doCommit() {
+    const items: Commit["items"] = {};
+    for (const t of candidates) {
+      const w = TIME_WEIGHT_MIN[t.label?.time as string] ?? 60;
+      items[t.id] = { weight: w, title: t.title };
+    }
+    if (Object.keys(items).length === 0) {
+      alert("今日のタスクが見当たらない。タスクボードで先に1つ以上追加してね。");
+      return;
+    }
+    const c: Commit = { date: targetDay, items };
+    saveCommit(c);
+    setTick((x) => x + 1);
+  }
+
+  function resetCommit() {
+    if (!confirm("今日の確定をやり直す？")) return;
+    clearCommit(targetDay);
+    setTick((x) => x + 1);
+  }
+
+  // 進捗計算
+  let pctTask = 0, pctWeight = 0, doneCount = 0, totalCount = 0, doneMin = 0, totalMin = 0;
+  if (commit) {
+    const stillOpen = new Set(tasks.map((t) => t.id));
+    const entries = Object.entries(commit.items);
+    totalCount = entries.length;
+    totalMin = entries.reduce((a, [, v]) => a + v.weight, 0);
+    for (const [id, v] of entries) {
+      if (!stillOpen.has(id)) {
+        doneCount++;
+        doneMin += v.weight;
+      }
+    }
+    pctTask = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
+    pctWeight = totalMin > 0 ? Math.round((doneMin / totalMin) * 100) : 0;
+  }
+
+  if (!commit) {
+    // 未確定 → CTAカード
+    const totalCand = candidates.length;
+    const totalCandMin = candidates.reduce(
+      (a, t) => a + (TIME_WEIGHT_MIN[t.label?.time as string] ?? 60), 0
+    );
+    return (
+      <section className="card flex items-center gap-3 flex-wrap">
+        <div className="flex-1 min-w-0">
+          <div className="font-bold text-sm">🎯 今日のタスクを確定する</div>
+          <div className="text-xs text-gray-500 mt-0.5">
+            候補 {totalCand}件 / 見積 {Math.floor(totalCandMin / 60)}h{totalCandMin % 60}m
+            （長期=daysは除外）
+          </div>
+        </div>
+        <button
+          onClick={doCommit}
+          disabled={candidates.length === 0}
+          className="bg-[var(--accent)] text-white text-sm font-bold px-4 py-2 rounded-lg disabled:opacity-50"
+        >
+          これで確定する
+        </button>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card">
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div className="font-bold text-sm">
+          🎯 今日の進捗
+          <span className="text-xs text-gray-500 ml-2 font-normal">
+            {doneCount}/{totalCount} 完了 ／ {Math.floor(doneMin / 60)}h{doneMin % 60}m済
+            ／ 見積 {Math.floor(totalMin / 60)}h{totalMin % 60}m
+          </span>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => { onRefresh(); setTick((x) => x + 1); }}
+            className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded"
+          >
+            🔄 反映
+          </button>
+          <button
+            onClick={resetCommit}
+            className="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded"
+          >
+            やり直し
+          </button>
+        </div>
+      </div>
+      <div className="space-y-2">
+        <div>
+          <div className="flex justify-between text-xs text-gray-600 mb-0.5">
+            <span>所要時間ベース</span>
+            <span className="font-bold tabular-nums">{pctWeight}%</span>
+          </div>
+          <div className="h-2.5 bg-purple-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gradient-to-r from-[var(--accent)] to-[var(--accent-dark)] transition-all"
+              style={{ width: `${pctWeight}%` }}
+            />
+          </div>
+        </div>
+        <div>
+          <div className="flex justify-between text-xs text-gray-500 mb-0.5">
+            <span>件数ベース</span>
+            <span className="tabular-nums">{pctTask}%</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className="h-full bg-gray-400 transition-all"
+              style={{ width: `${pctTask}%` }}
+            />
+          </div>
+        </div>
+      </div>
+    </section>
   );
 }
 

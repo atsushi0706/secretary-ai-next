@@ -196,16 +196,6 @@ export function Chat({
 
   return (
     <div className="chat-stage flex flex-col" style={{ height: 600 }}>
-      {/* 中央に大きなキャラ立ち絵 */}
-      <Image
-        src="/kiyose.png"
-        alt="清瀬リンク"
-        width={260}
-        height={260}
-        className="stage-avatar"
-        priority
-      />
-
       {/* 上部ヘッダー（半透明白バー） */}
       <div className="stage-header">
         <Image

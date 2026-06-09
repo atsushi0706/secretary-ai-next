@@ -181,9 +181,12 @@ export function Chat({
             if (data.name === "web_search") setSearching(true);
           } else if (event === "added") {
             needsRefresh = true;
+          } else if (event === "calendar_added") {
+            needsRefresh = true;
           } else if (event === "done") {
             setSearching(false);
             if (data.addedTitles?.length > 0) needsRefresh = true;
+            if (data.addedEvents?.length > 0) needsRefresh = true;
           } else if (event === "error") {
             setMessages((prev) => {
               const arr = [...prev];

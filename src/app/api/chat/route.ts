@@ -3,7 +3,7 @@ import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA, extractJson } from "
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing,
 } from "@/lib/supabase";
-import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, addTask } from "@/lib/google";
+import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, addTask, addCalendarEvent } from "@/lib/google";
 
 const ADD_INTENT_KEYWORDS = [
   "入れといて", "入れておいて", "入れとい", "追加しといて", "追加しておいて",
@@ -225,12 +225,53 @@ JSONのみ:
           }
         }
 
+        // AIの応答内に <calendar_events>...</calendar_events> タグがあれば、予定を実体化する
+        const eventTagMatch = fullReply.match(/<calendar_events>([\s\S]*?)<\/calendar_events>/);
+        const addedEvents: string[] = [];
+        if (eventTagMatch) {
+          try {
+            const evs = extractJson<any[]>(eventTagMatch[1]) ?? [];
+            for (const e of Array.isArray(evs) ? evs : []) {
+              const title = String(e.title ?? "").trim();
+              const date = String(e.date ?? "").trim();
+              const start = String(e.start ?? "").trim();
+              const end = String(e.end ?? "").trim();
+              if (!title || !date || !start) continue;
+              const endTime = end || (() => {
+                const [h, m] = start.split(":").map(Number);
+                const t = h * 60 + (m || 0) + 30;
+                return `${String(Math.floor(t / 60)).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`;
+              })();
+              try {
+                await addCalendarEvent(userId, {
+                  title,
+                  startISO: `${date}T${start}:00+09:00`,
+                  endISO: `${date}T${endTime}:00+09:00`,
+                  description: e.description || undefined,
+                });
+                addedEvents.push(`${date} ${start}〜${endTime} ${title}`);
+              } catch (err: any) {
+                console.error("addCalendarEvent failed:", err);
+                send("error", { message: `カレンダー登録失敗: ${err?.message ?? err}。ログアウト→再ログインで calendar 書き込みを許可してください。` });
+              }
+            }
+            if (addedEvents.length > 0) {
+              send("calendar_added", { events: addedEvents });
+            }
+          } catch (e) {
+            console.error("parse calendar_events failed:", e);
+          }
+        }
+
         // タグはユーザー画面に残さない・保存もタグを除いた版で
-        const cleanReply = fullReply.replace(/<tasks_to_add>[\s\S]*?<\/tasks_to_add>/g, "").trim();
+        const cleanReply = fullReply
+          .replace(/<tasks_to_add>[\s\S]*?<\/tasks_to_add>/g, "")
+          .replace(/<calendar_events>[\s\S]*?<\/calendar_events>/g, "")
+          .trim();
         await saveMessage(userId, today, mode, "assistant", cleanReply);
 
         // タグを除いた本文をフロントにも通知（タイピング中に一瞬見えたタグを差し替える）
-        if (tagMatch) {
+        if (tagMatch || eventTagMatch) {
           send("replace", { text: cleanReply });
         }
 
@@ -244,7 +285,7 @@ JSONのみ:
           }
         }
 
-        send("done", { addedTitles });
+        send("done", { addedTitles, addedEvents });
       } catch (e: any) {
         console.error("chat stream error:", e);
         send("error", { message: String(e?.message ?? e) });

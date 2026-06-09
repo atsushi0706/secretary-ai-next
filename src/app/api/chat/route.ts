@@ -3,7 +3,8 @@ import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA, extractJson } from "
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing,
 } from "@/lib/supabase";
-import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, addTask, addCalendarEvent } from "@/lib/google";
+import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, addTask, addCalendarEvent, completeTask, deleteTask } from "@/lib/google";
+import { clearManualLabel } from "@/lib/supabase";
 
 const ADD_INTENT_KEYWORDS = [
   "入れといて", "入れておいて", "入れとい", "追加しといて", "追加しておいて",
@@ -225,6 +226,45 @@ JSONのみ:
           }
         }
 
+        // AIの応答内に <tasks_to_remove>...</tasks_to_remove> タグがあれば削除/完了
+        const removeTagMatch = fullReply.match(/<tasks_to_remove>([\s\S]*?)<\/tasks_to_remove>/);
+        const removedTitles: string[] = [];
+        if (removeTagMatch) {
+          try {
+            const existingTasks = await getTasks(userId);
+            const removes = extractJson<any[]>(removeTagMatch[1]) ?? [];
+            for (const r of Array.isArray(removes) ? removes : []) {
+              const titleMatch = String(r.title_match ?? "").trim().toLowerCase();
+              const action = (r.action === "complete") ? "complete" : "delete";
+              if (!titleMatch) continue;
+              // 部分一致で対象を特定
+              const target = existingTasks.find((t: any) =>
+                String(t.title || "").toLowerCase().includes(titleMatch)
+              );
+              if (!target) {
+                console.warn("remove target not found:", titleMatch);
+                continue;
+              }
+              try {
+                if (action === "delete") {
+                  await deleteTask(userId, target.tasklist_id, target.id);
+                  await clearManualLabel(userId, target.id);
+                } else {
+                  await completeTask(userId, target.tasklist_id, target.id);
+                }
+                removedTitles.push(target.title);
+              } catch (e) {
+                console.error("remove task failed:", e);
+              }
+            }
+            if (removedTitles.length > 0) {
+              send("removed", { titles: removedTitles });
+            }
+          } catch (e) {
+            console.error("parse tasks_to_remove failed:", e);
+          }
+        }
+
         // AIの応答内に <calendar_events>...</calendar_events> タグがあれば、予定を実体化する
         const eventTagMatch = fullReply.match(/<calendar_events>([\s\S]*?)<\/calendar_events>/);
         const addedEvents: string[] = [];
@@ -266,12 +306,13 @@ JSONのみ:
         // タグはユーザー画面に残さない・保存もタグを除いた版で
         const cleanReply = fullReply
           .replace(/<tasks_to_add>[\s\S]*?<\/tasks_to_add>/g, "")
+          .replace(/<tasks_to_remove>[\s\S]*?<\/tasks_to_remove>/g, "")
           .replace(/<calendar_events>[\s\S]*?<\/calendar_events>/g, "")
           .trim();
         await saveMessage(userId, today, mode, "assistant", cleanReply);
 
         // タグを除いた本文をフロントにも通知（タイピング中に一瞬見えたタグを差し替える）
-        if (tagMatch || eventTagMatch) {
+        if (tagMatch || eventTagMatch || removeTagMatch) {
           send("replace", { text: cleanReply });
         }
 
@@ -285,7 +326,7 @@ JSONのみ:
           }
         }
 
-        send("done", { addedTitles, addedEvents });
+        send("done", { addedTitles, addedEvents, removedTitles });
       } catch (e: any) {
         console.error("chat stream error:", e);
         send("error", { message: String(e?.message ?? e) });

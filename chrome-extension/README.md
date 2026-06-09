@@ -29,7 +29,7 @@
 
 ## ブロックリスト初期値
 
-```
+```text
 x.com / twitter.com
 youtube.com / youtu.be
 instagram.com

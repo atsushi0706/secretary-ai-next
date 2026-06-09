@@ -196,24 +196,5 @@ chrome.runtime.onInstalled.addListener(() => {
   }
 });
 
-// popup から「サイドパネル開く」が来たら開く
-chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
-  if (msg.type === "openSidePanel") {
-    (async () => {
-      try {
-        if (sender.tab && sender.tab.windowId !== undefined && chrome.sidePanel?.open) {
-          await chrome.sidePanel.open({ windowId: sender.tab.windowId });
-          sendResponse({ ok: true });
-        } else {
-          // popup から呼ばれた場合は currentWindow を取得
-          const win = await chrome.windows.getCurrent();
-          await chrome.sidePanel.open({ windowId: win.id });
-          sendResponse({ ok: true });
-        }
-      } catch (e) {
-        sendResponse({ ok: false, error: String(e?.message ?? e) });
-      }
-    })();
-    return true;
-  }
-});
+// 注: sidePanel.open() は popup.js 側でユーザー操作起点に直接呼ぶ。
+// background から呼ぶと "may only be called in response to a user gesture" エラーになる。

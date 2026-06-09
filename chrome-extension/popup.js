@@ -115,11 +115,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("openSidePanel").addEventListener("click", async () => {
-    const res = await send("openSidePanel");
-    if (res?.ok) {
-      window.close(); // popup を閉じる
-    } else {
-      alert("サイドパネルを開けませんでした: " + (res?.error || "Chrome 114 以降が必要です"));
+    // sidePanel.open() はユーザー操作起点でしか呼べないので popup 側で直接実行
+    try {
+      const win = await chrome.windows.getCurrent();
+      await chrome.sidePanel.open({ windowId: win.id });
+      window.close();
+    } catch (e) {
+      alert("サイドパネルを開けませんでした: " + (e?.message ?? String(e)) + "\n(Chrome 114 以降が必要)");
     }
   });
 });

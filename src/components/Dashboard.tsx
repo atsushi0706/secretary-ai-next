@@ -8,6 +8,7 @@ import { TaskMatrix } from "./TaskMatrix";
 import { Chat } from "./Chat";
 import { MonthCalendar } from "./MonthCalendar";
 import { WeekCalendarCompact } from "./WeekCalendarCompact";
+import { TimerWidget } from "./TimerWidget";
 import { syncTodayProgress, type TodayProgress } from "@/lib/todayProgress";
 
 type Bootstrap = {
@@ -176,6 +177,9 @@ export function Dashboard({ userName }: { userName: string }) {
               <LastLoadedBadge ts={lastLoadedAt} stale={Date.now() - lastLoadedAt > STALE_AFTER_MS} />
             )}
           </section>
+
+          {/* タイマー (30分 / 5分) */}
+          <TimerWidget />
 
           {/* 月/週 タブ切替カレンダー */}
           <section className="card">

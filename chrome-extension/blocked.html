@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>集中タイム中</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+      background: linear-gradient(160deg, #7a6dd6 0%, #6358c5 40%, #2c2c2e 100%);
+      color: #fff;
+      min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      padding: 24px;
+    }
+    .wrap {
+      max-width: 520px; text-align: center;
+      background: rgba(255,255,255,.08);
+      backdrop-filter: blur(10px);
+      border-radius: 24px;
+      padding: 40px 32px;
+      border: 1px solid rgba(255,255,255,.15);
+    }
+    img.avatar {
+      width: 130px; height: 130px; border-radius: 50%;
+      border: 3px solid #fff;
+      box-shadow: 0 4px 24px rgba(0,0,0,.3);
+      margin-bottom: 20px;
+    }
+    h1 { font-size: 28px; font-weight: 800; margin-bottom: 8px; letter-spacing: .03em; }
+    .msg {
+      font-size: 15px; line-height: 1.7; opacity: .92;
+      margin-bottom: 28px; white-space: pre-line;
+    }
+    .quote {
+      background: rgba(0,0,0,.18); border-radius: 12px;
+      padding: 14px 18px; font-size: 14px; font-style: italic;
+      margin-bottom: 20px; border-left: 3px solid #f6c84c;
+    }
+    .actions {
+      display: flex; flex-direction: column; gap: 10px;
+    }
+    button {
+      background: #fff; color: #5a4ab8;
+      font-weight: 800; font-size: 14px; padding: 12px 20px;
+      border: none; border-radius: 12px; cursor: pointer;
+      transition: opacity .15s;
+    }
+    button:hover { opacity: .9; }
+    .ghost {
+      background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.4);
+      font-size: 12px; font-weight: 600;
+    }
+    .from {
+      font-size: 11px; opacity: .5; margin-top: 16px;
+      word-break: break-all;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img src="icons/icon128.png" class="avatar" alt="清瀬リンク" />
+    <h1>いま、集中タイム中。</h1>
+    <p class="msg">
+      ここは集中モード中ブロック対象。
+      今やってる作業に戻ろう？
+    </p>
+    <div class="quote" id="quote">
+      「気がそれた瞬間に気づけたのは、半分戻ってきたのと同じ」
+    </div>
+    <div class="actions">
+      <button onclick="window.history.back()">← さっき開いてたページに戻る</button>
+      <button class="ghost" onclick="chrome.runtime.sendMessage({type:'setFocus',value:false},()=>{location.reload()})">
+        集中モードを切る（緊急用）
+      </button>
+    </div>
+    <div class="from" id="from"></div>
+  </div>
+  <script>
+    // ランダム引用
+    const quotes = [
+      "気がそれた瞬間に気づけたのは、半分戻ってきたのと同じ",
+      "5分の脱線は20分の戻り時間に化ける。今戻ろう。",
+      "やってる作業が一番のドーパミン源だったの、忘れた？",
+      "見たかったやつは、終わってからにしよう。逃げない。",
+      "集中の波は20分かけて作る。今切ったらまた最初から。",
+    ];
+    document.getElementById("quote").textContent =
+      "「" + quotes[Math.floor(Math.random() * quotes.length)] + "」";
+    const params = new URLSearchParams(location.search);
+    const from = params.get("from");
+    if (from) document.getElementById("from").textContent = "blocked: " + decodeURIComponent(from);
+  </script>
+</body>
+</html>

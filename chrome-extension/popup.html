@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>清瀬リンク 集中モード</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div class="header">
+    <img src="icons/icon128.png" class="avatar" alt="" />
+    <div>
+      <div class="title">清瀬リンク</div>
+      <div class="sub">集中モード</div>
+    </div>
+  </div>
+
+  <section class="card">
+    <label class="toggle-row">
+      <span class="toggle-label">🎯 集中モード</span>
+      <input type="checkbox" id="focusToggle" class="toggle" />
+    </label>
+    <div class="focus-status" id="focusStatus">OFF</div>
+  </section>
+
+  <section class="card">
+    <div class="row">
+      <span>📑 タブ上限</span>
+      <input type="number" id="tabLimit" min="2" max="20" />
+    </div>
+    <div class="row">
+      <span>🍅 集中(分)</span>
+      <input type="number" id="pomoWork" min="5" max="90" />
+    </div>
+    <div class="row">
+      <span>☕ 休憩(分)</span>
+      <input type="number" id="pomoBreak" min="1" max="30" />
+    </div>
+    <button id="saveSettings" class="btn-secondary">設定を保存</button>
+  </section>
+
+  <section class="card">
+    <div class="pomo-state" id="pomoState">待機中</div>
+    <div class="pomo-timer" id="pomoTimer">--:--</div>
+    <div class="pomo-actions">
+      <button id="startPomo" class="btn-primary">▶ 集中スタート</button>
+      <button id="stopPomo" class="btn-secondary">停止</button>
+    </div>
+    <div class="focus-total">
+      今日の集中合計: <span id="todayFocus">0分</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="row-label">🚫 ブロックリスト（1行1ドメイン）</div>
+    <textarea id="blockList" rows="6"></textarea>
+    <button id="saveBlock" class="btn-secondary">リストを保存</button>
+  </section>
+
+  <script src="popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "清瀬リンク 集中モード",
+  "version": "1.0.0",
+  "description": "タブ上限+サイトブロック+ポモドーロ。仕事中に他を見ちゃう淳くん専用。",
+  "permissions": ["tabs", "storage", "notifications", "alarms", "webNavigation"],
+  "host_permissions": ["<all_urls>"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon128.png",
+      "48": "icons/icon128.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon128.png",
+    "48": "icons/icon128.png",
+    "128": "icons/icon128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["blocked.html", "icons/*"],
+      "matches": ["<all_urls>"]
+    }
+  ]
+}

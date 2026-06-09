@@ -113,4 +113,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     await send("stopPomo");
     await render();
   });
+
+  $("openSidePanel").addEventListener("click", async () => {
+    const res = await send("openSidePanel");
+    if (res?.ok) {
+      window.close(); // popup を閉じる
+    } else {
+      alert("サイドパネルを開けませんでした: " + (res?.error || "Chrome 114 以降が必要です"));
+    }
+  });
 });

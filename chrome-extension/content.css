@@ -1,0 +1,91 @@
+/* 全ページ右下に出すフローティングタイマー */
+#kiyose-timer-badge {
+  position: fixed;
+  bottom: 16px;
+  right: 16px;
+  z-index: 2147483600; /* かなり最前面 */
+  background: linear-gradient(135deg, rgba(122, 109, 214, 0.97), rgba(99, 88, 197, 0.97));
+  color: #fff;
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(80, 80, 130, 0.32);
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  cursor: grab;
+  user-select: none;
+  min-width: 130px;
+  transition: opacity .2s;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+#kiyose-timer-badge.dragging { cursor: grabbing; opacity: .85; }
+
+#kiyose-timer-badge .ktb-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,.6);
+  background: #fff;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+#kiyose-timer-badge .ktb-body {
+  display: flex; flex-direction: column; line-height: 1.1;
+  min-width: 60px;
+}
+#kiyose-timer-badge .ktb-state {
+  font-size: 10px; font-weight: 700; opacity: .9;
+}
+#kiyose-timer-badge .ktb-time {
+  font-size: 18px; font-weight: 800; letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+}
+#kiyose-timer-badge .ktb-actions {
+  display: flex; gap: 4px; margin-left: 6px;
+}
+#kiyose-timer-badge button {
+  background: rgba(255,255,255,.18);
+  border: none;
+  color: #fff;
+  width: 26px; height: 26px;
+  border-radius: 8px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+#kiyose-timer-badge button:hover { background: rgba(255,255,255,.32); }
+
+#kiyose-timer-badge.work {
+  background: linear-gradient(135deg, rgba(122, 109, 214, 0.97), rgba(99, 88, 197, 0.97));
+}
+#kiyose-timer-badge.break {
+  background: linear-gradient(135deg, rgba(63, 178, 127, 0.97), rgba(47, 152, 105, 0.97));
+}
+#kiyose-timer-badge.minimized {
+  min-width: 0;
+  padding: 6px 8px;
+}
+#kiyose-timer-badge.minimized .ktb-body,
+#kiyose-timer-badge.minimized .ktb-actions { display: none; }
+
+/* PiP 内のスタイル */
+.kiyose-pip-root {
+  position: fixed; inset: 0;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #7a6dd6 0%, #6358c5 50%, #2c2c2e 100%);
+  color: #fff;
+  font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
+  padding: 20px;
+}
+.kiyose-pip-root.break {
+  background: linear-gradient(160deg, #3fb27f 0%, #2f9869 50%, #1a4e36 100%);
+}
+.kiyose-pip-state { font-size: 13px; opacity: .9; margin-bottom: 4px; }
+.kiyose-pip-time {
+  font-size: 56px; font-weight: 900;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+}
+.kiyose-pip-hint { font-size: 11px; opacity: .55; margin-top: 8px; }

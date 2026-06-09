@@ -28,12 +28,15 @@ async function render() {
   // 設定
   $("tabLimit").value = s.tabLimit;
   $("pomoWork").value = s.pomoWorkMin;
+  $("pomoPrep").value = s.pomoPrepSec;
   $("pomoBreak").value = s.pomoBreakMin;
   $("blockList").value = (s.blockList || []).join("\n");
 
   // ポモドーロ状態
   if (s.pomoState === "work") {
     $("pomoState").textContent = "🍅 集中タイム";
+  } else if (s.pomoState === "prep") {
+    $("pomoState").textContent = "✋ 休む準備";
   } else if (s.pomoState === "break") {
     $("pomoState").textContent = "☕ 休憩タイム";
   } else {
@@ -64,8 +67,8 @@ function startTicker() {
     const s = await send("getState");
     if (!s) return;
     updatePomoTimer(s);
-    // 状態変化(work->break など) も popup で拾うため都度反映
     if (s.pomoState === "work") $("pomoState").textContent = "🍅 集中タイム";
+    else if (s.pomoState === "prep") $("pomoState").textContent = "✋ 休む準備";
     else if (s.pomoState === "break") $("pomoState").textContent = "☕ 休憩タイム";
     else $("pomoState").textContent = "待機中";
   }, 1000);
@@ -84,7 +87,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("saveSettings").addEventListener("click", async () => {
     const patch = {
       tabLimit: parseInt($("tabLimit").value, 10) || 4,
-      pomoWorkMin: parseInt($("pomoWork").value, 10) || 25,
+      pomoWorkMin: parseInt($("pomoWork").value, 10) || 30,
+      pomoPrepSec: parseInt($("pomoPrep").value, 10) || 30,
       pomoBreakMin: parseInt($("pomoBreak").value, 10) || 5,
     };
     await send("updateSettings", { patch });

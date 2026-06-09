@@ -131,7 +131,7 @@
         });
       });
       if (!s) return;
-      const running = s.pomoState === "work" || s.pomoState === "break";
+      const running = s.pomoState === "work" || s.pomoState === "prep" || s.pomoState === "break";
       if (!running) {
         removeBadge();
         if (pipWindow) {
@@ -142,7 +142,10 @@
       }
       createBadge();
       const left = Math.max(0, Math.ceil((s.pomoEndAt - Date.now()) / 1000));
-      const stateLabel = s.pomoState === "work" ? "🍅 集中中" : "☕ 休憩中";
+      const stateLabel =
+        s.pomoState === "work" ? "🍅 集中中" :
+        s.pomoState === "prep" ? "✋ 休む準備" :
+        "☕ 休憩中";
       const timeText = fmt(left);
 
       // 閉じてた人がもし表示できるよう、display を解除
@@ -152,6 +155,7 @@
       }
 
       badge.classList.toggle("work", s.pomoState === "work");
+      badge.classList.toggle("prep", s.pomoState === "prep");
       badge.classList.toggle("break", s.pomoState === "break");
       badge.querySelector(".ktb-state").textContent = stateLabel;
       badge.querySelector(".ktb-time").textContent = timeText;

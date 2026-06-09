@@ -26,13 +26,15 @@ const DEFAULT_STATE = {
     "netflix.com",
     "amazon.co.jp/gp/video",
   ],
-  pomoState: "idle",        // idle | work | break
-  pomoEndAt: 0,             // タイマー終了時刻(ms)
-  pomoWorkMin: 25,
-  pomoBreakMin: 5,
+  // ポモドーロ: idle → work(30分) → prep(30秒「休む準備」) → break(5分) → work ...
+  pomoState: "idle",
+  pomoEndAt: 0,
+  pomoWorkMin: 30,          // 集中(分)
+  pomoPrepSec: 30,          // 休む準備(秒)
+  pomoBreakMin: 5,          // 休憩(分)
   // 累積記録
-  todayFocusSec: 0,         // 今日の集中合計(秒)
-  todayDate: "",            // YYYY-MM-DD
+  todayFocusSec: 0,
+  todayDate: "",
 };
 
 async function getState() {
@@ -106,14 +108,14 @@ chrome.webNavigation.onBeforeNavigate.addListener(async (details) => {
   }
 });
 
-// ---- ポモドーロ ----
+// ---- ポモドーロ: work(30分) → prep(30秒) → break(5分) → work ループ ----
 async function startPomo() {
   await ensureTodayKey();
   const s = await getState();
   const endAt = Date.now() + s.pomoWorkMin * 60 * 1000;
   await setState({ pomoState: "work", pomoEndAt: endAt });
   chrome.alarms.create("pomo", { when: endAt });
-  notify("🍅 集中スタート", `${s.pomoWorkMin}分の集中タイム。`);
+  notify("🍅 集中スタート", `${s.pomoWorkMin}分の集中タイム。手を動かそう。`);
 }
 
 async function stopPomo() {
@@ -125,23 +127,33 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
   if (alarm.name !== "pomo") return;
   const s = await getState();
   if (s.pomoState === "work") {
-    // 集中時間を累積
+    // 集中完了 → 集中時間を累積、「休む準備」に入る(短い・音は軽く)
     await ensureTodayKey();
     const cur = await getState();
     await setState({
       todayFocusSec: cur.todayFocusSec + cur.pomoWorkMin * 60,
     });
-    // 休憩開始
+    const endAt = Date.now() + s.pomoPrepSec * 1000;
+    await setState({ pomoState: "prep", pomoEndAt: endAt });
+    chrome.alarms.create("pomo", { when: endAt });
+    notify("✋ お疲れさま", `${s.pomoPrepSec}秒で休憩に入るよ。区切りつけて。`);
+  } else if (s.pomoState === "prep") {
+    // 準備完了 → 休憩開始
     const endAt = Date.now() + s.pomoBreakMin * 60 * 1000;
     await setState({ pomoState: "break", pomoEndAt: endAt });
     chrome.alarms.create("pomo", { when: endAt });
-    notify("☕ 休憩タイム", `${s.pomoBreakMin}分の休憩。深呼吸。`);
+    notify("☕ 休憩タイム", `${s.pomoBreakMin}分。深呼吸・伸び・水分。`);
   } else if (s.pomoState === "break") {
-    // 次の集中を自動で始めるかは設定により分岐 — シンプルに自動で次の集中へ
-    const endAt = Date.now() + s.pomoWorkMin * 60 * 1000;
-    await setState({ pomoState: "work", pomoEndAt: endAt });
-    chrome.alarms.create("pomo", { when: endAt });
-    notify("🍅 次の集中", `${s.pomoWorkMin}分。手を動かそう。`);
+    // 休憩完了 → 自動で次の集中へ（focusOn のときのみループ。OFFなら停止）
+    if (s.focusOn) {
+      const endAt = Date.now() + s.pomoWorkMin * 60 * 1000;
+      await setState({ pomoState: "work", pomoEndAt: endAt });
+      chrome.alarms.create("pomo", { when: endAt });
+      notify("🍅 次の集中", `${s.pomoWorkMin}分。再開しよう。`);
+    } else {
+      await setState({ pomoState: "idle", pomoEndAt: 0 });
+      notify("✅ ポモドーロ終了", "集中モードがOFFなので停止しました。");
+    }
   }
 });
 
@@ -165,11 +177,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse(await getState());
     } else if (msg.type === "setFocus") {
       await setState({ focusOn: !!msg.value });
+      const cur = await getState();
       if (msg.value) {
         await enforceTabLimit();
-        notify("🎯 集中モードON", "余計なサイトはブロックされます。");
+        notify("🎯 集中モードON", "余計なサイトはブロック。ポモドーロも開始します。");
+        // 集中モードONで自動的にポモドーロも開始(まだ走ってなければ)
+        if (cur.pomoState === "idle") {
+          await startPomo();
+        }
       } else {
-        notify("集中モードOFF", "お疲れさま。");
+        notify("集中モードOFF", "お疲れさま。ポモドーロも停止します。");
+        // 集中モードOFFでポモドーロも停止
+        await stopPomo();
       }
       sendResponse(await getState());
     } else if (msg.type === "updateSettings") {

@@ -60,6 +60,9 @@
 #kiyose-timer-badge.work {
   background: linear-gradient(135deg, rgba(122, 109, 214, 0.97), rgba(99, 88, 197, 0.97));
 }
+#kiyose-timer-badge.prep {
+  background: linear-gradient(135deg, rgba(246, 200, 76, 0.97), rgba(230, 149, 0, 0.97));
+}
 #kiyose-timer-badge.break {
   background: linear-gradient(135deg, rgba(63, 178, 127, 0.97), rgba(47, 152, 105, 0.97));
 }

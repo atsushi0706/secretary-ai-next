@@ -71,31 +71,42 @@ export const WINDOW_COLOR: Record<Window3, string> = {
 };
 
 // due 日付と label から「いつ着手」を決める
-// - due が今日以前 → today
-// - due が今週(日曜まで)以内 → this_week
+// - due が今日(JST)以前 → today
+// - due が今週(JST日曜まで)以内 → this_week
 // - due がそれ以降 → this_month
 // - due 無し: urgency=high or importance=high → today、それ以外 → this_week
+//
+// 重要: Vercel サーバは UTC で動いている。JST(UTC+9)基準で日付比較しないと
+// JST 00時〜09時の間は「昨日」扱いになって"today"枠が空になるバグが出る。
+// すべて YYYY-MM-DD の文字列比較で行う（タイムゾーンの罠を完全に避ける）。
 export function windowOf(label: Partial<Label> | undefined, due: string | null | undefined): Window3 {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
   if (!due) {
     if ((label?.urgency ?? "low") === "high" || (label?.importance ?? "low") === "high") return "today";
     return "this_week";
   }
-  try {
-    const d = new Date(due);
-    d.setHours(0, 0, 0, 0);
-    if (d.getTime() <= today.getTime()) return "today";
-    // 週末(日曜)まで
-    const dow = today.getDay(); // 0=日,1=月,..,6=土
-    const daysToSun = (7 - dow) % 7;
-    const sunEnd = new Date(today);
-    sunEnd.setDate(sunEnd.getDate() + daysToSun);
-    if (d.getTime() <= sunEnd.getTime()) return "this_week";
-    return "this_month";
-  } catch {
-    return "this_week";
-  }
+  // due は "YYYY-MM-DD" もしくは "YYYY-MM-DDT00:00:00.000Z" のISO形式。
+  // 日付部分10桁だけ取り出して文字列比較する。
+  const dueDate = String(due).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDate)) return "this_week";
+
+  // JST の現在日付・今週日曜日付を YYYY-MM-DD で取得
+  const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
+  const jstNow = new Date(Date.now() + JST_OFFSET_MS);
+  const y = jstNow.getUTCFullYear();
+  const m = jstNow.getUTCMonth();
+  const d = jstNow.getUTCDate();
+  const todayJst = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+
+  // JST 上の曜日 (0=Sun..6=Sat)
+  const jstDow = jstNow.getUTCDay();
+  const daysToSun = (7 - jstDow) % 7;
+  const sunMs = jstNow.getTime() + daysToSun * 86400000;
+  const sun = new Date(sunMs);
+  const sunStr = `${sun.getUTCFullYear()}-${String(sun.getUTCMonth() + 1).padStart(2, "0")}-${String(sun.getUTCDate()).padStart(2, "0")}`;
+
+  if (dueDate <= todayJst) return "today";
+  if (dueDate <= sunStr) return "this_week";
+  return "this_month";
 }
 
 // 並び順スコア: urgency=high & importance=high が最上位

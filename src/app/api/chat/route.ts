@@ -184,15 +184,61 @@ JSONのみ:
           }
         }
 
-        await saveMessage(userId, today, mode, "assistant", fullReply);
+        // AIの応答内に <tasks_to_add>...</tasks_to_add> タグがあれば、実体化する
+        const tagMatch = fullReply.match(/<tasks_to_add>([\s\S]*?)<\/tasks_to_add>/);
+        if (tagMatch) {
+          try {
+            // 既存タスク一覧（再追加避け）
+            const existingTasks = await getTasks(userId);
+            const existingLower = new Set(
+              existingTasks.map((t: any) => String(t.title || "").toLowerCase().trim()),
+            );
+            const cands = extractJson<any[]>(tagMatch[1]) ?? [];
+            for (const c of Array.isArray(cands) ? cands : []) {
+              const title = String(c.title ?? "").trim();
+              if (!title) continue;
+              if (existingLower.has(title.toLowerCase())) continue;
+              try {
+                const created = await addTask(userId, title, {
+                  notes: c.notes ?? "",
+                  due: c.due || null,
+                });
+                if (created.id) {
+                  await setManualLabel(userId, created.id, {
+                    category: ["work", "personal"].includes(c.category) ? c.category : "work",
+                    urgency: ["high", "low"].includes(c.urgency) ? c.urgency : "low",
+                    importance: ["high", "low"].includes(c.importance) ? c.importance : "high",
+                    time_label: ["quick", "mid", "long"].includes(c.time) ? c.time : "mid",
+                    reason: "AI判定で追加",
+                  });
+                  addedTitles.push(title);
+                }
+              } catch (e) {
+                console.error("tag addTask failed:", e);
+              }
+            }
+            if (addedTitles.length > 0) {
+              send("added", { titles: addedTitles });
+            }
+          } catch (e) {
+            console.error("parse tasks_to_add failed:", e);
+          }
+        }
+
+        // タグはユーザー画面に残さない・保存もタグを除いた版で
+        const cleanReply = fullReply.replace(/<tasks_to_add>[\s\S]*?<\/tasks_to_add>/g, "").trim();
+        await saveMessage(userId, today, mode, "assistant", cleanReply);
+
+        // タグを除いた本文をフロントにも通知（タイピング中に一瞬見えたタグを差し替える）
+        if (tagMatch) {
+          send("replace", { text: cleanReply });
+        }
 
         // 時間割っぽい応答(時刻範囲が3個以上)なら briefing として保存
-        // 翌日のダッシュボードで参照できるよう、夜モードは target=明日(targetDay)に保存
-        // 朝モードは target=今日(today)
-        const timeMatches = fullReply.match(/\d{1,2}:\d{2}\s*[-–〜~]\s*\d{1,2}:\d{2}/g);
+        const timeMatches = cleanReply.match(/\d{1,2}:\d{2}\s*[-–〜~]\s*\d{1,2}:\d{2}/g);
         if (timeMatches && timeMatches.length >= 3) {
           try {
-            await saveBriefing(userId, targetDay, mode, fullReply);
+            await saveBriefing(userId, targetDay, mode, cleanReply);
           } catch (e) {
             console.error("saveBriefing failed:", e);
           }

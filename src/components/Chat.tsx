@@ -167,6 +167,16 @@ export function Chat({
               }
               return arr;
             });
+          } else if (event === "replace") {
+            // タグ除去後の本文で最後の assistant メッセージを置き換え
+            setMessages((prev) => {
+              const arr = [...prev];
+              const last = arr[arr.length - 1];
+              if (last?.role === "assistant") {
+                arr[arr.length - 1] = { ...last, content: data.text };
+              }
+              return arr;
+            });
           } else if (event === "tool") {
             if (data.name === "web_search") setSearching(true);
           } else if (event === "added") {

@@ -4,6 +4,10 @@
 (() => {
   if (window.top !== window.self) return;
 
+  // 診断: F12 Console で "kiyose-timer" 検索すれば動いているか確認できる
+  const DEBUG_TAG = "[kiyose-timer]";
+  console.log(`${DEBUG_TAG} loaded on ${location.href}`);
+
   let badge = null;
   let pipWindow = null;
   let dragOffset = null;
@@ -201,17 +205,32 @@
     }
   }
 
+  let firstTickReported = false;
   async function tick() {
     let s = null;
     try {
       s = await new Promise((resolve) => {
         chrome.runtime.sendMessage({ type: "getState" }, (res) => {
-          if (chrome.runtime.lastError) { resolve(null); return; }
+          if (chrome.runtime.lastError) {
+            console.warn(`${DEBUG_TAG} sendMessage failed:`, chrome.runtime.lastError.message);
+            resolve(null);
+            return;
+          }
           resolve(res);
         });
       });
-    } catch { /* ignore */ }
+    } catch (e) {
+      console.warn(`${DEBUG_TAG} tick error:`, e);
+    }
     if (!s) return;
+    if (!firstTickReported) {
+      firstTickReported = true;
+      console.log(`${DEBUG_TAG} first state:`, {
+        pomoState: s.pomoState,
+        scheduleLen: (s.scheduleText || "").length,
+        focusOn: s.focusOn,
+      });
+    }
 
     // 状態遷移検知 → 音
     if (lastPomoState !== null && s.pomoState !== lastPomoState) {

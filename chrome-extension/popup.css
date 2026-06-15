@@ -80,6 +80,23 @@ body {
 }
 .focus-total span { font-weight: 800; color: #5a4ab8; }
 
+.schedule-preview {
+  margin-top: 10px; padding: 10px;
+  background: linear-gradient(135deg, #f0eefa, #e7e2f4);
+  border-radius: 8px; font-size: 11px; line-height: 1.5;
+  border-left: 3px solid #7a6dd6;
+}
+.schedule-preview .sp-now {
+  font-weight: 800; color: #5a4ab8;
+  font-size: 13px; margin-bottom: 4px;
+}
+.schedule-preview .sp-next {
+  color: #666;
+}
+.schedule-preview .sp-empty {
+  color: #999; font-style: italic;
+}
+
 textarea {
   width: 100%; padding: 8px;
   border: 1px solid #d6cef0; border-radius: 8px;

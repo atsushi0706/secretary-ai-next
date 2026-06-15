@@ -16,6 +16,64 @@ async function send(type, extra = {}) {
   });
 }
 
+function parseSchedule(text) {
+  if (!text) return [];
+  const lines = text.split("\n").map((l) => l.trim()).filter(Boolean);
+  const slots = [];
+  for (const line of lines) {
+    let m = line.match(/^(\d{1,2}):(\d{2})\s*[-–〜~]\s*(\d{1,2}):(\d{2})\s+(.+)$/);
+    if (m) {
+      slots.push({
+        startMin: parseInt(m[1], 10) * 60 + parseInt(m[2], 10),
+        endMin: parseInt(m[3], 10) * 60 + parseInt(m[4], 10),
+        task: m[5].trim(),
+      });
+      continue;
+    }
+    m = line.match(/^(\d{1,2}):(\d{2})\s+(.+)$/);
+    if (m) {
+      slots.push({
+        startMin: parseInt(m[1], 10) * 60 + parseInt(m[2], 10),
+        endMin: null,
+        task: m[3].trim(),
+      });
+    }
+  }
+  for (let i = 0; i < slots.length; i++) {
+    if (slots[i].endMin === null) {
+      slots[i].endMin = slots[i + 1] ? slots[i + 1].startMin : 24 * 60;
+    }
+  }
+  return slots;
+}
+function fmtMin(m) {
+  return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+}
+
+function updateSchedulePreview(text) {
+  const preview = document.getElementById("schedulePreview");
+  if (!preview) return;
+  const slots = parseSchedule(text);
+  if (slots.length === 0) {
+    preview.innerHTML = `<div class="sp-empty">時間割なし。上のエリアに書いて「時間割を保存」を押してください</div>`;
+    return;
+  }
+  const now = new Date();
+  const nowMin = now.getHours() * 60 + now.getMinutes();
+  const cur = slots.find((s) => nowMin >= s.startMin && nowMin < s.endMin);
+  const nxt = slots.find((s) => s.startMin > nowMin);
+  let html = "";
+  if (cur) {
+    html += `<div class="sp-now">▶ いま: ${cur.task}<br><span style="font-size:10px;font-weight:600;">${fmtMin(cur.startMin)}〜${fmtMin(cur.endMin)}</span></div>`;
+  } else if (nxt) {
+    html += `<div class="sp-now">次: ${nxt.task}<br><span style="font-size:10px;font-weight:600;">${fmtMin(nxt.startMin)}〜</span></div>`;
+  } else {
+    html += `<div class="sp-empty">今は時間割の範囲外</div>`;
+  }
+  html += `<div class="sp-next">全 ${slots.length} スロット保存済み</div>`;
+  preview.innerHTML = html;
+}
+
 async function render() {
   const s = await send("getState");
   if (!s) return;
@@ -32,6 +90,7 @@ async function render() {
   $("pomoBreak").value = s.pomoBreakMin;
   $("blockList").value = (s.blockList || []).join("\n");
   $("scheduleText").value = s.scheduleText || "";
+  updateSchedulePreview(s.scheduleText || "");
 
   // ポモドーロ状態
   if (s.pomoState === "work") {
@@ -114,6 +173,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     $("saveSchedule").textContent = "✓ 保存しました";
     setTimeout(() => ($("saveSchedule").textContent = "時間割を保存"), 1200);
     await render();
+  });
+
+  // テキストエリアの編集中もリアルタイムでプレビュー更新
+  $("scheduleText").addEventListener("input", () => {
+    updateSchedulePreview($("scheduleText").value);
   });
 
   $("startPomo").addEventListener("click", async () => {

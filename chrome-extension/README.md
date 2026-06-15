@@ -41,6 +41,27 @@ netflix.com / amazon.co.jp/gp/video
 
 popup の「🚫 ブロックリスト」テキストエリアで追加削除して「リストを保存」。
 
+## ⚠️ 拡張をリロードしたとき必読
+
+manifest.json や content.js を更新したあと拡張を **🔄 リロード** したら、
+**既に開いていたタブも `Ctrl+R` で再読み込み**してください。
+Chrome の仕様で、リロード前から開いていたタブは古い content.js のまま動き続けます。
+これが「バッジが出るタブと出ないタブがある」の主な原因です。
+
+## 動作確認
+
+バッジが出ない時の切り分け:
+
+1. **そのページで F12 を開く**
+2. **Console タブ**を表示
+3. 上のフィルタに `kiyose-timer` と入力
+4. `[kiyose-timer] loaded on ...` が出ていれば content.js は動いている
+5. `[kiyose-timer] first state: {...}` も出るはず → `scheduleLen` を見れば時間割が読めているか確認できる
+
+`kiyose-timer` ログが何も出ていない場合:
+- そのページは Chrome の制約で content script が動かない（`chrome://`, Chrome Web Store, file:// の一部）
+- もしくはタブを再読み込みしていない
+
 ## トラブルシュート
 
 - **タブが勝手に閉じる**: 上限を超えるとそうなる仕様。上限を上げるか集中モードを OFF

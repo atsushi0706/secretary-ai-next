@@ -3,7 +3,7 @@
   "name": "清瀬リンク 集中モード",
   "version": "1.0.0",
   "description": "タブ上限+サイトブロック+ポモドーロ。仕事中に他を見ちゃう淳くん専用。",
-  "permissions": ["tabs", "storage", "notifications", "alarms", "webNavigation", "sidePanel"],
+  "permissions": ["tabs", "storage", "notifications", "alarms", "webNavigation", "sidePanel", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"

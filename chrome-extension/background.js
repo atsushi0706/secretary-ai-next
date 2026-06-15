@@ -209,11 +209,34 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
 // 起動時に日付ローテーション確認
 chrome.runtime.onStartup.addListener(() => ensureTodayKey());
-chrome.runtime.onInstalled.addListener(() => {
+chrome.runtime.onInstalled.addListener(async () => {
   ensureTodayKey();
   // 拡張アイコンクリックでサイドパネルが開くように設定
   if (chrome.sidePanel && chrome.sidePanel.setPanelBehavior) {
     chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {});
+  }
+  // 既存タブにも新しい content.js / content.css を強制注入
+  // Chrome の仕様で「拡張リロード前から開いていたタブ」には新版が入らないので
+  // 自動でやってあげる
+  try {
+    const tabs = await chrome.tabs.query({});
+    for (const tab of tabs) {
+      if (!tab.id || !tab.url) continue;
+      if (!/^https?:|^file:/.test(tab.url)) continue;
+      try {
+        await chrome.scripting.executeScript({
+          target: { tabId: tab.id },
+          files: ["content.js"],
+        });
+        await chrome.scripting.insertCSS({
+          target: { tabId: tab.id },
+          files: ["content.css"],
+        });
+      } catch (e) { /* タブが閉じた等は無視 */ }
+    }
+    console.log("[kiyose-bg] re-injected content scripts into existing tabs");
+  } catch (e) {
+    console.error("[kiyose-bg] re-injection failed:", e);
   }
 });
 

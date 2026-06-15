@@ -247,9 +247,10 @@
     const slots = parseSchedule(s.scheduleText);
     const cur = currentSlot(slots);
     const nxt = nextSlot(slots);
+    const hasSchedule = !!(s.scheduleText && s.scheduleText.trim());
 
-    // どっちもなしならバッジを消す
-    if (!pomoRunning && !cur && !nxt) {
+    // ポモドーロも時間割も何もない → 完全に消す
+    if (!pomoRunning && !hasSchedule) {
       removeBadge();
       if (pipWindow) { try { pipWindow.close(); } catch {} pipWindow = null; }
       return;
@@ -257,13 +258,20 @@
 
     createBadge();
 
-    // ─ いま欄の中身 ─
+    // ─ いま欄: 時間割があれば常に何か表示 ─
     const nowEl = badge.querySelector(".ktb-now");
     if (cur) {
       nowEl.innerHTML = `<span class="ktb-now-label">いま</span> ${escapeHtml(cur.task)} <span class="ktb-now-time">〜${fmtMinHHMM(cur.endMin)}</span>`;
       nowEl.style.display = "";
     } else if (nxt) {
       nowEl.innerHTML = `<span class="ktb-now-label">次</span> ${escapeHtml(nxt.task)} <span class="ktb-now-time">${fmtMinHHMM(nxt.startMin)}〜</span>`;
+      nowEl.style.display = "";
+    } else if (hasSchedule) {
+      nowEl.innerHTML = `<span class="ktb-now-label">!</span> 時間割の範囲外`;
+      nowEl.style.display = "";
+    } else if (pomoRunning) {
+      // ポモドーロは動いてるが時間割未設定 → 軽く告知
+      nowEl.innerHTML = `<span class="ktb-now-label">⏰</span> 時間割未設定 (拡張から設定)`;
       nowEl.style.display = "";
     } else {
       nowEl.style.display = "none";

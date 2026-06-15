@@ -69,27 +69,13 @@
       「気がそれた瞬間に気づけたのは、半分戻ってきたのと同じ」
     </div>
     <div class="actions">
-      <button onclick="window.history.back()">← さっき開いてたページに戻る</button>
-      <button class="ghost" onclick="chrome.runtime.sendMessage({type:'setFocus',value:false},()=>{location.reload()})">
+      <button id="btn-back">← さっき開いてたページに戻る</button>
+      <button id="btn-disable-focus" class="ghost">
         集中モードを切る（緊急用）
       </button>
     </div>
     <div class="from" id="from"></div>
   </div>
-  <script>
-    // ランダム引用
-    const quotes = [
-      "気がそれた瞬間に気づけたのは、半分戻ってきたのと同じ",
-      "5分の脱線は20分の戻り時間に化ける。今戻ろう。",
-      "やってる作業が一番のドーパミン源だったの、忘れた？",
-      "見たかったやつは、終わってからにしよう。逃げない。",
-      "集中の波は20分かけて作る。今切ったらまた最初から。",
-    ];
-    document.getElementById("quote").textContent =
-      "「" + quotes[Math.floor(Math.random() * quotes.length)] + "」";
-    const params = new URLSearchParams(location.search);
-    const from = params.get("from");
-    if (from) document.getElementById("from").textContent = "blocked: " + decodeURIComponent(from);
-  </script>
+  <script src="blocked.js"></script>
 </body>
 </html>

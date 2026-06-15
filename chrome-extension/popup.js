@@ -50,12 +50,16 @@ function fmtMin(m) {
   return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
 }
 
+function escHtml(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function updateSchedulePreview(text) {
   const preview = document.getElementById("schedulePreview");
   if (!preview) return;
   const slots = parseSchedule(text);
   if (slots.length === 0) {
-    preview.innerHTML = `<div class="sp-empty">時間割なし。上のエリアに書いて「時間割を保存」を押してください</div>`;
+    preview.innerHTML = `<div class="sp-empty">パースできた行が0件。形式: <code>HH:MM-HH:MM タスク名</code></div>`;
     return;
   }
   const now = new Date();
@@ -64,15 +68,19 @@ function updateSchedulePreview(text) {
   const nxt = slots.find((s) => s.startMin > nowMin);
   let html = "";
   if (cur) {
-    html += `<div class="sp-now">▶ いま: ${cur.task}<br><span style="font-size:10px;font-weight:600;">${fmtMin(cur.startMin)}〜${fmtMin(cur.endMin)}</span></div>`;
+    html += `<div class="sp-now">▶ いま: ${escHtml(cur.task)}<br><span style="font-size:10px;font-weight:600;">${fmtMin(cur.startMin)}〜${fmtMin(cur.endMin)}</span></div>`;
   } else if (nxt) {
-    html += `<div class="sp-now">次: ${nxt.task}<br><span style="font-size:10px;font-weight:600;">${fmtMin(nxt.startMin)}〜</span></div>`;
+    html += `<div class="sp-now">次: ${escHtml(nxt.task)}<br><span style="font-size:10px;font-weight:600;">${fmtMin(nxt.startMin)}〜</span></div>`;
   } else {
-    html += `<div class="sp-empty">今は時間割の範囲外</div>`;
+    html += `<div class="sp-empty">いま ${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")} は時間割の範囲外</div>`;
   }
-  html += `<div class="sp-next">全 ${slots.length} スロット保存済み</div>`;
+  html += `<div class="sp-next">全 ${slots.length} スロット解析OK</div>`;
   preview.innerHTML = html;
 }
+
+const SAMPLE_SCHEDULE = `10:00-12:00 動画作業
+13:00-15:00 LP原稿
+15:30-17:00 撮影準備`;
 
 async function render() {
   const s = await send("getState");
@@ -89,8 +97,10 @@ async function render() {
   $("pomoPrep").value = s.pomoPrepSec;
   $("pomoBreak").value = s.pomoBreakMin;
   $("blockList").value = (s.blockList || []).join("\n");
-  $("scheduleText").value = s.scheduleText || "";
-  updateSchedulePreview(s.scheduleText || "");
+  // scheduleText が空ならサンプルを表示。本物の入力なのでそのまま保存できる
+  const effectiveSchedule = s.scheduleText && s.scheduleText.trim() ? s.scheduleText : SAMPLE_SCHEDULE;
+  $("scheduleText").value = effectiveSchedule;
+  updateSchedulePreview(effectiveSchedule);
 
   // ポモドーロ状態
   if (s.pomoState === "work") {
@@ -169,9 +179,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   $("saveSchedule").addEventListener("click", async () => {
-    await send("updateSettings", { patch: { scheduleText: $("scheduleText").value } });
-    $("saveSchedule").textContent = "✓ 保存しました";
-    setTimeout(() => ($("saveSchedule").textContent = "時間割を保存"), 1200);
+    const val = $("scheduleText").value;
+    console.log("[kiyose] saveSchedule. length=" + val.length, val.slice(0, 80));
+    await send("updateSettings", { patch: { scheduleText: val } });
+    $("saveSchedule").textContent = "✓ 保存しました (" + val.length + "文字)";
+    setTimeout(() => ($("saveSchedule").textContent = "時間割を保存"), 2000);
     await render();
   });
 

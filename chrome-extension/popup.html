@@ -59,6 +59,18 @@
   </section>
 
   <section class="card">
+    <div class="row-label">⏰ 今日の時間割（タブまたぎ表示）</div>
+    <div style="font-size:11px;color:#666;margin-bottom:6px;line-height:1.4;">
+      1行1スロット。形式: <code>09:00-10:00 タスク名</code> または <code>09:00 タスク名</code>
+    </div>
+    <textarea id="scheduleText" rows="6" placeholder="09:00-10:00 メール返信
+10:00-12:00 動画編集
+13:00-15:00 LP原稿
+15:30-17:00 撮影準備"></textarea>
+    <button id="saveSchedule" class="btn-secondary">時間割を保存</button>
+  </section>
+
+  <section class="card">
     <div class="row-label">🚫 ブロックリスト（1行1ドメイン）</div>
     <textarea id="blockList" rows="6"></textarea>
     <button id="saveBlock" class="btn-secondary">リストを保存</button>

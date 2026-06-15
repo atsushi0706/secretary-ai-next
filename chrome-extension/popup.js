@@ -31,6 +31,7 @@ async function render() {
   $("pomoPrep").value = s.pomoPrepSec;
   $("pomoBreak").value = s.pomoBreakMin;
   $("blockList").value = (s.blockList || []).join("\n");
+  $("scheduleText").value = s.scheduleText || "";
 
   // ポモドーロ状態
   if (s.pomoState === "work") {
@@ -105,6 +106,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     await send("updateSettings", { patch: { blockList: list } });
     $("saveBlock").textContent = "✓ 保存しました";
     setTimeout(() => ($("saveBlock").textContent = "リストを保存"), 1200);
+    await render();
+  });
+
+  $("saveSchedule").addEventListener("click", async () => {
+    await send("updateSettings", { patch: { scheduleText: $("scheduleText").value } });
+    $("saveSchedule").textContent = "✓ 保存しました";
+    setTimeout(() => ($("saveSchedule").textContent = "時間割を保存"), 1200);
     await render();
   });
 

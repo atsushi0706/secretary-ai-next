@@ -32,8 +32,23 @@
   flex-shrink: 0;
 }
 #kiyose-timer-badge .ktb-body {
-  display: flex; flex-direction: column; line-height: 1.1;
-  min-width: 60px;
+  display: flex; flex-direction: column; line-height: 1.15;
+  min-width: 80px; max-width: 280px;
+}
+#kiyose-timer-badge .ktb-now {
+  font-size: 11px; font-weight: 700;
+  display: flex; gap: 4px; align-items: baseline;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 260px;
+  padding-bottom: 2px;
+}
+#kiyose-timer-badge .ktb-now-label {
+  background: rgba(255,255,255,.22);
+  padding: 1px 5px; border-radius: 4px;
+  font-size: 9px; font-weight: 800;
+}
+#kiyose-timer-badge .ktb-now-time {
+  font-size: 9px; opacity: .8; margin-left: auto; font-variant-numeric: tabular-nums;
 }
 #kiyose-timer-badge .ktb-state {
   font-size: 10px; font-weight: 700; opacity: .9;

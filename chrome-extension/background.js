@@ -35,6 +35,8 @@ const DEFAULT_STATE = {
   // 累積記録
   todayFocusSec: 0,
   todayDate: "",
+  // 今日の時間割テキスト("HH:MM-HH:MM タスク名"を1行1スロットで)
+  scheduleText: "",
 };
 
 async function getState() {

@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA, extractJson } from "@/lib/claude";
 import {
-  saveMessage, loadMessages, setManualLabel, saveBriefing,
+  saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels,
 } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, addTask, addCalendarEvent, completeTask, deleteTask } from "@/lib/google";
 import { clearManualLabel } from "@/lib/supabase";
@@ -120,9 +120,10 @@ JSONのみ:
         }
 
         // 会話コンテキストを組み立て
-        const [events, tasks] = await Promise.all([
+        const [events, tasks, manualLabels] = await Promise.all([
           getCalendarEvents(userId, 1),
           getTasks(userId),
+          getManualLabels(userId),
         ]);
         const targetDate = new Date(targetDay + "T00:00:00+09:00");
         const sched = computeSchedule(events, targetDate, 9, 17, isMorning ? now : undefined);
@@ -135,8 +136,29 @@ JSONのみ:
         if (sched.after_hours_text) {
           ctxLines.push("■夜の予定（参考）:\n" + sched.after_hours_text);
         }
-        const taskLines = tasks.map((t) => `- ${t.title}（期限:${t.due ?? "なし"}）`).join("\n");
+        // 既存タスクには time_label / urgency / importance も含めて、AI が再質問しないように
+        const timeLabelMap: Record<string, string> = {
+          quick: "すぐ", mid: "30分〜1時間", long: "1〜3時間", today: "30分〜1時間", days: "1〜3時間",
+        };
+        const taskLines = tasks.map((t: any) => {
+          const lb = manualLabels[t.id];
+          const tk = lb?.time_label;
+          const u = lb?.urgency;
+          const im = lb?.importance;
+          const meta: string[] = [];
+          if (tk && timeLabelMap[tk]) meta.push(`所要:${timeLabelMap[tk]}`);
+          if (t.due) meta.push(`期限:${t.due.slice(0, 10)}`);
+          if (u === "high") meta.push("緊急");
+          if (im === "high") meta.push("重要");
+          const metaStr = meta.length > 0 ? `（${meta.join(", ")}）` : "（情報不足）";
+          return `- ${t.title}${metaStr}`;
+        }).join("\n");
         ctxLines.push("未完了タスク:\n" + (taskLines || "なし"));
+        ctxLines.push(
+          "[注記] 上の未完了タスクには既に所要時間・期限・緊急度・重要度が記載されている。" +
+          "これらの値が分かっているタスクについて、淳くんに『どれくらいかかる？』『いつまで？』を" +
+          "再質問するのは禁止。情報不足タスクのみ聞く。"
+        );
 
         if (addedTitles.length > 0) {
           ctxLines.push(

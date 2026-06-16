@@ -80,6 +80,19 @@ body {
 }
 .focus-total span { font-weight: 800; color: #5a4ab8; }
 
+.schedule-date-info {
+  margin-top: 6px; font-size: 11px; color: #777;
+  text-align: right;
+}
+.schedule-date-info.stale {
+  color: #c25b5b; font-weight: 700;
+}
+.btn-clear {
+  background: #fdecec; color: #c25b5b;
+  width: 100%; margin-top: 6px;
+  font-size: 12px;
+}
+.btn-clear:hover { background: #fadddd; }
 .schedule-preview {
   margin-top: 10px; padding: 10px;
   background: linear-gradient(135deg, #f0eefa, #e7e2f4);

@@ -102,6 +102,25 @@ async function render() {
   $("scheduleText").value = effectiveSchedule;
   updateSchedulePreview(effectiveSchedule);
 
+  // 時間割の保存日付を表示。今日でなければ赤く警告
+  const info = document.getElementById("scheduleDateInfo");
+  if (info) {
+    if (s.scheduleText && s.scheduleDate) {
+      const todayStr = (() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      })();
+      const isStale = s.scheduleDate !== todayStr;
+      info.textContent = isStale
+        ? `⚠ ${s.scheduleDate} に保存されたまま (今日ではない)`
+        : `${s.scheduleDate} に保存`;
+      info.classList.toggle("stale", isStale);
+    } else {
+      info.textContent = "";
+      info.classList.remove("stale");
+    }
+  }
+
   // ポモドーロ状態
   if (s.pomoState === "work") {
     $("pomoState").textContent = "🍅 集中タイム";
@@ -190,6 +209,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   // テキストエリアの編集中もリアルタイムでプレビュー更新
   $("scheduleText").addEventListener("input", () => {
     updateSchedulePreview($("scheduleText").value);
+  });
+
+  // 時間割をクリア
+  $("clearSchedule").addEventListener("click", async () => {
+    if (!confirm("時間割をクリアする？")) return;
+    await send("updateSettings", { patch: { scheduleText: "" } });
+    await render();
   });
 
   $("startPomo").addEventListener("click", async () => {

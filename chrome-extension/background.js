@@ -37,6 +37,7 @@ const DEFAULT_STATE = {
   todayDate: "",
   // 今日の時間割テキスト("HH:MM-HH:MM タスク名"を1行1スロットで)
   scheduleText: "",
+  scheduleDate: "",  // 時間割を保存した日付(YYYY-MM-DD) — 前日のを使ってないか判定に使う
 };
 
 async function getState() {
@@ -194,7 +195,12 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       }
       sendResponse(await getState());
     } else if (msg.type === "updateSettings") {
-      await setState(msg.patch || {});
+      const patch = msg.patch || {};
+      // scheduleText を変更したら、保存日付も今日にする
+      if (Object.prototype.hasOwnProperty.call(patch, "scheduleText")) {
+        patch.scheduleDate = todayStr();
+      }
+      await setState(patch);
       sendResponse(await getState());
     } else if (msg.type === "startPomo") {
       await startPomo();

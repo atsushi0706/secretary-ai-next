@@ -338,6 +338,45 @@
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
 
+  // ─── 秘書アプリからの postMessage を受けて拡張ストレージに送る ───
+  // 秘書アプリ(同タブ内 or どのタブからでも)が
+  // window.postMessage({ type: "kiyose:setSchedule", scheduleText: "..." }, "*")
+  // を投げると拡張機能に届く
+  window.addEventListener("message", (event) => {
+    if (event.source !== window) return;
+    const data = event.data;
+    if (!data || typeof data !== "object") return;
+    if (data.type === "kiyose:setSchedule" && typeof data.scheduleText === "string") {
+      console.log(`${DEBUG_TAG} received setSchedule (${data.scheduleText.length} chars)`);
+      try {
+        chrome.runtime.sendMessage(
+          { type: "updateSettings", patch: { scheduleText: data.scheduleText } },
+          (res) => {
+            // 結果を呼び出し側にも通知（秘書アプリで「✓ 送信完了」を出すため）
+            window.postMessage(
+              {
+                type: "kiyose:setScheduleResult",
+                ok: !!res,
+                length: data.scheduleText.length,
+              },
+              "*",
+            );
+          },
+        );
+      } catch (e) {
+        console.error(`${DEBUG_TAG} setSchedule send failed:`, e);
+        window.postMessage(
+          { type: "kiyose:setScheduleResult", ok: false, error: String(e) },
+          "*",
+        );
+      }
+    }
+    if (data.type === "kiyose:ping") {
+      // 秘書アプリが「拡張入ってる？」を確認するための ping
+      window.postMessage({ type: "kiyose:pong", version: "1.0.0" }, "*");
+    }
+  });
+
   setInterval(tick, 1000);
   tick();
 })();

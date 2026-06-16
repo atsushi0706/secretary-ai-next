@@ -23,6 +23,32 @@ function mdToHtml(text: string): string {
   return s;
 }
 
+// AI 応答から時間割行だけを抽出して、拡張機能が読める形式
+// "HH:MM-HH:MM タスク名" に整形する
+function extractScheduleFromReply(reply: string): string {
+  if (!reply) return "";
+  const lines = reply.split(/\n+/);
+  const out: string[] = [];
+  for (const line of lines) {
+    const m = line.match(
+      /^[\s\|｜・\-\*●○◇◆]*(\d{1,2}):(\d{2})\s*[-–〜~]\s*(\d{1,2}):(\d{2})\s*[:：\|｜]?\s*(.+?)\s*$/,
+    );
+    if (!m) continue;
+    const [, h1, m1, h2, m2, taskRaw] = m;
+    const task = taskRaw
+      .replace(/\*\*/g, "")
+      .replace(/^[\|｜:：\s]+/, "")
+      .replace(/[\|｜]+/g, " ")
+      .trim();
+    if (!task) continue;
+    // 17時以降は除外（秘書ルール: 稼働9-17時）
+    const startHour = parseInt(h1, 10);
+    if (startHour >= 17 || startHour < 5) continue;
+    out.push(`${h1}:${m1}-${h2}:${m2} ${task}`);
+  }
+  return out.join("\n");
+}
+
 async function readSse(
   resp: Response,
   onEvent: (event: string, data: any) => void,
@@ -50,6 +76,51 @@ async function readSse(
       catch { /* ignore */ }
     }
   }
+}
+
+function SendToExtensionButton({
+  scheduleText, slotCount,
+}: {
+  scheduleText: string;
+  slotCount: number;
+}) {
+  const [state, setState] = useState<"idle" | "sending" | "done" | "no-ext">("idle");
+  function send() {
+    if (state === "sending") return;
+    setState("sending");
+    // 拡張がインストールされていれば content.js が pong を返す
+    const timer = setTimeout(() => {
+      // 5秒待っても応答無ければ「拡張なし」
+      setState("no-ext");
+      window.removeEventListener("message", onMsg);
+    }, 5000);
+    function onMsg(event: MessageEvent) {
+      if (event.source !== window) return;
+      const d = event.data;
+      if (!d || typeof d !== "object") return;
+      if (d.type === "kiyose:setScheduleResult") {
+        clearTimeout(timer);
+        window.removeEventListener("message", onMsg);
+        setState(d.ok ? "done" : "no-ext");
+        setTimeout(() => setState("idle"), 3000);
+      }
+    }
+    window.addEventListener("message", onMsg);
+    window.postMessage({ type: "kiyose:setSchedule", scheduleText }, "*");
+  }
+  return (
+    <button
+      onClick={send}
+      disabled={state === "sending"}
+      className="ml-10 text-xs bg-white/90 hover:bg-purple-50 border border-purple-200 rounded-full px-3 py-1 shadow-sm transition disabled:opacity-50"
+      title="Chrome 拡張機能「清瀬リンク 集中モード」のタイマーバッジに、この時間割を反映"
+    >
+      {state === "idle" && `📌 拡張機能に送る（${slotCount}スロット）`}
+      {state === "sending" && "送信中…"}
+      {state === "done" && "✓ 拡張機能に送りました"}
+      {state === "no-ext" && "⚠ 拡張機能が見つかりません（インストール&リロード必要）"}
+    </button>
+  );
 }
 
 export function Chat({
@@ -241,30 +312,37 @@ export function Chat({
             清瀬リンクとの会話がここに表示されます
           </div>
         )}
-        {messages.map((m, i) => (
-          <div
-            key={i}
-            className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"}`}
-          >
-            {m.role === "assistant" && (
-              <Image
-                src="/kiyose.png"
-                alt="清瀬リンク"
-                width={32}
-                height={32}
-                className="rounded-full border border-purple-200 shrink-0 bg-white"
-              />
-            )}
-            <div
-              className={`bubble ${m.role === "user" ? "bubble-me" : "bubble-bot"}`}
-              dangerouslySetInnerHTML={{
-                __html: m.content
-                  ? mdToHtml(m.content)
-                  : '<span class="typing-dots"><span></span><span></span><span></span></span>',
-              }}
-            />
-          </div>
-        ))}
+        {messages.map((m, i) => {
+          const extractedSchedule = m.role === "assistant" ? extractScheduleFromReply(m.content) : "";
+          const slotCount = extractedSchedule ? extractedSchedule.split("\n").length : 0;
+          return (
+            <div key={i} className={`flex flex-col gap-1 ${m.role === "user" ? "items-end" : "items-start"}`}>
+              <div className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"} w-full`}>
+                {m.role === "assistant" && (
+                  <Image
+                    src="/kiyose.png"
+                    alt="清瀬リンク"
+                    width={32}
+                    height={32}
+                    className="rounded-full border border-purple-200 shrink-0 bg-white"
+                  />
+                )}
+                <div
+                  className={`bubble ${m.role === "user" ? "bubble-me" : "bubble-bot"}`}
+                  dangerouslySetInnerHTML={{
+                    __html: m.content
+                      ? mdToHtml(m.content)
+                      : '<span class="typing-dots"><span></span><span></span><span></span></span>',
+                  }}
+                />
+              </div>
+              {/* 時間割が3スロット以上含まれていれば「拡張機能に送る」ボタン */}
+              {slotCount >= 3 && (
+                <SendToExtensionButton scheduleText={extractedSchedule} slotCount={slotCount} />
+              )}
+            </div>
+          );
+        })}
         {searching && (
           <div className="text-xs text-purple-700 flex items-center gap-1 bg-white/70 inline-flex px-2 py-1 rounded-full">
             🔎 Web を検索中…

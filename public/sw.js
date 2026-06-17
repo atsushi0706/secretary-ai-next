@@ -1,54 +1,35 @@
-// 秘書AI Service Worker (PWA + Web Push 基本対応)
-const CACHE = "secretary-ai-v1";
+// 秘書AI Service Worker — 自己アンレジスト版
+//
+// 以前のバージョンが /_next/static/ を勝手にキャッシュしていたため、
+// デプロイ後にユーザー側で古いHTML/JSが返されて「This page couldn't load」が出る
+// 事象があった。当面 SW を切り、各クライアントの古いキャッシュを全消ししてから
+// 自身を unregister する形に切り替える。
+//
+// Push 通知は ntfy で代替している（拡張機能側のポモドーロ通知含む）。
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
-
-// 通常のオフラインキャッシュは最小限（Streamlit と違い動的データが多いため）
-self.addEventListener("fetch", (event) => {
-  const url = new URL(event.request.url);
-  // 静的アセットのみキャッシュ
-  if (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icon-")) {
-    event.respondWith(
-      caches.open(CACHE).then(async (cache) => {
-        const cached = await cache.match(event.request);
-        if (cached) return cached;
-        const res = await fetch(event.request);
-        cache.put(event.request, res.clone());
-        return res;
-      }),
-    );
-  }
-});
-
-// Web Push 通知（送信側は別途実装）
-self.addEventListener("push", (event) => {
-  let data = { title: "清瀬リンク", body: "通知が届きました" };
-  try { if (event.data) data = event.data.json(); } catch {}
-  event.waitUntil(
-    self.registration.showNotification(data.title || "清瀬リンク", {
-      body: data.body,
-      icon: "/icon-192.png",
-      badge: "/icon-192.png",
-      data: { url: data.url || "/" },
-    }),
-  );
-});
-
-self.addEventListener("notificationclick", (event) => {
-  event.notification.close();
-  const url = event.notification.data?.url || "/";
-  event.waitUntil(
-    self.clients.matchAll({ type: "window" }).then((clients) => {
+  event.waitUntil((async () => {
+    try {
+      // 全キャッシュ削除
+      const keys = await caches.keys();
+      await Promise.all(keys.map((k) => caches.delete(k)));
+    } catch (e) { /* ignore */ }
+    try {
+      // 自身を unregister
+      await self.registration.unregister();
+    } catch (e) { /* ignore */ }
+    // すべての開いているクライアントを再読み込み (新しいページに切り替わる)
+    try {
+      const clients = await self.clients.matchAll({ type: "window" });
       for (const c of clients) {
-        if (c.url.includes(url) && "focus" in c) return c.focus();
+        try { c.navigate(c.url); } catch { /* ignore */ }
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url);
-    }),
-  );
+    } catch (e) { /* ignore */ }
+  })());
 });
+
+// fetch ハンドラなし → 何もインターセプトしない (素通り)

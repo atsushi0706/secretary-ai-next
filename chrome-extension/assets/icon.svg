@@ -1,0 +1,28 @@
+<svg viewBox="0 0 256 256" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8a7de6"/>
+      <stop offset="100%" stop-color="#5a4ab8"/>
+    </linearGradient>
+    <linearGradient id="check" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5dd49f"/>
+      <stop offset="100%" stop-color="#2f9869"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="3" stdDeviation="4" flood-opacity="0.25"/>
+    </filter>
+  </defs>
+  <!-- 角丸の正方形背景 -->
+  <rect x="8" y="8" width="240" height="240" rx="56" ry="56" fill="url(#bg)" filter="url(#shadow)"/>
+  <!-- 時計 -->
+  <circle cx="120" cy="124" r="68" fill="none" stroke="rgba(255,255,255,0.95)" stroke-width="10"/>
+  <!-- 時針(短・上向き) -->
+  <line x1="120" y1="124" x2="120" y2="78" stroke="rgba(255,255,255,0.95)" stroke-width="10" stroke-linecap="round"/>
+  <!-- 分針(右向き) -->
+  <line x1="120" y1="124" x2="160" y2="124" stroke="rgba(255,255,255,0.95)" stroke-width="8" stroke-linecap="round"/>
+  <!-- 中心点 -->
+  <circle cx="120" cy="124" r="6" fill="white"/>
+  <!-- チェックマーク(右下) -->
+  <circle cx="190" cy="194" r="38" fill="url(#check)" filter="url(#shadow)"/>
+  <path d="M173 194 L186 207 L210 181" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+</svg>

@@ -1,0 +1,55 @@
+<svg viewBox="0 0 920 680" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8a7de6"/>
+      <stop offset="55%" stop-color="#6358c5"/>
+      <stop offset="100%" stop-color="#3d3380"/>
+    </linearGradient>
+    <linearGradient id="iconbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a8a0f0"/>
+      <stop offset="100%" stop-color="#7a6dd6"/>
+    </linearGradient>
+    <linearGradient id="check" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5dd49f"/>
+      <stop offset="100%" stop-color="#2f9869"/>
+    </linearGradient>
+  </defs>
+  <rect width="920" height="680" fill="url(#bg)"/>
+  <circle cx="800" cy="80" r="140" fill="rgba(255,255,255,0.05)"/>
+  <circle cx="100" cy="600" r="180" fill="rgba(255,255,255,0.04)"/>
+
+  <!-- メインアイコン (上中央) -->
+  <g transform="translate(360, 80) scale(0.8)">
+    <rect x="8" y="8" width="240" height="240" rx="56" ry="56" fill="url(#iconbg)"/>
+    <circle cx="120" cy="124" r="68" fill="none" stroke="white" stroke-width="10"/>
+    <line x1="120" y1="124" x2="120" y2="78" stroke="white" stroke-width="10" stroke-linecap="round"/>
+    <line x1="120" y1="124" x2="160" y2="124" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="120" cy="124" r="6" fill="white"/>
+    <circle cx="190" cy="194" r="38" fill="url(#check)"/>
+    <path d="M173 194 L186 207 L210 181" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- タイトル -->
+  <text x="460" y="370" fill="white" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif" font-size="60" font-weight="800" text-anchor="middle">Focus Secretary</text>
+  <text x="460" y="416" fill="rgba(255,255,255,0.9)" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif" font-size="22" font-weight="500" text-anchor="middle">集中モード × ポモドーロ × 秘書AI連動</text>
+
+  <!-- 特徴3つ -->
+  <g transform="translate(60, 480)">
+    <rect x="0" y="0" width="240" height="140" rx="20" fill="rgba(255,255,255,0.12)"/>
+    <text x="120" y="50" fill="white" font-family="sans-serif" font-size="42" text-anchor="middle">📑</text>
+    <text x="120" y="90" fill="white" font-family="-apple-system, 'Hiragino Sans', sans-serif" font-size="18" font-weight="700" text-anchor="middle">タブ上限</text>
+    <text x="120" y="116" fill="rgba(255,255,255,0.8)" font-family="-apple-system, 'Hiragino Sans', sans-serif" font-size="13" text-anchor="middle">開きすぎを自動制御</text>
+  </g>
+  <g transform="translate(340, 480)">
+    <rect x="0" y="0" width="240" height="140" rx="20" fill="rgba(255,255,255,0.12)"/>
+    <text x="120" y="50" fill="white" font-family="sans-serif" font-size="42" text-anchor="middle">🍅</text>
+    <text x="120" y="90" fill="white" font-family="-apple-system, 'Hiragino Sans', sans-serif" font-size="18" font-weight="700" text-anchor="middle">自動ポモドーロ</text>
+    <text x="120" y="116" fill="rgba(255,255,255,0.8)" font-family="-apple-system, 'Hiragino Sans', sans-serif" font-size="13" text-anchor="middle">30分集中→5分休憩</text>
+  </g>
+  <g transform="translate(620, 480)">
+    <rect x="0" y="0" width="240" height="140" rx="20" fill="rgba(255,255,255,0.12)"/>
+    <text x="120" y="50" fill="white" font-family="sans-serif" font-size="42" text-anchor="middle">⏰</text>
+    <text x="120" y="90" fill="white" font-family="-apple-system, 'Hiragino Sans', sans-serif" font-size="18" font-weight="700" text-anchor="middle">常駐タイマー</text>
+    <text x="120" y="116" fill="rgba(255,255,255,0.8)" font-family="-apple-system, 'Hiragino Sans', sans-serif" font-size="13" text-anchor="middle">タブまたいで見える</text>
+  </g>
+</svg>

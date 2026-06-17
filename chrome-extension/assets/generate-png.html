@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>Focus Secretary - 画像生成ツール</title>
+  <style>
+    body {
+      font-family: -apple-system, "Hiragino Sans", sans-serif;
+      max-width: 960px;
+      margin: 40px auto;
+      padding: 0 20px;
+      background: #f5f3fb;
+    }
+    h1 { color: #5a4ab8; }
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(80,80,130,0.08);
+    }
+    .preview {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .preview img {
+      background: #ddd;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    button {
+      background: linear-gradient(135deg, #7a6dd6, #6358c5);
+      color: #fff;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+      font-size: 14px;
+    }
+    button:hover { opacity: 0.9; }
+    .btn-all {
+      background: linear-gradient(135deg, #3fb27f, #2f9869);
+      font-size: 18px;
+      padding: 14px 28px;
+      width: 100%;
+      margin-bottom: 20px;
+    }
+    code {
+      background: #f0eefa;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .desc { font-size: 13px; color: #666; margin-top: 4px; }
+  </style>
+</head>
+<body>
+  <h1>📦 Chrome Web Store 申請用画像ジェネレータ</h1>
+  <p>下の「全部一括ダウンロード」を押すと、必要な PNG 画像が全てダウンロードされます。</p>
+
+  <button class="btn-all" id="dl-all">📥 全部一括ダウンロード</button>
+
+  <div class="card">
+    <h3>① アイコン（必須）</h3>
+    <div class="desc">manifest.json で使用 / Chrome Web Store のメインアイコン</div>
+    <div class="preview" id="prv-icon"></div>
+  </div>
+
+  <div class="card">
+    <h3>② 小プロモーションタイル 440×280（必須）</h3>
+    <div class="desc">Chrome Web Store の検索結果に出る</div>
+    <div class="preview" id="prv-small"></div>
+    <button data-key="promo-small">ダウンロード</button>
+  </div>
+
+  <div class="card">
+    <h3>③ 大プロモーションタイル 920×680（任意）</h3>
+    <div class="desc">特集ページ用</div>
+    <div class="preview" id="prv-large"></div>
+    <button data-key="promo-large">ダウンロード</button>
+  </div>
+
+  <div class="card">
+    <h3>④ マーキーのプロモーションタイル 1400×560（任意）</h3>
+    <div class="desc">トップ特集用</div>
+    <div class="preview" id="prv-marquee"></div>
+    <button data-key="promo-marquee">ダウンロード</button>
+  </div>
+
+  <div class="card" style="background:#fffaeb;border-left:4px solid #e69500;">
+    <h3>⚠️ スクリーンショット 1280×800 (必須・最低1枚)</h3>
+    <p>
+      これは「実際に拡張機能が動いている画面」を撮る必要があります。淳くんがブラウザで実際に使って撮影してください。
+    </p>
+    <ol>
+      <li>Chrome で拡張機能を有効にする</li>
+      <li>1280×800 にウィンドウサイズを合わせる（DevTools の Device toolbar 推奨）</li>
+      <li>Print Screen or Snipping Tool で撮影</li>
+      <li>推奨ショット例:
+        <ul>
+          <li>サイドパネル開いた状態（秘書UI + メインタブ）</li>
+          <li>集中モードON → フローティングタイマー表示中</li>
+          <li>popup を開いた状態（設定欄）</li>
+          <li>ブロック画面（紫の「集中タイム中」）</li>
+          <li>時間割テキストを保存して「いま: ○○」が出ている状態</li>
+        </ul>
+      </li>
+    </ol>
+  </div>
+
+  <script>
+    const SIZES = {
+      "icon-16":   { src: "icon.svg",          w: 16,   h: 16 },
+      "icon-48":   { src: "icon.svg",          w: 48,   h: 48 },
+      "icon-128":  { src: "icon.svg",          w: 128,  h: 128 },
+      "icon-256":  { src: "icon.svg",          w: 256,  h: 256 },
+      "promo-small":   { src: "promo-small.svg",   w: 440,  h: 280 },
+      "promo-large":   { src: "promo-large.svg",   w: 920,  h: 680 },
+      "promo-marquee": { src: "promo-marquee.svg", w: 1400, h: 560 },
+    };
+
+    async function svgToPng(svgPath, w, h) {
+      const res = await fetch(svgPath);
+      const text = await res.text();
+      const blob = new Blob([text], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const img = new Image();
+      await new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = url;
+      });
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
+    async function preview(containerId, key) {
+      const { src, w, h } = SIZES[key];
+      const blob = await svgToPng(src, w, h);
+      const url = URL.createObjectURL(blob);
+      const wrap = document.createElement("div");
+      const img = new Image();
+      img.src = url;
+      img.style.maxWidth = "200px";
+      img.style.maxHeight = "150px";
+      wrap.appendChild(img);
+      const label = document.createElement("span");
+      label.textContent = `${w}×${h}`;
+      label.style.fontSize = "11px";
+      label.style.marginTop = "4px";
+      label.style.display = "block";
+      wrap.appendChild(label);
+      document.getElementById(containerId).appendChild(wrap);
+    }
+
+    async function downloadOne(key) {
+      const { src, w, h } = SIZES[key];
+      const blob = await svgToPng(src, w, h);
+      downloadBlob(blob, `${key}-${w}x${h}.png`);
+    }
+
+    async function downloadAll() {
+      const keys = Object.keys(SIZES);
+      for (const k of keys) {
+        await downloadOne(k);
+        await new Promise(r => setTimeout(r, 300));
+      }
+    }
+
+    // プレビュー
+    ["icon-16", "icon-48", "icon-128", "icon-256"].forEach(k => preview("prv-icon", k));
+    preview("prv-small", "promo-small");
+    preview("prv-large", "promo-large");
+    preview("prv-marquee", "promo-marquee");
+
+    // 個別ダウンロードボタン
+    document.querySelectorAll("button[data-key]").forEach(b => {
+      b.addEventListener("click", () => downloadOne(b.dataset.key));
+    });
+
+    document.getElementById("dl-all").addEventListener("click", downloadAll);
+  </script>
+</body>
+</html>

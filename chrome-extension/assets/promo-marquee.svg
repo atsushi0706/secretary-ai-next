@@ -1,0 +1,37 @@
+<svg viewBox="0 0 1400 560" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#8a7de6"/>
+      <stop offset="55%" stop-color="#6358c5"/>
+      <stop offset="100%" stop-color="#3d3380"/>
+    </linearGradient>
+    <linearGradient id="iconbg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#a8a0f0"/>
+      <stop offset="100%" stop-color="#7a6dd6"/>
+    </linearGradient>
+    <linearGradient id="check" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#5dd49f"/>
+      <stop offset="100%" stop-color="#2f9869"/>
+    </linearGradient>
+  </defs>
+  <rect width="1400" height="560" fill="url(#bg)"/>
+  <circle cx="1280" cy="90" r="200" fill="rgba(255,255,255,0.06)"/>
+  <circle cx="120" cy="470" r="240" fill="rgba(255,255,255,0.05)"/>
+
+  <!-- アイコン (左) -->
+  <g transform="translate(140, 156) scale(1.0)">
+    <rect x="8" y="8" width="240" height="240" rx="56" ry="56" fill="url(#iconbg)"/>
+    <circle cx="120" cy="124" r="68" fill="none" stroke="white" stroke-width="10"/>
+    <line x1="120" y1="124" x2="120" y2="78" stroke="white" stroke-width="10" stroke-linecap="round"/>
+    <line x1="120" y1="124" x2="160" y2="124" stroke="white" stroke-width="8" stroke-linecap="round"/>
+    <circle cx="120" cy="124" r="6" fill="white"/>
+    <circle cx="190" cy="194" r="38" fill="url(#check)"/>
+    <path d="M173 194 L186 207 L210 181" stroke="white" stroke-width="8" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+  </g>
+
+  <!-- テキスト -->
+  <text x="490" y="240" fill="white" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif" font-size="84" font-weight="800">Focus Secretary</text>
+  <text x="492" y="290" fill="rgba(255,255,255,0.92)" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif" font-size="28" font-weight="500">集中モード × ポモドーロ × 秘書AI 連動</text>
+  <text x="492" y="350" fill="rgba(255,255,255,0.78)" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif" font-size="22">仕事中に他サイトを見ちゃう人のためのブラウザ拡張</text>
+  <text x="492" y="384" fill="rgba(255,255,255,0.78)" font-family="-apple-system, 'Hiragino Sans', 'Noto Sans JP', sans-serif" font-size="22">タブ上限・サイトブロック・常駐タイマーを統合</text>
+</svg>

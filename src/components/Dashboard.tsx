@@ -191,6 +191,10 @@ export function Dashboard({ userName }: { userName: string }) {
           {/* タイマー (30分 / 5分) */}
           <TimerWidget />
 
+          {/* マイツール（外部のWebツールへのショートカット） */}
+          <ToolLinks />
+
+
           {/* 月/週 タブ切替カレンダー */}
           <section className="card">
             <div className="flex items-center gap-1 mb-3">
@@ -251,6 +255,51 @@ export function Dashboard({ userName }: { userName: string }) {
 }
 
 const WALK_ROUTINE_TITLE = "ウォーキング30分";
+
+// マイツール (外部 Webツールへのショートカット)
+const MY_TOOLS: Array<{ name: string; url: string; emoji: string; note?: string }> = [
+  {
+    emoji: "📝",
+    name: "note 自動執筆ツール",
+    url: "https://note-writer.streamlit.app",
+    note: "テーマから note 記事を生成",
+  },
+  {
+    emoji: "🧵",
+    name: "Threads 自動投稿ツール",
+    url: "https://threads-writer-tool-syntch8scd4xvhp3szyqqp.streamlit.app/",
+    note: "Threads 向け5投稿一括生成",
+  },
+];
+
+function ToolLinks() {
+  return (
+    <section className="card">
+      <div className="font-bold text-sm mb-2 flex items-center gap-1">
+        🔗 マイツール
+      </div>
+      <ul className="space-y-1.5">
+        {MY_TOOLS.map((t) => (
+          <li key={t.url}>
+            <a
+              href={t.url}
+              target="_blank"
+              rel="noreferrer"
+              className="block text-xs p-2 rounded-lg bg-gray-50 hover:bg-purple-50 transition border border-gray-100 hover:border-purple-200"
+            >
+              <div className="font-bold text-gray-700 flex items-center gap-1.5">
+                <span>{t.emoji}</span>
+                <span className="truncate flex-1">{t.name}</span>
+                <span className="text-gray-400">↗</span>
+              </div>
+              {t.note && <div className="text-[10px] text-gray-500 mt-0.5 ml-5">{t.note}</div>}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 // 昨夜の briefing 表示
 function EveningBriefingCard({

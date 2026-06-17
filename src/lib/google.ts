@@ -176,46 +176,70 @@ export type Schedule = {
   work_end: number;
 };
 
+// JST 基準で Date を分解する（サーバーが UTC で動いていても正確に JST の年月日時分が取れる）
+function toJstParts(d: Date) {
+  const j = new Date(d.getTime() + 9 * 60 * 60 * 1000);
+  return {
+    y: j.getUTCFullYear(),
+    m: j.getUTCMonth(),       // 0-11
+    d: j.getUTCDate(),
+    h: j.getUTCHours(),
+    mi: j.getUTCMinutes(),
+  };
+}
+
+// JST の y/m/d/h/mi から「絶対時刻」(=UTC基準の Date オブジェクト) を作る
+function jstToUtc(y: number, m: number, d: number, h: number, mi: number): Date {
+  // JST = UTC + 9h なので、JST の時刻と同じ瞬間の UTC を作るには JSTから9h引く
+  return new Date(Date.UTC(y, m, d, h - 9, mi, 0));
+}
+
+// JST 上の "YYYY-MM-DD" 文字列
+function jstDateKey(d: Date): string {
+  const p = toJstParts(d);
+  return `${p.y}-${String(p.m + 1).padStart(2, "0")}-${String(p.d).padStart(2, "0")}`;
+}
+
 export function computeSchedule(
   events: Awaited<ReturnType<typeof getCalendarEvents>>,
   targetDate: Date,
   workStart = 9, workEnd = 17,
   now?: Date,
 ): Schedule {
-  const y = targetDate.getFullYear();
-  const m = targetDate.getMonth();
-  const d = targetDate.getDate();
-  let dayStart = new Date(y, m, d, workStart, 0, 0);
-  const dayEnd = new Date(y, m, d, workEnd, 0, 0);
-  if (now && now.getFullYear() === y && now.getMonth() === m && now.getDate() === d) {
-    if (now > dayStart) dayStart = now < dayEnd ? now : dayEnd;
+  // targetDate は通常 "YYYY-MM-DDT00:00:00+09:00" で渡される → JST 0時を指す
+  // それを JST 基準で分解して、稼働時間の絶対時刻を作る
+  const tj = toJstParts(targetDate);
+  let dayStart = jstToUtc(tj.y, tj.m, tj.d, workStart, 0);
+  const dayEnd = jstToUtc(tj.y, tj.m, tj.d, workEnd, 0);
+  if (now) {
+    const nj = toJstParts(now);
+    if (nj.y === tj.y && nj.m === tj.m && nj.d === tj.d) {
+      if (now > dayStart) dayStart = now < dayEnd ? now : dayEnd;
+    }
   }
 
   const timed: Array<[Date, Date, string]> = [];
   const allDay: string[] = [];
   const afterHours: Array<[Date, Date, string]> = [];
-  const targetIso = `${y}-${String(m + 1).padStart(2, "0")}-${String(d).padStart(2, "0")}`;
+  const targetDateStr = `${tj.y}-${String(tj.m + 1).padStart(2, "0")}-${String(tj.d).padStart(2, "0")}`;
 
   for (const e of events) {
     if (e.holiday) continue;
     if (e.all_day) {
-      if (e.start && e.start.startsWith(targetIso)) allDay.push(e.title);
+      if (e.start && e.start.startsWith(targetDateStr)) allDay.push(e.title);
       continue;
     }
     if (!e.start || !e.end) continue;
     const s = new Date(e.start);
     const en = new Date(e.end);
-    const sJst = new Date(s.getFullYear(), s.getMonth(), s.getDate(),
-      s.getHours(), s.getMinutes());
-    const enJst = new Date(en.getFullYear(), en.getMonth(), en.getDate(),
-      en.getHours(), en.getMinutes());
-    if (sJst.toDateString() !== targetDate.toDateString()) continue;
-    if (enJst <= dayStart || sJst >= dayEnd) {
-      afterHours.push([sJst, enJst, e.title]);
+    // JST 上で「同じ日」かを比較（サーバUTCに依存しない）
+    if (jstDateKey(s) !== targetDateStr) continue;
+    if (en <= dayStart || s >= dayEnd) {
+      afterHours.push([s, en, e.title]);
     } else {
       timed.push([
-        sJst < dayStart ? dayStart : sJst,
-        enJst > dayEnd ? dayEnd : enJst,
+        s < dayStart ? dayStart : s,
+        en > dayEnd ? dayEnd : en,
         e.title,
       ]);
     }
@@ -233,7 +257,11 @@ export function computeSchedule(
   const freeMin = free.reduce(
     (acc, [a, b]) => acc + Math.max(0, Math.floor((b.getTime() - a.getTime()) / 60000)), 0,
   );
-  const fmt = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+  // 時刻表示も JST 基準（サーバUTCに依存しない）
+  const fmt = (d: Date) => {
+    const p = toJstParts(d);
+    return `${String(p.h).padStart(2, "0")}:${String(p.mi).padStart(2, "0")}`;
+  };
   return {
     busy_minutes: busyMin,
     free_minutes: freeMin,

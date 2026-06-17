@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA, extractJson } from "@/lib/claude";
+import { getClaudeForUser, CLAUDE_MODEL, buildSecretaryPersona, extractJson } from "@/lib/claude";
+import { getUserSettings } from "@/lib/supabase";
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels,
 } from "@/lib/supabase";
@@ -177,7 +178,12 @@ JSONのみ:
           history.push({ role: "user", content: text });
         }
 
-        const systemText = SECRETARY_PERSONA + "\n\n# いまの状況\n" + ctxLines.join("\n\n");
+        const settings = await getUserSettings(userId);
+        const persona = buildSecretaryPersona({
+          secretaryName: (settings as any)?.secretary_name,
+          userCallName: (settings as any)?.user_call_name,
+        });
+        const systemText = persona + "\n\n# いまの状況\n" + ctxLines.join("\n\n");
 
         // Claude streaming + web_search
         let fullReply = "";

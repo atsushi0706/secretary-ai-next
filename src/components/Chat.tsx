@@ -128,12 +128,19 @@ export function Chat({
   isMorning,
   onTasksUpdated,
   autoGreet,
+  secretaryName,
+  secretaryAvatarUrl,
 }: {
   initialMessages: Message[];
   isMorning: boolean;
   onTasksUpdated: () => void;
   autoGreet: boolean;
+  secretaryName?: string;
+  secretaryAvatarUrl?: string;
 }) {
+  const sName = secretaryName || "清瀬リンク";
+  const sAvatar = secretaryAvatarUrl || "/kiyose.png";
+  const isHttpAvatar = sAvatar.startsWith("http");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -286,14 +293,15 @@ export function Chat({
       {/* 上部ヘッダー（半透明白バー） */}
       <div className="stage-header">
         <Image
-          src="/kiyose.png"
+          src={sAvatar}
           alt=""
           width={28}
           height={28}
           className="rounded-full border border-purple-200"
+          unoptimized={isHttpAvatar}
         />
         <div className="flex-1">
-          <div className="name">清瀬リンク</div>
+          <div className="name">{sName}</div>
           <div className="status">● オンライン</div>
         </div>
       </div>
@@ -309,7 +317,7 @@ export function Chat({
       <div ref={scroller} className="stage-messages space-y-3">
         {messages.length === 0 && (
           <div className="text-center text-gray-500 text-sm pt-8 drop-shadow-sm">
-            清瀬リンクとの会話がここに表示されます
+            {sName}との会話がここに表示されます
           </div>
         )}
         {messages.map((m, i) => {
@@ -320,11 +328,12 @@ export function Chat({
               <div className={`flex items-end gap-2 ${m.role === "user" ? "justify-end" : "justify-start"} w-full`}>
                 {m.role === "assistant" && (
                   <Image
-                    src="/kiyose.png"
-                    alt="清瀬リンク"
+                    src={sAvatar}
+                    alt={sName}
                     width={32}
                     height={32}
                     className="rounded-full border border-purple-200 shrink-0 bg-white"
+                    unoptimized={isHttpAvatar}
                   />
                 )}
                 <div

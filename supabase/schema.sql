@@ -14,14 +14,25 @@
 create table if not exists public.user_settings (
   user_id text primary key,
   gemini_api_key text,                  -- 暗号化推奨だが今はプレーン
+  anthropic_api_key text,
   ntfy_topic text,
   work_email text,                       -- 仕事用メールアドレス
   drive_root_folder_id text,
   google_refresh_token text,             -- Google API用 refresh token (calendar/tasks/drive/gmail)
   google_scopes text,
+  -- カスタマイズ系
+  secretary_name text,                   -- 秘書の名前 (デフォルト「清瀬リンク」)
+  secretary_avatar_url text,             -- 秘書のアバター画像URL
+  user_call_name text,                   -- ユーザーが呼ばれたい名前
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
+
+-- 既存テーブルへの追加 (本番DBにあとから足す用)
+alter table public.user_settings add column if not exists anthropic_api_key text;
+alter table public.user_settings add column if not exists secretary_name text;
+alter table public.user_settings add column if not exists secretary_avatar_url text;
+alter table public.user_settings add column if not exists user_call_name text;
 
 -- 会話履歴
 create table if not exists public.conversations (

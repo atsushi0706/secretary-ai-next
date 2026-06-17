@@ -24,6 +24,10 @@ type Bootstrap = {
   messages: { role: "user" | "assistant"; content: string }[];
   quickmemo: string;
   eveningBriefing?: { body: string; created_at: string } | null;
+  // ユーザーカスタマイズ
+  secretaryName?: string;
+  secretaryAvatarUrl?: string;
+  userCallName?: string;
 };
 
 // PC開きっぱなしで情報が古くなったときの判定しきい値
@@ -82,7 +86,7 @@ export function Dashboard({ userName }: { userName: string }) {
       <main className="min-h-screen flex items-center justify-center">
         <div className="flex items-center gap-3 text-gray-500">
           <div className="w-8 h-8 rounded-full border-2 border-purple-300 border-t-purple-600 animate-spin" />
-          清瀬リンクが準備中…
+          秘書が準備中…
         </div>
       </main>
     );
@@ -113,6 +117,11 @@ export function Dashboard({ userName }: { userName: string }) {
   // 今日進捗: 上(DailyProgress)と下(TaskMatrix today枠)で同じ値を使う
   const todayProgress: TodayProgress = syncTodayProgress(data.tasks);
 
+  // ユーザーカスタマイズ
+  const secretaryName = data.secretaryName || "清瀬リンク";
+  const secretaryAvatarUrl = data.secretaryAvatarUrl || "/kiyose.png";
+  const userCallName = data.userCallName || userName;
+
   return (
     <main className="min-h-screen">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-3 sm:p-5">
@@ -121,18 +130,19 @@ export function Dashboard({ userName }: { userName: string }) {
           <section className="card flex flex-col items-center text-center pt-5">
             <div className="relative">
               <Image
-                src="/kiyose.png"
-                alt="清瀬リンク"
+                src={secretaryAvatarUrl}
+                alt={secretaryName}
                 width={140}
                 height={140}
                 className="rounded-full border-4 border-purple-200 shadow"
                 priority
+                unoptimized={secretaryAvatarUrl.startsWith("http")}
               />
               <span className="absolute bottom-2 right-2 w-4 h-4 rounded-full bg-green-400 border-2 border-white" />
             </div>
-            <div className="mt-3 font-bold text-lg">清瀬リンク</div>
+            <div className="mt-3 font-bold text-lg">{secretaryName}</div>
             <div className="text-xs text-green-600">● オンライン</div>
-            <div className="text-xs text-gray-500 mt-1">{userName} 専属の秘書</div>
+            <div className="text-xs text-gray-500 mt-1">{userCallName} 専属の秘書</div>
 
             <select
               value={mode}
@@ -215,15 +225,17 @@ export function Dashboard({ userName }: { userName: string }) {
           {/* 今日のタスク進捗（リング表示・100%超え可） */}
           <DailyProgress progress={todayProgress} onRefresh={() => setReloadKey((k) => k + 1)} />
 
-          {/* 清瀬リンクとの会話（森背景＋立ち絵） */}
+          {/* 秘書との会話（森背景＋立ち絵） */}
           <section>
-            <h2 className="font-bold text-base mb-2">💬 清瀬リンクとの会話</h2>
+            <h2 className="font-bold text-base mb-2">💬 {secretaryName}との会話</h2>
             <Chat
               key={`${data.targetDay}-${data.isMorning}`}
               initialMessages={data.messages}
               isMorning={data.isMorning}
               autoGreet={autoGreet}
               onTasksUpdated={() => setReloadKey((k) => k + 1)}
+              secretaryName={secretaryName}
+              secretaryAvatarUrl={secretaryAvatarUrl}
             />
           </section>
 

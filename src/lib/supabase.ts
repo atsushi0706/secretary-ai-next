@@ -37,11 +37,15 @@ export async function upsertUserSettings(
   userId: string,
   fields: Partial<{
     gemini_api_key: string;
+    anthropic_api_key: string;
     ntfy_topic: string;
     work_email: string;
     drive_root_folder_id: string;
     google_refresh_token: string;
     google_scopes: string;
+    secretary_name: string;
+    secretary_avatar_url: string;
+    user_call_name: string;
   }>,
 ) {
   const supa = supabaseAdmin();

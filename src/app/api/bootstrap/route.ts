@@ -115,6 +115,10 @@ ${taskBlock}`;
       targetDay,
       targetLabel,
       isMorning,
+      // ユーザー個別のカスタマイズ設定
+      secretaryName: (settings as any)?.secretary_name || "清瀬リンク",
+      secretaryAvatarUrl: (settings as any)?.secretary_avatar_url || "/kiyose.png",
+      userCallName: (settings as any)?.user_call_name || "",
       events,
       tasks: tasks.map((t) => {
         const lab = labels[t.id] ?? { category: "work" as const, urgency: "low" as const, importance: "low" as const, time: "mid" as const };

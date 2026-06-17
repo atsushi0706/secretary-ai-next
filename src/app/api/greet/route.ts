@@ -3,8 +3,8 @@
  * GET /api/greet?isMorning=true
  */
 import { auth } from "@/auth";
-import { getClaudeForUser, CLAUDE_MODEL, SECRETARY_PERSONA } from "@/lib/claude";
-import { saveMessage, saveBriefing } from "@/lib/supabase";
+import { getClaudeForUser, CLAUDE_MODEL, buildSecretaryPersona } from "@/lib/claude";
+import { saveMessage, saveBriefing, getUserSettings } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
 
 function sse(name: string, data: any): Uint8Array {
@@ -56,12 +56,18 @@ export async function GET(req: Request) {
 
         await saveMessage(userId, today, mode, "user", userTrigger);
 
+        const settings = await getUserSettings(userId);
+        const persona = buildSecretaryPersona({
+          secretaryName: (settings as any)?.secretary_name,
+          userCallName: (settings as any)?.user_call_name,
+        });
+
         let full = "";
         const sdkStream = client.messages.stream({
           model: CLAUDE_MODEL,
           max_tokens: 1800,
           temperature: 0.5,
-          system: SECRETARY_PERSONA + "\n\n# いまの状況\n" + ctx.join("\n\n"),
+          system: persona + "\n\n# いまの状況\n" + ctx.join("\n\n"),
           messages: [{ role: "user", content: userTrigger }],
         });
 

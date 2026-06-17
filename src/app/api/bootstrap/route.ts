@@ -6,7 +6,8 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
 import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, normalizeTime, windowOf } from "@/lib/gemini";
-import { getClaudeForUser, CLAUDE_MODEL, extractJson } from "@/lib/claude";
+import { extractJson } from "@/lib/claude";
+import { complete } from "@/lib/ai";
 import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings, loadBriefing } from "@/lib/supabase";
 
 export async function GET(req: Request) {
@@ -65,7 +66,6 @@ export async function GET(req: Request) {
     }
     if (toClassify.length > 0) {
       try {
-        const client = await getClaudeForUser(userId);
         const taskBlock = toClassify.map((t) =>
           `- id: ${t.id}\n  タイトル: ${t.title}\n  期限: ${t.due ?? "期限なし"}`
         ).join("\n");
@@ -80,14 +80,12 @@ export async function GET(req: Request) {
 
 タスク:
 ${taskBlock}`;
-        const r = await client.messages.create({
-          model: CLAUDE_MODEL,
-          max_tokens: 2048,
-          messages: [{ role: "user", content: prompt }],
+        const raw = await complete({
+          userId,
+          prompt,
+          maxTokens: 2048,
+          temperature: 0.2,
         });
-        const raw = r.content
-          .filter((b: any) => b.type === "text")
-          .map((b: any) => b.text).join("\n");
         const data = extractJson<Record<string, any>>(raw);
         if (data) {
           for (const [tid, v] of Object.entries(data)) {

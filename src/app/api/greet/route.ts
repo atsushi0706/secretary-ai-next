@@ -3,7 +3,8 @@
  * GET /api/greet?isMorning=true
  */
 import { auth } from "@/auth";
-import { getClaudeForUser, CLAUDE_MODEL, buildSecretaryPersona } from "@/lib/claude";
+import { buildSecretaryPersona } from "@/lib/claude";
+import { streamChat } from "@/lib/ai";
 import { saveMessage, saveBriefing, getUserSettings } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
 
@@ -26,8 +27,6 @@ export async function GET(req: Request) {
     async start(controller) {
       const send = (name: string, data: any) => controller.enqueue(sse(name, data));
       try {
-        const client = await getClaudeForUser(userId);
-
         const now = jstNow();
         const today = jstDateStr();
         const targetDay = isMorning ? today : jstDateStr(new Date(Date.now() + 86400000));
@@ -63,21 +62,17 @@ export async function GET(req: Request) {
         });
 
         let full = "";
-        const sdkStream = client.messages.stream({
-          model: CLAUDE_MODEL,
-          max_tokens: 1800,
-          temperature: 0.5,
+        for await (const ev of streamChat({
+          userId,
           system: persona + "\n\n# いまの状況\n" + ctx.join("\n\n"),
           messages: [{ role: "user", content: userTrigger }],
-        });
-
-        for await (const event of sdkStream) {
-          if (event.type === "content_block_delta") {
-            const d: any = event.delta;
-            if (d.type === "text_delta" && d.text) {
-              full += d.text;
-              send("delta", { text: d.text });
-            }
+          maxTokens: 1800,
+          temperature: 0.5,
+          enableWebSearch: false,
+        })) {
+          if (ev.type === "delta") {
+            full += ev.text;
+            send("delta", { text: ev.text });
           }
         }
         await saveMessage(userId, today, mode, "assistant", full);

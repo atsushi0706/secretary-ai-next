@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
-import { getClaudeForUser, CLAUDE_MODEL, buildSecretaryPersona, extractJson } from "@/lib/claude";
+import { buildSecretaryPersona, extractJson } from "@/lib/claude";
+import { streamChat, complete } from "@/lib/ai";
 import { getUserSettings } from "@/lib/supabase";
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels,
@@ -49,8 +50,6 @@ export async function POST(req: Request) {
 
         await saveMessage(userId, today, mode, "user", text);
 
-        const client = await getClaudeForUser(userId);
-
         // 「入れといて」自動検出 → タスク追加
         const intentAdd = ADD_INTENT_KEYWORDS.some((k) => text.includes(k));
         const addedTitles: string[] = [];
@@ -80,14 +79,12 @@ JSONのみ:
 [{"title":"30字","notes":"出所","category":"work|personal","urgency":"high|low","importance":"high|low","time":"quick|mid|long","due":"${targetDay}|"}]
 ※ time の意味: quick=すぐ終わる(〜30分) / mid=30分〜1時間 / long=1〜3時間`;
 
-            const r = await client.messages.create({
-              model: CLAUDE_MODEL,
-              max_tokens: 1024,
-              messages: [{ role: "user", content: exPrompt }],
+            const raw = await complete({
+              userId,
+              prompt: exPrompt,
+              maxTokens: 1024,
+              temperature: 0.3,
             });
-            const raw = r.content
-              .filter((b: any) => b.type === "text")
-              .map((b: any) => b.text).join("\n");
             const cands = extractJson<any[]>(raw) ?? [];
             const existingLower = new Set(existingTitles.map((t) => t.toLowerCase().trim()));
             for (const c of cands) {
@@ -185,31 +182,21 @@ JSONのみ:
         });
         const systemText = persona + "\n\n# いまの状況\n" + ctxLines.join("\n\n");
 
-        // Claude streaming + web_search
+        // AI streaming (Gemini or Claude を自動選択) + web_search (Claude時のみ)
         let fullReply = "";
-        const sdkStream = client.messages.stream({
-          model: CLAUDE_MODEL,
-          max_tokens: 2048,
-          temperature: 0.6,
+        for await (const ev of streamChat({
+          userId,
           system: systemText,
           messages: history,
-          tools: [
-            { type: "web_search_20250305", name: "web_search", max_uses: 3 } as any,
-          ],
-        });
-
-        for await (const event of sdkStream) {
-          if (event.type === "content_block_delta") {
-            const delta: any = event.delta;
-            if (delta.type === "text_delta" && delta.text) {
-              fullReply += delta.text;
-              send("delta", { text: delta.text });
-            }
-          } else if (event.type === "content_block_start") {
-            const cb: any = event.content_block;
-            if (cb?.type === "server_tool_use" && cb?.name === "web_search") {
-              send("tool", { name: "web_search" });
-            }
+          maxTokens: 2048,
+          temperature: 0.6,
+          enableWebSearch: true,
+        })) {
+          if (ev.type === "delta") {
+            fullReply += ev.text;
+            send("delta", { text: ev.text });
+          } else if (ev.type === "tool_start") {
+            send("tool", { name: ev.name });
           }
         }
 

@@ -3,7 +3,8 @@
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getClaudeForUser, CLAUDE_MODEL, extractJson } from "@/lib/claude";
+import { extractJson } from "@/lib/claude";
+import { vision } from "@/lib/ai";
 import { addTask, jstNow, jstDateStr } from "@/lib/google";
 import { setManualLabel } from "@/lib/supabase";
 
@@ -27,7 +28,6 @@ export async function POST(req: Request) {
     const base64 = Buffer.from(bytes).toString("base64");
     const mediaType = (file.type || "image/png") as "image/png" | "image/jpeg" | "image/gif" | "image/webp";
 
-    const client = await getClaudeForUser(userId);
     const prompt = `あなたは秘書AI。下の画像はメール/メッセージ/連絡のスクリーンショット。
 本人が対応すべき「やるべきこと」を抽出して、JSON配列のみ返す。
 ${hint ? "【補足ヒント】" + hint + "\n" : ""}
@@ -41,20 +41,13 @@ JSONのみ:
 [{"title":"...","notes":"差出人や出所","category":"work|personal","urgency":"high|low","importance":"high|low","time":"quick|mid|long","due":"${targetDay}|"}]
 ※ time: quick=すぐ終わる(〜30分) / mid=30分〜1時間 / long=1〜3時間`;
 
-    const r = await client.messages.create({
-      model: CLAUDE_MODEL,
-      max_tokens: 2048,
-      messages: [{
-        role: "user",
-        content: [
-          { type: "image", source: { type: "base64", media_type: mediaType, data: base64 } },
-          { type: "text", text: prompt },
-        ],
-      }],
+    const raw = await vision({
+      userId,
+      prompt,
+      imageBase64: base64,
+      mediaType,
+      maxTokens: 2048,
     });
-    const raw = r.content
-      .filter((b: any) => b.type === "text")
-      .map((b: any) => b.text).join("\n");
     const cands = extractJson<any[]>(raw) ?? [];
 
     const added: string[] = [];

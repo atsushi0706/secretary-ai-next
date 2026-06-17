@@ -9,10 +9,7 @@ export async function GET() {
   const s: any = await getUserSettings(userId);
   return NextResponse.json({
     gemini_api_key_set: !!s?.gemini_api_key,
-    anthropic_api_key_set: !!s?.anthropic_api_key,
     ntfy_topic: s?.ntfy_topic ?? "",
-    work_email: s?.work_email ?? "",
-    drive_root_folder_id: s?.drive_root_folder_id ?? "",
     secretary_name: s?.secretary_name ?? "",
     secretary_avatar_url: s?.secretary_avatar_url ?? "",
     user_call_name: s?.user_call_name ?? "",

@@ -1,20 +1,23 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 
 export default function SettingsPage() {
   const [geminiKey, setGeminiKey] = useState("");
   const [hasGeminiKey, setHasGeminiKey] = useState(false);
-  const [anthropicKey, setAnthropicKey] = useState("");
-  const [hasAnthropicKey, setHasAnthropicKey] = useState(false);
   const [ntfyTopic, setNtfyTopic] = useState("");
-  const [workEmail, setWorkEmail] = useState("");
 
   // カスタマイズ系
   const [secretaryName, setSecretaryName] = useState("");
   const [secretaryAvatarUrl, setSecretaryAvatarUrl] = useState("");
   const [userCallName, setUserCallName] = useState("");
+
+  // アップロード
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState("");
+  const fileRef = useRef<HTMLInputElement>(null);
 
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -22,9 +25,7 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((s) => {
       setHasGeminiKey(!!s.gemini_api_key_set);
-      setHasAnthropicKey(!!s.anthropic_api_key_set);
       setNtfyTopic(s.ntfy_topic ?? "");
-      setWorkEmail(s.work_email ?? "");
       setSecretaryName(s.secretary_name ?? "");
       setSecretaryAvatarUrl(s.secretary_avatar_url ?? "");
       setUserCallName(s.user_call_name ?? "");
@@ -35,13 +36,10 @@ export default function SettingsPage() {
   async function save() {
     const body: any = {
       ntfy_topic: ntfyTopic,
-      work_email: workEmail,
       secretary_name: secretaryName,
-      secretary_avatar_url: secretaryAvatarUrl,
       user_call_name: userCallName,
     };
     if (geminiKey) body.gemini_api_key = geminiKey;
-    if (anthropicKey) body.anthropic_api_key = anthropicKey;
     const r = await fetch("/api/settings", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),
@@ -49,22 +47,45 @@ export default function SettingsPage() {
     if (r.ok) {
       setSaved(true);
       if (geminiKey) setHasGeminiKey(true);
-      if (anthropicKey) setHasAnthropicKey(true);
       setGeminiKey("");
-      setAnthropicKey("");
       setTimeout(() => setSaved(false), 2000);
+    }
+  }
+
+  async function uploadAvatar() {
+    const file = fileRef.current?.files?.[0];
+    if (!file) return;
+    setUploading(true);
+    setUploadError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/upload-avatar", { method: "POST", body: fd });
+      const data = await r.json();
+      if (data.error) {
+        setUploadError(data.error);
+      } else {
+        setSecretaryAvatarUrl(data.url);
+      }
+    } catch (e: any) {
+      setUploadError(String(e?.message ?? e));
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = "";
     }
   }
 
   if (loading) return <main className="p-6">読み込み中…</main>;
 
   return (
-    <main className="min-h-screen p-6 max-w-2xl mx-auto">
+    <main className="min-h-screen p-6 max-w-2xl mx-auto pb-20">
       <h1 className="text-2xl font-bold mb-4">⚙️ 設定</h1>
       <Link href="/" className="text-sm text-[var(--accent)] underline">← ホームに戻る</Link>
 
-      <div className="card mt-6 space-y-4">
+      {/* ── 秘書のカスタマイズ ── */}
+      <div className="card mt-6 space-y-5">
         <h2 className="font-bold text-base text-purple-700">🎭 秘書のカスタマイズ</h2>
+
         <div>
           <label className="block font-bold text-sm mb-1">秘書の名前</label>
           <input
@@ -81,16 +102,34 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block font-bold text-sm mb-1">秘書のアバター画像URL（任意）</label>
-          <input
-            type="url"
-            value={secretaryAvatarUrl}
-            onChange={(e) => setSecretaryAvatarUrl(e.target.value)}
-            placeholder="https://example.com/your-character.png"
-            className="w-full p-2 border rounded-lg text-sm"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            空欄ならデフォルトの清瀬リンク画像が使われます
+          <label className="block font-bold text-sm mb-1">秘書のアバター画像</label>
+          <div className="flex items-center gap-3 mb-2">
+            {secretaryAvatarUrl && (
+              <Image
+                src={secretaryAvatarUrl}
+                alt="現在のアバター"
+                width={64}
+                height={64}
+                className="rounded-full border-2 border-purple-200"
+                unoptimized={secretaryAvatarUrl.startsWith("http")}
+              />
+            )}
+            <div className="flex-1">
+              <input
+                ref={fileRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/gif"
+                onChange={uploadAvatar}
+                disabled={uploading}
+                className="text-xs"
+              />
+              {uploading && <div className="text-xs text-purple-600 mt-1">アップロード中…</div>}
+              {uploadError && <div className="text-xs text-red-500 mt-1">{uploadError}</div>}
+            </div>
+          </div>
+          <p className="text-xs text-gray-500">
+            5MBまで・PNG/JPEG/WEBP/GIF。アップロードした画像が秘書のアイコンになります。
+            空欄ならデフォルトの清瀬リンク画像が使われます。
           </p>
         </div>
 
@@ -110,76 +149,114 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      <div className="card mt-6 space-y-4">
-        <h2 className="font-bold text-base text-purple-700">🔑 AIキー（運営側で設定済みなら空欄でOK）</h2>
-        <div>
-          <label className="block font-bold text-sm mb-1">
-            Anthropic API キー
-            {hasAnthropicKey && <span className="text-green-600 text-xs ml-2">✓ 設定済み</span>}
-          </label>
-          <input
-            type="password"
-            value={anthropicKey}
-            onChange={(e) => setAnthropicKey(e.target.value)}
-            placeholder={hasAnthropicKey ? "（保存済み。再設定する場合のみ）" : "sk-ant-... を貼り付け"}
-            className="w-full p-2 border rounded-lg text-sm"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            👉 <a href="https://console.anthropic.com/" target="_blank" className="underline">Anthropic Console</a> で発行
-          </p>
+      {/* ── Gemini API キー ── */}
+      <div className="card mt-6 space-y-3">
+        <h2 className="font-bold text-base text-purple-700">🔑 Gemini API キー（必須）</h2>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          秘書AIを動かすために、Google の Gemini API キーをご自身で取得して貼り付けてください。
+          <strong className="text-purple-700">無料枠で1日1,000回までの利用が可能</strong>です（毎日リセット）。
+        </p>
+
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs leading-relaxed">
+          <div className="font-bold text-purple-700 mb-2">📝 取得手順（3分くらい）</div>
+          <ol className="list-decimal list-inside space-y-1.5 text-gray-700">
+            <li>
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer"
+                 className="text-purple-700 underline font-bold">
+                Google AI Studio
+              </a>
+              を開く
+            </li>
+            <li>Google アカウントでログイン（このアプリと同じアカウントでOK）</li>
+            <li>右上の <strong>「Create API key」</strong> ボタンを押す</li>
+            <li>プロジェクトを選ぶか「Create API key in new project」を選択</li>
+            <li>表示された <strong>「AIzaSy...」で始まる文字列</strong>をコピー</li>
+            <li>下の枠に貼り付けて「保存」</li>
+          </ol>
         </div>
 
         <div>
           <label className="block font-bold text-sm mb-1">
-            Gemini APIキー（互換用・任意）
+            Gemini API キー
             {hasGeminiKey && <span className="text-green-600 text-xs ml-2">✓ 設定済み</span>}
           </label>
           <input
             type="password"
             value={geminiKey}
             onChange={(e) => setGeminiKey(e.target.value)}
-            placeholder={hasGeminiKey ? "（保存済み。再設定する場合のみ）" : "AIza... を貼り付け"}
-            className="w-full p-2 border rounded-lg text-sm"
+            placeholder={hasGeminiKey ? "（保存済み。再設定する場合のみ入力）" : "AIzaSy... を貼り付け"}
+            className="w-full p-2 border rounded-lg text-sm font-mono"
           />
+          <p className="text-xs text-gray-500 mt-1">
+            キーはあなた専用です。秘書AIの応答だけに使われます。他の用途には利用しません。
+          </p>
         </div>
       </div>
 
-      <div className="card mt-6 space-y-4">
-        <h2 className="font-bold text-base text-purple-700">📱 通知・その他</h2>
+      {/* ── スマホ通知 (ntfy) ── */}
+      <div className="card mt-6 space-y-3">
+        <h2 className="font-bold text-base text-purple-700">📱 スマホ通知（任意）</h2>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          設定すると、朝/夜の声かけ・集中タイム終了・タイマー終了などが
+          <strong>スマホにプッシュ通知で届く</strong>ようになります。
+          ntfy.sh という無料のオープンソース通知サービスを使います。
+        </p>
+
+        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs leading-relaxed">
+          <div className="font-bold text-purple-700 mb-2">📝 セットアップ手順（5分くらい）</div>
+          <ol className="list-decimal list-inside space-y-1.5 text-gray-700">
+            <li>
+              スマホで <strong>「ntfy」アプリ</strong>をインストール
+              （<a href="https://apps.apple.com/jp/app/ntfy/id1625396347" target="_blank" rel="noreferrer" className="underline">iOS</a>
+              ／<a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noreferrer" className="underline">Android</a>）
+            </li>
+            <li>
+              他の人と被らない「トピック名」を考える。例:
+              <code className="bg-white px-1.5 py-0.5 rounded mx-1">kiyose_yourname_1234</code>
+              のように<strong>長くて他人に推測されない名前</strong>にする
+            </li>
+            <li>
+              ntfy アプリで <strong>「＋」または「Subscribe to topic」</strong>を押して、
+              上で決めたトピック名を入力 → 「Subscribe」
+            </li>
+            <li>下の枠にも同じトピック名を入れて「保存」</li>
+            <li>
+              すぐ届くかテストしたい場合: スマホのブラウザで
+              <code className="bg-white px-1.5 py-0.5 rounded mx-1">https://ntfy.sh/トピック名</code>
+              を開いて、ターミナルやアプリから送信できます
+            </li>
+          </ol>
+          <div className="mt-2 text-red-600">
+            ⚠ トピック名は他人が知ると通知を盗み見できてしまいます。<strong>長く・ランダムに</strong>。
+          </div>
+        </div>
+
         <div>
-          <label className="block font-bold text-sm mb-1">ntfy トピック名（スマホ通知用・任意）</label>
+          <label className="block font-bold text-sm mb-1">ntfy トピック名</label>
           <input
             type="text"
             value={ntfyTopic}
             onChange={(e) => setNtfyTopic(e.target.value)}
-            placeholder="kiyose_rinq_xxxxx のような推測されにくい名前"
-            className="w-full p-2 border rounded-lg text-sm"
+            placeholder="例: kiyose_yourname_1234ab"
+            className="w-full p-2 border rounded-lg text-sm font-mono"
           />
           <p className="text-xs text-gray-500 mt-1">
-            スマホに「ntfy」アプリを入れて同じトピックを Subscribe しておく
+            空欄にするとプッシュ通知は使われません（ブラウザ通知だけになります）
           </p>
-        </div>
-
-        <div>
-          <label className="block font-bold text-sm mb-1">仕事用メールアドレス（任意）</label>
-          <input
-            type="email"
-            value={workEmail}
-            onChange={(e) => setWorkEmail(e.target.value)}
-            placeholder="work@example.com"
-            className="w-full p-2 border rounded-lg text-sm"
-          />
         </div>
       </div>
 
-      <div className="mt-6 flex items-center gap-3">
-        <button
-          onClick={save}
-          className="bg-[var(--accent)] text-white font-bold py-2 px-6 rounded-lg hover:opacity-90"
-        >
-          保存
-        </button>
-        {saved && <span className="text-green-600 text-sm">✓ 保存しました</span>}
+      {/* ── 保存ボタン (固定 footer) ── */}
+      <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-4 bg-white/95 backdrop-blur border-t border-purple-100">
+        <div className="flex items-center gap-3 max-w-2xl mx-auto">
+          <button
+            onClick={save}
+            className="bg-[var(--accent)] text-white font-bold py-2 px-6 rounded-lg hover:opacity-90"
+          >
+            保存
+          </button>
+          {saved && <span className="text-green-600 text-sm">✓ 保存しました</span>}
+        </div>
       </div>
     </main>
   );

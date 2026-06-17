@@ -27,3 +27,13 @@ document.getElementById("btn-disable-focus").addEventListener("click", () => {
     location.reload();
   });
 });
+
+// 秘書名・アバターを設定から反映
+chrome.runtime.sendMessage({ type: "getState" }, (s) => {
+  if (!s) return;
+  const av = document.querySelector("img.avatar");
+  if (av && s.secretaryAvatarUrl && /^https?:\/\//.test(s.secretaryAvatarUrl)) {
+    av.src = s.secretaryAvatarUrl;
+    av.alt = s.secretaryName || "清瀬リンク";
+  }
+});

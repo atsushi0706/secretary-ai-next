@@ -82,9 +82,21 @@ const SAMPLE_SCHEDULE = `10:00-12:00 動画作業
 13:00-15:00 LP原稿
 15:30-17:00 撮影準備`;
 
+function avatarSrcFromState(s) {
+  if (s?.secretaryAvatarUrl && /^https?:\/\//.test(s.secretaryAvatarUrl)) {
+    return s.secretaryAvatarUrl;
+  }
+  return "icons/icon128.png";
+}
+
 async function render() {
   const s = await send("getState");
   if (!s) return;
+  // ヘッダの秘書名 & アバター
+  const titleEl = document.querySelector(".header .title");
+  if (titleEl) titleEl.textContent = s.secretaryName || "清瀬リンク";
+  const avEl = document.querySelector(".header .avatar");
+  if (avEl) avEl.src = avatarSrcFromState(s);
 
   // 集中モードトグル
   $("focusToggle").checked = s.focusOn;

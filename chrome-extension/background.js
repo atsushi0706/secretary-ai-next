@@ -38,6 +38,9 @@ const DEFAULT_STATE = {
   // 今日の時間割テキスト("HH:MM-HH:MM タスク名"を1行1スロットで)
   scheduleText: "",
   scheduleDate: "",  // 時間割を保存した日付(YYYY-MM-DD) — 前日のを使ってないか判定に使う
+  // 秘書アプリと同期するカスタマイズ(content.js が /api/settings から取得して保存)
+  secretaryName: "",        // 空ならデフォルト「清瀬リンク」
+  secretaryAvatarUrl: "",   // 空ならデフォルト /icons/icon128.png
 };
 
 async function getState() {

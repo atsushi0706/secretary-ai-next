@@ -3,6 +3,17 @@
 
 const frame = document.getElementById("frame");
 
+// 拡張ストレージから秘書名・アバターを取得してヘッダを差し替え
+chrome.runtime.sendMessage({ type: "getState" }, (s) => {
+  if (!s) return;
+  const titleEl = document.querySelector(".header .name");
+  if (titleEl) titleEl.textContent = s.secretaryName || "清瀬リンク";
+  const av = document.querySelector(".header img");
+  if (av && s.secretaryAvatarUrl && /^https?:\/\//.test(s.secretaryAvatarUrl)) {
+    av.src = s.secretaryAvatarUrl;
+  }
+});
+
 document.getElementById("btn-reload").addEventListener("click", () => {
   try {
     frame.contentWindow.location.reload();

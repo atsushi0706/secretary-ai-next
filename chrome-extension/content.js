@@ -105,6 +105,13 @@
     return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   }
 
+  function avatarSrc(state) {
+    if (state?.secretaryAvatarUrl && /^https?:\/\//.test(state.secretaryAvatarUrl)) {
+      return state.secretaryAvatarUrl;
+    }
+    return chrome.runtime.getURL("icons/icon128.png");
+  }
+
   function createBadge() {
     if (badge) return;
     badge = document.createElement("div");
@@ -122,7 +129,6 @@
         <button class="ktb-close" title="非表示">×</button>
       </div>
     `;
-    badge.querySelector(".ktb-avatar").src = chrome.runtime.getURL("icons/icon128.png");
     document.documentElement.appendChild(badge);
 
     try {
@@ -258,6 +264,11 @@
 
     createBadge();
 
+    // 秘書アバターを毎ティック反映(設定変更に追従)
+    const avEl = badge.querySelector(".ktb-avatar");
+    const wantSrc = avatarSrc(s);
+    if (avEl && avEl.src !== wantSrc) avEl.src = wantSrc;
+
     // ─ いま欄: 時間割があれば常に何か表示 ─
     const nowEl = badge.querySelector(".ktb-now");
     if (cur) {
@@ -336,6 +347,29 @@
     return String(s)
       .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+
+  // ─── 秘書アプリにいる時は /api/settings を fetch して名前・アバターを同期 ───
+  const SECRETARY_ORIGIN = "https://secretary-ai-next.vercel.app";
+  if (location.origin === SECRETARY_ORIGIN) {
+    (async () => {
+      try {
+        const r = await fetch("/api/settings", { credentials: "include" });
+        if (!r.ok) return;
+        const s = await r.json();
+        const patch = {
+          secretaryName: s.secretary_name || "",
+          secretaryAvatarUrl: s.secretary_avatar_url || "",
+        };
+        chrome.runtime.sendMessage(
+          { type: "updateSettings", patch },
+          () => { /* ignore */ },
+        );
+        console.log(`${DEBUG_TAG} synced secretary profile:`, patch);
+      } catch (e) {
+        console.warn(`${DEBUG_TAG} settings sync failed:`, e);
+      }
+    })();
   }
 
   // ─── 秘書アプリからの postMessage を受けて拡張ストレージに送る ───

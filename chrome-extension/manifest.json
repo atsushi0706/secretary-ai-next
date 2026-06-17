@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "清瀬リンク 集中モード",
-  "version": "1.0.0",
-  "description": "タブ上限+サイトブロック+ポモドーロ。仕事中に他を見ちゃう淳くん専用。",
+  "name": "Focus Secretary - 集中モード＋ポモドーロ＋秘書連動",
+  "short_name": "Focus Secretary",
+  "version": "1.1.0",
+  "description": "タブ上限・サイトブロック・自動ポモドーロ・タブまたぎタイマー＋秘書AIと連動。仕事中に他を見ちゃう人向け。",
   "permissions": ["tabs", "storage", "notifications", "alarms", "webNavigation", "sidePanel", "scripting"],
   "host_permissions": ["<all_urls>"],
   "background": {

@@ -8,8 +8,21 @@ import { getUserSettings } from "./supabase";
 
 const JST_OFFSET_MS = 9 * 60 * 60 * 1000;
 
+// 真の現在時刻(UTC基準の絶対時刻)。 +9h された偽UTC は時刻比較で破綻するため
+// 比較・計算では必ずこれを使う(jstToUtc など他のヘルパーと整合する)
 export function jstNow(): Date {
-  return new Date(Date.now() + JST_OFFSET_MS);
+  return new Date();
+}
+
+// 表示用: JST の "YYYY-MM-DD HH:MM" 文字列を返す
+export function formatJstDateTime(d: Date = new Date()): string {
+  const j = new Date(d.getTime() + JST_OFFSET_MS);
+  const y = j.getUTCFullYear();
+  const m = String(j.getUTCMonth() + 1).padStart(2, "0");
+  const dd = String(j.getUTCDate()).padStart(2, "0");
+  const hh = String(j.getUTCHours()).padStart(2, "0");
+  const mi = String(j.getUTCMinutes()).padStart(2, "0");
+  return `${y}-${m}-${dd} ${hh}:${mi}`;
 }
 
 export function jstDateStr(d: Date = new Date()): string {

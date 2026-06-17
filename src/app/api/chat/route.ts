@@ -5,7 +5,7 @@ import { getUserSettings } from "@/lib/supabase";
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels,
 } from "@/lib/supabase";
-import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, addTask, addCalendarEvent, completeTask, deleteTask } from "@/lib/google";
+import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask } from "@/lib/google";
 import { clearManualLabel } from "@/lib/supabase";
 
 const ADD_INTENT_KEYWORDS = [
@@ -126,7 +126,7 @@ JSONのみ:
         const targetDate = new Date(targetDay + "T00:00:00+09:00");
         const sched = computeSchedule(events, targetDate, 9, 17, isMorning ? now : undefined);
         const ctxLines = [
-          `【現在時刻】${now.toISOString().slice(0, 16).replace("T", " ")}`,
+          `【現在時刻】${formatJstDateTime(now)} (JST)`,
           `日付の対象: ${targetLabel}（稼働は9〜17時）`,
           `■固定の予定:\n${sched.busy_text}`,
           `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,

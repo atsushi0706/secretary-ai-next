@@ -5,7 +5,7 @@
 import { auth } from "@/auth";
 import { buildSecretaryPersona } from "@/lib/claude";
 import { streamChat } from "@/lib/ai";
-import { saveMessage, saveBriefing, getUserSettings } from "@/lib/supabase";
+import { saveMessage, saveBriefing, getUserSettings, logError } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime } from "@/lib/google";
 
 function sse(name: string, data: any): Uint8Array {
@@ -89,6 +89,7 @@ export async function GET(req: Request) {
 
         send("done", {});
       } catch (e: any) {
+        await logError(userId, "/api/greet", e);
         send("error", { message: String(e?.message ?? e) });
       } finally {
         controller.close();

@@ -8,7 +8,7 @@ import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from
 import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, normalizeTime, windowOf } from "@/lib/gemini";
 import { extractJson } from "@/lib/claude";
 import { complete } from "@/lib/ai";
-import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings, loadBriefing } from "@/lib/supabase";
+import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings, loadBriefing, logError } from "@/lib/supabase";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -133,6 +133,7 @@ ${taskBlock}`;
       eveningBriefing, // 朝モード時、昨夜の時間割提案
     });
   } catch (e: any) {
+    await logError(userId, "/api/bootstrap", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
   }
 }

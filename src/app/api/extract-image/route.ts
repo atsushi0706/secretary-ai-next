@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { extractJson } from "@/lib/claude";
 import { vision } from "@/lib/ai";
 import { addTask, jstNow, jstDateStr } from "@/lib/google";
-import { setManualLabel } from "@/lib/supabase";
+import { setManualLabel, logError } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -74,6 +74,7 @@ JSONのみ:
     }
     return NextResponse.json({ ok: true, added });
   } catch (e: any) {
+    await logError(userId, "/api/extract-image", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
   }
 }

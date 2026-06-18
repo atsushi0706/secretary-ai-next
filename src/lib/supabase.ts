@@ -121,6 +121,42 @@ export async function saveQuickmemo(userId: string, body: string) {
   });
 }
 
+// error_logs: API でキャッチした例外を user_id と紐づけて保存。/errors ページで閲覧。
+export async function logError(
+  userId: string | null,
+  route: string,
+  err: unknown,
+  meta?: Record<string, unknown>,
+) {
+  try {
+    const supa = supabaseAdmin();
+    const message = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack ?? null : null;
+    await supa.from("error_logs").insert({
+      user_id: userId,
+      route,
+      message: message.slice(0, 2000),
+      stack: stack?.slice(0, 8000) ?? null,
+      meta: meta ?? null,
+    });
+  } catch (e) {
+    // ロギング自体は静かに失敗（本体APIをこれ以上壊さない）
+    console.error("[logError] failed to persist", e);
+  }
+}
+
+export async function listRecentErrors(limit = 100, filterUserId?: string) {
+  const supa = supabaseAdmin();
+  let q = supa.from("error_logs")
+    .select("id, user_id, route, message, stack, meta, created_at")
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (filterUserId) q = q.eq("user_id", filterUserId);
+  const { data, error } = await q;
+  if (error) throw error;
+  return data ?? [];
+}
+
 // briefings: 朝/夜の本文を保存して、翌日のダッシュボードでも参照できるようにする
 // schema: user_id, date, mode, body  (unique: user_id, date, mode)
 export async function saveBriefing(

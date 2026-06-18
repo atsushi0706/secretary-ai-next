@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { supabaseAdmin, upsertUserSettings } from "@/lib/supabase";
+import { supabaseAdmin, upsertUserSettings, logError } from "@/lib/supabase";
 
 const MAX_BYTES = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif"];
@@ -56,6 +56,7 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ ok: true, url: publicUrl });
   } catch (e: any) {
+    await logError(userId, "/api/upload-avatar", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
   }
 }

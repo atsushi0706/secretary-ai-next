@@ -34,7 +34,8 @@ const SLOT_PROMPT: Record<Slot, string> = {
 
 function isAuthorized(req: Request): boolean {
   const secret = process.env.CRON_SECRET;
-  if (!secret) return true; // 未設定なら誰でも叩ける（開発用）
+  // Fail closed: 環境変数が未設定なら誰も通さない（過去は開発用に true を返していたが、本番で誰でも叩けてしまうため変更）
+  if (!secret) return false;
   const auth = req.headers.get("authorization");
   return auth === `Bearer ${secret}`;
 }

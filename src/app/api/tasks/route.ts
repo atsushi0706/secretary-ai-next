@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { addTask, completeTask, deleteTask } from "@/lib/google";
-import { setManualLabel, clearManualLabel } from "@/lib/supabase";
+import { setManualLabel, clearManualLabel, logError } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -45,6 +45,7 @@ export async function POST(req: Request) {
     }
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (e: any) {
+    await logError(userId, "/api/tasks", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
   }
 }

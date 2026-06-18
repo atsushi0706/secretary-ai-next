@@ -109,6 +109,19 @@ create table if not exists public.manual_labels (
   primary key (user_id, google_task_id)
 );
 
+-- エラーログ（API でキャッチした例外をユーザーIDと紐づけて保存）
+create table if not exists public.error_logs (
+  id bigserial primary key,
+  user_id text,                          -- 該当する Google sub（未認証エラーは null）
+  route text not null,                   -- 例: "/api/chat", "/api/bootstrap"
+  message text not null,
+  stack text,
+  meta jsonb,                            -- 追加コンテキスト（任意）
+  created_at timestamptz default now()
+);
+create index if not exists idx_error_logs_user_created on public.error_logs(user_id, created_at desc);
+create index if not exists idx_error_logs_created on public.error_logs(created_at desc);
+
 -- AI分類キャッシュ
 create table if not exists public.classify_cache (
   user_id text not null,

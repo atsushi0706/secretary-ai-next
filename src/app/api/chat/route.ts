@@ -3,7 +3,7 @@ import { buildSecretaryPersona, extractJson } from "@/lib/claude";
 import { streamChat, complete } from "@/lib/ai";
 import { getUserSettings } from "@/lib/supabase";
 import {
-  saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels,
+  saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels, logError,
 } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask } from "@/lib/google";
 import { clearManualLabel } from "@/lib/supabase";
@@ -343,7 +343,7 @@ JSONのみ:
 
         send("done", { addedTitles, addedEvents, removedTitles });
       } catch (e: any) {
-        console.error("chat stream error:", e);
+        await logError(userId, "/api/chat", e);
         send("error", { message: String(e?.message ?? e) });
       } finally {
         controller.close();

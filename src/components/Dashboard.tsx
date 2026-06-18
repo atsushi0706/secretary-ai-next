@@ -125,8 +125,8 @@ export function Dashboard({ userName }: { userName: string }) {
   return (
     <main className="min-h-screen">
       <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-3 sm:p-5">
-        {/* ── 左サイドバー ── */}
-        <aside className="space-y-4">
+        {/* ── サイドバー (モバイルでは下に表示) ── */}
+        <aside className="space-y-4 order-2 lg:order-1">
           <section className="card flex flex-col items-center text-center pt-5">
             <div className="relative">
               <Image
@@ -134,7 +134,7 @@ export function Dashboard({ userName }: { userName: string }) {
                 alt={secretaryName}
                 width={140}
                 height={140}
-                className="rounded-full border-4 border-purple-200 shadow"
+                className="w-24 h-24 lg:w-[140px] lg:h-[140px] rounded-full border-4 border-purple-200 shadow object-cover"
                 priority
                 unoptimized={secretaryAvatarUrl.startsWith("http")}
               />
@@ -219,8 +219,8 @@ export function Dashboard({ userName }: { userName: string }) {
           </section>
         </aside>
 
-        {/* ── メイン列 ── */}
-        <div className="space-y-4 min-w-0">
+        {/* ── メイン列 (モバイルでは上に表示) ── */}
+        <div className="space-y-4 min-w-0 order-1 lg:order-2">
           {/* 昨夜決めた明日の流れ（朝モード時、briefingがあれば） */}
           {data.isMorning && data.eveningBriefing?.body && (
             <EveningBriefingCard briefing={data.eveningBriefing} />

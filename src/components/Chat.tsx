@@ -147,8 +147,11 @@ export function Chat({
   const [sending, setSending] = useState(false);
   const [searching, setSearching] = useState(false);
   const [thinking, setThinking] = useState(false);
+  const [recording, setRecording] = useState(false);
+  const [recError, setRecError] = useState("");
   const scroller = useRef<HTMLDivElement>(null);
   const greetedRef = useRef(false);
+  const recogRef = useRef<any>(null);
 
   useEffect(() => {
     if (scroller.current) scroller.current.scrollTop = scroller.current.scrollHeight;
@@ -185,6 +188,49 @@ export function Chat({
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autoGreet, isMorning]);
+
+  function toggleRecording() {
+    if (recording) {
+      try { recogRef.current?.stop(); } catch { /* ignore */ }
+      setRecording(false);
+      return;
+    }
+    setRecError("");
+    const SR =
+      (typeof window !== "undefined" && (
+        (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition
+      )) as any;
+    if (!SR) {
+      setRecError("お使いのブラウザは音声入力に未対応 (Chrome 推奨)");
+      return;
+    }
+    const recog = new SR();
+    recog.lang = "ja-JP";
+    recog.continuous = true;
+    recog.interimResults = true;
+    let finalText = "";
+    recog.onresult = (e: any) => {
+      let interim = "";
+      let finalSeg = "";
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const r = e.results[i];
+        if (r.isFinal) finalSeg += r[0].transcript;
+        else interim += r[0].transcript;
+      }
+      if (finalSeg) finalText += finalSeg;
+      setInput((finalText + interim).trim());
+    };
+    recog.onerror = (e: any) => {
+      setRecError("マイクエラー: " + (e?.error ?? ""));
+      setRecording(false);
+    };
+    recog.onend = () => {
+      setRecording(false);
+    };
+    recog.start();
+    recogRef.current = recog;
+    setRecording(true);
+  }
 
   async function send() {
     if (sending) return;
@@ -366,6 +412,11 @@ export function Chat({
           <button onClick={() => setFile(null)} className="ml-auto text-gray-500">×</button>
         </div>
       )}
+      {recError && (
+        <div className="bg-red-50 border border-red-200 rounded-lg mx-2 px-3 py-2 text-xs text-red-700">
+          {recError}
+        </div>
+      )}
       <div className="stage-input">
         <label className="cursor-pointer p-2 hover:bg-purple-50 rounded-lg" title="画像を添付">
           📎
@@ -374,6 +425,14 @@ export function Chat({
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </label>
+        <button
+          onClick={toggleRecording}
+          className={`p-2 rounded-lg transition ${recording ? "bg-red-100 text-red-600 animate-pulse" : "hover:bg-purple-50"}`}
+          title={recording ? "録音停止" : "音声入力 (Chrome のみ)"}
+          type="button"
+        >
+          {recording ? "🔴" : "🎤"}
+        </button>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}

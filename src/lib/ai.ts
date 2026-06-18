@@ -18,10 +18,18 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getUserSettings } from "./supabase";
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
-// Gemini 2.5 Flash の無料枠は 1日 250リクエストしかない (講座生には少なすぎる)。
-// 3.5 Flash (2026-05-19 安定版リリース) は 1日 1,500リクエスト・1分 15回まで無料。
-// 環境変数 GEMINI_MODEL で変更可能。
-const GEMINI_MODEL = process.env.GEMINI_MODEL || "gemini-3.5-flash";
+// Gemini モデルの優先順位。前から順に試して、503/overloaded のみ次へフォールバック。
+// 3.5 Flash: リリース直後 (2026-05-19) で人気のため 503 出やすい。Best Quality
+// 3-flash: 旧Stable。1500 RPD あり。
+// 2.5-flash-lite: 軽量版。1000 RPD あり、混雑も少なめ。
+// 2.5-flash: 古い安定版。最終救命。
+// 環境変数 GEMINI_MODEL を指定するとそれが先頭になる。
+const GEMINI_FALLBACK_CHAIN: string[] = (() => {
+  const userPick = process.env.GEMINI_MODEL?.trim();
+  const defaults = ["gemini-3.5-flash", "gemini-3-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  if (userPick) return [userPick, ...defaults.filter((m) => m !== userPick)];
+  return defaults;
+})();
 
 export type AIEngine = "gemini" | "claude";
 
@@ -35,23 +43,32 @@ export type StreamEvent =
   | { type: "tool_start"; name: string };
 
 /**
- * Gemini/Claude のレートリミット/クォータ枯渇を表す型付き例外。
+ * Gemini/Claude の「一時的に応答できない」状態を表す型付き例外。
+ *  - kind="rate_limit": 429 / quota枯渇 (1分 or 1日の上限)
+ *  - kind="overloaded": 503 Service Unavailable (Google/Anthropic 側の混雑)
  * 上位ルート (chat/greet) で instanceof チェックして、秘書っぽい返答に置き換える。
  */
 export class AIRateLimitError extends Error {
   retryAfterSec: number;
   engine: AIEngine;
-  constructor(engine: AIEngine, retryAfterSec: number, original?: unknown) {
+  kind: "rate_limit" | "overloaded";
+  constructor(
+    engine: AIEngine,
+    retryAfterSec: number,
+    kind: "rate_limit" | "overloaded" = "rate_limit",
+    original?: unknown,
+  ) {
     const orig = original instanceof Error ? original.message : String(original ?? "");
-    super(`AI rate limit (${engine}, retry in ${retryAfterSec}s): ${orig}`);
+    super(`AI ${kind} (${engine}, retry in ${retryAfterSec}s): ${orig}`);
     this.name = "AIRateLimitError";
     this.engine = engine;
     this.retryAfterSec = retryAfterSec;
+    this.kind = kind;
   }
 }
 
 /**
- * RateLimit エラーを秘書AI口調 + 技術的注釈 に変換するヘルパー。
+ * AIRateLimitError を秘書AI口調 + 技術的注釈 に変換するヘルパー。
  * チャット画面に流す delta テキストを返す。
  */
 export function formatRateLimitForUser(
@@ -64,6 +81,20 @@ export function formatRateLimitForUser(
     : sec >= 60  ? `約${Math.ceil(sec / 60)}分`
     :              `${sec}秒`;
   const engineLabel = err.engine === "gemini" ? "Gemini" : "Claude";
+
+  if (err.kind === "overloaded") {
+    return [
+      `ごめんね、AIサービスが今ちょっと混雑してるみたい…${wait}くらい待ってから、もう一回話しかけてくれる？🙏`,
+      ``,
+      `――― ⚙ 内部の状況（${secretaryName}の頭の中）―――`,
+      `${engineLabel} のサービスが一時的に過負荷状態です（HTTP 503）。`,
+      `・原因: Google/Anthropic 側のサーバー混雑。あなたの API キーは正常です。`,
+      `・推定待機時間: ${wait}`,
+      `・対処: 1〜2分待ってからもう一度話しかけてください。新モデル登場直後に出やすい一時現象です。`,
+      `―――――――――――――――――`,
+    ].join("\n");
+  }
+
   return [
     `ごめんね、ちょっと立て込んでて頭がパンクしそう…${wait}くらい休ませてもらえるかな🙏`,
     ``,
@@ -81,7 +112,19 @@ export function formatRateLimitForUser(
 function detectRateLimit(engine: AIEngine, err: unknown): AIRateLimitError | null {
   const msg = err instanceof Error ? err.message : String(err);
   const status = (err as any)?.status ?? (err as any)?.response?.status;
-  // 429 が含まれてる / "Too Many Requests" / "quota" / "rate" を含む
+
+  // 503 / Service Unavailable / overloaded / high demand → Google/Anthropic 側の混雑
+  const looksOverloaded =
+    status === 503 ||
+    /503|Service Unavailable|overloaded|high demand|temporarily.{0,20}unavail/i.test(msg);
+  if (looksOverloaded) {
+    // 503 は具体的な retry-after を返さないことが多いので 90秒デフォルト (1〜2分目安)
+    const m = msg.match(/retry.{0,15}after\s*[:=]?\s*([\d.]+)/i);
+    const sec = m ? Math.max(1, Math.ceil(parseFloat(m[1]))) : 90;
+    return new AIRateLimitError(engine, sec, "overloaded", err);
+  }
+
+  // 429 / Too Many Requests / quota → ユーザーの上限到達
   const looksRateLimit =
     status === 429 ||
     /429|Too Many Requests|quota|rate.?limit/i.test(msg);
@@ -90,7 +133,7 @@ function detectRateLimit(engine: AIEngine, err: unknown): AIRateLimitError | nul
   const m = msg.match(/retry in\s+([\d.]+)\s*s/i)
     ?? msg.match(/retry.{0,15}after\s*[:=]?\s*([\d.]+)/i);
   const sec = m ? Math.max(1, Math.ceil(parseFloat(m[1]))) : 30;
-  return new AIRateLimitError(engine, sec, err);
+  return new AIRateLimitError(engine, sec, "rate_limit", err);
 }
 
 async function pickEngine(userId: string): Promise<{
@@ -134,8 +177,18 @@ export async function* streamChat(opts: {
   }
 }
 
-async function* streamGemini(
+function isOverloadedError(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const status = (err as any)?.status ?? (err as any)?.response?.status;
+  return status === 503 || /503|Service Unavailable|overloaded|high demand/i.test(msg);
+}
+
+/**
+ * 単一の Gemini モデル名でストリーミング呼び出し。例外をそのまま伝搬する。
+ */
+async function* streamGeminiOne(
   apiKey: string,
+  modelName: string,
   opts: {
     system: string;
     messages: ChatMessage[];
@@ -145,7 +198,7 @@ async function* streamGemini(
 ): AsyncGenerator<StreamEvent, void, unknown> {
   const genAI = new GoogleGenerativeAI(apiKey);
   const model = genAI.getGenerativeModel({
-    model: GEMINI_MODEL,
+    model: modelName,
     systemInstruction: opts.system,
     generationConfig: {
       temperature: opts.temperature ?? 0.6,
@@ -160,17 +213,60 @@ async function* streamGemini(
   if (contents.length === 0 || contents[0].role !== "user") {
     contents.unshift({ role: "user", parts: [{ text: "（秘書業務を開始）" }] });
   }
-  try {
-    const result = await model.generateContentStream({ contents });
-    for await (const chunk of result.stream) {
-      const text = chunk.text();
-      if (text) yield { type: "delta", text };
-    }
-  } catch (e) {
-    const rl = detectRateLimit("gemini", e);
-    if (rl) throw rl;
-    throw e;
+  const result = await model.generateContentStream({ contents });
+  for await (const chunk of result.stream) {
+    const text = chunk.text();
+    if (text) yield { type: "delta", text };
   }
+}
+
+/**
+ * Gemini フォールバックチェーン: 各モデルを順番に試す。
+ * 「チャンクを yield していない時点」での 503 のみ次へフォールバック。
+ * 一度でも yield したら、その時点で異常が出ても fallback はしない (応答が混ざるため)。
+ */
+async function* streamGemini(
+  apiKey: string,
+  opts: {
+    system: string;
+    messages: ChatMessage[];
+    temperature?: number;
+    maxTokens?: number;
+  },
+): AsyncGenerator<StreamEvent, void, unknown> {
+  let lastErr: unknown = null;
+  for (let i = 0; i < GEMINI_FALLBACK_CHAIN.length; i++) {
+    const modelName = GEMINI_FALLBACK_CHAIN[i];
+    let hasYielded = false;
+    try {
+      for await (const ev of streamGeminiOne(apiKey, modelName, opts)) {
+        hasYielded = true;
+        yield ev;
+      }
+      return; // 成功
+    } catch (e) {
+      lastErr = e;
+      if (hasYielded) {
+        // 途中まで返した状態でこけたらフォールバックしない
+        const rl = detectRateLimit("gemini", e);
+        if (rl) throw rl;
+        throw e;
+      }
+      // チャンク前にこけた場合、503/overloaded なら次のモデルへ
+      if (isOverloadedError(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
+        console.warn(`[Gemini] ${modelName} unavailable (${(e as any)?.status ?? "?"}), trying ${GEMINI_FALLBACK_CHAIN[i + 1]}`);
+        continue;
+      }
+      // それ以外はそのまま投げる
+      const rl = detectRateLimit("gemini", e);
+      if (rl) throw rl;
+      throw e;
+    }
+  }
+  // 全モデル枯死
+  const rl = detectRateLimit("gemini", lastErr);
+  if (rl) throw rl;
+  throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
 }
 
 async function* streamClaude(opts: {
@@ -217,6 +313,26 @@ async function* streamClaude(opts: {
 // ────────────────────────────────────────────────────────────
 // complete: 1ターンのテキスト生成 (JSON抽出など)
 // ────────────────────────────────────────────────────────────
+async function completeGeminiOne(
+  apiKey: string,
+  modelName: string,
+  opts: { system?: string; prompt: string; maxTokens?: number; temperature?: number },
+): Promise<string> {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    systemInstruction: opts.system,
+    generationConfig: {
+      temperature: opts.temperature ?? 0.3,
+      maxOutputTokens: opts.maxTokens ?? 2048,
+    },
+  });
+  const r = await model.generateContent({
+    contents: [{ role: "user", parts: [{ text: opts.prompt }] }],
+  });
+  return r.response.text();
+}
+
 export async function complete(opts: {
   userId: string;
   system?: string;
@@ -225,23 +341,31 @@ export async function complete(opts: {
   temperature?: number;
 }): Promise<string> {
   const { engine, geminiKey } = await pickEngine(opts.userId);
-  try {
-    if (engine === "gemini") {
-      const genAI = new GoogleGenerativeAI(geminiKey!);
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODEL,
-        systemInstruction: opts.system,
-        generationConfig: {
-          temperature: opts.temperature ?? 0.3,
-          maxOutputTokens: opts.maxTokens ?? 2048,
-        },
-      });
-      const r = await model.generateContent({
-        contents: [{ role: "user", parts: [{ text: opts.prompt }] }],
-      });
-      return r.response.text();
+
+  if (engine === "gemini") {
+    let lastErr: unknown = null;
+    for (let i = 0; i < GEMINI_FALLBACK_CHAIN.length; i++) {
+      const modelName = GEMINI_FALLBACK_CHAIN[i];
+      try {
+        return await completeGeminiOne(geminiKey!, modelName, opts);
+      } catch (e) {
+        lastErr = e;
+        if (isOverloadedError(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
+          console.warn(`[Gemini complete] ${modelName} unavailable, trying ${GEMINI_FALLBACK_CHAIN[i + 1]}`);
+          continue;
+        }
+        const rl = detectRateLimit("gemini", e);
+        if (rl) throw rl;
+        throw e;
+      }
     }
-    // Claude
+    const rl = detectRateLimit("gemini", lastErr);
+    if (rl) throw rl;
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  }
+
+  // Claude
+  try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
     const r = await client.messages.create({
       model: ANTHROPIC_MODEL,
@@ -255,7 +379,7 @@ export async function complete(opts: {
       .map((b: any) => b.text)
       .join("\n");
   } catch (e) {
-    const rl = detectRateLimit(engine, e);
+    const rl = detectRateLimit("claude", e);
     if (rl) throw rl;
     throw e;
   }
@@ -264,6 +388,23 @@ export async function complete(opts: {
 // ────────────────────────────────────────────────────────────
 // vision: 画像 + テキスト → テキスト
 // ────────────────────────────────────────────────────────────
+async function visionGeminiOne(
+  apiKey: string,
+  modelName: string,
+  opts: { prompt: string; imageBase64: string; mediaType: string; maxTokens?: number },
+): Promise<string> {
+  const genAI = new GoogleGenerativeAI(apiKey);
+  const model = genAI.getGenerativeModel({
+    model: modelName,
+    generationConfig: { maxOutputTokens: opts.maxTokens ?? 2048 },
+  });
+  const r = await model.generateContent([
+    { inlineData: { data: opts.imageBase64, mimeType: opts.mediaType } },
+    { text: opts.prompt },
+  ]);
+  return r.response.text();
+}
+
 export async function vision(opts: {
   userId: string;
   prompt: string;
@@ -272,21 +413,31 @@ export async function vision(opts: {
   maxTokens?: number;
 }): Promise<string> {
   const { engine, geminiKey } = await pickEngine(opts.userId);
-  try {
-    if (engine === "gemini") {
-      const genAI = new GoogleGenerativeAI(geminiKey!);
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODEL,
-        generationConfig: {
-          maxOutputTokens: opts.maxTokens ?? 2048,
-        },
-      });
-      const r = await model.generateContent([
-        { inlineData: { data: opts.imageBase64, mimeType: opts.mediaType } },
-        { text: opts.prompt },
-      ]);
-      return r.response.text();
+
+  if (engine === "gemini") {
+    let lastErr: unknown = null;
+    for (let i = 0; i < GEMINI_FALLBACK_CHAIN.length; i++) {
+      const modelName = GEMINI_FALLBACK_CHAIN[i];
+      try {
+        return await visionGeminiOne(geminiKey!, modelName, opts);
+      } catch (e) {
+        lastErr = e;
+        if (isOverloadedError(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
+          console.warn(`[Gemini vision] ${modelName} unavailable, trying ${GEMINI_FALLBACK_CHAIN[i + 1]}`);
+          continue;
+        }
+        const rl = detectRateLimit("gemini", e);
+        if (rl) throw rl;
+        throw e;
+      }
     }
+    const rl = detectRateLimit("gemini", lastErr);
+    if (rl) throw rl;
+    throw lastErr instanceof Error ? lastErr : new Error(String(lastErr));
+  }
+
+  // Claude
+  try {
     const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY! });
     const r = await client.messages.create({
       model: ANTHROPIC_MODEL,
@@ -304,7 +455,7 @@ export async function vision(opts: {
       .map((b: any) => b.text)
       .join("\n");
   } catch (e) {
-    const rl = detectRateLimit(engine, e);
+    const rl = detectRateLimit("claude", e);
     if (rl) throw rl;
     throw e;
   }

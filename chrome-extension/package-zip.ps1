@@ -6,12 +6,9 @@
 $ErrorActionPreference = "Stop"
 
 $root = $PSScriptRoot
-$out  = Join-Path $root "..\focus-secretary-extension.zip"
+$finalOut = Join-Path $root "..\focus-secretary-extension.zip"
 
-# 既存zip削除
-if (Test-Path $out) { Remove-Item $out -Force }
-
-# 含めるファイル(配布に不要なものは除外)
+# Files to include (exclude things not needed for distribution)
 $include = @(
   "manifest.json",
   "background.js",
@@ -29,20 +26,39 @@ $include = @(
 )
 $iconDir = Join-Path $root "icons"
 
-# 一時ディレクトリ作って必要ファイルだけコピー
-$tmp = Join-Path $env:TEMP "focus-secretary-pack-$(Get-Random)"
-New-Item -ItemType Directory -Force -Path $tmp | Out-Null
+# Workspace lives under a path with Japanese chars. PowerShell's Compress-Archive
+# silently fails on non-ASCII paths, so we build entirely under $env:TEMP
+# (ASCII) and copy the finished zip back to the final location.
+$workDir = Join-Path $env:TEMP "focus-secretary-pack-$(Get-Random)"
+$srcDir  = Join-Path $workDir "src"
+$tmpZip  = Join-Path $workDir "focus-secretary-extension.zip"
+
+New-Item -ItemType Directory -Force -Path $srcDir | Out-Null
+
 foreach ($f in $include) {
   $src = Join-Path $root $f
-  if (Test-Path $src) { Copy-Item $src $tmp }
+  if (Test-Path $src) { Copy-Item $src $srcDir }
 }
-Copy-Item $iconDir (Join-Path $tmp "icons") -Recurse
+Copy-Item $iconDir (Join-Path $srcDir "icons") -Recurse
 
-# zip 化
-Compress-Archive -Path (Join-Path $tmp "*") -DestinationPath $out -Force
+# zip under ASCII path
+Compress-Archive -Path (Join-Path $srcDir "*") -DestinationPath $tmpZip -Force
 
-# 後始末
-Remove-Item $tmp -Recurse -Force
+if (-not (Test-Path $tmpZip)) {
+  throw "Compress-Archive failed: $tmpZip was not created"
+}
 
-Write-Host "Created: $out"
-Get-Item $out | Select-Object Name, Length, LastWriteTime
+# Copy back to final location (handles Japanese path correctly via Copy-Item)
+if (Test-Path $finalOut) { Remove-Item $finalOut -Force }
+Copy-Item $tmpZip $finalOut
+
+# Cleanup
+Remove-Item $workDir -Recurse -Force
+
+if (Test-Path $finalOut) {
+  Write-Host "OK: $finalOut"
+  Get-Item $finalOut | Select-Object Name, Length, LastWriteTime
+} else {
+  Write-Host "FAILED: zip not at final destination"
+  exit 1
+}

@@ -193,58 +193,49 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* ── スマホ通知 (ntfy) ── */}
-      <div className="card mt-6 space-y-3">
-        <h2 className="font-bold text-base text-purple-700">📱 スマホ通知（任意）</h2>
-        <p className="text-xs text-gray-600 leading-relaxed">
-          設定すると、朝/夜の声かけ・集中タイム終了・タイマー終了などが
-          <strong>スマホにプッシュ通知で届く</strong>ようになります。
-          ntfy.sh という無料のオープンソース通知サービスを使います。
-        </p>
+      {/* ── その他 (折りたたみ) ── */}
+      <details className="card mt-6 group">
+        <summary className="cursor-pointer font-bold text-base text-gray-700 flex items-center justify-between">
+          <span>⚙️ その他の設定</span>
+          <span className="text-purple-500 group-open:rotate-180 transition text-sm">▼</span>
+        </summary>
+        <div className="mt-4 space-y-3">
+          <h3 className="font-bold text-sm text-purple-700">📱 スマホ通知（任意）</h3>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            設定すると、朝/夜の声かけ・タイマー終了などがスマホにプッシュで届きます。
+            ntfy.sh という無料サービスを使います。
+          </p>
 
-        <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs leading-relaxed">
-          <div className="font-bold text-purple-700 mb-2">📝 セットアップ手順（5分くらい）</div>
-          <ol className="list-decimal list-inside space-y-1.5 text-gray-700">
-            <li>
-              スマホで <strong>「ntfy」アプリ</strong>をインストール
-              （<a href="https://apps.apple.com/jp/app/ntfy/id1625396347" target="_blank" rel="noreferrer" className="underline">iOS</a>
-              ／<a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noreferrer" className="underline">Android</a>）
-            </li>
-            <li>
-              他の人と被らない「トピック名」を考える。例:
-              <code className="bg-white px-1.5 py-0.5 rounded mx-1">kiyose_yourname_1234</code>
-              のように<strong>長くて他人に推測されない名前</strong>にする
-            </li>
-            <li>
-              ntfy アプリで <strong>「＋」または「Subscribe to topic」</strong>を押して、
-              上で決めたトピック名を入力 → 「Subscribe」
-            </li>
-            <li>下の枠にも同じトピック名を入れて「保存」</li>
-            <li>
-              すぐ届くかテストしたい場合: スマホのブラウザで
-              <code className="bg-white px-1.5 py-0.5 rounded mx-1">https://ntfy.sh/トピック名</code>
-              を開いて、ターミナルやアプリから送信できます
-            </li>
-          </ol>
-          <div className="mt-2 text-red-600">
-            ⚠ トピック名は他人が知ると通知を盗み見できてしまいます。<strong>長く・ランダムに</strong>。
+          <details className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs leading-relaxed">
+            <summary className="cursor-pointer font-bold text-purple-700">📝 セットアップ手順を見る</summary>
+            <ol className="list-decimal list-inside space-y-1.5 text-gray-700 mt-2">
+              <li>
+                スマホで <strong>「ntfy」アプリ</strong>をインストール
+                （<a href="https://apps.apple.com/jp/app/ntfy/id1625396347" target="_blank" rel="noreferrer" className="underline">iOS</a>
+                ／<a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noreferrer" className="underline">Android</a>）
+              </li>
+              <li>他人と被らない「トピック名」を考える（例: <code className="bg-white px-1 rounded">kiyose_yourname_1234</code>）</li>
+              <li>ntfy アプリで「＋」→ トピック名を入力 → Subscribe</li>
+              <li>下の枠にも同じトピック名を入れて「保存」</li>
+              <li>テスト送信: <code className="bg-white px-1 rounded">https://ntfy.sh/トピック名</code> をブラウザで開く</li>
+            </ol>
+            <div className="mt-2 text-red-600">
+              ⚠ トピック名は他人に推測されると通知が漏洩。長くランダムに。
+            </div>
+          </details>
+
+          <div>
+            <label className="block font-bold text-xs mb-1 text-gray-700">ntfy トピック名</label>
+            <input
+              type="text"
+              value={ntfyTopic}
+              onChange={(e) => setNtfyTopic(e.target.value)}
+              placeholder="例: kiyose_yourname_1234ab"
+              className="w-full p-2 border rounded-lg text-sm font-mono"
+            />
           </div>
         </div>
-
-        <div>
-          <label className="block font-bold text-sm mb-1">ntfy トピック名</label>
-          <input
-            type="text"
-            value={ntfyTopic}
-            onChange={(e) => setNtfyTopic(e.target.value)}
-            placeholder="例: kiyose_yourname_1234ab"
-            className="w-full p-2 border rounded-lg text-sm font-mono"
-          />
-          <p className="text-xs text-gray-500 mt-1">
-            空欄にするとプッシュ通知は使われません（ブラウザ通知だけになります）
-          </p>
-        </div>
-      </div>
+      </details>
 
       {/* ── 保存ボタン (固定 footer) ── */}
       <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-4 bg-white/95 backdrop-blur border-t border-purple-100">

@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { buildSecretaryPersona, extractJson } from "@/lib/claude";
-import { streamChat, complete } from "@/lib/ai";
+import { streamChat, complete, AIRateLimitError, formatRateLimitForUser } from "@/lib/ai";
 import { getUserSettings } from "@/lib/supabase";
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels, logError,
@@ -344,7 +344,17 @@ JSONのみ:
         send("done", { addedTitles, addedEvents, removedTitles });
       } catch (e: any) {
         await logError(userId, "/api/chat", e);
-        send("error", { message: String(e?.message ?? e) });
+        if (e instanceof AIRateLimitError) {
+          // 秘書AIの返答として友好的なメッセージを delta で流す
+          const settings: any = await getUserSettings(userId).catch(() => null);
+          const secretaryName = settings?.secretary_name || "清瀬リンク";
+          const friendly = formatRateLimitForUser(e, secretaryName);
+          send("delta", { text: friendly });
+          send("replace", { text: friendly });
+          send("done", { addedTitles: [], addedEvents: [], removedTitles: [] });
+        } else {
+          send("error", { message: String(e?.message ?? e) });
+        }
       } finally {
         controller.close();
       }

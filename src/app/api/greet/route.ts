@@ -4,7 +4,7 @@
  */
 import { auth } from "@/auth";
 import { buildSecretaryPersona } from "@/lib/claude";
-import { streamChat } from "@/lib/ai";
+import { streamChat, AIRateLimitError, formatRateLimitForUser } from "@/lib/ai";
 import { saveMessage, saveBriefing, getUserSettings, logError } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime } from "@/lib/google";
 
@@ -90,7 +90,15 @@ export async function GET(req: Request) {
         send("done", {});
       } catch (e: any) {
         await logError(userId, "/api/greet", e);
-        send("error", { message: String(e?.message ?? e) });
+        if (e instanceof AIRateLimitError) {
+          const settings: any = await getUserSettings(userId).catch(() => null);
+          const secretaryName = settings?.secretary_name || "清瀬リンク";
+          const friendly = formatRateLimitForUser(e, secretaryName);
+          send("delta", { text: friendly });
+          send("done", {});
+        } else {
+          send("error", { message: String(e?.message ?? e) });
+        }
       } finally {
         controller.close();
       }

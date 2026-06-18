@@ -4,9 +4,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { extractJson } from "@/lib/claude";
-import { vision } from "@/lib/ai";
+import { vision, AIRateLimitError, formatRateLimitForUser } from "@/lib/ai";
 import { addTask, jstNow, jstDateStr } from "@/lib/google";
-import { setManualLabel, logError } from "@/lib/supabase";
+import { setManualLabel, logError, getUserSettings } from "@/lib/supabase";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -75,6 +75,13 @@ JSONのみ:
     return NextResponse.json({ ok: true, added });
   } catch (e: any) {
     await logError(userId, "/api/extract-image", e);
+    if (e instanceof AIRateLimitError) {
+      const settings: any = await getUserSettings(userId).catch(() => null);
+      const secretaryName = settings?.secretary_name || "清瀬リンク";
+      const friendly = formatRateLimitForUser(e, secretaryName);
+      // Chat 側で "画像読み取りでエラー: {error}" として表示されるので、エラー文字列に friendly を入れる
+      return NextResponse.json({ ok: false, error: friendly, rateLimited: true }, { status: 200 });
+    }
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
   }
 }

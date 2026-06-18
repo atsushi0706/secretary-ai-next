@@ -14,7 +14,6 @@ export async function GET() {
     secretary_avatar_url: s?.secretary_avatar_url ?? "",
     user_call_name: s?.user_call_name ?? "",
     quickmemo: await loadQuickmemo(userId),
-    your_user_id: userId,  // 管理者設定用に自分のIDを返す
   });
 }
 

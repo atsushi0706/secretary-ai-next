@@ -21,6 +21,8 @@ export default function SettingsPage() {
 
   const [saved, setSaved] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [yourUserId, setYourUserId] = useState("");
+  const [idCopied, setIdCopied] = useState(false);
 
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((s) => {
@@ -29,6 +31,7 @@ export default function SettingsPage() {
       setSecretaryName(s.secretary_name ?? "");
       setSecretaryAvatarUrl(s.secretary_avatar_url ?? "");
       setUserCallName(s.user_call_name ?? "");
+      setYourUserId(s.your_user_id ?? "");
       setLoading(false);
     });
   }, []);
@@ -243,6 +246,52 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500 mt-1">
             空欄にするとプッシュ通知は使われません（ブラウザ通知だけになります）
           </p>
+        </div>
+      </div>
+
+      {/* ── あなたのID (管理者設定用) ── */}
+      <div className="card mt-6 space-y-3">
+        <h2 className="font-bold text-base text-purple-700">🔐 あなたのID（管理者設定用）</h2>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          講座生管理画面（<code>/admin</code>）を使いたい場合だけ必要。
+          下のIDをコピーして Vercel の環境変数 <code>ADMIN_USER_IDS</code> に登録してください。
+        </p>
+        <div className="flex items-center gap-2">
+          <input
+            type="text"
+            value={yourUserId}
+            readOnly
+            className="flex-1 p-2 border rounded-lg text-xs font-mono bg-gray-50"
+            onClick={(e) => (e.target as HTMLInputElement).select()}
+          />
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(yourUserId);
+              setIdCopied(true);
+              setTimeout(() => setIdCopied(false), 2000);
+            }}
+            className="text-xs bg-purple-100 hover:bg-purple-200 text-purple-700 px-3 py-2 rounded-lg font-bold"
+          >
+            {idCopied ? "✓ コピー" : "📋 コピー"}
+          </button>
+        </div>
+        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-xs leading-relaxed">
+          <div className="font-bold text-amber-700 mb-1">📝 設定手順</div>
+          <ol className="list-decimal list-inside space-y-1 text-gray-700">
+            <li>上の「コピー」ボタンを押してIDをコピー</li>
+            <li>
+              <a href="https://vercel.com/dashboard" target="_blank" rel="noreferrer" className="text-purple-700 underline">
+                Vercel ダッシュボード ↗
+              </a>
+              で <code>secretary-ai-next</code> プロジェクトを開く
+            </li>
+            <li>左メニュー <strong>Settings → Environment Variables</strong></li>
+            <li>「Add New」ボタンを押す</li>
+            <li>Key に <code>ADMIN_USER_IDS</code> 、Value にコピーしたIDを貼り付け</li>
+            <li>「Save」を押す</li>
+            <li>左メニュー <strong>Deployments</strong> → 最新行の「⋯」→「Redeploy」</li>
+            <li>1-2分待ってから <code>/admin</code> を開く → 管理画面が見える</li>
+          </ol>
         </div>
       </div>
 

@@ -18,15 +18,23 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 import { getUserSettings } from "./supabase";
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
-// Gemini モデルの優先順位。前から順に試して、503/overloaded のみ次へフォールバック。
-// 3.5 Flash: リリース直後 (2026-05-19) で人気のため 503 出やすい。Best Quality
-// 3-flash: 旧Stable。1500 RPD あり。
-// 2.5-flash-lite: 軽量版。1000 RPD あり、混雑も少なめ。
-// 2.5-flash: 古い安定版。最終救命。
+// Gemini モデルの優先順位。前から順に試して、503/overloaded/404 なら次へフォールバック。
+// すべて公式 GA + 無料枠ありで実在することを確認済み (2026-06 時点)。
+//
+//  - gemini-3.5-flash:     GA・最賢、ただしリリース直後で 503 頻発 (2026-05-19 公開)
+//  - gemini-3.1-flash-lite: GA・新Lite版。混雑少なめ
+//  - gemini-2.5-flash-lite: GA・旧Lite版。最も安定
+//  - gemini-2.5-flash:      GA・旧版。RPD 250 と低めなので最終救命のみ
+//
 // 環境変数 GEMINI_MODEL を指定するとそれが先頭になる。
 const GEMINI_FALLBACK_CHAIN: string[] = (() => {
   const userPick = process.env.GEMINI_MODEL?.trim();
-  const defaults = ["gemini-3.5-flash", "gemini-3-flash", "gemini-2.5-flash-lite", "gemini-2.5-flash"];
+  const defaults = [
+    "gemini-3.5-flash",
+    "gemini-3.1-flash-lite",
+    "gemini-2.5-flash-lite",
+    "gemini-2.5-flash",
+  ];
   if (userPick) return [userPick, ...defaults.filter((m) => m !== userPick)];
   return defaults;
 })();
@@ -177,6 +185,19 @@ export async function* streamChat(opts: {
   }
 }
 
+/**
+ * フォールバックして次モデルを試すべき一時障害かを判定。
+ *  - 503 (overloaded)
+ *  - 404 (モデル名が不正/廃止 — 万一未来に廃止されてもチェーンが死なないため)
+ *  - 500 (Internal Server Error — Google側の一時障害)
+ */
+function shouldFallback(err: unknown): boolean {
+  const msg = err instanceof Error ? err.message : String(err);
+  const status = (err as any)?.status ?? (err as any)?.response?.status;
+  if (status === 503 || status === 404 || status === 500) return true;
+  return /\b(503|404|500)\b|Service Unavailable|overloaded|high demand|not found|Internal.{0,10}Server.{0,10}Error/i.test(msg);
+}
+
 function isOverloadedError(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   const status = (err as any)?.status ?? (err as any)?.response?.status;
@@ -253,7 +274,7 @@ async function* streamGemini(
         throw e;
       }
       // チャンク前にこけた場合、503/overloaded なら次のモデルへ
-      if (isOverloadedError(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
+      if (shouldFallback(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
         console.warn(`[Gemini] ${modelName} unavailable (${(e as any)?.status ?? "?"}), trying ${GEMINI_FALLBACK_CHAIN[i + 1]}`);
         continue;
       }
@@ -350,7 +371,7 @@ export async function complete(opts: {
         return await completeGeminiOne(geminiKey!, modelName, opts);
       } catch (e) {
         lastErr = e;
-        if (isOverloadedError(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
+        if (shouldFallback(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
           console.warn(`[Gemini complete] ${modelName} unavailable, trying ${GEMINI_FALLBACK_CHAIN[i + 1]}`);
           continue;
         }
@@ -422,7 +443,7 @@ export async function vision(opts: {
         return await visionGeminiOne(geminiKey!, modelName, opts);
       } catch (e) {
         lastErr = e;
-        if (isOverloadedError(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
+        if (shouldFallback(e) && i < GEMINI_FALLBACK_CHAIN.length - 1) {
           console.warn(`[Gemini vision] ${modelName} unavailable, trying ${GEMINI_FALLBACK_CHAIN[i + 1]}`);
           continue;
         }

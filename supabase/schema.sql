@@ -33,6 +33,10 @@ alter table public.user_settings add column if not exists anthropic_api_key text
 alter table public.user_settings add column if not exists secretary_name text;
 alter table public.user_settings add column if not exists secretary_avatar_url text;
 alter table public.user_settings add column if not exists user_call_name text;
+-- 週次シフト (曜日別に "HH:MM-HH:MM" or null=休み)
+-- 例: {"mon":"09:00-17:00","tue":"09:00-17:00",..."sat":null,"sun":null}
+-- 未設定なら 9-17平日 をデフォ動作とする (システム側のフォールバック)
+alter table public.user_settings add column if not exists weekly_schedule jsonb;
 
 -- 会話履歴
 create table if not exists public.conversations (

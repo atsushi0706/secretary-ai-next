@@ -14,6 +14,16 @@ export default function SettingsPage() {
   const [secretaryAvatarUrl, setSecretaryAvatarUrl] = useState("");
   const [userCallName, setUserCallName] = useState("");
 
+  // 週次シフト
+  type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+  type Shift = { start: string; end: string; off: boolean };
+  const EMPTY_SHIFT: Shift = { start: "", end: "", off: false };
+  const [shifts, setShifts] = useState<Record<DayKey, Shift>>({
+    mon: { ...EMPTY_SHIFT }, tue: { ...EMPTY_SHIFT }, wed: { ...EMPTY_SHIFT },
+    thu: { ...EMPTY_SHIFT }, fri: { ...EMPTY_SHIFT },
+    sat: { ...EMPTY_SHIFT }, sun: { ...EMPTY_SHIFT },
+  });
+
   // アップロード
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
@@ -29,15 +39,55 @@ export default function SettingsPage() {
       setSecretaryName(s.secretary_name ?? "");
       setSecretaryAvatarUrl(s.secretary_avatar_url ?? "");
       setUserCallName(s.user_call_name ?? "");
+      // weekly_schedule = {mon: "09:00-17:00" | null, ...} を画面用に展開
+      if (s.weekly_schedule && typeof s.weekly_schedule === "object") {
+        const ws = s.weekly_schedule;
+        const next: any = {};
+        (["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).forEach((k) => {
+          const raw = ws[k];
+          if (raw === null) {
+            next[k] = { start: "", end: "", off: true };
+          } else if (typeof raw === "string") {
+            const m = raw.match(/^(\d{1,2}:\d{2})-(\d{1,2}:\d{2})$/);
+            next[k] = m ? { start: m[1], end: m[2], off: false } : { start: "", end: "", off: false };
+          } else {
+            next[k] = { start: "", end: "", off: false };
+          }
+        });
+        setShifts(next);
+      }
       setLoading(false);
     });
   }, []);
+
+  function updateShift(day: DayKey, patch: Partial<Shift>) {
+    setShifts((prev) => ({ ...prev, [day]: { ...prev[day], ...patch } }));
+  }
+
+  /** UI の shifts オブジェクトを weekly_schedule JSON に変換。全曜日空欄なら null を返す (= 未設定扱い) */
+  function buildWeeklySchedulePayload(): any {
+    const result: any = {};
+    let hasAny = false;
+    (["mon", "tue", "wed", "thu", "fri", "sat", "sun"] as const).forEach((k) => {
+      const s = shifts[k];
+      if (s.off) {
+        result[k] = null;
+        hasAny = true;
+      } else if (s.start && s.end) {
+        result[k] = `${s.start}-${s.end}`;
+        hasAny = true;
+      }
+      // 両方空白なら省略 → 未設定扱い (デフォの9-17にフォールバック)
+    });
+    return hasAny ? result : null;
+  }
 
   async function save() {
     const body: any = {
       ntfy_topic: ntfyTopic,
       secretary_name: secretaryName,
       user_call_name: userCallName,
+      weekly_schedule: buildWeeklySchedulePayload(),
     };
     if (geminiKey) body.gemini_api_key = geminiKey;
     const r = await fetch("/api/settings", {
@@ -146,6 +196,54 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500 mt-1">
             秘書から会話の中でこう呼ばれます（空欄なら「あなた」と呼びます）
           </p>
+        </div>
+      </div>
+
+      {/* ── 固定シフト（週次） ── */}
+      <div className="card mt-6 space-y-3">
+        <h2 className="font-bold text-base text-purple-700">🕐 固定シフト（週次・任意）</h2>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          曜日ごとの稼働時間。設定すると秘書AIが「その曜日の時間割」を組んでくれる。
+          <strong className="text-purple-700">空欄なら 9:00〜17:00 をデフォ</strong>として扱います。
+          <br />
+          「休み」にチェックすると、その曜日は時間割を作らず軽く挨拶だけ。
+        </p>
+
+        <div className="space-y-2">
+          {([
+            ["mon", "月"], ["tue", "火"], ["wed", "水"], ["thu", "木"],
+            ["fri", "金"], ["sat", "土"], ["sun", "日"],
+          ] as const).map(([k, label]) => {
+            const s = shifts[k];
+            return (
+              <div key={k} className="flex items-center gap-2 text-sm">
+                <span className="w-6 font-bold text-gray-700">{label}</span>
+                <input
+                  type="time"
+                  value={s.start}
+                  onChange={(e) => updateShift(k, { start: e.target.value })}
+                  disabled={s.off}
+                  className="p-1.5 border rounded text-xs font-mono disabled:bg-gray-100 disabled:text-gray-400"
+                />
+                <span className="text-gray-400">〜</span>
+                <input
+                  type="time"
+                  value={s.end}
+                  onChange={(e) => updateShift(k, { end: e.target.value })}
+                  disabled={s.off}
+                  className="p-1.5 border rounded text-xs font-mono disabled:bg-gray-100 disabled:text-gray-400"
+                />
+                <label className="flex items-center gap-1 ml-2 text-xs text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={s.off}
+                    onChange={(e) => updateShift(k, { off: e.target.checked })}
+                  />
+                  休み
+                </label>
+              </div>
+            );
+          })}
         </div>
       </div>
 

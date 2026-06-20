@@ -14,6 +14,7 @@ export async function GET() {
       secretary_name: s?.secretary_name ?? "",
       secretary_avatar_url: s?.secretary_avatar_url ?? "",
       user_call_name: s?.user_call_name ?? "",
+      weekly_schedule: s?.weekly_schedule ?? null,
       quickmemo: await loadQuickmemo(userId),
     });
   } catch (e: any) {
@@ -37,6 +38,10 @@ export async function POST(req: Request) {
     if (typeof body.secretary_name === "string") upd.secretary_name = body.secretary_name;
     if (typeof body.secretary_avatar_url === "string") upd.secretary_avatar_url = body.secretary_avatar_url;
     if (typeof body.user_call_name === "string") upd.user_call_name = body.user_call_name;
+    // weekly_schedule: null か、または {mon: "HH:MM-HH:MM"|null, ...} 形式
+    if (body.weekly_schedule === null || (body.weekly_schedule && typeof body.weekly_schedule === "object")) {
+      upd.weekly_schedule = body.weekly_schedule;
+    }
     if (Object.keys(upd).length > 0) await upsertUserSettings(userId, upd);
     if (typeof body.quickmemo === "string") await saveQuickmemo(userId, body.quickmemo);
     return NextResponse.json({ ok: true });

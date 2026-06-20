@@ -185,9 +185,67 @@ export type Schedule = {
   free_text: string;
   all_day: string[];
   after_hours_text: string;
-  work_start: number;
+  work_start: number;       // 時 (整数)。互換のため残す。分は work_start_text の方が正確
   work_end: number;
+  work_start_text: string;  // "HH:MM" (例: "09:30")
+  work_end_text: string;
+  is_off_day: boolean;      // シフトで休みに設定されてる曜日
 };
+
+export type WeekDayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+export type WeeklySchedule = Partial<Record<WeekDayKey, string | null>>;
+
+const DAY_KEYS_FROM_SUN = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+
+/**
+ * JST 上での曜日キーを取得 ("mon", "tue", ...).
+ * targetDate が "2026-06-22T00:00:00+09:00" のような JST 0時を指してることを想定。
+ */
+function jstDayKey(d: Date): WeekDayKey {
+  const p = toJstParts(d);
+  const wd = new Date(Date.UTC(p.y, p.m, p.d)).getUTCDay(); // 0=Sun..6=Sat
+  return DAY_KEYS_FROM_SUN[wd];
+}
+
+/** "HH:MM-HH:MM" をパースして { startH, startM, endH, endM } を返す。形式不正なら null */
+function parseShiftRange(s: string | null | undefined): {
+  startH: number; startM: number; endH: number; endM: number;
+} | null {
+  if (!s || typeof s !== "string") return null;
+  const m = s.match(/^(\d{1,2}):(\d{2})\s*[-–〜~]\s*(\d{1,2}):(\d{2})$/);
+  if (!m) return null;
+  const startH = parseInt(m[1], 10), startM = parseInt(m[2], 10);
+  const endH = parseInt(m[3], 10), endM = parseInt(m[4], 10);
+  if (startH < 0 || startH > 24 || endH < 0 || endH > 24) return null;
+  if (startM < 0 || startM > 59 || endM < 0 || endM > 59) return null;
+  if (endH * 60 + endM <= startH * 60 + startM) return null;
+  return { startH, startM, endH, endM };
+}
+
+/** weeklySchedule からその日の (startH, startM, endH, endM) または「休み」を返す */
+function shiftForDate(
+  targetDate: Date,
+  weeklySchedule: WeeklySchedule | null | undefined,
+  fallbackStartH: number,
+  fallbackEndH: number,
+): { startH: number; startM: number; endH: number; endM: number; isOff: boolean } {
+  if (!weeklySchedule) {
+    return { startH: fallbackStartH, startM: 0, endH: fallbackEndH, endM: 0, isOff: false };
+  }
+  const dayKey = jstDayKey(targetDate);
+  if (!(dayKey in weeklySchedule)) {
+    return { startH: fallbackStartH, startM: 0, endH: fallbackEndH, endM: 0, isOff: false };
+  }
+  const raw = weeklySchedule[dayKey];
+  if (raw === null) {
+    return { startH: 0, startM: 0, endH: 0, endM: 0, isOff: true };
+  }
+  const parsed = parseShiftRange(raw);
+  if (!parsed) {
+    return { startH: fallbackStartH, startM: 0, endH: fallbackEndH, endM: 0, isOff: false };
+  }
+  return { ...parsed, isOff: false };
+}
 
 // JST 基準で Date を分解する（サーバーが UTC で動いていても正確に JST の年月日時分が取れる）
 function toJstParts(d: Date) {
@@ -218,12 +276,55 @@ export function computeSchedule(
   targetDate: Date,
   workStart = 9, workEnd = 17,
   now?: Date,
+  weeklySchedule?: WeeklySchedule | null,
 ): Schedule {
   // targetDate は通常 "YYYY-MM-DDT00:00:00+09:00" で渡される → JST 0時を指す
   // それを JST 基準で分解して、稼働時間の絶対時刻を作る
   const tj = toJstParts(targetDate);
-  let dayStart = jstToUtc(tj.y, tj.m, tj.d, workStart, 0);
-  const dayEnd = jstToUtc(tj.y, tj.m, tj.d, workEnd, 0);
+
+  // 週次シフトがあればその曜日のシフトで上書き
+  const shift = shiftForDate(targetDate, weeklySchedule, workStart, workEnd);
+  const startHText = String(shift.startH).padStart(2, "0") + ":" + String(shift.startM).padStart(2, "0");
+  const endHText = String(shift.endH).padStart(2, "0") + ":" + String(shift.endM).padStart(2, "0");
+
+  // 休みの日: 時間割を作らず、固定予定だけ拾って返す
+  if (shift.isOff) {
+    const allDayOff: string[] = [];
+    const timedOff: Array<[Date, Date, string]> = [];
+    const targetDateStrOff = `${tj.y}-${String(tj.m + 1).padStart(2, "0")}-${String(tj.d).padStart(2, "0")}`;
+    for (const e of events) {
+      if (e.holiday) continue;
+      if (e.all_day) {
+        if (e.start && e.start.startsWith(targetDateStrOff)) allDayOff.push(e.title);
+        continue;
+      }
+      if (!e.start || !e.end) continue;
+      const s = new Date(e.start);
+      if (jstDateKey(s) !== targetDateStrOff) continue;
+      timedOff.push([s, new Date(e.end), e.title]);
+    }
+    timedOff.sort((a, b) => a[0].getTime() - b[0].getTime());
+    const fmtOff = (d: Date) => {
+      const p = toJstParts(d);
+      return `${String(p.h).padStart(2, "0")}:${String(p.mi).padStart(2, "0")}`;
+    };
+    return {
+      busy_minutes: 0,
+      free_minutes: 0,
+      busy_text: timedOff.map(([s, en, t]) => `  ${fmtOff(s)}-${fmtOff(en)} ${t}`).join("\n") || "  なし",
+      free_text: "  （お休みの日）",
+      all_day: allDayOff,
+      after_hours_text: "",
+      work_start: 0,
+      work_end: 0,
+      work_start_text: "",
+      work_end_text: "",
+      is_off_day: true,
+    };
+  }
+
+  let dayStart = jstToUtc(tj.y, tj.m, tj.d, shift.startH, shift.startM);
+  const dayEnd = jstToUtc(tj.y, tj.m, tj.d, shift.endH, shift.endM);
   if (now) {
     const nj = toJstParts(now);
     if (nj.y === tj.y && nj.m === tj.m && nj.d === tj.d) {
@@ -282,6 +383,9 @@ export function computeSchedule(
     free_text: free.map(([a, b]) => `  ${fmt(a)}-${fmt(b)} (${Math.floor((b.getTime() - a.getTime()) / 60000)}分)`).join("\n") || "  まとまった空きなし",
     all_day: allDay,
     after_hours_text: afterHours.map(([s, en, t]) => `  ${fmt(s)}-${fmt(en)} ${t}`).join("\n"),
-    work_start: workStart, work_end: workEnd,
+    work_start: shift.startH, work_end: shift.endH,
+    work_start_text: startHText,
+    work_end_text: endHText,
+    is_off_day: false,
   };
 }

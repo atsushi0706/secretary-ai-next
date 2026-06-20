@@ -104,7 +104,10 @@ ${taskBlock}`;
       }
     }
 
-    const schedule = computeSchedule(events, targetDate, 9, 17, isMorning ? now : undefined);
+    const schedule = computeSchedule(
+      events, targetDate, 9, 17, isMorning ? now : undefined,
+      (settings as any)?.weekly_schedule,
+    );
 
     return NextResponse.json({
       setupNeeded: false,

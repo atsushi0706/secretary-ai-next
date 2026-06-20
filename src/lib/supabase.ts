@@ -33,6 +33,10 @@ export async function getUserSettings(userId: string) {
   return data;
 }
 
+// 週次シフト型: 各曜日に "HH:MM-HH:MM" or null(=休み)
+export type WeekDayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
+export type WeeklySchedule = Partial<Record<WeekDayKey, string | null>>;
+
 export async function upsertUserSettings(
   userId: string,
   fields: Partial<{
@@ -46,6 +50,7 @@ export async function upsertUserSettings(
     secretary_name: string;
     secretary_avatar_url: string;
     user_call_name: string;
+    weekly_schedule: WeeklySchedule | null;
   }>,
 ) {
   const supa = supabaseAdmin();

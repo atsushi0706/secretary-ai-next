@@ -33,32 +33,44 @@ export async function GET(req: Request) {
         const targetLabel = isMorning ? "今日" : "明日";
         const mode = isMorning ? "morning" : "evening";
 
+        const settings: any = await getUserSettings(userId).catch(() => null);
         const [events, tasks] = await Promise.all([
           getCalendarEvents(userId, 1),
           getTasks(userId),
         ]);
         const targetDate = new Date(targetDay + "T00:00:00+09:00");
-        const sched = computeSchedule(events, targetDate, 9, 17, isMorning ? now : undefined);
+        const sched = computeSchedule(
+          events, targetDate, 9, 17, isMorning ? now : undefined,
+          settings?.weekly_schedule,
+        );
 
+        const workHoursLabel = sched.is_off_day
+          ? "（お休みの日）"
+          : `稼働 ${sched.work_start_text}〜${sched.work_end_text}`;
         const ctx = [
           `【現在時刻】${formatJstDateTime(now)} (JST)`,
-          `対象: ${targetLabel}（稼働 9〜17時）`,
+          `対象: ${targetLabel}（${workHoursLabel}）`,
           `■固定の予定:\n${sched.busy_text}`,
-          `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
+          sched.is_off_day
+            ? `今日はお休みの日として設定されています。時間割を作らず、軽くゆっくりした挨拶だけしてください。`
+            : `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
         ];
         if (sched.after_hours_text) ctx.push("■夜の予定:\n" + sched.after_hours_text);
         ctx.push("未完了タスク:\n" + (tasks.map((t) => `- ${t.title}（期限:${t.due ?? "なし"}）`).join("\n") || "なし"));
 
-        const userTrigger = isMorning
-          ? "おはよう。今日の流れと、優先順位の高いタスクを時間割で組んで。固定予定は時刻つきで省略せず全部入れて。"
-          : "お疲れさま。明日の流れを組んでくれる？固定予定は時刻つきで全部入れて、空き時間にタスクを差し込んで。";
+        const userTrigger = sched.is_off_day
+          ? (isMorning
+            ? "おはよう。今日はお休みの日に設定してるので、ゆっくり休む方向で短く挨拶して。時間割は作らなくていい。"
+            : "お疲れさま。明日はお休みの日なので、軽く挨拶だけで OK。時間割は不要。")
+          : (isMorning
+            ? "おはよう。今日の流れと、優先順位の高いタスクを時間割で組んで。固定予定は時刻つきで省略せず全部入れて。途中で15分の散歩タイムを入れることを提案して。"
+            : "お疲れさま。明日の流れを組んでくれる？固定予定は時刻つきで全部入れて、空き時間にタスクを差し込んで。途中で15分の散歩タイムを入れることを提案して。");
 
         await saveMessage(userId, today, mode, "user", userTrigger);
 
-        const settings = await getUserSettings(userId);
         const persona = buildSecretaryPersona({
-          secretaryName: (settings as any)?.secretary_name,
-          userCallName: (settings as any)?.user_call_name,
+          secretaryName: settings?.secretary_name,
+          userCallName: settings?.user_call_name,
         });
 
         let full = "";

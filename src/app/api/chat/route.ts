@@ -118,18 +118,27 @@ JSONのみ:
         }
 
         // 会話コンテキストを組み立て
-        const [events, tasks, manualLabels] = await Promise.all([
+        const [events, tasks, manualLabels, settingsForCtx] = await Promise.all([
           getCalendarEvents(userId, 1),
           getTasks(userId),
           getManualLabels(userId),
+          getUserSettings(userId).catch(() => null) as Promise<any>,
         ]);
         const targetDate = new Date(targetDay + "T00:00:00+09:00");
-        const sched = computeSchedule(events, targetDate, 9, 17, isMorning ? now : undefined);
+        const sched = computeSchedule(
+          events, targetDate, 9, 17, isMorning ? now : undefined,
+          settingsForCtx?.weekly_schedule,
+        );
+        const workLabelChat = sched.is_off_day
+          ? "（お休みの日）"
+          : `稼働は ${sched.work_start_text}〜${sched.work_end_text}`;
         const ctxLines = [
           `【現在時刻】${formatJstDateTime(now)} (JST)`,
-          `日付の対象: ${targetLabel}（稼働は9〜17時）`,
+          `日付の対象: ${targetLabel}（${workLabelChat}）`,
           `■固定の予定:\n${sched.busy_text}`,
-          `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
+          sched.is_off_day
+            ? `今日はお休みの日として設定されているため、時間割は組まなくて OK。`
+            : `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
         ];
         if (sched.after_hours_text) {
           ctxLines.push("■夜の予定（参考）:\n" + sched.after_hours_text);

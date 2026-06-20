@@ -314,6 +314,7 @@ export function Chat({
             if (data.addedTitles?.length > 0) needsRefresh = true;
             if (data.addedEvents?.length > 0) needsRefresh = true;
             if (data.removedTitles?.length > 0) needsRefresh = true;
+            if (data.removedEvents?.length > 0) needsRefresh = true;
           } else if (event === "error") {
             setMessages((prev) => {
               const arr = [...prev];

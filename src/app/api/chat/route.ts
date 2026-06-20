@@ -5,7 +5,7 @@ import { getUserSettings } from "@/lib/supabase";
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels, logError,
 } from "@/lib/supabase";
-import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask, jstDayOfWeekJa } from "@/lib/google";
+import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask, jstDayOfWeekJa, deleteCalendarEventsByCriteria } from "@/lib/google";
 import { clearManualLabel } from "@/lib/supabase";
 
 const ADD_INTENT_KEYWORDS = [
@@ -292,6 +292,37 @@ JSONのみ:
           }
         }
 
+        // AIの応答内に <calendar_events_to_remove>...</calendar_events_to_remove> タグがあれば、予定を削除
+        const calRemoveTagMatch = fullReply.match(/<calendar_events_to_remove>([\s\S]*?)<\/calendar_events_to_remove>/);
+        const removedEvents: string[] = [];
+        if (calRemoveTagMatch) {
+          try {
+            const arr = extractJson<any[]>(calRemoveTagMatch[1]);
+            if (Array.isArray(arr)) {
+              for (const item of arr) {
+                const dateJST = String(item?.date ?? "").trim();
+                if (!/^\d{4}-\d{2}-\d{2}$/.test(dateJST)) continue;
+                const titleMatch = item?.title_match ? String(item.title_match).trim() : undefined;
+                const startHHMM = item?.start ? String(item.start).trim() : undefined;
+                const deleteAll = item?.delete_all === true;
+                try {
+                  const titles = await deleteCalendarEventsByCriteria(userId, {
+                    dateJST,
+                    titleMatch,
+                    startHHMM,
+                    deleteAll,
+                  });
+                  removedEvents.push(...titles.map((t) => `${dateJST} ${t}`));
+                } catch (err: any) {
+                  console.error("deleteCalendarEventsByCriteria failed:", err);
+                }
+              }
+            }
+          } catch (e) {
+            console.error("parse calendar_events_to_remove failed:", e);
+          }
+        }
+
         // AIの応答内に <calendar_events>...</calendar_events> タグがあれば、予定を実体化する
         const eventTagMatch = fullReply.match(/<calendar_events>([\s\S]*?)<\/calendar_events>/);
         const addedEvents: string[] = [];
@@ -335,6 +366,7 @@ JSONのみ:
           .replace(/<tasks_to_add>[\s\S]*?<\/tasks_to_add>/g, "")
           .replace(/<tasks_to_remove>[\s\S]*?<\/tasks_to_remove>/g, "")
           .replace(/<calendar_events>[\s\S]*?<\/calendar_events>/g, "")
+          .replace(/<calendar_events_to_remove>[\s\S]*?<\/calendar_events_to_remove>/g, "")
           .trim();
         await saveMessage(userId, today, mode, "assistant", cleanReply);
 
@@ -353,7 +385,7 @@ JSONのみ:
           }
         }
 
-        send("done", { addedTitles, addedEvents, removedTitles });
+        send("done", { addedTitles, addedEvents, removedTitles, removedEvents });
       } catch (e: any) {
         await logError(userId, "/api/chat", e);
         if (e instanceof AIRateLimitError) {
@@ -363,7 +395,7 @@ JSONのみ:
           const friendly = formatRateLimitForUser(e, secretaryName);
           send("delta", { text: friendly });
           send("replace", { text: friendly });
-          send("done", { addedTitles: [], addedEvents: [], removedTitles: [] });
+          send("done", { addedTitles: [], addedEvents: [], removedTitles: [], removedEvents: [] });
         } else {
           send("error", { message: String(e?.message ?? e) });
         }

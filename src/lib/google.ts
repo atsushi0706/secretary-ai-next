@@ -136,6 +136,97 @@ export async function deleteTask(userId: string, tasklistId: string, taskId: str
   });
 }
 
+/**
+ * カレンダー予定を ID 指定で削除。
+ * primary 以外のカレンダーから登録されたものも消せるよう calendarId 指定対応。
+ */
+export async function deleteCalendarEvent(
+  userId: string,
+  calendarId: string,
+  eventId: string,
+) {
+  const auth = await getOAuthClient(userId);
+  const cal = google.calendar({ version: "v3", auth });
+  await cal.events.delete({ calendarId, eventId });
+}
+
+/**
+ * 条件にマッチするカレンダー予定を検索 → 一括削除。
+ *  - dateJST: "YYYY-MM-DD" その日のJST 0時〜翌0時の範囲で探す
+ *  - titleMatch: タイトルにこの文字列が部分一致するもののみ (省略可、その場合は date のみで絞る)
+ *  - startHHMM: "HH:MM" 開始時刻が一致するもののみ (省略可)
+ *  - deleteAll: true なら titleMatch を無視して、その日の全予定を削除
+ * 戻り値: 削除に成功したタイトルの配列
+ */
+export async function deleteCalendarEventsByCriteria(
+  userId: string,
+  criteria: {
+    dateJST: string;
+    titleMatch?: string;
+    startHHMM?: string;
+    deleteAll?: boolean;
+  },
+): Promise<string[]> {
+  const auth = await getOAuthClient(userId);
+  const cal = google.calendar({ version: "v3", auth });
+
+  // JST 0時〜翌0時の範囲
+  const [yStr, mStr, dStr] = criteria.dateJST.split("-");
+  const y = parseInt(yStr, 10), m = parseInt(mStr, 10) - 1, d = parseInt(dStr, 10);
+  if (isNaN(y) || isNaN(m) || isNaN(d)) return [];
+  const dayStart = new Date(Date.UTC(y, m, d, -9, 0, 0)); // JST 0時 = UTC 前日15時
+  const dayEnd = new Date(dayStart.getTime() + 24 * 60 * 60 * 1000);
+
+  const lists = await cal.calendarList.list();
+  const deleted: string[] = [];
+
+  for (const c of lists.data.items ?? []) {
+    if (!c.id) continue;
+    // 祝日カレンダー(読取専用)はスキップ
+    const cIdLower = (c.id + (c.summary ?? "")).toLowerCase();
+    if (cIdLower.includes("holiday") || (c.summary ?? "").includes("祝日")) continue;
+
+    try {
+      const r = await cal.events.list({
+        calendarId: c.id,
+        timeMin: dayStart.toISOString(),
+        timeMax: dayEnd.toISOString(),
+        singleEvents: true,
+        orderBy: "startTime",
+      });
+      for (const e of r.data.items ?? []) {
+        if (!e.id) continue;
+        const title = (e.summary ?? "").trim();
+
+        // タイトルマッチ判定
+        if (!criteria.deleteAll && criteria.titleMatch) {
+          if (!title.includes(criteria.titleMatch)) continue;
+        }
+        // 開始時刻マッチ判定 (HH:MM JST)
+        if (criteria.startHHMM) {
+          const startRaw = e.start?.dateTime ?? e.start?.date ?? null;
+          if (!startRaw) continue;
+          const startDate = new Date(startRaw);
+          // JST に変換
+          const jstHH = String((startDate.getUTCHours() + 9) % 24).padStart(2, "0");
+          const jstMI = String(startDate.getUTCMinutes()).padStart(2, "0");
+          if (`${jstHH}:${jstMI}` !== criteria.startHHMM) continue;
+        }
+
+        try {
+          await cal.events.delete({ calendarId: c.id, eventId: e.id });
+          deleted.push(title || "(無題)");
+        } catch (err) {
+          console.warn(`Failed to delete event ${e.id} from ${c.id}:`, err);
+        }
+      }
+    } catch (err) {
+      console.warn(`Failed to list events in calendar ${c.id}:`, err);
+    }
+  }
+  return deleted;
+}
+
 export async function addCalendarEvent(
   userId: string,
   args: {

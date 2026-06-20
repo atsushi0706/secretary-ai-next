@@ -9,6 +9,7 @@ import { Chat } from "./Chat";
 import { MonthCalendar } from "./MonthCalendar";
 import { WeekCalendarCompact } from "./WeekCalendarCompact";
 import { TimerWidget } from "./TimerWidget";
+import AlarmManager from "./AlarmManager";
 import { syncTodayProgress, type TodayProgress } from "@/lib/todayProgress";
 
 type Bootstrap = {
@@ -190,6 +191,9 @@ export function Dashboard({ userName }: { userName: string }) {
 
           {/* タイマー (30分 / 5分) */}
           <TimerWidget />
+
+          {/* アラーム (時刻指定で1回鳴らす) */}
+          <AlarmManager />
 
           {/* マイツール（外部のWebツールへのショートカット） */}
           <ToolLinks />

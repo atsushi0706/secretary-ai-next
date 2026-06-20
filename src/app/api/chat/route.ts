@@ -5,7 +5,7 @@ import { getUserSettings } from "@/lib/supabase";
 import {
   saveMessage, loadMessages, setManualLabel, saveBriefing, getManualLabels, logError,
 } from "@/lib/supabase";
-import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask } from "@/lib/google";
+import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask, jstDayOfWeekJa } from "@/lib/google";
 import { clearManualLabel } from "@/lib/supabase";
 
 const ADD_INTENT_KEYWORDS = [
@@ -132,9 +132,12 @@ JSONのみ:
         const workLabelChat = sched.is_off_day
           ? "（お休みの日）"
           : `稼働は ${sched.work_start_text}〜${sched.work_end_text}`;
+        const todayWeekday = jstDayOfWeekJa(now);
+        const targetWeekday = jstDayOfWeekJa(targetDate);
         const ctxLines = [
-          `【現在時刻】${formatJstDateTime(now)} (JST)`,
-          `日付の対象: ${targetLabel}（${workLabelChat}）`,
+          `【現在時刻】${formatJstDateTime(now)} (JST) (${todayWeekday})`,
+          `日付の対象: ${targetLabel} ${targetDay} (${targetWeekday}) (${workLabelChat})`,
+          `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。`,
           `■固定の予定:\n${sched.busy_text}`,
           sched.is_off_day
             ? `今日はお休みの日として設定されているため、時間割は組まなくて OK。`

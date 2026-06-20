@@ -196,6 +196,14 @@ export type WeekDayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
 export type WeeklySchedule = Partial<Record<WeekDayKey, string | null>>;
 
 const DAY_KEYS_FROM_SUN = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"] as const;
+const DAY_JA_FROM_SUN = ["日曜日", "月曜日", "火曜日", "水曜日", "木曜日", "金曜日", "土曜日"] as const;
+
+/** JST 上での曜日を日本語で返す ("月曜日" 〜 "日曜日"). LLM が曜日推論で間違うのを防ぐため明示用 */
+export function jstDayOfWeekJa(d: Date): string {
+  const p = toJstParts(d);
+  const wd = new Date(Date.UTC(p.y, p.m, p.d)).getUTCDay();
+  return DAY_JA_FROM_SUN[wd];
+}
 
 /**
  * JST 上での曜日キーを取得 ("mon", "tue", ...).

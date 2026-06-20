@@ -6,7 +6,7 @@ import { auth } from "@/auth";
 import { buildSecretaryPersona } from "@/lib/claude";
 import { streamChat, AIRateLimitError, formatRateLimitForUser } from "@/lib/ai";
 import { saveMessage, saveBriefing, getUserSettings, logError } from "@/lib/supabase";
-import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime } from "@/lib/google";
+import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, jstDayOfWeekJa } from "@/lib/google";
 
 function sse(name: string, data: any): Uint8Array {
   return new TextEncoder().encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -47,9 +47,12 @@ export async function GET(req: Request) {
         const workHoursLabel = sched.is_off_day
           ? "（お休みの日）"
           : `稼働 ${sched.work_start_text}〜${sched.work_end_text}`;
+        const todayWeekday = jstDayOfWeekJa(now);
+        const targetWeekday = jstDayOfWeekJa(targetDate);
         const ctx = [
-          `【現在時刻】${formatJstDateTime(now)} (JST)`,
-          `対象: ${targetLabel}（${workHoursLabel}）`,
+          `【現在時刻】${formatJstDateTime(now)} (JST) (${todayWeekday})`,
+          `対象: ${targetLabel} ${targetDay} (${targetWeekday}) (${workHoursLabel})`,
+          `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。`,
           `■固定の予定:\n${sched.busy_text}`,
           sched.is_off_day
             ? `今日はお休みの日として設定されています。時間割を作らず、軽くゆっくりした挨拶だけしてください。`

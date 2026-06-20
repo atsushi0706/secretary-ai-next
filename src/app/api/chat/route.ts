@@ -130,19 +130,24 @@ JSONのみ:
           settingsForCtx?.weekly_schedule,
         );
         const workLabelChat = sched.is_off_day
-          ? "（お休みの日）"
-          : `稼働は ${sched.work_start_text}〜${sched.work_end_text}`;
+          ? "（お休みの日 — 本業もタスクも休み）"
+          : `本業/シフト: ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
         const todayWeekday = jstDayOfWeekJa(now);
         const targetWeekday = jstDayOfWeekJa(targetDate);
         const ctxLines = [
           `【現在時刻】${formatJstDateTime(now)} (JST) (${todayWeekday})`,
-          `日付の対象: ${targetLabel} ${targetDay} (${targetWeekday}) (${workLabelChat})`,
+          `日付の対象: ${targetLabel} ${targetDay} (${targetWeekday})`,
+          `【本業/シフト】${workLabelChat}`,
           `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。`,
-          `■固定の予定:\n${sched.busy_text}`,
+          `[重要] シフト時間は本業(会社/メイン業務)の拘束時間。シフト中にタスクを入れる時は必ずユーザーに確認してから。`,
+          `■固定の予定 (Google カレンダー、シフト時間内):\n${sched.busy_text}`,
           sched.is_off_day
             ? `今日はお休みの日として設定されているため、時間割は組まなくて OK。`
-            : `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
-        ];
+            : `■シフト時間内の空き (本業中の隙間、計${sched.free_minutes}分 — ここはタスクを勝手に入れない):\n${sched.free_text}`,
+          sched.is_off_day
+            ? ""
+            : `[ヒント] AI が新規にタスクを入れるべきは、シフトの「外」(${sched.work_start_text} より前 / ${sched.work_end_text} より後)。シフト中に入れたい時は必ずユーザーに確認。`,
+        ].filter(Boolean);
         if (sched.after_hours_text) {
           ctxLines.push("■夜の予定（参考）:\n" + sched.after_hours_text);
         }

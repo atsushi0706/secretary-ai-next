@@ -45,19 +45,24 @@ export async function GET(req: Request) {
         );
 
         const workHoursLabel = sched.is_off_day
-          ? "（お休みの日）"
-          : `稼働 ${sched.work_start_text}〜${sched.work_end_text}`;
+          ? "（お休みの日 — 本業もタスクも休み）"
+          : `本業/シフト: ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
         const todayWeekday = jstDayOfWeekJa(now);
         const targetWeekday = jstDayOfWeekJa(targetDate);
         const ctx = [
           `【現在時刻】${formatJstDateTime(now)} (JST) (${todayWeekday})`,
-          `対象: ${targetLabel} ${targetDay} (${targetWeekday}) (${workHoursLabel})`,
+          `対象: ${targetLabel} ${targetDay} (${targetWeekday})`,
+          `【本業/シフト】${workHoursLabel}`,
           `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。`,
-          `■固定の予定:\n${sched.busy_text}`,
+          `[重要] シフト時間は本業(会社/メイン業務)の拘束時間。シフト中にタスクを入れる時は必ずユーザーに確認してから。`,
+          `■固定の予定 (Google カレンダー、シフト時間内):\n${sched.busy_text}`,
           sched.is_off_day
             ? `今日はお休みの日として設定されています。時間割を作らず、軽くゆっくりした挨拶だけしてください。`
-            : `空き時間（計${sched.free_minutes}分）:\n${sched.free_text}`,
-        ];
+            : `■シフト時間内の空き (本業中の隙間、計${sched.free_minutes}分 — ここはタスクを勝手に入れない):\n${sched.free_text}`,
+          sched.is_off_day
+            ? ""
+            : `[ヒント] AI が新規にタスクを入れるべきは、シフトの「外」(${sched.work_start_text} より前 / ${sched.work_end_text} より後)。シフト中に入れたい時は必ずユーザーに確認。`,
+        ].filter(Boolean);
         if (sched.after_hours_text) ctx.push("■夜の予定:\n" + sched.after_hours_text);
         ctx.push("未完了タスク:\n" + (tasks.map((t) => `- ${t.title}（期限:${t.due ?? "なし"}）`).join("\n") || "なし"));
 
@@ -66,8 +71,8 @@ export async function GET(req: Request) {
             ? "おはよう。今日はお休みの日に設定してるので、ゆっくり休む方向で短く挨拶して。時間割は作らなくていい。"
             : "お疲れさま。明日はお休みの日なので、軽く挨拶だけで OK。時間割は不要。")
           : (isMorning
-            ? "おはよう。今日の流れと、優先順位の高いタスクを時間割で組んで。固定予定は時刻つきで省略せず全部入れて。途中で15分の散歩タイムを入れることを提案して。"
-            : "お疲れさま。明日の流れを組んでくれる？固定予定は時刻つきで全部入れて、空き時間にタスクを差し込んで。途中で15分の散歩タイムを入れることを提案して。");
+            ? "おはよう。今日の流れを時間割で組んで。本業シフトは時刻つきで本体に書いて。固定予定も省略禁止。タスクはシフト前後の時間に差し込む形で。1日のどこかに15分散歩も入れて提案して。"
+            : "お疲れさま。明日の流れを組んでくれる？本業シフトは時刻つきで本体に書いて、固定予定も省略禁止。タスクはシフト前後の時間に差し込む形で。1日のどこかに15分散歩も提案して。");
 
         await saveMessage(userId, today, mode, "user", userTrigger);
 

@@ -274,6 +274,18 @@ const MY_TOOLS: Array<{ name: string; url: string; emoji: string; note?: string 
     url: "https://threads-writer-tool-syntch8scd4xvhp3szyqqp.streamlit.app/",
     note: "Threads 向け5投稿一括生成",
   },
+  {
+    emoji: "🌑",
+    name: "きよブラック 1",
+    url: "https://chatgpt.com/g/g-67efcfaf9e6481918ed2b6b3e2593819-kiyohuratuku",
+    note: "前に進めたい時 / メンタルブロックと向き合いたい時",
+  },
+  {
+    emoji: "🌑",
+    name: "きよブラック 2（厳しめ）",
+    url: "https://chatgpt.com/g/g-6a2cd50ba2748191aba2edcc288af66c-kiyohuratuku2",
+    note: "面倒だけどやらなきゃな時 / 思考の枠を超えたい時",
+  },
 ];
 
 function ToolLinks() {

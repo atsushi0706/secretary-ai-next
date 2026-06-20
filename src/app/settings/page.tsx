@@ -26,6 +26,16 @@ export default function SettingsPage() {
     sat: { ...EMPTY_SHIFT }, sun: { ...EMPTY_SHIFT },
   });
 
+  // 0:00 〜 24:00 を 30分刻みで列挙 (00:00, 00:30, 01:00, ..., 23:30, 24:00)
+  const TIME_OPTIONS_30MIN: string[] = (() => {
+    const arr: string[] = [];
+    for (let h = 0; h <= 24; h++) {
+      arr.push(`${String(h).padStart(2, "0")}:00`);
+      if (h < 24) arr.push(`${String(h).padStart(2, "0")}:30`);
+    }
+    return arr;
+  })();
+
   /** 月〜金を 9:00-17:00 / 土日休み で埋めるプリセット */
   function applyWeekdayDefault() {
     const next: Record<DayKey, Shift> = {
@@ -267,23 +277,29 @@ export default function SettingsPage() {
             return (
               <div key={k} className="flex items-center gap-2 text-sm">
                 <span className="w-6 font-bold text-gray-700">{label}</span>
-                <input
-                  type="time"
-                  step={1800}
+                <select
                   value={s.start}
                   onChange={(e) => updateShift(k, { start: e.target.value })}
                   disabled={s.off}
                   className="p-1.5 border rounded text-xs font-mono disabled:bg-gray-100 disabled:text-gray-400"
-                />
+                >
+                  <option value="">--:--</option>
+                  {TIME_OPTIONS_30MIN.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
                 <span className="text-gray-400">〜</span>
-                <input
-                  type="time"
-                  step={1800}
+                <select
                   value={s.end}
                   onChange={(e) => updateShift(k, { end: e.target.value })}
                   disabled={s.off}
                   className="p-1.5 border rounded text-xs font-mono disabled:bg-gray-100 disabled:text-gray-400"
-                />
+                >
+                  <option value="">--:--</option>
+                  {TIME_OPTIONS_30MIN.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
                 <label className="flex items-center gap-1 ml-2 text-xs text-gray-600 cursor-pointer">
                   <input
                     type="checkbox"

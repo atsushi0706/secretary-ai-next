@@ -17,6 +17,8 @@ export default function SettingsPage() {
   // 週次シフト
   type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
   type Shift = { start: string; end: string; off: boolean };
+  // 最初に開いたときは時間入力欄を全部空にしておく（未設定=デフォの9-17で動作）。
+  // 一度でも保存したら、その時の値で次回プレフィル。
   const EMPTY_SHIFT: Shift = { start: "", end: "", off: false };
   const [shifts, setShifts] = useState<Record<DayKey, Shift>>({
     mon: { ...EMPTY_SHIFT }, tue: { ...EMPTY_SHIFT }, wed: { ...EMPTY_SHIFT },
@@ -24,12 +26,34 @@ export default function SettingsPage() {
     sat: { ...EMPTY_SHIFT }, sun: { ...EMPTY_SHIFT },
   });
 
+  /** 月〜金を 9:00-17:00 / 土日休み で埋めるプリセット */
+  function applyWeekdayDefault() {
+    const next: Record<DayKey, Shift> = {
+      mon: { start: "09:00", end: "17:00", off: false },
+      tue: { start: "09:00", end: "17:00", off: false },
+      wed: { start: "09:00", end: "17:00", off: false },
+      thu: { start: "09:00", end: "17:00", off: false },
+      fri: { start: "09:00", end: "17:00", off: false },
+      sat: { start: "", end: "", off: true },
+      sun: { start: "", end: "", off: true },
+    };
+    setShifts(next);
+  }
+  function applyClearAll() {
+    setShifts({
+      mon: { ...EMPTY_SHIFT }, tue: { ...EMPTY_SHIFT }, wed: { ...EMPTY_SHIFT },
+      thu: { ...EMPTY_SHIFT }, fri: { ...EMPTY_SHIFT },
+      sat: { ...EMPTY_SHIFT }, sun: { ...EMPTY_SHIFT },
+    });
+  }
+
   // アップロード
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [saved, setSaved] = useState(false);
+  const [saveError, setSaveError] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -90,15 +114,23 @@ export default function SettingsPage() {
       weekly_schedule: buildWeeklySchedulePayload(),
     };
     if (geminiKey) body.gemini_api_key = geminiKey;
-    const r = await fetch("/api/settings", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
-    if (r.ok) {
-      setSaved(true);
-      if (geminiKey) setHasGeminiKey(true);
-      setGeminiKey("");
-      setTimeout(() => setSaved(false), 2000);
+    setSaveError("");
+    try {
+      const r = await fetch("/api/settings", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+      if (r.ok) {
+        setSaved(true);
+        if (geminiKey) setHasGeminiKey(true);
+        setGeminiKey("");
+        setTimeout(() => setSaved(false), 2000);
+      } else {
+        const data = await r.json().catch(() => ({}));
+        setSaveError(data?.error || `保存に失敗しました (HTTP ${r.status})`);
+      }
+    } catch (e: any) {
+      setSaveError(String(e?.message ?? e));
     }
   }
 
@@ -209,6 +241,23 @@ export default function SettingsPage() {
           「休み」にチェックすると、その曜日は時間割を作らず軽く挨拶だけ。
         </p>
 
+        <div className="flex gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={applyWeekdayDefault}
+            className="text-xs bg-purple-50 hover:bg-purple-100 border border-purple-200 text-purple-700 rounded-lg px-3 py-1.5"
+          >
+            ⚡ 平日 9-17 / 土日休み
+          </button>
+          <button
+            type="button"
+            onClick={applyClearAll}
+            className="text-xs bg-gray-50 hover:bg-gray-100 border border-gray-200 text-gray-600 rounded-lg px-3 py-1.5"
+          >
+            ↺ クリア
+          </button>
+        </div>
+
         <div className="space-y-2">
           {([
             ["mon", "月"], ["tue", "火"], ["wed", "水"], ["thu", "木"],
@@ -220,6 +269,7 @@ export default function SettingsPage() {
                 <span className="w-6 font-bold text-gray-700">{label}</span>
                 <input
                   type="time"
+                  step={1800}
                   value={s.start}
                   onChange={(e) => updateShift(k, { start: e.target.value })}
                   disabled={s.off}
@@ -228,6 +278,7 @@ export default function SettingsPage() {
                 <span className="text-gray-400">〜</span>
                 <input
                   type="time"
+                  step={1800}
                   value={s.end}
                   onChange={(e) => updateShift(k, { end: e.target.value })}
                   disabled={s.off}
@@ -345,6 +396,9 @@ export default function SettingsPage() {
             保存
           </button>
           {saved && <span className="text-green-600 text-sm">✓ 保存しました</span>}
+          {saveError && (
+            <span className="text-red-600 text-xs">❌ {saveError}</span>
+          )}
         </div>
       </div>
     </main>

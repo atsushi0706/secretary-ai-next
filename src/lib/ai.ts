@@ -103,15 +103,21 @@ export function formatRateLimitForUser(
     ].join("\n");
   }
 
+  // 24秒前後の短い待ち時間 → 1分あたりの上限(RPM) を踏んだ可能性が高い
+  // 数時間以上の長い待ち時間 → 1日あたりの上限(RPD) を踏んだ可能性が高い
+  const likelyCause = sec <= 70
+    ? "1分あたりの上限 (Gemini 3.5 Flash は 1分 15回まで) を一時的に踏みました。立て続けに連発した直後によく出ます。"
+    : "1日あたりの上限 (Gemini 3.5 Flash は 1日 1,500回まで) を踏んだ可能性があります。明日リセットされます。";
+
   return [
     `ごめんね、ちょっと立て込んでて頭がパンクしそう…${wait}くらい休ませてもらえるかな🙏`,
     ``,
     `――― ⚙ 内部の状況（${secretaryName}の頭の中）―――`,
     `${engineLabel} API の利用上限に到達したため、AI が一時的に応答できません。`,
     `・推定待機時間: ${wait}（${sec}秒）`,
-    `・原因: 1分または1日あたりのリクエスト上限を超過`,
+    `・原因: ${likelyCause}`,
     err.engine === "gemini"
-      ? `・対処: ${wait}後に自動回復します。連発した直後によく出ます。\n　長期的に詰まる場合は、設定画面で Gemini API キーを見直すか、無料枠の大きいモデル(gemini-3.5-flash)を使ってください。`
+      ? `・対処: ${wait}後に自動回復します。本来は別モデルへ自動切替で回避できるはずですが、すべてのモデルで上限に達したケースです。`
       : `・対処: ${wait}後に自動回復します。発生頻度が高い場合は管理者にご連絡ください。`,
     `―――――――――――――――――`,
   ].join("\n");
@@ -190,12 +196,13 @@ export async function* streamChat(opts: {
  *  - 503 (overloaded)
  *  - 404 (モデル名が不正/廃止 — 万一未来に廃止されてもチェーンが死なないため)
  *  - 500 (Internal Server Error — Google側の一時障害)
+ *  - 429 (rate limit) — Gemini は各モデルが独自カウンタなので、3.5 で詰まっても 3.1 Lite はOK
  */
 function shouldFallback(err: unknown): boolean {
   const msg = err instanceof Error ? err.message : String(err);
   const status = (err as any)?.status ?? (err as any)?.response?.status;
-  if (status === 503 || status === 404 || status === 500) return true;
-  return /\b(503|404|500)\b|Service Unavailable|overloaded|high demand|not found|Internal.{0,10}Server.{0,10}Error/i.test(msg);
+  if (status === 503 || status === 404 || status === 500 || status === 429) return true;
+  return /\b(503|404|500|429)\b|Service Unavailable|overloaded|high demand|not found|Internal.{0,10}Server.{0,10}Error|Too Many Requests|quota|rate.?limit/i.test(msg);
 }
 
 function isOverloadedError(err: unknown): boolean {

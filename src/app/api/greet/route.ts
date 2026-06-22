@@ -46,7 +46,9 @@ export async function GET(req: Request) {
 
         const workHoursLabel = sched.is_off_day
           ? "（お休みの日 — 本業もタスクも休み）"
-          : `本業/シフト: ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
+          : sched.is_flexible_day
+            ? `この曜日に本業シフトは設定されていません。${sched.work_start_text}〜${sched.work_end_text} を「AIの稼働時間」として使う (本業の拘束ではない、タスクをここに入れて OK)`
+            : `本業/シフト: ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
         const todayWeekday = jstDayOfWeekJa(now);
         const targetWeekday = jstDayOfWeekJa(targetDate);
         const ctx = [
@@ -54,14 +56,20 @@ export async function GET(req: Request) {
           `対象: ${targetLabel} ${targetDay} (${targetWeekday})`,
           `【本業/シフト】${workHoursLabel}`,
           `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。`,
-          `[重要] シフト時間は本業(会社/メイン業務)の拘束時間。シフト中にタスクを入れる時は必ずユーザーに確認してから。`,
-          `■固定の予定 (Google カレンダー、シフト時間内):\n${sched.busy_text}`,
+          sched.is_flexible_day
+            ? `[重要] この日に本業シフトは無い。「本業ブロック」を時間割に書かない。${sched.work_start_text}〜${sched.work_end_text} を AI の作業時間として普通にタスクを詰めていい。`
+            : `[重要] シフト時間は本業(会社/メイン業務)の拘束時間。シフト中にタスクを入れる時は必ずユーザーに確認してから。`,
+          `■固定の予定 (Google カレンダー):\n${sched.busy_text}`,
           sched.is_off_day
             ? `今日はお休みの日として設定されています。時間割を作らず、軽くゆっくりした挨拶だけしてください。`
-            : `■シフト時間内の空き (本業中の隙間、計${sched.free_minutes}分 — ここはタスクを勝手に入れない):\n${sched.free_text}`,
+            : sched.is_flexible_day
+              ? `■空き時間 (計${sched.free_minutes}分 — 本業シフトなし、ここにタスクを詰めて OK):\n${sched.free_text}`
+              : `■シフト時間内の空き (本業中の隙間、計${sched.free_minutes}分 — ここはタスクを勝手に入れない):\n${sched.free_text}`,
           sched.is_off_day
             ? ""
-            : `[ヒント] AI が新規にタスクを入れるべきは、シフトの「外」(${sched.work_start_text} より前 / ${sched.work_end_text} より後)。シフト中に入れたい時は必ずユーザーに確認。`,
+            : sched.is_flexible_day
+              ? `[ヒント] この日は本業シフト設定なし。${sched.work_start_text}〜${sched.work_end_text} の範囲で普通に時間割を組む。固定予定の合間にタスクを詰める。`
+              : `[ヒント] AI が新規にタスクを入れるべきは、シフトの「外」(${sched.work_start_text} より前 / ${sched.work_end_text} より後)。シフト中に入れたい時は必ずユーザーに確認。`,
         ].filter(Boolean);
         if (sched.after_hours_text) ctx.push("■夜の予定:\n" + sched.after_hours_text);
         ctx.push("未完了タスク:\n" + (tasks.map((t) => `- ${t.title}（期限:${t.due ?? "なし"}）`).join("\n") || "なし"));

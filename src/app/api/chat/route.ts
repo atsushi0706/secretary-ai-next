@@ -129,21 +129,23 @@ JSONのみ:
           events, targetDate, 9, 17, isMorning ? now : undefined,
           settingsForCtx?.weekly_schedule,
         );
-        const workLabelChat = sched.is_off_day
-          ? "（お休みの日 — 本業もタスクも休み）"
-          : sched.is_flexible_day
-            ? `この曜日に本業シフトは設定されていません。${sched.work_start_text}〜${sched.work_end_text} を「AIの稼働時間」として使う (本業の拘束ではない、タスクをここに入れて OK)`
-            : `本業/シフト: ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
         const todayWeekday = jstDayOfWeekJa(now);
         const targetWeekday = jstDayOfWeekJa(targetDate);
+        const stateBlock = sched.is_off_day
+          ? `【今日の状態】お休みの日 (本業もタスクも休み)`
+          : sched.is_flexible_day
+            ? `【今日の状態】フレキシブル日 — この曜日に本業シフトは設定されていない。作業可能時間: ${sched.work_start_text}〜${sched.work_end_text} (AI が自由にタスクを詰める時間。本業ではない)`
+            : `【今日の状態】本業シフトあり — 本業 (会社/メイン業務) ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
         const ctxLines = [
           `【現在時刻】${formatJstDateTime(now)} (JST) (${todayWeekday})`,
           `日付の対象: ${targetLabel} ${targetDay} (${targetWeekday})`,
-          `【本業/シフト】${workLabelChat}`,
+          stateBlock,
           `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。`,
           sched.is_flexible_day
-            ? `[重要] この日に本業シフトは無い。「本業ブロック」を時間割に書かない。${sched.work_start_text}〜${sched.work_end_text} を AI の作業時間として普通にタスクを詰めていい。`
-            : `[重要] シフト時間は本業(会社/メイン業務)の拘束時間。シフト中にタスクを入れる時は必ずユーザーに確認してから。`,
+            ? `[絶対NG] この日に本業シフトは無い。時間割に「本業」「会社」「メイン業務」のブロックを書くのは絶対禁止 (ユーザーが本業を設定してないため、書くと虚偽情報)。${sched.work_start_text}〜${sched.work_end_text} は AI の作業時間として普通に使う。`
+            : sched.is_off_day
+              ? `[重要] 今日はお休み。時間割は組まない。`
+              : `[重要] シフト時間は本業(会社/メイン業務)の拘束時間。シフト中にタスクを入れる時は必ずユーザーに確認してから。`,
           `■固定の予定 (Google カレンダー):\n${sched.busy_text}`,
           sched.is_off_day
             ? `今日はお休みの日として設定されているため、時間割は組まなくて OK。`

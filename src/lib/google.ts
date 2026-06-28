@@ -297,6 +297,11 @@ export function jstDayOfWeekJa(d: Date): string {
   return DAY_JA_FROM_SUN[wd];
 }
 
+/** JST 基準の時 (0-23)。Vercel は UTC なので Date#getHours() を使うと9時間ずれる */
+export function jstHour(d: Date = new Date()): number {
+  return toJstParts(d).h;
+}
+
 /**
  * JST 上での曜日キーを取得 ("mon", "tue", ...).
  * targetDate が "2026-06-22T00:00:00+09:00" のような JST 0時を指してることを想定。

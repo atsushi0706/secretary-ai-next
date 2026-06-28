@@ -4,7 +4,7 @@
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
+import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, jstHour } from "@/lib/google";
 import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, normalizeTime, windowOf } from "@/lib/gemini";
 import { extractJson } from "@/lib/claude";
 import { complete } from "@/lib/ai";
@@ -27,7 +27,9 @@ export async function GET(req: Request) {
     const url = new URL(req.url);
     const modeParam = url.searchParams.get("mode");
     const now = jstNow();
-    const hour = now.getHours();
+    // [重要] Vercel は UTC なので now.getHours() を使うと9時間ずれる。JST 基準で判定。
+    // 朝6時 JST = UTC 21時 → 旧コードは isMorning=false で「明日の準備」になってた。
+    const hour = jstHour(now);
     const isMorning = modeParam ? modeParam === "morning" : hour < 15;
     const today = jstDateStr();
     const targetDay = isMorning ? today

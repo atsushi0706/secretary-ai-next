@@ -185,7 +185,27 @@ export async function* streamChat(opts: {
   const { engine, geminiKey } = await pickEngine(opts.userId);
 
   if (engine === "gemini") {
-    yield* streamGemini(geminiKey!, opts);
+    // Gemini を試して、全モデル失敗 (チャンク前で死亡) なら Claude にフォールバック
+    let hasYieldedFromGemini = false;
+    try {
+      for await (const ev of streamGemini(geminiKey!, opts)) {
+        hasYieldedFromGemini = true;
+        yield ev;
+      }
+      return;
+    } catch (e) {
+      if (hasYieldedFromGemini) {
+        // 途中まで Gemini が返してた場合、フォールバックは混乱を生むので throw
+        throw e;
+      }
+      // Anthropic キーがあれば Claude にフォールバック
+      if (process.env.ANTHROPIC_API_KEY) {
+        console.warn("[ai] Gemini fully failed, falling back to Claude:", e instanceof Error ? e.message : e);
+        yield* streamClaude({ ...opts, enableWebSearch: false }); // フォールバック時は web search 切る (淳くん財布節約)
+        return;
+      }
+      throw e;
+    }
   } else {
     yield* streamClaude(opts);
   }
@@ -197,12 +217,14 @@ export async function* streamChat(opts: {
  *  - 404 (モデル名が不正/廃止 — 万一未来に廃止されてもチェーンが死なないため)
  *  - 500 (Internal Server Error — Google側の一時障害)
  *  - 429 (rate limit) — Gemini は各モデルが独自カウンタなので、3.5 で詰まっても 3.1 Lite はOK
+ *  - FirstChunkTimeoutError - 初回チャンクが来ないモデルもタイムアウトでフォールバック
  */
 function shouldFallback(err: unknown): boolean {
+  if (err instanceof FirstChunkTimeoutError) return true;
   const msg = err instanceof Error ? err.message : String(err);
   const status = (err as any)?.status ?? (err as any)?.response?.status;
   if (status === 503 || status === 404 || status === 500 || status === 429) return true;
-  return /\b(503|404|500|429)\b|Service Unavailable|overloaded|high demand|not found|Internal.{0,10}Server.{0,10}Error|Too Many Requests|quota|rate.?limit/i.test(msg);
+  return /\b(503|404|500|429)\b|Service Unavailable|overloaded|high demand|not found|Internal.{0,10}Server.{0,10}Error|Too Many Requests|quota|rate.?limit|timeout/i.test(msg);
 }
 
 function isOverloadedError(err: unknown): boolean {
@@ -211,8 +233,18 @@ function isOverloadedError(err: unknown): boolean {
   return status === 503 || /503|Service Unavailable|overloaded|high demand/i.test(msg);
 }
 
+/** タイムアウト印 (フォールバック判定で「次のモデルへ」と扱うため shouldFallback を pass する) */
+const FIRST_CHUNK_TIMEOUT_MS = 12_000; // 各モデルで初回チャンクを待つ最大時間
+class FirstChunkTimeoutError extends Error {
+  constructor(modelName: string) {
+    super(`First chunk timeout for ${modelName} (${FIRST_CHUNK_TIMEOUT_MS}ms)`);
+    this.name = "FirstChunkTimeoutError";
+  }
+}
+
 /**
  * 単一の Gemini モデル名でストリーミング呼び出し。例外をそのまま伝搬する。
+ * 「初回チャンクが timeoutMs 以内に来ない」場合は FirstChunkTimeoutError を throw。
  */
 async function* streamGeminiOne(
   apiKey: string,
@@ -241,10 +273,39 @@ async function* streamGeminiOne(
   if (contents.length === 0 || contents[0].role !== "user") {
     contents.unshift({ role: "user", parts: [{ text: "（秘書業務を開始）" }] });
   }
-  const result = await model.generateContentStream({ contents });
-  for await (const chunk of result.stream) {
-    const text = chunk.text();
-    if (text) yield { type: "delta", text };
+  // generateContentStream を呼ぶ前段階のタイムアウト
+  const result = await Promise.race([
+    model.generateContentStream({ contents }),
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new FirstChunkTimeoutError(modelName)), FIRST_CHUNK_TIMEOUT_MS),
+    ),
+  ]);
+
+  // 初回チャンクが来るまでにもタイムアウトをかける
+  let receivedFirstChunk = false;
+  let firstChunkTimer: any = null;
+  const firstChunkPromise = new Promise<never>((_, reject) => {
+    firstChunkTimer = setTimeout(() => {
+      if (!receivedFirstChunk) reject(new FirstChunkTimeoutError(modelName));
+    }, FIRST_CHUNK_TIMEOUT_MS);
+  });
+  try {
+    const iter = result.stream[Symbol.asyncIterator]();
+    while (true) {
+      const nextPromise = iter.next();
+      const step = receivedFirstChunk
+        ? await nextPromise
+        : await Promise.race([nextPromise, firstChunkPromise]);
+      if (step.done) break;
+      const text = step.value.text();
+      if (text) {
+        receivedFirstChunk = true;
+        if (firstChunkTimer) { clearTimeout(firstChunkTimer); firstChunkTimer = null; }
+        yield { type: "delta", text };
+      }
+    }
+  } finally {
+    if (firstChunkTimer) clearTimeout(firstChunkTimer);
   }
 }
 

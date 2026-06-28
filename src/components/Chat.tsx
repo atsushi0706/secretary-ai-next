@@ -164,13 +164,23 @@ export function Chat({
     let cancelled = false;
     (async () => {
       setThinking(true);
+      // 45秒経っても1チャンクも来なかったら諦めて秘書AIメッセージを出す。
+      // AbortController で fetch 自体を中断 → サーバー側のストリームも close。
+      const abort = new AbortController();
+      let receivedAnyDelta = false;
+      const timeoutId = setTimeout(() => {
+        if (!receivedAnyDelta) {
+          abort.abort();
+        }
+      }, 45_000);
       try {
-        const resp = await fetch(`/api/greet?isMorning=${isMorning}`);
+        const resp = await fetch(`/api/greet?isMorning=${isMorning}`, { signal: abort.signal });
         if (!resp.ok) return;
         setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
         await readSse(resp, (event, data) => {
           if (cancelled) return;
           if (event === "delta") {
+            receivedAnyDelta = true;
             setThinking(false);
             setMessages((prev) => {
               const arr = [...prev];
@@ -182,8 +192,25 @@ export function Chat({
             });
           }
         });
-      } catch (e) { console.error("greet failed", e); }
-      finally { if (!cancelled) setThinking(false); }
+      } catch (e: any) {
+        const isAbort = e?.name === "AbortError";
+        console.error(isAbort ? "greet timed out (45s no chunk)" : "greet failed", e);
+        if (!cancelled) {
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            const friendly =
+              "おはよう。ごめん、AI 側が今ちょっと反応遅いみたい (45秒待っても返事が来なかった)。\n" +
+              "もう一度ブラウザをリロードするか、下のチャット欄から「今日の予定」って送ってみて。";
+            if (last?.role === "assistant" && !last.content) {
+              return [...prev.slice(0, -1), { role: "assistant", content: friendly }];
+            }
+            return [...prev, { role: "assistant", content: friendly }];
+          });
+        }
+      } finally {
+        clearTimeout(timeoutId);
+        if (!cancelled) setThinking(false);
+      }
     })();
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps

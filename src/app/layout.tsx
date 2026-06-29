@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SWRegister } from "./sw-register";
+import { TimerProvider } from "@/components/TimerContext";
+import { TimerBadge } from "@/components/TimerBadge";
 
 export const metadata: Metadata = {
   title: "秘書AI 清瀬リンク",
@@ -28,7 +30,10 @@ export default function RootLayout({
     <html lang="ja" className="h-full">
       <body className="min-h-full flex flex-col">
         <SWRegister />
-        {children}
+        <TimerProvider>
+          {children}
+          <TimerBadge />
+        </TimerProvider>
       </body>
     </html>
   );

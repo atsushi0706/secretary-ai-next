@@ -40,23 +40,25 @@ export default async function ResetPage() {
   return (
     <main className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-b from-[#f5f3fb] to-white">
       <div className="card max-w-md w-full text-center">
-        <div className="text-5xl mb-3">🔄</div>
-        <h1 className="text-xl font-bold mb-2">セッションをリセット</h1>
+        <div className="text-5xl mb-3">🌱</div>
+        <h1 className="text-xl font-bold mb-2">Google と再接続</h1>
         <p className="text-sm text-gray-600 mb-5 leading-relaxed">
-          NextAuth セッションを完全に破棄して、Google の認可画面に直接飛びます。
+          セキュリティのため、Google 連携の更新が必要になりました。
           <br />
-          そこで「許可」を押すと refresh_token が再発行されて復旧します。
+          下のボタンひとつで完了します。
         </p>
         <form action={handleReset}>
           <button
             type="submit"
             className="w-full bg-[var(--accent)] text-white font-bold py-3 rounded-xl hover:opacity-90"
           >
-            🔓 セッションを破棄して Google 認可に進む
+            Google で再接続する
           </button>
         </form>
-        <p className="text-xs text-gray-400 mt-4">
-          「アプリはテスト中」の警告が出ても「詳細 → 続行 (安全ではないページに移動)」で OK
+        <p className="text-xs text-gray-400 mt-4 leading-relaxed">
+          Google の画面で「続行」または「許可」を押してください。<br />
+          もし「このアプリは Google で確認されていません」と出たら、<br />
+          「詳細」→「（アプリ名）に移動」で進めます。
         </p>
       </div>
     </main>

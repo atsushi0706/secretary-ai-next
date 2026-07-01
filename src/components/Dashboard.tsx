@@ -120,22 +120,21 @@ export function Dashboard({ userName }: { userName: string }) {
     return (
       <main className="min-h-screen flex items-center justify-center p-6">
         <div className="card max-w-md w-full text-center">
-          <div className="text-4xl mb-2">🔧</div>
-          <h1 className="text-xl font-bold mb-2">再ログインが必要です</h1>
+          <div className="text-4xl mb-2">🌱</div>
+          <h1 className="text-xl font-bold mb-2">Google と再接続してください</h1>
           <p className="text-sm text-gray-600 mb-4 leading-relaxed">
-            Google 連携のトークンが期限切れになっているようです。
-            <br />
-            下のボタンを押して Google に再ログインすると復旧します。
+            Google 連携の更新が必要な時期になりました。<br />
+            下のボタンから 30秒 で再接続できます。
           </p>
           <a
             href="/reset"
             className="block bg-[var(--accent)] text-white font-bold py-3 rounded-xl hover:opacity-90"
           >
-            🔄 再ログインする
+            Google で再接続する
           </a>
           <details className="mt-4 text-left">
-            <summary className="text-xs text-gray-400 cursor-pointer">詳細</summary>
-            <pre className="text-xs text-red-500 mt-2 whitespace-pre-wrap break-words bg-red-50 p-2 rounded">
+            <summary className="text-xs text-gray-400 cursor-pointer">詳細情報（技術情報）</summary>
+            <pre className="text-xs text-gray-500 mt-2 whitespace-pre-wrap break-words bg-gray-50 p-2 rounded">
               {fatalError}
             </pre>
           </details>

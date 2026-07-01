@@ -1,9 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
 
-// prerender/edge cache を無効化して、middleware の no-store ヘッダを Vercel が確実に効かせるため
-export const dynamic = "force-dynamic";
-
 export const metadata = {
   title: "Focus Secretary - 集中したい人のためのAI秘書",
   description: "Googleログインだけで、AI秘書が今日を一緒に組み立てる。タスク管理・集中モード・カレンダー連動・自動ポモドーロ。",

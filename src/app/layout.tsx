@@ -28,13 +28,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="ja" className="h-full">
-      <head>
-        {/* HTML キャッシュを Chrome にも二重で禁止 (middleware の Cache-Control と合わせて念押し)。
-            過去にデプロイのたびに古い HTML が残って「This page couldn't load」になる事象があった。 */}
-        <meta httpEquiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
-        <meta httpEquiv="Pragma" content="no-cache" />
-        <meta httpEquiv="Expires" content="0" />
-      </head>
       <body className="min-h-full flex flex-col">
         <SWRegister />
         <TimerProvider>

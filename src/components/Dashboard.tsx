@@ -44,16 +44,38 @@ export function Dashboard({ userName }: { userName: string }) {
   const [lastLoadedAt, setLastLoadedAt] = useState<number>(0);
   const lastLoadedRef = useRef<number>(0);
 
+  const [fatalError, setFatalError] = useState<string | null>(null);
+
   const load = useCallback(() => {
     setRefreshing(true);
     const q = mode === "auto" ? "" : `?mode=${mode}`;
     fetch(`/api/bootstrap${q}`)
-      .then((r) => r.json())
+      .then(async (r) => {
+        // HTTP エラー (500 等) の場合はエラー内容を取り出して fatalError にセット
+        // これをやらないと Dashboard が data.messages を触った時点で undefined.length で JS クラッシュ
+        // → Chrome が「This page couldn't load」を出してユーザーが救出不能になる
+        if (!r.ok) {
+          const errPayload = await r.json().catch(() => ({}));
+          setFatalError(errPayload?.error || `サーバーエラー (${r.status})`);
+          return null;
+        }
+        return r.json();
+      })
       .then((d) => {
+        if (!d) return; // fatalError 側で処理済み
+        // レスポンスに必須プロパティが揃ってない場合も fatalError 扱い
+        if (!d.setupNeeded && (!Array.isArray(d.messages) || !Array.isArray(d.tasks) || !Array.isArray(d.events))) {
+          setFatalError(d?.error || "サーバーから予期しないデータが返りました。");
+          return;
+        }
         setData(d);
+        setFatalError(null);
         const t = Date.now();
         setLastLoadedAt(t);
         lastLoadedRef.current = t;
+      })
+      .catch((e) => {
+        setFatalError(String(e?.message ?? e));
       })
       .finally(() => {
         setRefreshing(false);
@@ -88,6 +110,35 @@ export function Dashboard({ userName }: { userName: string }) {
         <div className="flex items-center gap-3 text-gray-500">
           <div className="w-8 h-8 rounded-full border-2 border-purple-300 border-t-purple-600 animate-spin" />
           秘書が準備中…
+        </div>
+      </main>
+    );
+  }
+
+  if (fatalError) {
+    // Google OAuth の refresh_token 期限切れが典型例。/reset で再認証すれば直る。
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6">
+        <div className="card max-w-md w-full text-center">
+          <div className="text-4xl mb-2">🔧</div>
+          <h1 className="text-xl font-bold mb-2">再ログインが必要です</h1>
+          <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+            Google 連携のトークンが期限切れになっているようです。
+            <br />
+            下のボタンを押して Google に再ログインすると復旧します。
+          </p>
+          <a
+            href="/reset"
+            className="block bg-[var(--accent)] text-white font-bold py-3 rounded-xl hover:opacity-90"
+          >
+            🔄 再ログインする
+          </a>
+          <details className="mt-4 text-left">
+            <summary className="text-xs text-gray-400 cursor-pointer">詳細</summary>
+            <pre className="text-xs text-red-500 mt-2 whitespace-pre-wrap break-words bg-red-50 p-2 rounded">
+              {fatalError}
+            </pre>
+          </details>
         </div>
       </main>
     );

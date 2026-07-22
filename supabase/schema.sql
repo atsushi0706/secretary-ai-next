@@ -187,17 +187,37 @@ create table if not exists public.quest_reflections (
 );
 create index if not exists idx_reflections_quest on public.quest_reflections(user_id, quest_id, created_at desc);
 
--- 感情の10段階記録
+-- 状態パラメーター（心の状態＋体のエネルギーを10段階で。1日2回まで）
 create table if not exists public.emotion_logs (
   id bigserial primary key,
   user_id text not null,
   date date not null,
-  level int not null check (level between 1 and 10),
+  slot text,                             -- 'morning' / 'evening'（1日2回まで）
+  level int not null check (level between 1 and 10),   -- 心の状態
+  energy int,                            -- 体のエネルギー
   note text default '',
-  quest_id uuid,                         -- 特定クエストに紐づく感情なら (任意)
+  quest_id uuid,                         -- 特定クエストに紐づくなら (任意)
   created_at timestamptz default now()
 );
 create index if not exists idx_emotion_user_date on public.emotion_logs(user_id, date desc);
+create unique index if not exists uq_emotion_user_date_slot
+  on public.emotion_logs(user_id, date, slot);
+
+-- 生年月日と名前（AIがその人に合わせて話すため。ユーザーには体系名を出さない）
+alter table public.user_settings add column if not exists birth_date date;
+alter table public.user_settings add column if not exists birth_name text;
+
+-- シンガワールドでの会話（既存の conversations は朝/夜しか入らないので分ける）
+create table if not exists public.shinga_conversations (
+  id bigserial primary key,
+  user_id text not null,
+  date date not null,
+  role text not null check (role in ('user', 'assistant')),
+  content text not null,
+  place text,                            -- そのとき地図のどこにいたか
+  created_at timestamptz default now()
+);
+create index if not exists idx_shinga_conv_user on public.shinga_conversations(user_id, created_at desc);
 
 -- Row Level Security（各ユーザーが自分のデータだけ見られる）
 alter table public.user_settings enable row level security;
@@ -212,6 +232,7 @@ alter table public.quests enable row level security;
 alter table public.task_links enable row level security;
 alter table public.quest_reflections enable row level security;
 alter table public.emotion_logs enable row level security;
+alter table public.shinga_conversations enable row level security;
 
 -- ポリシー（service_role キーは bypass されるので、サーバー側で user_id 一致を保証）
 -- 今はサービスロール経由で全アクセスする想定。クライアントから直接読まない。

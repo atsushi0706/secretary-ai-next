@@ -14,6 +14,8 @@ export async function GET() {
       secretary_name: s?.secretary_name ?? "",
       secretary_avatar_url: s?.secretary_avatar_url ?? "",
       user_call_name: s?.user_call_name ?? "",
+      birth_date: s?.birth_date ?? "",
+      birth_name: s?.birth_name ?? "",
       weekly_schedule: s?.weekly_schedule ?? null,
       quickmemo: await loadQuickmemo(userId),
     });
@@ -38,6 +40,9 @@ export async function POST(req: Request) {
     if (typeof body.secretary_name === "string") upd.secretary_name = body.secretary_name;
     if (typeof body.secretary_avatar_url === "string") upd.secretary_avatar_url = body.secretary_avatar_url;
     if (typeof body.user_call_name === "string") upd.user_call_name = body.user_call_name;
+    // 生年月日と名前（AIがその人に合わせて話すため。空文字なら未設定に戻す）
+    if (typeof body.birth_date === "string") upd.birth_date = body.birth_date || null;
+    if (typeof body.birth_name === "string") upd.birth_name = body.birth_name;
     // weekly_schedule: null か、または {mon: "HH:MM-HH:MM"|null, ...} 形式
     if (body.weekly_schedule === null || (body.weekly_schedule && typeof body.weekly_schedule === "object")) {
       upd.weekly_schedule = body.weekly_schedule;

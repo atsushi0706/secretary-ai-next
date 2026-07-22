@@ -47,7 +47,12 @@ export type EmotionLog = {
   id: number;
   user_id: string;
   date: string;
+  /** 'morning' / 'evening'。1日2回まで */
+  slot: string | null;
+  /** 心の状態 1〜10 */
   level: number;
+  /** 体のエネルギー 1〜10（任意） */
+  energy: number | null;
   note: string;
   quest_id: string | null;
   created_at: string;
@@ -190,6 +195,40 @@ export async function countTasksByQuest(userId: string): Promise<Record<string, 
   return counts;
 }
 
+// ── シンガワールドでの会話 ──────────────────────────────────
+
+export type ShingaMessage = {
+  id: number;
+  role: "user" | "assistant";
+  content: string;
+  place: string | null;
+  created_at: string;
+};
+
+export async function saveShingaMessage(
+  userId: string, date: string,
+  role: "user" | "assistant", content: string, place: string | null,
+): Promise<void> {
+  const supa = supabaseAdmin();
+  const { error } = await supa.from("shinga_conversations").insert({
+    user_id: userId, date, role, content, place,
+  });
+  if (error) throw error;
+}
+
+/** 直近 limit 件を古い順で返す（全件読むと会話が伸びるほど重くなるため） */
+export async function loadShingaMessages(userId: string, limit = 30): Promise<ShingaMessage[]> {
+  const supa = supabaseAdmin();
+  const { data, error } = await supa
+    .from("shinga_conversations")
+    .select("id, role, content, place, created_at")
+    .eq("user_id", userId)
+    .order("id", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return ((data ?? []) as ShingaMessage[]).reverse();
+}
+
 // ── 振り返り ────────────────────────────────────────────────
 
 export async function listReflections(userId: string, questId?: string): Promise<Reflection[]> {
@@ -243,7 +282,14 @@ export async function listEmotions(userId: string, limit = 60): Promise<EmotionL
 
 export async function createEmotion(
   userId: string,
-  fields: { date: string; level: number; note?: string; quest_id?: string | null },
+  fields: {
+    date: string;
+    slot: string;
+    level: number;
+    energy?: number | null;
+    note?: string;
+    quest_id?: string | null;
+  },
 ): Promise<EmotionLog> {
   const supa = supabaseAdmin();
   const { data, error } = await supa
@@ -251,12 +297,14 @@ export async function createEmotion(
     .insert({
       user_id: userId,
       date: fields.date,
+      slot: fields.slot,
       level: fields.level,
+      energy: fields.energy ?? null,
       note: fields.note ?? "",
       quest_id: fields.quest_id ?? null,
     })
     .select()
     .single();
-  if (error) throw error;
+  if (error) throw error;   // 同じ枠の2回目は一意制約(23505)で弾かれる
   return data as EmotionLog;
 }

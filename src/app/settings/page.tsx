@@ -13,6 +13,8 @@ export default function SettingsPage() {
   const [secretaryName, setSecretaryName] = useState("");
   const [secretaryAvatarUrl, setSecretaryAvatarUrl] = useState("");
   const [userCallName, setUserCallName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
+  const [birthName, setBirthName] = useState("");
 
   // 週次シフト
   type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -73,6 +75,8 @@ export default function SettingsPage() {
       setSecretaryName(s.secretary_name ?? "");
       setSecretaryAvatarUrl(s.secretary_avatar_url ?? "");
       setUserCallName(s.user_call_name ?? "");
+      setBirthDate(s.birth_date ?? "");
+      setBirthName(s.birth_name ?? "");
       // weekly_schedule = {mon: "09:00-17:00" | null, ...} を画面用に展開
       if (s.weekly_schedule && typeof s.weekly_schedule === "object") {
         const ws = s.weekly_schedule;
@@ -121,6 +125,8 @@ export default function SettingsPage() {
       ntfy_topic: ntfyTopic,
       secretary_name: secretaryName,
       user_call_name: userCallName,
+      birth_date: birthDate,
+      birth_name: birthName,
       weekly_schedule: buildWeeklySchedulePayload(),
     };
     if (geminiKey) body.gemini_api_key = geminiKey;
@@ -237,6 +243,41 @@ export default function SettingsPage() {
           />
           <p className="text-xs text-gray-500 mt-1">
             秘書から会話の中でこう呼ばれます（空欄なら「あなた」と呼びます）
+          </p>
+        </div>
+      </div>
+
+      {/* ── 星（生年月日・名前） ── */}
+      <div className="card mt-6 space-y-3">
+        <h2 className="font-bold text-base text-purple-700">✦ あなたの星（任意）</h2>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          生年月日を入れておくと、シンガワールドのAIが
+          <strong className="text-purple-700">あなたに合った話し方</strong>をします。
+          分類して決めつけたりはしません。表に出るのは、聞き方と励まし方が変わることだけです。
+        </p>
+
+        <div>
+          <label className="block font-bold text-sm mb-1">生年月日</label>
+          <input
+            type="date"
+            value={birthDate}
+            onChange={(e) => setBirthDate(e.target.value)}
+            className="w-full p-2 border rounded-lg text-sm"
+          />
+        </div>
+
+        <div>
+          <label className="block font-bold text-sm mb-1">お名前（漢字フルネーム）</label>
+          <input
+            type="text"
+            value={birthName}
+            onChange={(e) => setBirthName(e.target.value)}
+            placeholder="例: 山田 太郎"
+            maxLength={40}
+            className="w-full p-2 border rounded-lg text-sm"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            戸籍の字で入れると精度が上がります。空欄でも大丈夫です。
           </p>
         </div>
       </div>

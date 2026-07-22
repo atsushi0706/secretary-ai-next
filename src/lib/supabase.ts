@@ -50,6 +50,8 @@ export async function upsertUserSettings(
     secretary_name: string;
     secretary_avatar_url: string;
     user_call_name: string;
+    birth_date: string | null;
+    birth_name: string;
     weekly_schedule: WeeklySchedule | null;
   }>,
 ) {

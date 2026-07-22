@@ -21,8 +21,7 @@ export default async function ShingaLayout({ children }: { children: React.React
     <main className="min-h-screen">
       <div className="max-w-6xl mx-auto px-3 sm:px-5 py-3 sm:py-5">
         <RealmNav active="shinga" />
-        {/* ここから内側は「心の宝の地図」の世界（羊皮紙＋明朝） */}
-        <div className="singa-world">{children}</div>
+        {children}
       </div>
     </main>
   );

@@ -51,8 +51,11 @@ ${who} の話から「今はこの場所が合う」と判断したら、返事�
 - 「なんかしんどい」「疲れた」→ <move>garden</move> か <move>river</move>
 - 「やってみたいことがある」「これがしたい」→ <move>sky</move>
 - 「歩いてる」「散歩中」→ <move>forest</move>
+- 「どっちにしよう」「決められない」→ <move>clarity</move>
 - 「誰にも言えないんだけど」→ <move>sanctuary</move>
+- 「怖いけどやりたい」「一歩踏み出したい」→ <move>bridge</move>
 - 「怖い」「向き合いたくない」→ <move>shadow</move>
+- 「またこれが出てくる」「気になって仕方ない」→ <move>shrine</move>
 - 「やってみた」「終わった」→ <move>treasure</move>
 
 ルール:

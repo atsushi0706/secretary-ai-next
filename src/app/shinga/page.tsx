@@ -17,6 +17,7 @@ export default async function ShingaPage({
   const initialPlace: PlaceKey | undefined = isPlaceKey(place) ? place : undefined;
 
   let guideName = "清瀬リンク";
+  let avatarUrl = "/kiyose.png";
   try {
     const { auth } = await import("@/auth");
     const { getUserSettings } = await import("@/lib/supabase");
@@ -25,10 +26,11 @@ export default async function ShingaPage({
     if (userId) {
       const s: any = await getUserSettings(userId);
       if (s?.secretary_name) guideName = s.secretary_name;
+      if (s?.secretary_avatar_url) avatarUrl = s.secretary_avatar_url;
     }
   } catch {
-    // 名前が取れなくても世界には入れる
+    // 名前や姿が取れなくても世界には入れる
   }
 
-  return <ShingaWorld guideName={guideName} initialPlace={initialPlace} />;
+  return <ShingaWorld guideName={guideName} avatarUrl={avatarUrl} initialPlace={initialPlace} />;
 }

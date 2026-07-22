@@ -289,202 +289,208 @@ body {
 }
 .realm-tab-singa-on .realm-tag { color: #cbab6c; opacity: 1; }
 
-/* ── シンガワールド: 地図の上で、中央のAIと話す ── */
+/* ── シンガワールド: 宝の地図の上で、案内役と話す ── */
 .singa-stage {
-  display: flex;
-  align-items: stretch;
-  gap: 14px;
-  padding: 0 14px;
-  --singa-ink: #f0e2c0;
-  --singa-ink-soft: rgba(240, 226, 192, .72);
-  --singa-gold: #d8b46a;
+  --singa-ink: #f4e7c8;
+  --singa-ink-soft: rgba(244, 231, 200, .78);
+  --singa-gold: #e0bd72;
   position: relative;
-  min-height: min(78vh, 720px);
-  border-radius: 20px;
+  display: flex;
+  flex-direction: column;
+  height: min(82vh, 780px);
+  border-radius: 18px;
   overflow: hidden;
   color: var(--singa-ink);
   font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", YuMincho, serif;
-  background:
-    radial-gradient(ellipse 55% 45% at 50% 42%, color-mix(in srgb, var(--place-hue, #a8812f) 34%, transparent), rgba(0,0,0,0) 72%),
-    radial-gradient(ellipse 70% 50% at 15% 10%, rgba(90, 70, 130, .35), rgba(0,0,0,0) 70%),
-    radial-gradient(ellipse 60% 50% at 88% 88%, rgba(60, 90, 110, .32), rgba(0,0,0,0) 70%),
-    linear-gradient(165deg, #1d1a2b 0%, #17151f 55%, #100e16 100%);
-  box-shadow: inset 0 0 90px rgba(0,0,0,.55), 0 10px 40px rgba(20, 16, 30, .3);
-  transition: background 1.1s ease;
+  background: #17140f;
+  border: 1px solid rgba(150, 118, 62, .45);
+  box-shadow: 0 10px 40px rgba(20, 16, 30, .28);
 }
-/* 場所が変わる瞬間に、光が一度ふわっと広がる */
-.singa-stage::after {
-  content: "";
-  position: absolute; inset: 0;
-  pointer-events: none;
-  background: radial-gradient(circle at 50% 44%, color-mix(in srgb, var(--place-hue, #a8812f) 55%, transparent), rgba(0,0,0,0) 60%);
-  opacity: 0;
-  transition: opacity .5s ease;
-}
-.singa-stage.is-moving::after { opacity: .85; }
 
-/* 星のちらつき */
+/* 地図（背景）。場所が変わると、そこへ寄っていく */
+.singa-map {
+  position: absolute; inset: 0;
+  z-index: 0;
+  transition: transform 1.1s cubic-bezier(.3,.7,.2,1);
+  transform-origin: center;
+}
+.singa-map-img {
+  position: absolute; inset: 0;
+  background-image: url("/singa-map.jpg");
+  background-size: cover;
+  background-position: center;
+  /* 画像がまだ無いときは、夜空で代用する */
+  background-color: #17140f;
+}
+/* 文字が読めるように、上下だけ暗くする（地図の絵は真ん中が見える） */
 .singa-stage::before {
   content: "";
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; z-index: 1;
   pointer-events: none;
-  background-image:
-    radial-gradient(1px 1px at 12% 22%, rgba(255,255,255,.7), transparent),
-    radial-gradient(1px 1px at 74% 14%, rgba(255,255,255,.5), transparent),
-    radial-gradient(1px 1px at 38% 68%, rgba(255,255,255,.45), transparent),
-    radial-gradient(1px 1px at 88% 58%, rgba(255,255,255,.55), transparent),
-    radial-gradient(1px 1px at 58% 88%, rgba(255,255,255,.4), transparent),
-    radial-gradient(1px 1px at 26% 46%, rgba(255,255,255,.35), transparent);
-  animation: singa-twinkle 6s ease-in-out infinite alternate;
+  background:
+    linear-gradient(180deg, rgba(10,8,6,.72) 0%, rgba(10,8,6,.12) 22%, rgba(10,8,6,.10) 48%, rgba(10,8,6,.78) 88%, rgba(10,8,6,.92) 100%);
 }
-@keyframes singa-twinkle { from { opacity: .35; } to { opacity: .85; } }
+/* 場所が変わる瞬間、その場所の色がふわっと広がる */
+.singa-stage::after {
+  content: "";
+  position: absolute; inset: 0; z-index: 2;
+  pointer-events: none;
+  background: radial-gradient(circle at 50% 45%, color-mix(in srgb, var(--place-hue, #c9a227) 60%, transparent), rgba(0,0,0,0) 62%);
+  opacity: 0;
+  transition: opacity .55s ease;
+}
+.singa-stage.is-moving::after { opacity: .8; }
 
-/* 地図の上の場所たち */
-.singa-map { position: absolute; inset: 0; z-index: 1; }
+/* 地図の上の場所（点だけ。名前は中央に出るので置かない） */
 .singa-spot {
   position: absolute;
   transform: translate(-50%, -50%);
-  display: flex; flex-direction: column; align-items: center; gap: 4px;
-  padding: 6px;
-  color: rgba(240, 226, 192, .5);
-  transition: color .4s ease, transform .5s cubic-bezier(.2,.8,.3,1);
+  padding: 10px;
+  z-index: 2;
 }
 .singa-spot .dot {
-  width: 9px; height: 9px; border-radius: 50%;
-  background: var(--spot-hue, #a8812f);
-  box-shadow: 0 0 0 3px rgba(255,255,255,.06);
-  transition: box-shadow .5s ease, transform .5s ease;
+  display: block;
+  width: 10px; height: 10px; border-radius: 50%;
+  background: var(--spot-hue, #c9a227);
+  box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 0 10px 2px color-mix(in srgb, var(--spot-hue, #c9a227) 60%, transparent);
+  opacity: .55;
+  transition: opacity .3s ease, transform .3s ease;
 }
-.singa-spot .name {
-  font-size: .62rem; letter-spacing: .08em; white-space: nowrap;
-  text-shadow: 0 1px 4px rgba(0,0,0,.8);
-}
-.singa-spot:hover { color: rgba(240, 226, 192, .95); }
-.singa-spot:hover .dot { transform: scale(1.25); }
-.singa-spot.is-here {
-  color: #fff;
-  transform: translate(-50%, -50%) scale(1.18);
-}
+.singa-spot:hover .dot { opacity: 1; transform: scale(1.3); }
 .singa-spot.is-here .dot {
+  opacity: 1;
   box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--spot-hue, #a8812f) 40%, transparent),
-    0 0 22px 6px color-mix(in srgb, var(--spot-hue, #a8812f) 65%, transparent);
+    0 0 0 4px color-mix(in srgb, var(--spot-hue, #c9a227) 35%, transparent),
+    0 0 26px 8px color-mix(in srgb, var(--spot-hue, #c9a227) 70%, transparent);
   animation: singa-pulse 2.4s ease-in-out infinite;
 }
 @keyframes singa-pulse {
   0%, 100% { transform: scale(1); }
-  50%      { transform: scale(1.18); }
-}
-@media (max-width: 640px) {
-  .singa-spot .name { font-size: .55rem; }
+  50%      { transform: scale(1.25); }
 }
 
-/* 中央: 案内役との対話 */
-.singa-center {
-  position: relative;
-  z-index: 2;
-  flex: 1 1 auto;
-  min-width: 0;
-  max-width: 620px;
-  margin: 0 auto;
-  padding: clamp(14px, 4vh, 34px) 0 18px;
-  display: flex; flex-direction: column;
-  min-height: min(78vh, 720px);
+/* 今いる場所の名前 */
+.singa-place-name {
+  position: relative; z-index: 4;
+  text-align: center;
+  padding: 12px 14px 0;
 }
-.singa-place-name { text-align: center; margin-bottom: 10px; }
 .singa-place-name .en {
   display: block;
-  font-size: .58rem; letter-spacing: .24em; text-transform: uppercase;
+  font-size: .56rem; letter-spacing: .26em; text-transform: uppercase;
   color: var(--singa-gold);
+  text-shadow: 0 1px 6px rgba(0,0,0,.9);
 }
 .singa-place-name .ja {
   display: block;
-  font-size: 1.15rem; font-weight: 700; letter-spacing: .1em;
-  text-shadow: 0 2px 10px rgba(0,0,0,.7);
+  font-size: 1.2rem; font-weight: 700; letter-spacing: .12em;
+  text-shadow: 0 2px 12px rgba(0,0,0,.95);
 }
 .singa-place-name .tag {
-  display: block;
-  margin-top: 4px;
-  font-size: .7rem;
-  color: var(--singa-ink-soft);
-  text-shadow: 0 1px 8px rgba(0,0,0,.8);
+  display: block; margin-top: 3px;
+  font-size: .68rem; color: var(--singa-ink-soft);
+  text-shadow: 0 1px 8px rgba(0,0,0,.95);
 }
-/* 今いる場所の名前は中央に大きく出ているので、地図側のラベルは消す */
-.singa-spot.is-here .name { opacity: 0; }
 
+/* 案内役。地図の左下に立って、そこから話しかけてくる。
+   （画像の背景が白でも浮かないよう、丸く切り抜いて金の縁をつける） */
+.singa-avatar {
+  position: absolute;
+  left: 18px;
+  bottom: 72px;
+  z-index: 3;
+  width: clamp(96px, 15vw, 168px);
+  height: clamp(96px, 15vw, 168px);
+  border-radius: 50%;
+  overflow: hidden;
+  border: 2px solid rgba(224, 189, 114, .55);
+  box-shadow: 0 8px 28px rgba(0,0,0,.7), 0 0 0 6px rgba(18,15,11,.5);
+  pointer-events: none;
+  animation: singa-breathe 5.5s ease-in-out infinite;
+}
+/* 全身の絵でも顔が見えるように、寄せて切り抜く */
+.singa-avatar img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  object-position: 50% 8%;
+  transform: scale(1.75);
+  transform-origin: 50% 12%;
+}
+@keyframes singa-breathe {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-4px); }
+}
+
+/* 会話。立ち絵の手前に、札のように浮かぶ */
 .singa-talk {
+  position: relative; z-index: 4;
   flex: 1;
   overflow-y: auto;
-  padding: 12px 2px;
-  margin-bottom: 10px;
-  /* 地図を隠さない。会話が無いところは地図に触れるようにする */
-  pointer-events: none;
-  display: flex; flex-direction: column; gap: 14px;
+  padding: 14px 16px 6px;
+  padding-left: clamp(124px, calc(15vw + 34px), 200px);
+  display: flex; flex-direction: column; gap: 12px;
+  justify-content: flex-end;
   scrollbar-width: thin;
+  pointer-events: none;
 }
-.singa-line { max-width: 92%; pointer-events: auto; }
+.singa-line { max-width: min(440px, 82%); pointer-events: auto; }
 .singa-line .who {
   display: block;
-  font-size: .58rem; letter-spacing: .16em;
+  font-size: .56rem; letter-spacing: .18em;
   color: var(--singa-gold);
   margin-bottom: 3px;
+  text-shadow: 0 1px 6px rgba(0,0,0,.9);
 }
 .singa-line p {
   display: inline-block;
-  font-size: .92rem; line-height: 1.95;
+  font-size: .9rem; line-height: 1.95;
   white-space: pre-wrap;
-  padding: 10px 15px;
-  border-radius: 4px 14px 14px 14px;
-  background: rgba(14, 12, 20, .68);
-  border: 1px solid rgba(255,255,255,.09);
-  backdrop-filter: blur(6px);
-  box-shadow: 0 4px 18px rgba(0,0,0,.35);
+  padding: 11px 16px;
+  border-radius: 4px 16px 16px 16px;
+  background: rgba(20, 16, 11, .82);
+  border: 1px solid rgba(224, 189, 114, .22);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 6px 22px rgba(0,0,0,.5);
 }
-.singa-line.is-me {
-  align-self: flex-end;
-  text-align: right;
-  color: rgba(255,255,255,.92);
-}
+.singa-line.is-me { align-self: flex-end; }
 .singa-line.is-me p {
-  display: inline-block;
-  background: rgba(255,255,255,.09);
-  border: 1px solid rgba(255,255,255,.12);
-  border-radius: 14px 14px 4px 14px;
-  padding: 8px 14px;
-  font-size: .88rem; line-height: 1.85;
-  text-align: left;
+  border-radius: 16px 4px 16px 16px;
+  background: rgba(90, 72, 40, .82);
+  border-color: rgba(224, 189, 114, .3);
 }
 
+/* 入力 */
 .singa-input {
+  position: relative; z-index: 5;
   display: flex; align-items: flex-end; gap: 8px;
-  padding: 10px 12px;
-  border-radius: 16px;
-  background: rgba(255,255,255,.07);
-  border: 1px solid rgba(255,255,255,.13);
+  margin: 0 12px 12px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(18, 15, 11, .82);
+  border: 1px solid rgba(224, 189, 114, .22);
   backdrop-filter: blur(10px);
 }
 .singa-textarea {
-  background: rgba(0,0,0,.22);
-  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(0,0,0,.32);
+  border: 1px solid rgba(224, 189, 114, .18);
   border-radius: 10px;
   padding: 8px 10px;
   color: var(--singa-ink);
   font-size: .86rem; line-height: 1.7;
   font-family: inherit;
   resize: none;
-  min-height: 40px; max-height: 140px;
+  min-height: 40px; max-height: 120px;
 }
-.singa-textarea::placeholder { color: rgba(240, 226, 192, .42); }
-.singa-textarea:focus { outline: 1px solid color-mix(in srgb, var(--place-hue, #a8812f) 60%, transparent); }
+.singa-textarea::placeholder { color: rgba(244, 231, 200, .4); }
+.singa-textarea:focus { outline: 1px solid color-mix(in srgb, var(--place-hue, #c9a227) 65%, transparent); }
 .singa-input .singa-textarea { flex: 1; }
 .singa-send {
   padding: 9px 16px;
   border-radius: 10px;
-  font-size: .82rem; font-weight: 700; letter-spacing: .08em;
-  color: #1a1622;
-  background: linear-gradient(160deg, #e6cd93, #c9a55e);
-  box-shadow: 0 3px 12px rgba(0,0,0,.35);
-  transition: opacity .2s ease;
+  font-size: .82rem; font-weight: 700; letter-spacing: .1em;
+  color: #221b10;
+  background: linear-gradient(160deg, #eed69b, #c9a55e);
+  box-shadow: 0 3px 12px rgba(0,0,0,.45);
 }
 .singa-send:disabled { opacity: .35; }
 
@@ -495,49 +501,74 @@ body {
   display: inline-flex; align-items: center; justify-content: center;
   font-size: .95rem;
   background: rgba(255,255,255,.09);
-  border: 1px solid rgba(255,255,255,.16);
+  border: 1px solid rgba(224, 189, 114, .25);
   color: var(--singa-ink);
-  transition: background .2s ease, transform .2s ease;
+  transition: background .2s ease;
 }
-.singa-mic:hover { background: rgba(255,255,255,.16); }
+.singa-mic:hover { background: rgba(255,255,255,.18); }
 .singa-mic.is-on {
-  background: rgba(226, 87, 76, .85);
+  background: rgba(200, 70, 60, .88);
   color: #fff;
   animation: singa-rec 1.4s ease-in-out infinite;
 }
 .singa-mic.is-busy { opacity: .6; }
 @keyframes singa-rec {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(226, 87, 76, .55); }
-  50%      { box-shadow: 0 0 0 8px rgba(226, 87, 76, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(200, 70, 60, .55); }
+  50%      { box-shadow: 0 0 0 8px rgba(200, 70, 60, 0); }
 }
 
-/* その場所で開く道具（右下に静かに出る） */
-.singa-panel {
-  position: relative;
-  z-index: 3;
-  flex: 0 0 300px;
-  align-self: center;
-  max-height: min(72vh, 560px);
-  overflow-y: auto;
-  padding: 14px;
-  border-radius: 16px;
-  background: rgba(22, 19, 30, .82);
-  border: 1px solid rgba(255,255,255,.14);
-  backdrop-filter: blur(14px);
-  box-shadow: 0 10px 40px rgba(0,0,0,.5);
+/* その場所の道具 */
+.singa-panel-wrap {
+  position: absolute;
+  right: 12px; top: 76px;
+  z-index: 6;
+  width: min(300px, 46%);
+  max-height: calc(100% - 160px);
+  display: flex;
   animation: singa-rise .5s cubic-bezier(.2,.8,.3,1);
 }
 @keyframes singa-rise {
-  from { opacity: 0; transform: translateY(16px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from { opacity: 0; transform: translateX(20px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+.singa-panel {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(18, 15, 11, .9);
+  border: 1px solid rgba(224, 189, 114, .25);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 10px 40px rgba(0,0,0,.6);
+}
+.singa-panel-close {
+  position: absolute; right: 6px; top: -22px;
+  z-index: 7;
+  font-size: .8rem;
+  color: var(--singa-ink-soft);
+  padding: 2px 8px;
+  border-radius: 8px;
+  background: rgba(18, 15, 11, .8);
+  border: 1px solid rgba(224, 189, 114, .22);
+}
+.singa-panel-open {
+  position: absolute; right: 12px; bottom: 82px;
+  z-index: 6;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: .7rem; letter-spacing: .08em;
+  color: var(--singa-ink);
+  background: rgba(18, 15, 11, .82);
+  border: 1px solid rgba(224, 189, 114, .25);
+  backdrop-filter: blur(10px);
 }
 .singa-panel-title {
-  font-size: .58rem; letter-spacing: .2em; text-transform: uppercase;
+  font-size: .56rem; letter-spacing: .2em; text-transform: uppercase;
   color: var(--singa-gold);
   margin-bottom: 8px;
 }
 .singa-panel-sub {
-  font-size: .58rem; letter-spacing: .16em;
+  font-size: .56rem; letter-spacing: .16em;
   color: var(--singa-gold);
   margin: 12px 0 6px;
 }
@@ -547,9 +578,8 @@ body {
   padding: 9px;
   border-radius: 10px;
   font-size: .78rem; font-weight: 700;
-  color: #1a1622;
-  background: linear-gradient(160deg, #e6cd93, #c9a55e);
-  transition: opacity .2s ease;
+  color: #221b10;
+  background: linear-gradient(160deg, #eed69b, #c9a55e);
 }
 .singa-panel-btn:disabled { opacity: .4; }
 /* 世界をまたぐボタンだけリアルバースの青 */
@@ -563,7 +593,7 @@ body {
   padding: 6px 0;
   border-radius: 7px;
   font-size: .7rem; font-weight: 700;
-  color: rgba(240, 226, 192, .55);
+  color: rgba(244, 231, 200, .55);
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.1);
   transition: transform .15s ease;
@@ -578,9 +608,8 @@ body {
   border-radius: 10px;
   background: rgba(255,255,255,.06);
   border: 1px solid rgba(255,255,255,.1);
-  transition: background .2s ease;
 }
-.singa-quest:hover { background: rgba(255,255,255,.12); }
+.singa-quest:hover { background: rgba(255,255,255,.13); }
 .singa-quest .t { flex: 1; min-width: 0; font-size: .78rem; line-height: 1.6; }
 .singa-quest .n {
   font-size: .62rem; font-weight: 700;
@@ -588,10 +617,7 @@ body {
   background: rgba(63, 130, 200, .25);
   border-radius: 999px; padding: 1px 7px;
 }
-.singa-quest-detail {
-  padding: 8px 10px 4px;
-  font-size: .74rem;
-}
+.singa-quest-detail { padding: 8px 10px 4px; font-size: .74rem; }
 .singa-cand {
   display: flex; align-items: flex-start; gap: 7px;
   padding: 7px 0;
@@ -602,37 +628,37 @@ body {
 /* どこにいても押せる状態パラメーターのボタン */
 .singa-state-fab {
   position: absolute;
-  right: 16px; top: 16px;
-  z-index: 3;
+  left: 12px; top: 12px;
+  z-index: 6;
   display: inline-flex; align-items: center; gap: 7px;
   padding: 7px 13px 7px 9px;
   border-radius: 999px;
-  background: rgba(22, 19, 30, .7);
-  border: 1px solid rgba(255,255,255,.16);
+  background: rgba(18, 15, 11, .78);
+  border: 1px solid rgba(224, 189, 114, .25);
   backdrop-filter: blur(10px);
   color: var(--singa-ink);
-  transition: background .2s ease;
 }
-.singa-state-fab:hover { background: rgba(40, 34, 54, .9); }
+.singa-state-fab:hover { background: rgba(40, 32, 20, .92); }
 .singa-state-fab .ring {
   width: 11px; height: 11px; border-radius: 50%;
-  background: radial-gradient(circle, #6fc0d8, #2f7f9c);
-  box-shadow: 0 0 10px 2px rgba(111, 192, 216, .5);
+  background: radial-gradient(circle, #7fd0e0, #2f8f9c);
+  box-shadow: 0 0 10px 2px rgba(127, 208, 224, .5);
 }
-.singa-state-fab .label { font-size: .68rem; letter-spacing: .06em; }
+.singa-state-fab .label { font-size: .66rem; letter-spacing: .06em; }
 
-@media (max-width: 900px) {
-  .singa-stage { flex-direction: column; padding: 0 10px 10px; }
-  .singa-center { min-height: 52vh; max-width: none; }
-  .singa-panel {
-    flex: none;
-    align-self: stretch;
+@media (max-width: 700px) {
+  .singa-stage { height: min(86vh, 720px); }
+  .singa-avatar { width: 92px; height: 92px; left: 10px; bottom: 66px; }
+  .singa-line { max-width: 82%; }
+  .singa-talk { padding-left: 112px; }
+  .singa-panel-wrap {
+    left: 8px; right: 8px; top: auto; bottom: 68px;
     width: auto;
-    max-height: 42vh;
+    max-height: 44vh;
   }
-  .singa-state-fab { right: 8px; top: 8px; }
+  .singa-panel-open { bottom: 76px; }
+  .singa-place-name .ja { font-size: 1.05rem; }
 }
-
 
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }

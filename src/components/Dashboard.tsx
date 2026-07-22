@@ -180,6 +180,8 @@ export function Dashboard({ userName }: { userName: string }) {
 
   return (
     <main className="min-h-screen">
+      {/* 島々の世界を、画面の奥にうっすら敷く */}
+      <div className="realverse-bg" />
       {/* 最上位の領域切り替え（リアルバース / シンガワールド） */}
       <div className="max-w-6xl mx-auto px-3 sm:px-5 pt-3 sm:pt-5">
         <RealmNav active="realverse" />

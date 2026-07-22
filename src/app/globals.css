@@ -270,24 +270,53 @@ body {
 /* リアルバース: 上空から見た青い海 */
 .realm-tab-realverse-on {
   color: #fff;
-  background:
-    radial-gradient(ellipse 120px 40px at 20% 15%, rgba(255,255,255,.35), rgba(255,255,255,0) 70%),
-    radial-gradient(ellipse 140px 40px at 80% 80%, rgba(255,255,255,.22), rgba(255,255,255,0) 70%),
-    linear-gradient(160deg, #3d97e0 0%, #1f6fc0 55%, #17559a 100%);
+  background-image:
+    linear-gradient(160deg, rgba(31,111,192,.86) 0%, rgba(23,85,154,.9) 100%),
+    url("/realverse-map.jpg");
+  background-size: cover, 130%;
+  background-position: center, center 30%;
   box-shadow: 0 6px 18px rgba(31,111,192,.35);
   transform: translateY(-1px);
+  text-shadow: 0 1px 6px rgba(0,0,0,.5);
 }
 
 /* シンガワールド: 焼けた羊皮紙と金 */
 .realm-tab-singa-on {
   color: #f0d9a0;
-  background:
-    radial-gradient(ellipse 100px 40px at 25% 20%, rgba(240,217,160,.16), rgba(0,0,0,0) 70%),
-    linear-gradient(160deg, #4a3418 0%, #33230f 55%, #241708 100%);
+  background-image:
+    linear-gradient(160deg, rgba(45,32,15,.82) 0%, rgba(28,19,8,.88) 100%),
+    url("/singa-map.jpg");
+  background-size: cover, 130%;
+  background-position: center, center 35%;
   box-shadow: 0 6px 18px rgba(58,40,18,.4);
   transform: translateY(-1px);
+  text-shadow: 0 1px 6px rgba(0,0,0,.7);
 }
 .realm-tab-singa-on .realm-tag { color: #cbab6c; opacity: 1; }
+
+
+/* リアルバース: 画面の奥に、島々の世界をうっすら敷く。
+   タスクボードの読みやすさを壊さないよう、かなり薄くする。 */
+/* body 自体の背景色に隠されてしまうので、地図を敷くページでは body を透明にする */
+body:has(.realverse-bg) { background: transparent; }
+
+.realverse-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(180deg, rgba(248,250,255,.80) 0%, rgba(245,247,253,.86) 35%, rgba(241,240,251,.94) 68%, rgba(236,242,251,.98) 100%),
+    url("/realverse-map.jpg");
+  background-size: cover, 128%;
+  background-position: center, center 26%;
+  background-attachment: scroll, fixed;
+  /* html の背景色より手前、コンテンツより奥 */
+  z-index: -1;
+}
+@media (max-width: 640px) {
+  /* スマホは固定背景が重いので、上部だけに置く */
+  .realverse-bg { background-attachment: scroll, scroll; }
+}
 
 /* ── シンガワールド: 宝の地図の上で、案内役と話す ── */
 .singa-stage {
@@ -350,18 +379,23 @@ body {
 }
 .singa-spot .dot {
   display: block;
-  width: 10px; height: 10px; border-radius: 50%;
-  background: var(--spot-hue, #c9a227);
-  box-shadow: 0 0 0 2px rgba(0,0,0,.35), 0 0 10px 2px color-mix(in srgb, var(--spot-hue, #c9a227) 60%, transparent);
-  opacity: .55;
+  width: 13px; height: 13px; border-radius: 50%;
+  background: radial-gradient(circle at 40% 35%, #fff 0%, var(--spot-hue, #c9a227) 55%, color-mix(in srgb, var(--spot-hue, #c9a227) 70%, #000) 100%);
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.55),
+    0 0 0 4px rgba(0,0,0,.4),
+    0 0 14px 3px color-mix(in srgb, var(--spot-hue, #c9a227) 75%, transparent);
+  opacity: .8;
   transition: opacity .3s ease, transform .3s ease;
 }
 .singa-spot:hover .dot { opacity: 1; transform: scale(1.3); }
 .singa-spot.is-here .dot {
   opacity: 1;
+  width: 16px; height: 16px;
   box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--spot-hue, #c9a227) 35%, transparent),
-    0 0 26px 8px color-mix(in srgb, var(--spot-hue, #c9a227) 70%, transparent);
+    0 0 0 3px rgba(255,255,255,.85),
+    0 0 0 7px color-mix(in srgb, var(--spot-hue, #c9a227) 45%, transparent),
+    0 0 34px 12px color-mix(in srgb, var(--spot-hue, #c9a227) 85%, transparent);
   animation: singa-pulse 2.4s ease-in-out infinite;
 }
 @keyframes singa-pulse {

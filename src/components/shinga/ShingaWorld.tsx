@@ -184,12 +184,14 @@ export function ShingaWorld({
           })}
       </div>
 
-      {/* 今いる場所 */}
-      <div className="singa-place-name">
-        <span className="en">{here.en}</span>
-        <span className="ja">{here.ja}</span>
-        <span className="tag">{here.tagline}</span>
-      </div>
+      {/* 今いる場所。地図全体のときは、絵に描かれた表題があるので出さない */}
+      {place !== "map" && (
+        <div className="singa-place-name">
+          <span className="en">{here.en}</span>
+          <span className="ja">{here.ja}</span>
+          <span className="tag">{here.tagline}</span>
+        </div>
+      )}
 
       {/* 案内役。地図の左下に立って、そこから話しかけてくる */}
       <div className="singa-avatar">

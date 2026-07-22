@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { TodayProgress } from "@/lib/todayProgress";
 
 type TimeKey = "quick" | "mid" | "long";
@@ -14,6 +15,11 @@ type Task = {
   label: { category: string; urgency: string; importance: string; time: string };
   bucket: "urgent_work" | "important_work" | "personal" | "by_time";
   window: Win3;
+  /**
+   * タスクの出自（シンガワールド連携）。
+   * クエストから作られたタスクだけ入る。既存タスクは undefined / null。
+   */
+  source?: { type: string | null; questId: string | null; conversationId: number | null } | null;
 };
 
 const WIN_LABEL: Record<Win3, string> = {
@@ -278,6 +284,7 @@ function CategoryCard({
     }
     // 既存タスクの due を更新するAPIがないので、delete + add で簡易対応
     // → タスクID変わるが、UX的にはOK
+    // ※クエスト由来のタスクは、作り直しても出自を引き継がせる
     await fetch("/api/tasks", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -288,6 +295,9 @@ function CategoryCard({
         urgency: t.label.urgency,
         importance: t.label.importance,
         time: normalizeTime(t.label.time),
+        sourceType: t.source?.type ?? undefined,
+        sourceQuestId: t.source?.questId ?? undefined,
+        sourceConversationId: t.source?.conversationId ?? undefined,
       }),
     });
     await fetch("/api/tasks", {
@@ -438,6 +448,7 @@ function TaskRow({
   const tkey = normalizeTime(task.label.time);
   const isUrgent = task.label.urgency === "high";
   const isImportant = task.label.importance === "high";
+  const questId = task.source?.questId ?? null;
 
   return (
     <div className="group flex items-start gap-2 text-sm py-1.5 px-2 rounded-lg hover:bg-white/80 transition relative">
@@ -476,6 +487,11 @@ function TaskRow({
           {task.due && (
             <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
               〆{task.due.slice(5, 10)}
+            </span>
+          )}
+          {questId && (
+            <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded" title="クエストから生まれたタスク">
+              🌌 クエスト
             </span>
           )}
           <button
@@ -527,6 +543,16 @@ function TaskRow({
                 {TIME_LABEL[tk]} {tk === tkey && "（現在）"}
               </button>
             ))}
+            {questId && (
+              <div className="border-t mt-2 pt-2">
+                <Link
+                  href={`/shinga/quests?quest=${questId}`}
+                  className="block px-2 py-1.5 rounded text-indigo-700 font-bold hover:bg-indigo-50"
+                >
+                  🌌 シンガワールドで振り返る
+                </Link>
+              </div>
+            )}
             <div className="border-t mt-2 pt-2">
               <button
                 onClick={() => { onDelete(task); setMenuOpen(false); }}

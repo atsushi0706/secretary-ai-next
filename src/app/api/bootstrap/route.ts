@@ -9,6 +9,7 @@ import { categorize, type Label, URGENCY, IMPORTANCE, TIME_KEYS, CATEGORY_KEYS, 
 import { extractJson } from "@/lib/claude";
 import { complete } from "@/lib/ai";
 import { getManualLabels, loadMessages, loadQuickmemo, getUserSettings, loadBriefing, logError } from "@/lib/supabase";
+import { getTaskLinks } from "@/lib/shinga";
 
 export async function GET(req: Request) {
   const session = await auth();
@@ -37,7 +38,7 @@ export async function GET(req: Request) {
     const targetLabel = isMorning ? "今日" : "明日";
     const targetDate = new Date(targetDay + "T00:00:00+09:00");
 
-    const [events, tasks, manualLabels, messages, quickmemo, eveningBriefing] = await Promise.all([
+    const [events, tasks, manualLabels, messages, quickmemo, eveningBriefing, taskLinks] = await Promise.all([
       getCalendarEvents(userId, 1),
       getTasks(userId, false),
       getManualLabels(userId),
@@ -45,6 +46,8 @@ export async function GET(req: Request) {
       loadQuickmemo(userId),
       // 朝モードのとき: 昨夜(yesterday の evening)で targetDay=今日 として保存された briefing を取りに行く
       isMorning ? loadBriefing(userId, today, "evening") : Promise.resolve(null),
+      // クエスト由来などのタスク出自。テーブル未作成でも {} が返るので既存動作に影響しない。
+      getTaskLinks(userId),
     ]);
 
     // タスク分類: manual 優先、無ければ Claude に投げる
@@ -125,11 +128,20 @@ ${taskBlock}`;
       events,
       tasks: tasks.map((t) => {
         const lab = labels[t.id] ?? { category: "work" as const, urgency: "low" as const, importance: "low" as const, time: "mid" as const };
+        const link = taskLinks[t.id];
         return {
           ...t,
           label: lab,
           bucket: categorize(lab),       // 既存4軸: 色分けやデフォ追加先に使用
           window: windowOf(lab, t.due),  // 新3軸: タスクボードの主軸
+          // シンガワールド連携: クエスト由来のタスクなら出自が入る (無ければ null)
+          source: link
+            ? {
+                type: link.source_type,
+                questId: link.source_quest_id,
+                conversationId: link.source_conversation_id,
+              }
+            : null,
         };
       }),
       schedule,

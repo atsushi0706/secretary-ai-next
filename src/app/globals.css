@@ -245,6 +245,145 @@ body {
   font-weight: 600;
 }
 
+/* ============================================================
+   世界観: リアルバース（青空と海の島々）／ シンガワールド（心の宝の地図）
+   画像は使わず、配色・質感・書体だけで world を作る。
+   ============================================================ */
+
+/* ── 最上位ナビ（2つの世界の切り替え） ── */
+.realm-tab {
+  flex: 1 1 0%;
+  min-width: 0;
+  border-radius: 14px;
+  padding: 10px 12px;
+  text-align: center;
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.realm-tab .realm-name { font-weight: 800; font-size: .92rem; letter-spacing: .02em; }
+.realm-tab .realm-tag {
+  font-size: .58rem; letter-spacing: .14em; text-transform: uppercase;
+  margin-top: 2px; opacity: .8;
+}
+.realm-tab-off { color: #8a8a90; }
+.realm-tab-off:hover { background: rgba(255,255,255,.65); }
+
+/* リアルバース: 上空から見た青い海 */
+.realm-tab-realverse-on {
+  color: #fff;
+  background:
+    radial-gradient(ellipse 120px 40px at 20% 15%, rgba(255,255,255,.35), rgba(255,255,255,0) 70%),
+    radial-gradient(ellipse 140px 40px at 80% 80%, rgba(255,255,255,.22), rgba(255,255,255,0) 70%),
+    linear-gradient(160deg, #3d97e0 0%, #1f6fc0 55%, #17559a 100%);
+  box-shadow: 0 6px 18px rgba(31,111,192,.35);
+  transform: translateY(-1px);
+}
+
+/* シンガワールド: 焼けた羊皮紙と金 */
+.realm-tab-singa-on {
+  color: #f0d9a0;
+  background:
+    radial-gradient(ellipse 100px 40px at 25% 20%, rgba(240,217,160,.16), rgba(0,0,0,0) 70%),
+    linear-gradient(160deg, #4a3418 0%, #33230f 55%, #241708 100%);
+  box-shadow: 0 6px 18px rgba(58,40,18,.4);
+  transform: translateY(-1px);
+}
+.realm-tab-singa-on .realm-tag { color: #cbab6c; opacity: 1; }
+
+/* ── シンガワールド全体: 羊皮紙の宝の地図 ── */
+.singa-world {
+  --singa-ink: #3a2a15;
+  --singa-ink-soft: #6b5535;
+  --singa-gold: #a8812f;
+  --singa-line: rgba(140, 110, 60, .35);
+  color: var(--singa-ink);
+  font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", YuMincho, "Yu Gothic", serif;
+  background:
+    radial-gradient(ellipse 60% 45% at 12% 8%, rgba(255, 246, 222, .85), rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse 50% 40% at 88% 92%, rgba(214, 178, 120, .35), rgba(255,255,255,0) 60%),
+    radial-gradient(ellipse 70% 50% at 50% 50%, rgba(247, 232, 198, .9), rgba(255,255,255,0) 70%),
+    linear-gradient(150deg, #f2e2bd 0%, #ecdcb4 45%, #e0cb9c 100%);
+  border-radius: 18px;
+  border: 1px solid rgba(150, 118, 62, .45);
+  box-shadow: inset 0 0 60px rgba(120, 88, 40, .18), 0 6px 24px rgba(90, 68, 30, .12);
+  padding: 14px;
+}
+@media (min-width: 640px) { .singa-world { padding: 20px; } }
+
+/* シンガワールド内のカードは羊皮紙に馴染ませる（既存 .card をこの中でだけ上書き） */
+.singa-world .card {
+  background: rgba(255, 250, 236, .78);
+  border: 1px solid var(--singa-line);
+  border-radius: 14px;
+  box-shadow: 0 2px 10px rgba(110, 84, 40, .10);
+  backdrop-filter: blur(2px);
+}
+.singa-world input,
+.singa-world textarea,
+.singa-world select {
+  background: rgba(255, 252, 244, .92);
+  border-color: rgba(150, 118, 62, .35);
+  color: var(--singa-ink);
+}
+.singa-world .text-gray-500 { color: var(--singa-ink-soft); }
+.singa-world .text-gray-600 { color: var(--singa-ink-soft); }
+.singa-world .text-gray-400 { color: rgba(107, 85, 53, .7); }
+
+/* 地図の見出し */
+.singa-heading {
+  font-family: "Noto Serif JP", "Hiragino Mincho ProN", "Yu Mincho", YuMincho, serif;
+  letter-spacing: .06em;
+  color: #2f2008;
+  text-shadow: 0 1px 0 rgba(255,255,255,.5);
+}
+.singa-sub {
+  font-size: .62rem; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--singa-gold);
+}
+/* 金の罫線 */
+.singa-rule {
+  height: 1px; margin: 10px 0;
+  background: linear-gradient(90deg, rgba(168,129,47,0), rgba(168,129,47,.6), rgba(168,129,47,0));
+}
+/* 地図上の「土地」カード */
+.singa-land {
+  position: relative;
+  display: block;
+  border-radius: 14px;
+  padding: 14px;
+  background: rgba(255, 250, 236, .72);
+  border: 1px solid var(--singa-line);
+  box-shadow: 0 2px 10px rgba(110, 84, 40, .10);
+  transition: transform .18s ease, box-shadow .18s ease, background .18s ease;
+}
+.singa-land:hover {
+  transform: translateY(-2px);
+  background: rgba(255, 252, 242, .92);
+  box-shadow: 0 8px 20px rgba(110, 84, 40, .18);
+}
+.singa-land.is-locked {
+  background: rgba(246, 236, 214, .55);
+  border-style: dashed;
+  color: rgba(58, 42, 21, .8);
+}
+.singa-land .land-en {
+  font-size: .58rem; letter-spacing: .12em; text-transform: uppercase;
+  color: var(--singa-gold);
+}
+.singa-land .land-ja { font-weight: 700; font-size: .95rem; margin-top: 2px; }
+.singa-land .land-desc { font-size: .72rem; line-height: 1.7; color: var(--singa-ink-soft); margin-top: 6px; }
+
+/* 宝の地図の枠（トップの大見出し用） */
+.singa-scroll {
+  border: 1px solid rgba(150, 118, 62, .5);
+  border-radius: 14px;
+  padding: 18px 16px;
+  text-align: center;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 0%, rgba(255,244,214,.9), rgba(255,255,255,0) 70%),
+    rgba(255, 250, 236, .5);
+  box-shadow: inset 0 0 0 3px rgba(168, 129, 47, .18);
+}
+
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
 .typing-dots span {

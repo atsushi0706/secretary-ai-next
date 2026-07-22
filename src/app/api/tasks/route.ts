@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { addTask, completeTask, deleteTask } from "@/lib/google";
 import { setManualLabel, clearManualLabel, logError } from "@/lib/supabase";
+import { linkTask, unlinkTask, isMissingTable } from "@/lib/shinga";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -21,6 +22,20 @@ export async function POST(req: Request) {
           importance: body.importance, time_label: body.time,
         });
       }
+      // クエスト由来などの「出自」を外付けで記録する。
+      // 既存の呼び出し (source なし) は何も起きない。
+      // ここで失敗してもタスク作成自体は成功扱いにする（既存機能を絶対に壊さない）。
+      if (created.id && (body.sourceType || body.sourceQuestId || body.sourceConversationId)) {
+        try {
+          await linkTask(userId, created.id, {
+            sourceType: body.sourceType ?? "manual",
+            sourceQuestId: body.sourceQuestId ?? null,
+            sourceConversationId: body.sourceConversationId ?? null,
+          });
+        } catch (e) {
+          if (!isMissingTable(e)) console.error("[/api/tasks] linkTask failed:", e);
+        }
+      }
       return NextResponse.json({ ok: true, task: created });
     }
     if (action === "complete") {
@@ -30,6 +45,7 @@ export async function POST(req: Request) {
     if (action === "delete") {
       await deleteTask(userId, body.tasklistId, body.taskId);
       await clearManualLabel(userId, body.taskId);
+      await unlinkTask(userId, body.taskId); // 内部で失敗を握りつぶすので既存挙動に影響なし
       return NextResponse.json({ ok: true });
     }
     if (action === "label") {

@@ -139,6 +139,66 @@ create table if not exists public.classify_cache (
   primary key (user_id, cache_key)
 );
 
+-- ============================================================
+-- シンガワールド（自己開示・自己探求の領域）
+-- 既存テーブルには一切変更を加えない。全て新規テーブルで外付けする。
+-- ============================================================
+
+-- クエスト: シンガワールドで見つけた「人生で体験したいこと」
+create table if not exists public.quests (
+  id uuid primary key default gen_random_uuid(),
+  user_id text not null,
+  title text not null,
+  body text default '',                  -- なぜやりたいか / どんな状態になりたいか
+  category text default 'life',          -- life / work / family / play / expression / habit
+  status text not null default 'active', -- idea / active / paused / done
+  source_conversation_id bigint,         -- 元になった会話 (public.conversations.id)
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+create index if not exists idx_quests_user on public.quests(user_id, status, updated_at desc);
+
+-- タスクの出自リンク
+-- タスク本体は Google Tasks 側にあるので、列を足さずここで外付けする。
+-- 行が無い既存タスク = 出自なし。既存データは一切影響を受けない。
+create table if not exists public.task_links (
+  user_id text not null,
+  google_task_id text not null,
+  source_type text,                      -- 'quest' / 'chat' / 'manual'
+  source_quest_id uuid,
+  source_conversation_id bigint,
+  created_at timestamptz default now(),
+  primary key (user_id, google_task_id)
+);
+create index if not exists idx_task_links_quest on public.task_links(user_id, source_quest_id);
+
+-- 振り返り記録: リアルバースで動いた結果をシンガワールドで振り返る
+create table if not exists public.quest_reflections (
+  id bigserial primary key,
+  user_id text not null,
+  quest_id uuid not null,
+  google_task_id text,                   -- 特定タスクの振り返りなら紐づける (任意)
+  body text not null,                    -- 実際どうだったか
+  emotion_before int,                    -- 1〜10
+  emotion_after int,                     -- 1〜10
+  gap text,                              -- 青写真と現実の違い
+  next_step text,                        -- 次に進みたいクエスト
+  created_at timestamptz default now()
+);
+create index if not exists idx_reflections_quest on public.quest_reflections(user_id, quest_id, created_at desc);
+
+-- 感情の10段階記録
+create table if not exists public.emotion_logs (
+  id bigserial primary key,
+  user_id text not null,
+  date date not null,
+  level int not null check (level between 1 and 10),
+  note text default '',
+  quest_id uuid,                         -- 特定クエストに紐づく感情なら (任意)
+  created_at timestamptz default now()
+);
+create index if not exists idx_emotion_user_date on public.emotion_logs(user_id, date desc);
+
 -- Row Level Security（各ユーザーが自分のデータだけ見られる）
 alter table public.user_settings enable row level security;
 alter table public.conversations enable row level security;
@@ -148,6 +208,10 @@ alter table public.notifications enable row level security;
 alter table public.quickmemo enable row level security;
 alter table public.manual_labels enable row level security;
 alter table public.classify_cache enable row level security;
+alter table public.quests enable row level security;
+alter table public.task_links enable row level security;
+alter table public.quest_reflections enable row level security;
+alter table public.emotion_logs enable row level security;
 
 -- ポリシー（service_role キーは bypass されるので、サーバー側で user_id 一致を保証）
 -- 今はサービスロール経由で全アクセスする想定。クライアントから直接読まない。

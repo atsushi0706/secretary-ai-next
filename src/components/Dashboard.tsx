@@ -10,6 +10,7 @@ import { MonthCalendar } from "./MonthCalendar";
 import { WeekCalendarCompact } from "./WeekCalendarCompact";
 import { TimerWidget } from "./TimerWidget";
 import AlarmManager from "./AlarmManager";
+import { RealmNav } from "./RealmNav";
 import { syncTodayProgress, type TodayProgress } from "@/lib/todayProgress";
 
 type Bootstrap = {
@@ -132,6 +133,10 @@ export function Dashboard({ userName }: { userName: string }) {
           >
             Google で再接続する
           </a>
+          {/* Google が切れていてもシンガワールドは使えるので、逃げ道を残す */}
+          <Link href="/shinga" className="block mt-2 text-xs text-purple-600 hover:underline">
+            🌌 シンガワールドへ行く
+          </Link>
           <details className="mt-4 text-left">
             <summary className="text-xs text-gray-400 cursor-pointer">詳細情報（技術情報）</summary>
             <pre className="text-xs text-gray-500 mt-2 whitespace-pre-wrap break-words bg-gray-50 p-2 rounded">
@@ -175,7 +180,11 @@ export function Dashboard({ userName }: { userName: string }) {
 
   return (
     <main className="min-h-screen">
-      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 p-3 sm:p-5">
+      {/* 最上位の領域切り替え（リアルバース / シンガワールド） */}
+      <div className="max-w-6xl mx-auto px-3 sm:px-5 pt-3 sm:pt-5">
+        <RealmNav active="realverse" />
+      </div>
+      <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4 px-3 sm:px-5 pb-3 sm:pb-5">
         {/* ── サイドバー (モバイルでは下に表示) ── */}
         <aside className="space-y-4 order-2 lg:order-1">
           <section className="card flex flex-col items-center text-center pt-5">

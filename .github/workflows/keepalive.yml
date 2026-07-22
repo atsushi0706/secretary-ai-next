@@ -1,0 +1,24 @@
+name: Keep database awake
+
+# 無料プランの Supabase は「7日間アクセスなし」で一時停止する。
+# 止まるとアプリ全体が動かなくなるので、毎日1回だけ軽く触っておく。
+# データは一切扱わない（触るだけ）ので、このリポジトリが公開でも問題ない。
+on:
+  schedule:
+    - cron: '0 21 * * *'   # JST 6:00
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Touch the database
+        run: |
+          CODE=$(curl -sS -o /tmp/out.txt -w "%{http_code}" \
+            "https://secretary-ai-next.vercel.app/api/cron/keepalive")
+          echo "HTTP $CODE"
+          cat /tmp/out.txt
+          if [ "$CODE" != "200" ]; then
+            echo "::error::データベースに届きませんでした。停止しているかもしれません。"
+            exit 1
+          fi

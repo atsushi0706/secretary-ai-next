@@ -443,6 +443,21 @@ export default function SettingsPage() {
         </div>
       </details>
 
+      {/* ── データの控え ── */}
+      <div className="card mt-6">
+        <h2 className="font-bold text-base text-purple-700 mb-2">🗄 データの控え</h2>
+        <p className="text-xs text-gray-600 leading-relaxed mb-3">
+          クエスト・会話・状態の記録を、まるごとファイルに落とせます。
+          月に1回やっておくと、万一のときに戻せます。
+        </p>
+        <Link
+          href="/backup"
+          className="block text-center bg-gray-100 hover:bg-gray-200 font-bold text-sm py-2 rounded-lg"
+        >
+          控えを取るページへ
+        </Link>
+      </div>
+
       {/* ── 保存ボタン (固定 footer) ── */}
       <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-4 bg-white/95 backdrop-blur border-t border-purple-100">
         <div className="flex items-center gap-3 max-w-2xl mx-auto">

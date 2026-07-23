@@ -694,6 +694,208 @@ body:has(.realverse-bg) { background: transparent; }
   .singa-place-name .ja { font-size: 1.05rem; }
 }
 
+/* ── ホーム：開いた瞬間に選べる入口 ── */
+.singa-home {
+  position: relative; z-index: 4;
+  height: 100%;
+  overflow-y: auto;
+  display: flex; flex-direction: column;
+  padding: clamp(16px, 4vh, 40px) 16px 24px;
+}
+.singa-home-hero { text-align: center; margin-bottom: clamp(16px, 4vh, 34px); }
+.singa-home-hero .sub {
+  font-size: .58rem; letter-spacing: .32em; text-transform: uppercase;
+  color: var(--singa-gold);
+  text-shadow: 0 1px 6px rgba(0,0,0,.9);
+}
+.singa-home-hero h1 {
+  font-size: clamp(1.2rem, 3.4vw, 1.7rem); font-weight: 700; letter-spacing: .08em;
+  margin-top: 6px;
+  text-shadow: 0 2px 14px rgba(0,0,0,.95);
+}
+.singa-home-hero p {
+  font-size: .74rem; line-height: 1.9; margin-top: 8px;
+  color: var(--singa-ink-soft);
+  text-shadow: 0 1px 8px rgba(0,0,0,.95);
+}
+.singa-home-main {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  max-width: 760px; width: 100%; margin: 0 auto;
+}
+.singa-entry {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  text-align: left;
+  padding: 16px 14px;
+  border-radius: 16px;
+  background: rgba(20, 16, 11, .72);
+  border: 1px solid rgba(224, 189, 114, .32);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 8px 28px rgba(0,0,0,.45);
+  transition: transform .2s ease, background .2s ease, border-color .2s ease;
+  min-height: 128px;
+}
+.singa-entry:hover {
+  transform: translateY(-3px);
+  background: rgba(30, 24, 15, .85);
+  border-color: rgba(224, 189, 114, .6);
+}
+.singa-entry .min {
+  font-size: .58rem; letter-spacing: .1em;
+  color: var(--singa-gold);
+  border: 1px solid rgba(224, 189, 114, .4);
+  border-radius: 999px; padding: 1px 8px;
+}
+.singa-entry .en {
+  font-size: .55rem; letter-spacing: .18em; text-transform: uppercase;
+  color: rgba(224, 189, 114, .8);
+  margin-top: 8px;
+}
+.singa-entry .ja { font-size: 1.05rem; font-weight: 700; letter-spacing: .06em; }
+.singa-entry .desc {
+  font-size: .68rem; line-height: 1.7;
+  color: var(--singa-ink-soft);
+  margin-top: 4px;
+}
+.singa-home-sub {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  margin-top: 16px;
+}
+.singa-entry-s {
+  display: inline-flex; align-items: baseline; gap: 7px;
+  padding: 8px 15px;
+  border-radius: 999px;
+  background: rgba(20, 16, 11, .6);
+  border: 1px solid rgba(224, 189, 114, .22);
+  backdrop-filter: blur(8px);
+  transition: background .2s ease;
+}
+.singa-entry-s:hover { background: rgba(30, 24, 15, .82); }
+.singa-entry-s .ja { font-size: .8rem; font-weight: 700; }
+.singa-entry-s .en { font-size: .52rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(224,189,114,.7); }
+
+.singa-back {
+  position: absolute; left: 12px; top: 12px; z-index: 6;
+  font-size: .68rem; letter-spacing: .06em;
+  color: var(--singa-ink-soft);
+  padding: 6px 12px; border-radius: 999px;
+  background: rgba(18, 15, 11, .78);
+  border: 1px solid rgba(224, 189, 114, .25);
+  backdrop-filter: blur(10px);
+}
+.singa-back:hover { color: var(--singa-ink); background: rgba(40, 32, 20, .9); }
+
+/* ── 音声入力バー ── */
+.vbar {
+  position: relative; z-index: 5;
+  margin: 0 12px 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(18, 15, 11, .86);
+  border: 1px solid rgba(224, 189, 114, .25);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 6px 26px rgba(0,0,0,.5);
+}
+.vbar-state {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .64rem; letter-spacing: .08em;
+  color: var(--singa-gold);
+  margin-bottom: 7px;
+}
+.vbar-state.is-think { color: #9fc7f0; }
+.vbar-state .pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #e2574c;
+  animation: vbar-pulse 1.2s ease-in-out infinite;
+}
+@keyframes vbar-pulse {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(226,87,76,.6); }
+  50%     { opacity: .5; box-shadow: 0 0 0 7px rgba(226,87,76,0); }
+}
+.vbar-live {
+  font-size: .86rem; line-height: 1.8;
+  padding: 8px 10px; margin-bottom: 8px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(224, 189, 114, .16);
+  max-height: 120px; overflow-y: auto;
+}
+.vbar-live .dim { color: rgba(244, 231, 200, .45); }
+.vbar-text {
+  width: 100%;
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(224, 189, 114, .18);
+  border-radius: 10px;
+  padding: 9px 11px;
+  color: var(--singa-ink);
+  font-size: .9rem; line-height: 1.7;
+  font-family: inherit;
+  resize: none;
+  margin-bottom: 8px;
+}
+.vbar-text::placeholder { color: rgba(244, 231, 200, .4); }
+.vbar-text:focus { outline: 1px solid color-mix(in srgb, var(--place-hue, #c9a227) 65%, transparent); }
+.vbar-err { font-size: .68rem; color: #f0a8a0; margin-bottom: 8px; }
+.vbar-row { display: flex; gap: 8px; }
+.vbar-btn {
+  flex: 1;
+  padding: 11px 10px;
+  border-radius: 11px;
+  font-size: .82rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--singa-ink);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(224, 189, 114, .22);
+  transition: background .2s ease, opacity .2s ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.vbar-btn:hover:not(:disabled) { background: rgba(255,255,255,.16); }
+.vbar-btn:disabled { opacity: .38; }
+.vbar-btn .mic { font-size: 1rem; }
+.vbar-btn.is-rec {
+  color: #fff;
+  background: linear-gradient(160deg, #d46a5e, #b3453a);
+  border-color: transparent;
+}
+.vbar-btn.is-send {
+  color: #221b10;
+  background: linear-gradient(160deg, #eed69b, #c9a55e);
+  border-color: transparent;
+}
+
+/* ── セッションの着地 ── */
+.singa-summary {
+  align-self: center;
+  width: min(460px, 92%);
+  margin: 8px 0 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(28, 22, 12, .9);
+  border: 1px solid rgba(224, 189, 114, .5);
+  box-shadow: 0 8px 30px rgba(0,0,0,.55);
+  pointer-events: auto;
+}
+.singa-summary-title {
+  font-size: .58rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--singa-gold); margin-bottom: 10px; text-align: center;
+}
+.singa-summary .row { margin-bottom: 9px; }
+.singa-summary .row:last-child { margin-bottom: 0; }
+.singa-summary .k {
+  display: block;
+  font-size: .58rem; letter-spacing: .12em;
+  color: var(--singa-gold); margin-bottom: 2px;
+}
+.singa-summary .v { display: block; font-size: .86rem; line-height: 1.75; }
+
+@media (max-width: 700px) {
+  .singa-home-main { grid-template-columns: 1fr; }
+  .singa-entry { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .singa-entry .en { margin-top: 0; }
+  .singa-entry .ja { width: 100%; }
+  .singa-entry .desc { width: 100%; }
+}
+
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
 .typing-dots span {

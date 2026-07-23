@@ -13,6 +13,7 @@ import { streamChat, AIRateLimitError, formatRateLimitForUser } from "@/lib/ai";
 import { extractJson } from "@/lib/claude";
 import { buildGuidePersona } from "@/lib/guide";
 import { isPlaceKey, type PlaceKey } from "@/lib/places";
+import { isModeKey, MODES, type ModeKey } from "@/lib/modes";
 import { jstDateStr } from "@/lib/google";
 import { getUserSettings, logError } from "@/lib/supabase";
 import {
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
   const text = String(body.text ?? "").trim();
   const place: PlaceKey = isPlaceKey(body.place) ? body.place : "map";
+  const mode: ModeKey | undefined = isModeKey(body.mode) ? body.mode : undefined;
   const greet = !!body.greet;   // 開いた直後の最初のひとこと
 
   const stream = new ReadableStream({
@@ -56,6 +58,7 @@ export async function POST(req: Request) {
           userCallName: settings?.user_call_name,
           birthDate: settings?.birth_date,
           place,
+          mode,
         });
 
         // 直近30件だけ渡す（全部渡すと会話が伸びるほど重くなるため）
@@ -66,12 +69,12 @@ export async function POST(req: Request) {
         }));
 
         if (greet) {
-          history.push({
-            role: "user",
-            content: history.length === 0
+          const openLine = mode
+            ? `（「${MODES[mode].label}」の時間を始める。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`
+            : (history.length === 0
               ? "（はじめてこの世界に来た。まだ何も話していない。短く迎えて、今日はどこへ行きたいかを聞いて）"
-              : "（また戻ってきた。短く迎えて、今日はどうしたいかを聞いて）",
-          });
+              : "（また戻ってきた。短く迎えて、今日はどうしたいかを聞いて）");
+          history.push({ role: "user", content: openLine });
         } else if (history.length === 0 || history[history.length - 1].role !== "user") {
           history.push({ role: "user", content: text });
         }
@@ -117,17 +120,28 @@ export async function POST(req: Request) {
           }
         }
 
+        // セッションの着地（今日見えた世界 / 今日の一手 / 戻るための言葉）
+        let summary: { world?: string; step?: string; anchor?: string } | null = null;
+        const sumMatch = full.match(/<session_summary>([\s\S]*?)<\/session_summary>/);
+        if (sumMatch) {
+          summary = extractJson<any>(sumMatch[1]) ?? null;
+        }
+
         // 本文からタグを取り除く
         const clean = full
           .replace(/<move>[\s\S]*?<\/move>/g, "")
           .replace(/<quest_to_add>[\s\S]*?<\/quest_to_add>/g, "")
+          .replace(/<session_summary>[\s\S]*?<\/session_summary>/g, "")
           .trim();
 
-        if (moveMatch || questMatch) {
+        if (moveMatch || questMatch || sumMatch) {
           send("replace", { text: clean });
         }
         if (moveTo) send("move", { place: moveTo });
         if (addedQuests.length > 0) send("quests", { quests: addedQuests });
+        if (summary && (summary.world || summary.step || summary.anchor)) {
+          send("summary", { summary });
+        }
 
         if (clean) {
           await saveShingaMessage(userId, today, "assistant", clean, moveTo ?? place);

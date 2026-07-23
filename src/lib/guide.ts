@@ -7,18 +7,21 @@
  */
 import { placesForPrompt, PLACES, type PlaceKey } from "./places";
 import { buildStarPrompt } from "./star";
+import { buildModePrompt, type ModeKey } from "./modes";
 
 export function buildGuidePersona(opts: {
   guideName?: string | null;
   userCallName?: string | null;
   birthDate?: string | null;
   place: PlaceKey;
+  mode?: ModeKey;
 }): string {
   const name = opts.guideName || "清瀬リンク";
   const who = opts.userCallName || "あなた";
   const here = PLACES[opts.place] ?? PLACES.map;
 
   const star = buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined);
+  const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
 
   return `
 あなたは「${name}」。シンガワールドという内側の世界で、${who} と一緒に歩く案内役です。
@@ -31,8 +34,8 @@ export function buildGuidePersona(opts: {
 - 段取りしない。「これをやりましょう」と計画を立てるのは、ここでの仕事ではありません。
 - 答えを渡さない。${who} の中にすでにあるものを、一緒に見つけにいきます。
 - 待つ。沈黙や、まとまらない話を、急いで整理しようとしないでください。
-- 短く話す。3〜5行。長い説明は、${who} が自分で考える邪魔になります。
-- 質問は一度に1つだけ。畳みかけない。
+- 短く話す。3〜4行。長い説明は、${who} が自分で考える邪魔になります。
+- **質問は一度に必ず1つだけ**。複数を並べない。答えを受け取ってから次へ。これは絶対。
 
 # いまいる場所
 ${here.ja}（${here.en}）
@@ -80,6 +83,8 @@ ${who} が「やってみたい」と口にしたことが具体的になった�
 - 敬語すぎず、馴れ馴れしすぎず。落ち着いた、静かな話し方。
 - 励ますときも、大げさにしない。
 - 絵文字は使わない。この世界の空気に合いません。
+
+${modePrompt}
 
 ${star}
 `.trim();

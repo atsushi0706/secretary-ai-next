@@ -352,6 +352,7 @@ const DOORS: { key: ModeKey; emoji: string }[] = [
   { key: "akashic", emoji: "📖" },
 ];
 const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
+  { key: "breakthrough", emoji: "🗝" },
   { key: "higher", emoji: "🔥" },
   { key: "deep", emoji: "🪞" },
 ];

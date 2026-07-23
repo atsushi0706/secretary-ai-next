@@ -1028,6 +1028,112 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .singa-stage.is-bright .singa-avatar { border-color: rgba(120,170,210,.6); }
 
+/* ── ホーム：地図の絵そのものを押す ── */
+/* ホームでは地図をあまり暗くしない（描かれた文字を見せる） */
+.singa-stage.is-home::before {
+  background: linear-gradient(180deg, rgba(10,8,6,.28) 0%, rgba(10,8,6,0) 20%, rgba(10,8,6,0) 72%, rgba(10,8,6,.5) 100%);
+}
+.singa-home2 { position: absolute; inset: 0; z-index: 4; }
+.singa-hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 18px;
+  background: transparent;
+  transition: background .2s ease;
+}
+.singa-hotspot .ring {
+  position: absolute; inset: 6%;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.singa-hotspot:hover { background: rgba(232,193,90,.08); }
+.singa-hotspot:hover .ring {
+  border-color: rgba(232,193,90,.75);
+  box-shadow: 0 0 26px 4px rgba(232,193,90,.35), inset 0 0 40px rgba(232,193,90,.12);
+}
+/* ゾーン名の吹き出し（hover で出る） */
+.singa-hotspot .hs-name {
+  position: absolute; bottom: -6px; left: 50%; transform: translate(-50%, 100%);
+  min-width: 150px; max-width: 220px;
+  padding: 8px 12px; border-radius: 12px;
+  background: rgba(18,15,11,.94); border: 1px solid rgba(232,193,90,.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+  opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  text-align: center; z-index: 5;
+}
+.singa-hotspot:hover .hs-name { opacity: 1; }
+.singa-hotspot .hs-name b { display: block; font-size: .9rem; color: #f4e7c8; }
+.singa-hotspot .hs-name i { display: block; font-style: normal; font-size: .66rem; line-height: 1.6; color: rgba(244,231,200,.72); margin-top: 3px; }
+
+/* 「まずここから」— 常に光って始点を示す */
+.singa-hotspot.is-start .ring {
+  border-color: rgba(232,193,90,.6);
+  animation: hs-pulse 2.4s ease-in-out infinite;
+}
+@keyframes hs-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(232,193,90,.0), inset 0 0 30px rgba(232,193,90,.1); border-color: rgba(232,193,90,.45); }
+  50%     { box-shadow: 0 0 30px 6px rgba(232,193,90,.4), inset 0 0 46px rgba(232,193,90,.18); border-color: rgba(232,193,90,.9); }
+}
+.singa-hotspot .start-tag {
+  position: absolute; top: -10px; left: 50%; transform: translate(-50%, -100%);
+  white-space: nowrap;
+  font-size: .64rem; font-weight: 700; letter-spacing: .08em;
+  color: #221b10; background: linear-gradient(160deg, #eed69b, #d9b463);
+  padding: 4px 12px; border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  animation: hs-tag 2.4s ease-in-out infinite;
+}
+@keyframes hs-tag { 0%,100%{transform:translate(-50%,-100%) scale(1);} 50%{transform:translate(-50%,-110%) scale(1.05);} }
+
+.singa-home-hint {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  z-index: 5;
+  font-size: .72rem; color: rgba(244,231,200,.9);
+  background: rgba(18,15,11,.78); border: 1px solid rgba(232,193,90,.3);
+  padding: 8px 16px; border-radius: 999px; backdrop-filter: blur(8px);
+  text-align: center; white-space: nowrap;
+  text-shadow: 0 1px 6px rgba(0,0,0,.9);
+}
+.singa-home-hint b { color: #f0d9a0; }
+
+/* ── 感情の10段階メーター ── */
+.emeter { margin-top: 2px; }
+.emeter-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
+.emeter-title { font-size: .62rem; letter-spacing: .1em; color: var(--singa-gold); }
+.emeter-now { font-size: .82rem; font-weight: 700; text-align: right; }
+.emeter-bar {
+  display: flex; gap: 2px;
+  border-radius: 10px; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+}
+.emeter-seg {
+  position: relative;
+  flex: 1;
+  height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .12s ease, filter .12s ease;
+  filter: saturate(.85) brightness(.86);
+}
+.emeter-seg:hover { filter: saturate(1) brightness(1); }
+.emeter-seg .num { font-size: .62rem; font-weight: 700; color: rgba(0,0,0,.5); }
+.emeter-seg.is-on {
+  filter: saturate(1.1) brightness(1.12);
+  transform: scaleY(1.35);
+  z-index: 2;
+  box-shadow: 0 0 0 2px #fff, 0 0 14px 2px rgba(255,255,255,.5);
+  border-radius: 4px;
+}
+.emeter-seg.is-on .num { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.emeter-seg .needle {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 7px solid #fff;
+}
+.emeter-ends { display: flex; justify-content: space-between; font-size: .58rem; color: rgba(244,231,200,.6); margin-top: 5px; padding: 0 2px; }
+
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
 .typing-dots span {

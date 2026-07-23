@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { VoiceInput } from "./VoiceInput";
+import { EmotionMeter, emoColor } from "./EmotionMeter";
 
 type EmotionLog = {
   id: number;
@@ -12,12 +13,8 @@ type EmotionLog = {
   note: string;
 };
 
-function levelColor(n: number): string {
-  if (n <= 3) return "#5b7fc2";
-  if (n <= 5) return "#7a6dd6";
-  if (n <= 7) return "#e0a82e";
-  return "#e2574c";
-}
+// 感情の波：落ち着き(緑)→波あり(赤)
+const levelColor = emoColor;
 
 /**
  * 状態パラメーター。1日2回（朝の枠・夜の枠）まで。
@@ -27,7 +24,7 @@ export function StatePanel({ embedded }: { embedded?: boolean }) {
   const [logs, setLogs] = useState<EmotionLog[]>([]);
   const [slot, setSlot] = useState<"morning" | "evening">("morning");
   const [doneThisSlot, setDone] = useState(false);
-  const [level, setLevel] = useState(5);
+  const [level, setLevel] = useState<number | null>(null);
   const [energy, setEnergy] = useState(5);
   const [note, setNote] = useState("");
   const [saving, setSaving] = useState(false);
@@ -84,8 +81,10 @@ export function StatePanel({ embedded }: { embedded?: boolean }) {
         </p>
       ) : (
         <>
-          <Scale label="心の状態" value={level} onChange={setLevel} lowLabel="重い" highLabel="軽い" />
-          <Scale label="体のエネルギー" value={energy} onChange={setEnergy} lowLabel="ない" highLabel="ある" />
+          <EmotionMeter value={level} onChange={setLevel} />
+          <div className="mt-2">
+            <Scale label="体のエネルギー" value={energy} onChange={setEnergy} lowLabel="ない" highLabel="ある" />
+          </div>
 
           <div className="flex items-start gap-1.5 mt-2">
             <VoiceInput mode="speech" compact onText={(t) => setNote((p) => (p ? p + " " + t : t))} />
@@ -98,8 +97,8 @@ export function StatePanel({ embedded }: { embedded?: boolean }) {
             />
           </div>
 
-          <button onClick={save} disabled={saving} className="singa-panel-btn">
-            {saving ? "記録中…" : "記録する"}
+          <button onClick={save} disabled={saving || level == null} className="singa-panel-btn">
+            {saving ? "記録中…" : level == null ? "まず、いまの波を選ぶ" : "記録する"}
           </button>
         </>
       )}

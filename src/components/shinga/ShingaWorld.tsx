@@ -190,7 +190,7 @@ export function ShingaWorld({
 
   return (
     <div
-      className={`singa-stage ${moving ? "is-moving" : ""} ${bright ? "is-bright" : ""}`}
+      className={`singa-stage ${moving ? "is-moving" : ""} ${bright ? "is-bright" : ""} ${view === "home" ? "is-home" : ""}`}
       style={{ ["--place-hue" as any]: here.hue }}
     >
       {/* 地図（背景）— 会話中はその場所へ上がっていく */}
@@ -282,49 +282,41 @@ export function ShingaWorld({
   );
 }
 
-// ── ホーム：新しい5ゾーン（中央にピークステート） ──
+// ── ホーム：地図の絵そのものを押す（描かれたゾーンにクリック領域を重ねる） ──
+// 位置(%) は地図画像に描かれた各ゾーンの見出しに合わせてある。
+const HOTSPOTS: { key: ModeKey; x: number; y: number; w: number; h: number; start?: boolean }[] = [
+  { key: "peak", x: 50, y: 52, w: 30, h: 40, start: true },
+  { key: "walk", x: 24, y: 40, w: 30, h: 34 },
+  { key: "akashic", x: 77, y: 40, w: 30, h: 34 },
+  { key: "higher", x: 16, y: 86, w: 26, h: 20 },
+  { key: "deep", x: 84, y: 86, w: 26, h: 20 },
+];
+
 function Home({ onPick }: { onPick: (m: ModeKey) => void }) {
   return (
-    <div className="singa-home">
-      <div className="singa-home-hero">
-        <span className="sub">SINGA WORLD ・ 内なる世界の宝の地図</span>
-        <h1>今日のシンガワールドへ</h1>
-        <p>まず状態を整えて、望む世界を歩く。あなたは、あなたの物語。</p>
-      </div>
+    <div className="singa-home2">
+      {HOTSPOTS.map((h) => {
+        const m = MODES[h.key];
+        return (
+          <button
+            key={h.key}
+            className={`singa-hotspot ${h.start ? "is-start" : ""}`}
+            style={{ left: `${h.x}%`, top: `${h.y}%`, width: `${h.w}%`, height: `${h.h}%` }}
+            onClick={() => onPick(h.key)}
+            aria-label={m.label}
+          >
+            <span className="ring" />
+            {h.start && <span className="start-tag">まずここから ▶</span>}
+            <span className="hs-name">
+              <b>{m.label}</b>
+              <i>{m.desc}</i>
+            </span>
+          </button>
+        );
+      })}
 
-      {/* 中央：ピークステート（すべての土台・ここから） */}
-      <button className="singa-center-btn" onClick={() => onPick("peak")}>
-        <span className="badge">まずここから</span>
-        <span className="en">Peak State</span>
-        <span className="ja">ピークステート</span>
-        <span className="desc">{MODES.peak.desc}</span>
-      </button>
-
-      {/* 主役2つ */}
-      <div className="singa-home-main">
-        {(["walk", "akashic"] as ModeKey[]).map((k) => {
-          const m = MODES[k];
-          return (
-            <button key={k} className="singa-entry" onClick={() => onPick(k)}>
-              <span className="en">{m.en}</span>
-              <span className="ja">{m.label}</span>
-              <span className="desc">{m.desc}</span>
-            </button>
-          );
-        })}
-      </div>
-
-      {/* 補完2つ */}
-      <div className="singa-home-sub">
-        {(["higher", "deep"] as ModeKey[]).map((k) => {
-          const m = MODES[k];
-          return (
-            <button key={k} className="singa-entry-s" onClick={() => onPick(k)}>
-              <span className="ja">{m.label}</span>
-              <span className="en">{m.en}</span>
-            </button>
-          );
-        })}
+      <div className="singa-home-hint">
+        地図の場所をタップして始める。まずは中央の<b>ピークステート</b>から。
       </div>
     </div>
   );

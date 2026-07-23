@@ -23,7 +23,7 @@ function levelColor(n: number): string {
  * 状態パラメーター。1日2回（朝の枠・夜の枠）まで。
  * 何度も入れられると「その瞬間の気分」になって、変化が読めなくなるため。
  */
-export function StatePanel() {
+export function StatePanel({ embedded }: { embedded?: boolean }) {
   const [logs, setLogs] = useState<EmotionLog[]>([]);
   const [slot, setSlot] = useState<"morning" | "evening">("morning");
   const [doneThisSlot, setDone] = useState(false);
@@ -72,9 +72,10 @@ export function StatePanel() {
   const recent = [...logs].slice(0, 24).reverse();
   const slotLabel = slot === "morning" ? "朝の枠" : "夜の枠";
 
+  const Wrap = embedded ? "div" : "div";
   return (
-    <div className="singa-panel">
-      <div className="singa-panel-title">いまの状態（{slotLabel}）</div>
+    <Wrap className={embedded ? "" : "singa-panel"}>
+      {!embedded && <div className="singa-panel-title">いまの状態（{slotLabel}）</div>}
 
       {doneThisSlot ? (
         <p className="text-xs leading-relaxed opacity-80">
@@ -120,7 +121,7 @@ export function StatePanel() {
           </div>
         </>
       )}
-    </div>
+    </Wrap>
   );
 }
 

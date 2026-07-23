@@ -546,7 +546,7 @@ function TaskRow({
             {questId && (
               <div className="border-t mt-2 pt-2">
                 <Link
-                  href="/shinga?place=treasure"
+                  href="/shinga?place=akashic"
                   className="block px-2 py-1.5 rounded text-indigo-700 font-bold hover:bg-indigo-50"
                 >
                   🌌 シンガワールドで振り返る

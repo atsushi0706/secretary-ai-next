@@ -84,22 +84,46 @@ export async function POST(req: Request) {
           userId,
           system,
           messages: history,
-          maxTokens: 1024,
-          temperature: 0.8,
+          maxTokens: 1600,
+          temperature: 0.85,
         })) {
           if (ev.type === "delta") {
             full += ev.text;
+            // タグが混じり始めたら、それ以降はユーザーに流さない（<face> 等が本文に出ないように）
             send("delta", { text: ev.text });
           }
         }
 
         // ── タグの取り出し ──
+        // 表情
+        const faceMatch = full.match(/<face>\s*(neutral|smile|anxious)\s*<\/face>/i);
+        const face = faceMatch ? faceMatch[1].toLowerCase() : null;
+
+        // 移動
         let moveTo: PlaceKey | null = null;
-        const moveMatch = full.match(/<move>\s*([a-z_]+)\s*<\/move>/i);
+        const moveMatch = full.match(/<move>\s*([a-z]+)\s*<\/move>/i);
         if (moveMatch && isPlaceKey(moveMatch[1]) && moveMatch[1] !== place) {
           moveTo = moveMatch[1];
         }
 
+        // 選択肢ボタン
+        let choices: Array<{ label: string; mode?: string }> | null = null;
+        const choMatch = full.match(/<choices>([\s\S]*?)<\/choices>/);
+        if (choMatch) {
+          const parsed = extractJson<any[]>(choMatch[1]);
+          if (Array.isArray(parsed)) {
+            choices = parsed
+              .map((c) => ({
+                label: String(c?.label ?? "").trim(),
+                mode: isModeKey(c?.mode) ? c.mode : undefined,
+              }))
+              .filter((c) => c.label)
+              .slice(0, 3);
+            if (choices.length === 0) choices = null;
+          }
+        }
+
+        // クエスト
         const addedQuests: Array<{ id: string; title: string }> = [];
         const questMatch = full.match(/<quest_to_add>([\s\S]*?)<\/quest_to_add>/);
         if (questMatch) {
@@ -108,11 +132,7 @@ export async function POST(req: Request) {
             for (const c of cands.slice(0, 2)) {
               const title = String(c?.title ?? "").trim();
               if (!title) continue;
-              const q = await createQuest(userId, {
-                title,
-                body: String(c?.body ?? ""),
-                category: "life",
-              });
+              const q = await createQuest(userId, { title, body: String(c?.body ?? ""), category: "life" });
               addedQuests.push({ id: q.id, title: q.title });
             }
           } catch (e) {
@@ -120,28 +140,22 @@ export async function POST(req: Request) {
           }
         }
 
-        // セッションの着地（今日見えた世界 / 今日の一手 / 戻るための言葉）
-        let summary: { world?: string; step?: string; anchor?: string } | null = null;
-        const sumMatch = full.match(/<session_summary>([\s\S]*?)<\/session_summary>/);
-        if (sumMatch) {
-          summary = extractJson<any>(sumMatch[1]) ?? null;
-        }
-
-        // 本文からタグを取り除く
+        // 本文からタグを全部取り除く
         const clean = full
+          .replace(/<face>[\s\S]*?<\/face>/g, "")
           .replace(/<move>[\s\S]*?<\/move>/g, "")
+          .replace(/<choices>[\s\S]*?<\/choices>/g, "")
           .replace(/<quest_to_add>[\s\S]*?<\/quest_to_add>/g, "")
-          .replace(/<session_summary>[\s\S]*?<\/session_summary>/g, "")
           .trim();
 
-        if (moveMatch || questMatch || sumMatch) {
+        // タグが本文に混じっていたら、削り直した本文で置き換える
+        if (faceMatch || moveMatch || choMatch || questMatch) {
           send("replace", { text: clean });
         }
+        if (face) send("face", { face });
+        if (choices) send("choices", { choices });
         if (moveTo) send("move", { place: moveTo });
         if (addedQuests.length > 0) send("quests", { quests: addedQuests });
-        if (summary && (summary.world || summary.step || summary.anchor)) {
-          send("summary", { summary });
-        }
 
         if (clean) {
           await saveShingaMessage(userId, today, "assistant", clean, moveTo ?? place);

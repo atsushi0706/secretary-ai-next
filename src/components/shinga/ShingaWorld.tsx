@@ -5,11 +5,18 @@ import Image from "next/image";
 import { PLACES, type PlaceKey } from "@/lib/places";
 import { MODES, type ModeKey } from "@/lib/modes";
 import { VoiceBar } from "./VoiceBar";
-import { StatePanel } from "./StatePanel";
-import { QuestPanel } from "./QuestPanel";
+import { PeakPanel } from "./PeakPanel";
+import { AkashicPanel } from "./AkashicPanel";
 
+type Face = "neutral" | "smile" | "anxious";
+type Choice = { label: string; mode?: ModeKey };
 type Message = { role: "user" | "assistant"; content: string };
-type Summary = { world?: string; step?: string; anchor?: string };
+
+// タグが本文に混じっても画面に出さない（最初のタグ開始で切る）
+function stripTags(t: string): string {
+  const i = t.search(/<(face|move|choices|quest_to_add)\b/);
+  return (i >= 0 ? t.slice(0, i) : t).trimEnd();
+}
 
 async function readSse(resp: Response, onEvent: (event: string, data: any) => void) {
   if (!resp.body) return;
@@ -36,9 +43,11 @@ async function readSse(resp: Response, onEvent: (event: string, data: any) => vo
   }
 }
 
-// 主役の3つ / 控えめの3つ
-const MAIN: ModeKey[] = ["attune", "walk", "flow"];
-const SUB: ModeKey[] = ["sothen", "metaup"];
+const FACE_SRC: Record<Face, string> = {
+  neutral: "/kiyose.png",
+  smile: "/kiyose_smile.png",
+  anxious: "/kiyose_anxious.png",
+};
 
 export function ShingaWorld({
   guideName, avatarUrl, initialPlace,
@@ -49,218 +58,219 @@ export function ShingaWorld({
 }) {
   const [view, setView] = useState<"home" | "talk">(initialPlace ? "talk" : "home");
   const [mode, setMode] = useState<ModeKey | null>(null);
-  const [place, setPlace] = useState<PlaceKey>(initialPlace ?? "map");
+  const [place, setPlace] = useState<PlaceKey>(initialPlace ?? "peak");
   const [messages, setMessages] = useState<Message[]>([]);
+  const [choices, setChoices] = useState<Choice[] | null>(null);
+  const [face, setFace] = useState<Face>("neutral");
   const [sending, setSending] = useState(false);
-  const [thinking, setThinking] = useState(false);
+  const [typing, setTyping] = useState(false);
   const [moving, setMoving] = useState(false);
-  const [questBump, setQuestBump] = useState(0);
   const [panelOpen, setPanelOpen] = useState(true);
-  const [summary, setSummary] = useState<Summary | null>(null);
-  const [hasHistory, setHasHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // タイプ演出：流れてきた文字を一定ペースで少しずつ表示（考えながらピピピ）
+  const targetRef = useRef("");     // これまでに届いた生テキスト
+  const shownRef = useRef(0);        // 表示済み文字数
+  const finalRef = useRef(false);    // 生成終了フラグ
+
   const here = PLACES[place];
-  const isHttpAvatar = avatarUrl.startsWith("http");
+  const isDefaultFace = avatarUrl === "/kiyose.png";
+  const [faceSrc, setFaceSrc] = useState(avatarUrl);
 
-  // 前回の続きがあるか、だけ先に見ておく（ホームの「前回の続き」を出すため）
   useEffect(() => {
-    fetch("/api/shinga/chat")
-      .then((r) => r.json())
-      .then((d) => setHasHistory((d.messages ?? []).length > 0))
-      .catch(() => {});
-  }, []);
-
-  // 「振り返る」等で場所を指定して開いたときは、そのまま会話に入る
-  useEffect(() => {
-    if (initialPlace) void enter(undefined, initialPlace, true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // カスタムアバターを使っている人は表情差し替えをしない（画像が無いので）
+    setFaceSrc(isDefaultFace ? FACE_SRC[face] : avatarUrl);
+  }, [face, avatarUrl, isDefaultFace]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, thinking, summary]);
+  }, [messages, typing, choices]);
+
+  // タイプ演出のループ
+  useEffect(() => {
+    if (!typing) return;
+    const id = setInterval(() => {
+      const target = targetRef.current;
+      const shownText = stripTags(target);
+      if (shownRef.current < shownText.length) {
+        // 遅れているほど速く追いつく（詰まっても自然に見せる）
+        const behind = shownText.length - shownRef.current;
+        shownRef.current += Math.max(2, Math.ceil(behind / 8));
+        if (shownRef.current > shownText.length) shownRef.current = shownText.length;
+        const shown = shownText.slice(0, shownRef.current);
+        setMessages((prev) => {
+          const arr = [...prev];
+          const last = arr[arr.length - 1];
+          if (last?.role === "assistant") arr[arr.length - 1] = { ...last, content: shown };
+          return arr;
+        });
+      } else if (finalRef.current) {
+        // 追いつき終わり＆生成も終了
+        setTyping(false);
+      }
+    }, 22);
+    return () => clearInterval(id);
+  }, [typing]);
 
   const moveTo = useCallback((next: PlaceKey) => {
-    if (next === place) return;
     setMoving(true);
     setPanelOpen(true);
     setTimeout(() => setPlace(next), 260);
-    setTimeout(() => setMoving(false), 1000);
-  }, [place]);
+    setTimeout(() => setMoving(false), 1100);
+  }, []);
 
-  // 体験を始める（モード or 場所を決めて会話へ）
-  async function enter(m: ModeKey | undefined, p: PlaceKey, resume = false) {
-    setMode(m ?? null);
-    setPlace(p);
+  async function enter(m: ModeKey, resume = false) {
+    setMode(m);
+    setPlace(MODES[m].place);
     setView("talk");
-    setSummary(null);
+    setChoices(null);
     if (!resume) setMessages([]);
-    await talk("", true, m ?? null, p, resume);
+    await talk("", true, m, MODES[m].place);
   }
 
-  async function talk(
-    textIn: string,
-    greet = false,
-    m: ModeKey | null = mode,
-    p: PlaceKey = place,
-    resume = false,
-  ) {
+  async function talk(textIn: string, greet = false, m: ModeKey | null = mode, p: PlaceKey = place) {
     if (sending) return;
     const body = textIn.trim();
     if (!body && !greet) return;
 
     setSending(true);
-    setThinking(true);
+    setChoices(null);
     if (!greet) setMessages((prev) => [...prev, { role: "user", content: body }]);
+
+    // 新しい assistant 行を用意して、タイプ演出を開始
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+    targetRef.current = "";
+    shownRef.current = 0;
+    finalRef.current = false;
+    setTyping(true);
 
     try {
       const r = await fetch("/api/shinga/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet, resume }),
+        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
-        setMessages((prev) => {
-          const arr = [...prev];
-          arr[arr.length - 1] = { role: "assistant", content: `（うまく届かなかった: ${err?.error ?? r.status}）` };
-          return arr;
-        });
+        targetRef.current = `（うまく届かなかった: ${err?.error ?? r.status}）`;
+        finalRef.current = true;
         return;
       }
       await readSse(r, (name, data) => {
         if (name === "delta") {
-          setThinking(false);
-          setMessages((prev) => {
-            const arr = [...prev];
-            const last = arr[arr.length - 1];
-            if (last?.role === "assistant") arr[arr.length - 1] = { ...last, content: last.content + data.text };
-            return arr;
-          });
+          targetRef.current += data.text;
         } else if (name === "replace") {
-          setMessages((prev) => {
-            const arr = [...prev];
-            const last = arr[arr.length - 1];
-            if (last?.role === "assistant") arr[arr.length - 1] = { ...last, content: data.text };
-            return arr;
-          });
+          targetRef.current = data.text; // タグを削った最終本文
+        } else if (name === "face") {
+          setFace(data.face as Face);
+        } else if (name === "choices") {
+          setChoices(data.choices as Choice[]);
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
-        } else if (name === "quests") {
-          setQuestBump((n) => n + 1);
-        } else if (name === "summary") {
-          setSummary(data.summary as Summary);
+          setMode(data.place as ModeKey);
         }
       });
     } catch (e: any) {
-      setMessages((prev) => {
-        const arr = [...prev];
-        arr[arr.length - 1] = { role: "assistant", content: `（うまく届かなかった: ${String(e?.message ?? e)}）` };
-        return arr;
-      });
+      targetRef.current = `（うまく届かなかった: ${String(e?.message ?? e)}）`;
     } finally {
+      finalRef.current = true;
       setSending(false);
-      setThinking(false);
-      setHasHistory(true);
     }
   }
 
+  function pickChoice(c: Choice) {
+    setChoices(null);
+    if (c.mode) void enter(c.mode, true);
+    else void talk(c.label);
+  }
+
   const hasPanel = here.panel !== "none";
+  // パラレルウォークだけ、明るい空の画面にする（暗いと沈むので）
+  const bright = view === "talk" && place === "walk";
 
   return (
-    <div className={`singa-stage ${moving ? "is-moving" : ""}`} style={{ ["--place-hue" as any]: here.hue }}>
-      {/* 地図（背景） */}
+    <div
+      className={`singa-stage ${moving ? "is-moving" : ""} ${bright ? "is-bright" : ""}`}
+      style={{ ["--place-hue" as any]: here.hue }}
+    >
+      {/* 地図（背景）— 会話中はその場所へ上がっていく */}
       <div
         className="singa-map"
         style={{
           transform:
-            view === "home" || place === "map"
+            view === "home"
               ? "scale(1)"
-              : `scale(1.35) translate(${(50 - here.x) * 0.55}%, ${(50 - here.y) * 0.55}%)`,
+              : `scale(1.7) translate(${(50 - here.x) * 0.62}%, ${(50 - here.y) * 0.62}%)`,
         }}
       >
         <div className="singa-map-img" />
-        {view === "talk" &&
-          (Object.keys(PLACES) as PlaceKey[])
-            .filter((k) => k !== "map")
-            .map((k) => {
-              const p = PLACES[k];
-              return (
-                <button
-                  key={k}
-                  onClick={() => moveTo(k)}
-                  className={`singa-spot ${k === place ? "is-here" : ""}`}
-                  style={{ left: `${p.x}%`, top: `${p.y}%`, ["--spot-hue" as any]: p.hue }}
-                  title={`${p.ja} — ${p.tagline}`}
-                >
-                  <span className="dot" />
-                </button>
-              );
-            })}
       </div>
 
       {view === "home" ? (
-        <Home
-          hasHistory={hasHistory}
-          onPick={(m) => void enter(m, MODES[m].place)}
-          onContinue={() => void enter(undefined, "map", true)}
-        />
+        <Home onPick={(m) => void enter(m)} />
       ) : (
         <>
-          {/* もどる */}
-          <button className="singa-back" onClick={() => { setView("home"); setSummary(null); }}>
-            ← 入口にもどる
+          <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>
+            ← 地図にもどる
           </button>
 
-          {/* 今いる場所 / いまの体験 */}
           <div className="singa-place-name">
             <span className="en">{mode ? MODES[mode].en : here.en}</span>
             <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
-            <span className="tag">{mode ? MODES[mode].desc : here.tagline}</span>
           </div>
 
-          {/* 案内役 */}
-          <div className="singa-avatar">
-            <Image src={avatarUrl} alt={guideName} width={420} height={640} priority unoptimized={isHttpAvatar} />
+          {/* 案内役（表情が変わる・話しているとゆれる） */}
+          <div className={`singa-avatar ${typing ? "is-talking" : ""}`}>
+            <Image
+              key={faceSrc}
+              src={faceSrc}
+              alt={guideName}
+              width={420}
+              height={640}
+              priority
+              unoptimized={faceSrc.startsWith("http")}
+              onError={() => setFaceSrc(avatarUrl)}
+            />
           </div>
 
           {/* 会話 */}
           <div ref={scrollRef} className="singa-talk">
-            {messages.map((m, i) => (
-              <div key={i} className={m.role === "user" ? "singa-line is-me" : "singa-line"}>
-                {m.role === "assistant" && <span className="who">{guideName}</span>}
-                <p>
-                  {m.content ||
-                    (thinking && i === messages.length - 1
+            {messages.map((m, i) => {
+              const isLast = i === messages.length - 1;
+              const showDots = m.role === "assistant" && isLast && typing && !m.content;
+              return (
+                <div key={i} className={m.role === "user" ? "singa-line is-me" : "singa-line"}>
+                  {m.role === "assistant" && <span className="who">{guideName}</span>}
+                  <p>
+                    {showDots
                       ? <span className="typing-dots"><span /><span /><span /></span>
-                      : "")}
-                </p>
+                      : m.content}
+                  </p>
+                </div>
+              );
+            })}
+
+            {/* 選択肢ボタン */}
+            {choices && !typing && (
+              <div className="singa-choices">
+                {choices.map((c, i) => (
+                  <button key={i} className="singa-choice" onClick={() => pickChoice(c)}>
+                    {c.label}
+                  </button>
+                ))}
               </div>
-            ))}
-            {summary && <SummaryCard summary={summary} />}
+            )}
           </div>
 
-          {/* 音声入力バー（送信ボタンあり・確認してから送る） */}
+          {/* 音声入力バー */}
           <VoiceBar onSend={(t) => talk(t)} disabled={sending} />
 
           {/* その場所の道具 */}
           {hasPanel && panelOpen && (
             <div className="singa-panel-wrap">
               <button className="singa-panel-close" onClick={() => setPanelOpen(false)} title="しまう">×</button>
-              {here.panel === "state" && <StatePanel />}
-              {here.panel === "quests" && <QuestPanel bump={questBump} />}
-              {here.panel === "reflect" && <QuestPanel bump={questBump} reflectMode />}
-              {here.panel === "walk" && (
-                <div className="singa-panel">
-                  <div className="singa-panel-title">歩きながら</div>
-                  <p className="text-xs leading-relaxed">
-                    まとめなくていいので、浮かんだことをそのまま話してください。
-                    マイクを押して歩いて、思いついたら喋るだけで大丈夫です。
-                  </p>
-                </div>
-              )}
+              {here.panel === "peak" && <PeakPanel />}
+              {here.panel === "akashic" && <AkashicPanel />}
             </div>
           )}
           {hasPanel && !panelOpen && (
@@ -272,28 +282,30 @@ export function ShingaWorld({
   );
 }
 
-// ── ホーム：開いた瞬間に選べる入口 ──────────────────────────
-function Home({
-  hasHistory, onPick, onContinue,
-}: {
-  hasHistory: boolean;
-  onPick: (m: ModeKey) => void;
-  onContinue: () => void;
-}) {
+// ── ホーム：新しい5ゾーン（中央にピークステート） ──
+function Home({ onPick }: { onPick: (m: ModeKey) => void }) {
   return (
     <div className="singa-home">
       <div className="singa-home-hero">
-        <span className="sub">SINGA WORLD</span>
-        <h1>今日のシンガワールドを起動する</h1>
-        <p>今の自分を整え、望む世界を言葉にし、今日の行動につなげる。</p>
+        <span className="sub">SINGA WORLD ・ 内なる世界の宝の地図</span>
+        <h1>今日のシンガワールドへ</h1>
+        <p>まず状態を整えて、望む世界を歩く。あなたは、あなたの物語。</p>
       </div>
 
+      {/* 中央：ピークステート（すべての土台・ここから） */}
+      <button className="singa-center-btn" onClick={() => onPick("peak")}>
+        <span className="badge">まずここから</span>
+        <span className="en">Peak State</span>
+        <span className="ja">ピークステート</span>
+        <span className="desc">{MODES.peak.desc}</span>
+      </button>
+
+      {/* 主役2つ */}
       <div className="singa-home-main">
-        {MAIN.map((k) => {
+        {(["walk", "akashic"] as ModeKey[]).map((k) => {
           const m = MODES[k];
           return (
             <button key={k} className="singa-entry" onClick={() => onPick(k)}>
-              <span className="min">{m.minutes}分</span>
               <span className="en">{m.en}</span>
               <span className="ja">{m.label}</span>
               <span className="desc">{m.desc}</span>
@@ -302,8 +314,9 @@ function Home({
         })}
       </div>
 
+      {/* 補完2つ */}
       <div className="singa-home-sub">
-        {SUB.map((k) => {
+        {(["higher", "deep"] as ModeKey[]).map((k) => {
           const m = MODES[k];
           return (
             <button key={k} className="singa-entry-s" onClick={() => onPick(k)}>
@@ -312,31 +325,7 @@ function Home({
             </button>
           );
         })}
-        {hasHistory && (
-          <button className="singa-entry-s" onClick={onContinue}>
-            <span className="ja">前回の続き</span>
-            <span className="en">Continue</span>
-          </button>
-        )}
       </div>
-    </div>
-  );
-}
-
-// ── セッションの着地 ────────────────────────────────────────
-function SummaryCard({ summary }: { summary: Summary }) {
-  return (
-    <div className="singa-summary">
-      <div className="singa-summary-title">今日のまとめ</div>
-      {summary.world && (
-        <div className="row"><span className="k">今日見えた世界</span><span className="v">{summary.world}</span></div>
-      )}
-      {summary.step && (
-        <div className="row"><span className="k">今日の一手</span><span className="v">{summary.step}</span></div>
-      )}
-      {summary.anchor && (
-        <div className="row"><span className="k">戻るための言葉</span><span className="v">{summary.anchor}</span></div>
-      )}
     </div>
   );
 }

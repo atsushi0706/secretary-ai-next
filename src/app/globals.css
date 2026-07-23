@@ -896,6 +896,138 @@ body:has(.realverse-bg) { background: transparent; }
   .singa-entry .desc { width: 100%; }
 }
 
+/* ── 案内役の存在感（大きく・表情・話すと動く） ── */
+.singa-avatar {
+  width: clamp(120px, 20vw, 220px) !important;
+  height: clamp(120px, 20vw, 220px) !important;
+}
+.singa-avatar.is-talking {
+  animation: singa-talk 0.9s ease-in-out infinite !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.7), 0 0 0 6px rgba(18,15,11,.5),
+    0 0 30px 6px color-mix(in srgb, var(--place-hue, #c9a227) 55%, transparent) !important;
+}
+@keyframes singa-talk {
+  0%,100% { transform: translateY(0) rotate(-.6deg); }
+  50%     { transform: translateY(-5px) rotate(.6deg); }
+}
+
+/* ── 選択肢ボタン（案内役が出す分かれ道） ── */
+.singa-choices {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin: 4px 0 6px;
+  pointer-events: auto;
+  animation: singa-rise .4s ease;
+}
+.singa-choice {
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: .84rem; font-weight: 700;
+  color: #221b10;
+  background: linear-gradient(160deg, #eed69b, #c9a55e);
+  border: 1px solid rgba(224,189,114,.5);
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  transition: transform .15s ease, filter .15s ease;
+}
+.singa-choice:hover { transform: translateY(-2px); filter: brightness(1.06); }
+
+/* ── ホーム：中央のピークステート ── */
+.singa-center-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  max-width: 420px; width: 100%; margin: 0 auto;
+  padding: 20px 18px;
+  border-radius: 20px;
+  text-align: center;
+  color: var(--singa-ink);
+  background:
+    radial-gradient(ellipse 70% 80% at 50% 0%, rgba(232,193,90,.28), rgba(0,0,0,0) 70%),
+    rgba(24, 19, 11, .8);
+  border: 1px solid rgba(232,193,90,.55);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 34px rgba(0,0,0,.5), inset 0 0 0 1px rgba(232,193,90,.12);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.singa-center-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 44px rgba(0,0,0,.55), 0 0 30px 4px rgba(232,193,90,.25);
+}
+.singa-center-btn .badge {
+  font-size: .58rem; letter-spacing: .16em;
+  color: #221b10; background: linear-gradient(160deg, #eed69b, #d9b463);
+  padding: 2px 12px; border-radius: 999px; font-weight: 700;
+  margin-bottom: 6px;
+}
+.singa-center-btn .en {
+  font-size: .58rem; letter-spacing: .22em; text-transform: uppercase; color: var(--singa-gold);
+}
+.singa-center-btn .ja { font-size: 1.5rem; font-weight: 700; letter-spacing: .1em; }
+.singa-center-btn .desc { font-size: .72rem; line-height: 1.8; color: var(--singa-ink-soft); margin-top: 4px; }
+
+/* ── 呼吸の手順（ピークステートの道具） ── */
+.singa-breath {
+  list-style: decimal inside;
+  font-size: .72rem; line-height: 1.85;
+  color: var(--singa-ink-soft);
+  padding: 8px 4px 4px;
+}
+.singa-breath li { margin-bottom: 4px; }
+
+/* ── 入力欄：量に合わせて伸びる ── */
+.vbar-text { max-height: none !important; overflow-y: auto; }
+
+/* ── パラレルウォーク：明るい空と海の画面 ── */
+.singa-stage.is-bright {
+  --singa-ink: #23324a;
+  --singa-ink-soft: rgba(35, 50, 74, .82);
+  --singa-gold: #2f7fb0;
+  background: #cfeaf7;
+}
+.singa-stage.is-bright .singa-map-img {
+  /* 地図の上に、明るい空をかぶせる */
+  background-image:
+    linear-gradient(180deg, rgba(126,192,238,.72) 0%, rgba(190,224,246,.55) 40%, rgba(224,243,251,.5) 100%),
+    url("/singa-map.jpg");
+}
+.singa-stage.is-bright::before {
+  /* 上下の暗幕をやめて、雲のような明るさに */
+  background:
+    radial-gradient(ellipse 200px 70px at 20% 16%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    radial-gradient(ellipse 260px 80px at 78% 26%, rgba(255,255,255,.8), rgba(255,255,255,0) 70%),
+    linear-gradient(180deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(210,235,248,.5) 100%);
+}
+.singa-stage.is-bright::after {
+  background: radial-gradient(circle at 50% 40%, rgba(255,246,210,.5), rgba(0,0,0,0) 60%);
+}
+.singa-stage.is-bright .singa-place-name .ja { text-shadow: 0 2px 10px rgba(255,255,255,.8); color: #1f3350; }
+.singa-stage.is-bright .singa-place-name .en { color: #2f7fb0; text-shadow: 0 1px 4px rgba(255,255,255,.8); }
+.singa-stage.is-bright .singa-line .who { color: #2f7fb0; text-shadow: none; }
+.singa-stage.is-bright .singa-line p {
+  background: rgba(255,255,255,.9);
+  color: #23324a;
+  border-color: rgba(120,170,210,.4);
+  box-shadow: 0 4px 16px rgba(90,140,190,.25);
+}
+.singa-stage.is-bright .singa-line.is-me p {
+  background: linear-gradient(135deg, #7ec0ee, #5aa0d8);
+  color: #fff; border-color: transparent;
+}
+.singa-stage.is-bright .vbar {
+  background: rgba(255,255,255,.86);
+  border-color: rgba(120,170,210,.4);
+}
+.singa-stage.is-bright .vbar-text {
+  background: rgba(255,255,255,.9); color: #23324a; border-color: rgba(120,170,210,.4);
+}
+.singa-stage.is-bright .vbar-text::placeholder { color: rgba(35,50,74,.45); }
+.singa-stage.is-bright .vbar-state { color: #2f7fb0; }
+.singa-stage.is-bright .vbar-btn { color: #23324a; background: rgba(90,150,200,.14); border-color: rgba(120,170,210,.4); }
+.singa-stage.is-bright .vbar-btn.is-rec { color:#fff; background: linear-gradient(160deg,#d46a5e,#b3453a); }
+.singa-stage.is-bright .vbar-btn.is-send { color:#fff; background: linear-gradient(160deg,#5aa0d8,#3d7fbf); }
+.singa-stage.is-bright .singa-back,
+.singa-stage.is-bright .singa-panel-open {
+  background: rgba(255,255,255,.8); color: #23324a; border-color: rgba(120,170,210,.4);
+}
+.singa-stage.is-bright .singa-avatar { border-color: rgba(120,170,210,.6); }
+
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
 .typing-dots span {

@@ -7,33 +7,33 @@
  */
 
 export const EMO_LEVELS: { n: number; name: string }[] = [
-  { n: 1, name: "究極に落ち着いている" },
-  { n: 2, name: "とても穏やか" },
+  { n: 1, name: "すごく穏やか" },
+  { n: 2, name: "穏やか" },
   { n: 3, name: "落ち着いている" },
-  { n: 4, name: "わりと穏やか" },
+  { n: 4, name: "わりと落ち着き" },
   { n: 5, name: "ふつう" },
-  { n: 6, name: "少しざわつく" },
-  { n: 7, name: "ざわついている" },
-  { n: 8, name: "かなり波立っている" },
-  { n: 9, name: "強く揺れている" },
-  { n: 10, name: "究極に感情の波がある" },
+  { n: 6, name: "少しモヤモヤ" },
+  { n: 7, name: "モヤモヤする" },
+  { n: 8, name: "しんどい" },
+  { n: 9, name: "かなりしんどい" },
+  { n: 10, name: "もう限界" },
 ];
 
 function lerp(a: number, b: number, t: number) { return Math.round(a + (b - a) * t); }
 
-/** 1(緑) → 5(黄) → 10(赤) のグラデーション */
+/** 緑 → 黄 → 橙 → 赤 の4色グラデーション（橙もちゃんと入れる） */
 export function emoColor(n: number): string {
   const t = Math.max(0, Math.min(1, (n - 1) / 9));
-  const green = [63, 174, 90], yellow = [230, 192, 46], red = [224, 80, 58];
-  let r, g, b;
-  if (t < 0.5) {
-    const u = t * 2;
-    r = lerp(green[0], yellow[0], u); g = lerp(green[1], yellow[1], u); b = lerp(green[2], yellow[2], u);
-  } else {
-    const u = (t - 0.5) * 2;
-    r = lerp(yellow[0], red[0], u); g = lerp(yellow[1], red[1], u); b = lerp(yellow[2], red[2], u);
-  }
-  return `rgb(${r},${g},${b})`;
+  const stops = [
+    [63, 174, 90],   // 緑
+    [230, 200, 50],  // 黄
+    [232, 140, 42],  // 橙（だいだい）
+    [214, 60, 50],   // 赤
+  ];
+  const seg = Math.min(2, Math.floor(t * 3)); // 0,1,2 の3区間
+  const u = t * 3 - seg;
+  const a = stops[seg], b = stops[seg + 1];
+  return `rgb(${lerp(a[0], b[0], u)},${lerp(a[1], b[1], u)},${lerp(a[2], b[2], u)})`;
 }
 
 export function emoName(n: number): string {
@@ -41,7 +41,7 @@ export function emoName(n: number): string {
 }
 
 export function EmotionMeter({
-  value, onChange, title = "いまの感情の波",
+  value, onChange, title = "いまの気分は？",
 }: {
   value: number | null;
   onChange: (n: number) => void;
@@ -79,9 +79,9 @@ export function EmotionMeter({
       </div>
 
       <div className="emeter-ends">
-        <span>落ち着き</span>
+        <span>穏やか</span>
         <span>ふつう</span>
-        <span>波がある</span>
+        <span>しんどい</span>
       </div>
     </div>
   );

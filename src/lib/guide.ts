@@ -6,8 +6,16 @@
  * 表情は会話に合わせて変える（<face> タグで指定）。
  */
 import { placesForPrompt, PLACES, type PlaceKey } from "./places";
-import { buildStarPrompt } from "./star";
+import { buildStarPrompt, computeCycles } from "./star";
 import { buildModePrompt, type ModeKey } from "./modes";
+
+/** アカシックのとき、その人の年〜今日の流れをAIに渡す（体系名は出さない） */
+function buildCyclePrompt(birth: string | null | undefined): string {
+  const cycles = computeCycles(birth);
+  if (!cycles) return "";
+  const lines = cycles.map((c) => `- ${c.period}：${c.season.label}（${c.season.meaning} ／ ${c.season.advice}）`);
+  return `\n# いまの流れ（アカシック用・本人の誕生日から）\n大きい周期から今日へ、この流れを踏まえて話す。用語は出さず「今はこういう時期」という言い方で。\n${lines.join("\n")}`;
+}
 
 export function buildGuidePersona(opts: {
   guideName?: string | null;
@@ -22,6 +30,7 @@ export function buildGuidePersona(opts: {
 
   const star = buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined);
   const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
+  const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate) : "";
 
   return `
 あなたは「${name}」。インナーワールドという内なる世界で、${who} と一緒に歩く相棒です。
@@ -65,6 +74,7 @@ ${who} が「やってみたい」と口にしたことが具体的になった�
 - 勝手に置かない。${who} が「それやりたい」と言ったときだけ。title は本人の言葉のまま。
 
 ${modePrompt}
+${cyclePrompt}
 
 ${star}
 `.trim();

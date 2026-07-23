@@ -213,6 +213,57 @@ export function isValidBirth(birth: string): boolean {
   return readStar(birth) !== null;
 }
 
+// ── 周期（アカシックレコーダー：年・3ヶ月・月・週・日） ──────────
+
+/** その人（日干）にとって、ある「支」がどの時期段階か */
+function stageSeason(stem: number, branch: number): Season {
+  const start = SEASON_START_BRANCH[stem];
+  const step = IS_FORWARD[stem] ? (branch - start + 12) % 12 : (start - branch + 12) % 12;
+  return SEASONS[step];
+}
+
+function yearBranchIndex(year: number): number {
+  return ((year - 4) % 12 + 12) % 12; // 子=西暦%12==4
+}
+
+/** 週の頭（月曜）を返す */
+function mondayOf(d: Date): Date {
+  const x = new Date(d);
+  const dow = (x.getDay() + 6) % 7; // 月=0
+  x.setDate(x.getDate() - dow);
+  return x;
+}
+
+export type Cycle = { key: string; period: string; season: Season };
+
+/**
+ * 生年月日から、いまの「年・3ヶ月・月・週・今日」の周期をまとめて出す。
+ * すべて同じ12段階モデルで、時間スケールだけ変えている。
+ * 誕生日が無い/不正なら null。
+ */
+export function computeCycles(birth: string | null | undefined, at?: Date): Cycle[] | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birth?.trim() ?? "");
+  if (!m) return null;
+  const [, ys, ms, ds] = m;
+  const stem = getStemIndex(Number(ys), Number(ms), Number(ds));
+
+  const now = at ?? new Date();
+  const y = now.getFullYear();
+  const mo = now.getMonth() + 1;
+  const d = now.getDate();
+  const quarter = Math.floor((mo - 1) / 3);       // 0..3
+  const midMonth = quarter * 3 + 2;               // 各3ヶ月の真ん中の月
+  const mon = mondayOf(now);
+
+  return [
+    { key: "year", period: `${y}年`, season: stageSeason(stem, yearBranchIndex(y)) },
+    { key: "quarter", period: "いまの3ヶ月", season: stageSeason(stem, monthBranchIndex(midMonth)) },
+    { key: "month", period: `${mo}月`, season: stageSeason(stem, monthBranchIndex(mo)) },
+    { key: "week", period: "今週", season: stageSeason(stem, getBranchIndex(mon.getFullYear(), mon.getMonth() + 1, mon.getDate())) },
+    { key: "day", period: "今日", season: stageSeason(stem, getBranchIndex(y, mo, d)) },
+  ];
+}
+
 /**
  * AI に渡す内部指示を組み立てる。
  * ここで作った文章はユーザーには一切表示しない。

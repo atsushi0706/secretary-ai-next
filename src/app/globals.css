@@ -1243,6 +1243,41 @@ body:has(.realverse-bg) { background: transparent; }
   .iw-door .desc { display: none; }
 }
 
+/* ── アカシック：年→3ヶ月→月→週→今日 の流れ ── */
+.akashic-flow { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+.akashic-ring {
+  position: relative;
+  text-align: left;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(224,189,114,.28);
+  background: rgba(255,255,255,.05);
+  transition: background .18s ease, border-color .18s ease;
+}
+.akashic-ring:hover { background: rgba(255,255,255,.1); }
+/* 大きい周期ほど左に張り出し、今日へ向かって細く（ズームしていく感じ） */
+.akashic-ring.depth-0 { margin-right: 0; }
+.akashic-ring.depth-1 { margin-left: 8px; }
+.akashic-ring.depth-2 { margin-left: 16px; }
+.akashic-ring.depth-3 { margin-left: 24px; }
+.akashic-ring.depth-4 {
+  margin-left: 32px;
+  border-color: rgba(232,193,90,.6);
+  background: rgba(232,193,90,.1);
+}
+.akashic-ring .period {
+  display: inline-block; min-width: 78px;
+  font-size: .62rem; letter-spacing: .06em; color: var(--singa-gold);
+}
+.akashic-ring .season { font-size: .82rem; font-weight: 700; }
+.akashic-ring.is-open { background: rgba(255,255,255,.12); border-color: rgba(232,189,114,.55); }
+.akashic-ring .detail {
+  display: block; margin-top: 6px;
+  font-size: .68rem; line-height: 1.7; color: var(--singa-ink-soft);
+}
+.akashic-ring .detail em { display: block; margin-top: 4px; font-style: normal; color: var(--singa-gold); }
+.akashic-hint { font-size: .58rem; color: rgba(244,231,200,.55); margin-top: 6px; text-align: center; }
+
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
 .typing-dots span {

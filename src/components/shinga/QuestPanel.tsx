@@ -23,7 +23,7 @@ const TIME_LABEL: Record<TimeKey, string> = {
  * 可能性の空（クエスト）と、心の宝（振り返り）で開く道具。
  * 会話でここへ来たときに開くので、入口ボタンは持たない。
  */
-export function QuestPanel({ bump, reflectMode }: { bump?: number; reflectMode?: boolean }) {
+export function QuestPanel({ bump, reflectMode, embedded }: { bump?: number; reflectMode?: boolean; embedded?: boolean }) {
   const [quests, setQuests] = useState<Quest[]>([]);
   const [taskCounts, setCounts] = useState<Record<string, number>>({});
   const [openId, setOpenId] = useState<string | null>(null);
@@ -59,10 +59,12 @@ export function QuestPanel({ bump, reflectMode }: { bump?: number; reflectMode?:
   }
 
   return (
-    <div className="singa-panel">
-      <div className="singa-panel-title">
-        {reflectMode ? "やってみたこと" : "置いてあるもの"}
-      </div>
+    <div className={embedded ? "" : "singa-panel"}>
+      {!embedded && (
+        <div className="singa-panel-title">
+          {reflectMode ? "やってみたこと" : "置いてあるもの"}
+        </div>
+      )}
 
       {msg && <div className="text-[11px] opacity-80 mb-2">{msg}</div>}
 

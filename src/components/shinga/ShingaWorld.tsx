@@ -7,6 +7,8 @@ import { MODES, type ModeKey } from "@/lib/modes";
 import { VoiceBar } from "./VoiceBar";
 import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
+import { EmotionMeter, emoName } from "./EmotionMeter";
+import { BreathGuide } from "./BreathGuide";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -61,6 +63,8 @@ export function ShingaWorld({
   const [place, setPlace] = useState<PlaceKey>(initialPlace ?? "peak");
   const [messages, setMessages] = useState<Message[]>([]);
   const [choices, setChoices] = useState<Choice[] | null>(null);
+  const [widget, setWidget] = useState<"emotion" | "breath" | null>(null);
+  const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
@@ -135,6 +139,7 @@ export function ShingaWorld({
 
     setSending(true);
     setChoices(null);
+    setWidget(null);
     if (!greet) setMessages((prev) => [...prev, { role: "user", content: body }]);
 
     // 新しい assistant 行を用意して、タイプ演出を開始
@@ -165,6 +170,11 @@ export function ShingaWorld({
           setFace(data.face as Face);
         } else if (name === "choices") {
           setChoices(data.choices as Choice[]);
+        } else if (name === "emotion") {
+          setEmoPick(null);
+          setWidget("emotion");
+        } else if (name === "breath") {
+          setWidget("breath");
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
@@ -182,6 +192,25 @@ export function ShingaWorld({
     setChoices(null);
     if (c.mode) void enter(c.mode, true);
     else void talk(c.label);
+  }
+
+  // 感情メーターで選んだ → 記録して、AIに気分を伝える
+  function pickEmotion(n: number) {
+    setEmoPick(n);
+    // 状態記録（1日2回まで。失敗しても会話は進める）
+    fetch("/api/emotions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level: n }),
+    }).catch(() => {});
+    setWidget(null);
+    void talk(`いまの気分は「${emoName(n)}」`);
+  }
+
+  // 呼吸トレーニングが終わった → AIに知らせる
+  function breathDone() {
+    setWidget(null);
+    void talk("（呼吸トレーニングが終わった）");
   }
 
   const hasPanel = here.panel !== "none";
@@ -258,6 +287,20 @@ export function ShingaWorld({
                     {c.label}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* ピークステート：感情メーター（会話の中に出る） */}
+            {widget === "emotion" && !typing && (
+              <div className="singa-inline">
+                <EmotionMeter value={emoPick} onChange={pickEmotion} />
+              </div>
+            )}
+
+            {/* ピークステート：誘導音声の呼吸トレーニング */}
+            {widget === "breath" && !typing && (
+              <div className="singa-inline">
+                <BreathGuide onDone={breathDone} />
               </div>
             )}
           </div>

@@ -34,7 +34,7 @@ export const PLACES: Record<PlaceKey, Place> = {
     key: "peak", en: "Peak State", ja: "ピークステート", x: 50, y: 54,
     hue: "#e8c15a",
     tagline: "すべての土台になる、状態づくりの中核。",
-    panel: "peak",
+    panel: "none",
   },
   walk: {
     key: "walk", en: "Parallel Walk", ja: "パラレルウォーク", x: 24, y: 26,

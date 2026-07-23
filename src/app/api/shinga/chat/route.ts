@@ -106,6 +106,10 @@ export async function POST(req: Request) {
           moveTo = moveMatch[1];
         }
 
+        // ピークステートの進行トリガー
+        const wantEmotion = /<emotion\s*\/?>/.test(full);
+        const wantBreath = /<breath\s*\/?>/.test(full);
+
         // 選択肢ボタン
         let choices: Array<{ label: string; mode?: string }> | null = null;
         const choMatch = full.match(/<choices>([\s\S]*?)<\/choices>/);
@@ -146,13 +150,17 @@ export async function POST(req: Request) {
           .replace(/<move>[\s\S]*?<\/move>/g, "")
           .replace(/<choices>[\s\S]*?<\/choices>/g, "")
           .replace(/<quest_to_add>[\s\S]*?<\/quest_to_add>/g, "")
+          .replace(/<emotion\s*\/?>/g, "")
+          .replace(/<breath\s*\/?>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch) {
+        if (faceMatch || moveMatch || choMatch || questMatch || wantEmotion || wantBreath) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });
+        if (wantEmotion) send("emotion", {});
+        if (wantBreath) send("breath", {});
         if (choices) send("choices", { choices });
         if (moveTo) send("move", { place: moveTo });
         if (addedQuests.length > 0) send("quests", { quests: addedQuests });

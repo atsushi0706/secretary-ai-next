@@ -57,6 +57,7 @@ export async function POST(req: Request) {
           guideName: settings?.secretary_name,
           userCallName: settings?.user_call_name,
           birthDate: settings?.birth_date,
+          birthName: settings?.birth_name,
           place,
           mode,
         });

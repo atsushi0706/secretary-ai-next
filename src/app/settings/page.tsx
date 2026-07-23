@@ -251,7 +251,7 @@ export default function SettingsPage() {
       <div className="card mt-6 space-y-3">
         <h2 className="font-bold text-base text-purple-700">✦ あなたの星（任意）</h2>
         <p className="text-xs text-gray-600 leading-relaxed">
-          生年月日を入れておくと、インナーワールドのAIが
+          生年月日<strong className="text-purple-700">と名前</strong>を入れておくと、インナーワールドのAIが
           <strong className="text-purple-700">あなたに合った話し方</strong>をします。
           分類して決めつけたりはしません。表に出るのは、聞き方と励まし方が変わることだけです。
         </p>
@@ -267,7 +267,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block font-bold text-sm mb-1">お名前（漢字フルネーム）</label>
+          <label className="block font-bold text-sm mb-1">お名前（姓と名の間にスペース）</label>
           <input
             type="text"
             value={birthName}
@@ -277,7 +277,8 @@ export default function SettingsPage() {
             className="w-full p-2 border rounded-lg text-sm"
           />
           <p className="text-xs text-gray-500 mt-1">
-            戸籍の字で入れると精度が上がります。空欄でも大丈夫です。
+            <strong>姓と名の間に半角スペース</strong>を入れてください（画数を正しく読むため）。
+            戸籍の漢字だと精度が上がります。空欄でも大丈夫です。
           </p>
         </div>
       </div>

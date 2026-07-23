@@ -8,6 +8,30 @@
 import { placesForPrompt, PLACES, type PlaceKey } from "./places";
 import { buildStarPrompt, computeCycles } from "./star";
 import { buildModePrompt, type ModeKey } from "./modes";
+import { diagnoseSeimei } from "./seimei";
+
+/** 名前（姓名判断）から、その人の傾向を内部情報にする。用語は出さない */
+function buildNamePrompt(birthName: string | null | undefined, who: string): string {
+  const name = (birthName ?? "").trim();
+  if (!name) return "";
+  const parts = name.split(/[\s　]+/).filter(Boolean);
+  const family = parts.length >= 2 ? parts[0] : "";
+  const given = parts.length >= 2 ? parts.slice(1).join("") : parts[0] ?? "";
+  if (!given) return "";
+  let r;
+  try { r = diagnoseSeimei(family, given); } catch { return ""; }
+  // 画数が全く取れない（記号だけ等）なら使わない
+  if (r.soukaku <= 0) return "";
+  const clean = (t: string) => t.replace(/【[^】]*】/g, "").trim();
+  return `
+## ${who}の名前から（本人には絶対に見せない内部情報）
+名前が持つ傾向。性質を裏で汲むために使う。用語（姓名判断・画数・人格・天格など）は絶対に出さない。
+- 中心にある性質: ${clean(r.jinkakuMeaning)}
+- 生まれ持った才能・若い頃の傾向: ${clean(r.chikakuMeaning)}
+- 人生全体の傾向: ${clean(r.soukakuMeaning)}
+- 周りから見た印象: ${clean(r.tenkakuMeaning)}
+使い方: これを宣言しない。${who} に合った聞き方・励まし方に、そっと反映するだけ。`;
+}
 
 /** アカシックのとき、その人の年〜今日の流れをAIに渡す（体系名は出さない） */
 function buildCyclePrompt(birth: string | null | undefined): string {
@@ -21,6 +45,7 @@ export function buildGuidePersona(opts: {
   guideName?: string | null;
   userCallName?: string | null;
   birthDate?: string | null;
+  birthName?: string | null;
   place: PlaceKey;
   mode?: ModeKey;
 }): string {
@@ -29,6 +54,7 @@ export function buildGuidePersona(opts: {
   const here = PLACES[opts.place] ?? PLACES.peak;
 
   const star = buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined);
+  const namePrompt = buildNamePrompt(opts.birthName, who);
   const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
   const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate) : "";
 
@@ -77,5 +103,6 @@ ${modePrompt}
 ${cyclePrompt}
 
 ${star}
+${namePrompt}
 `.trim();
 }

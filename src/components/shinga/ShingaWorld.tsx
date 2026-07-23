@@ -264,33 +264,29 @@ export function ShingaWorld({
             <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
           </div>
 
-          {/* 案内役（表情が変わる・話しているとゆれる） */}
-          <div className={`singa-avatar ${typing ? "is-talking" : ""}`}>
-            <Image
-              key={faceSrc}
-              src={faceSrc}
-              alt={guideName}
-              width={420}
-              height={640}
-              priority
-              unoptimized={faceSrc.startsWith("http")}
-              onError={() => setFaceSrc(avatarUrl)}
-            />
-          </div>
-
-          {/* 会話 */}
+          {/* 会話（メッセージごとにキヨセリンクの顔アイコンを出す） */}
           <div ref={scrollRef} className="singa-talk">
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
               const showDots = m.role === "assistant" && isLast && typing && !m.content;
               return (
                 <div key={i} className={m.role === "user" ? "singa-line is-me" : "singa-line"}>
+                  {m.role === "assistant" && (
+                    <img
+                      className={`singa-face ${isLast && typing ? "is-talking" : ""}`}
+                      src={faceSrc}
+                      alt={guideName}
+                      onError={() => setFaceSrc(avatarUrl)}
+                    />
+                  )}
+                  <div className="singa-line-body">
                   {m.role === "assistant" && <span className="who">{guideName}</span>}
                   <p>
                     {showDots
                       ? <span className="typing-dots"><span /><span /><span /></span>
                       : m.content}
                   </p>
+                  </div>
                 </div>
               );
             })}

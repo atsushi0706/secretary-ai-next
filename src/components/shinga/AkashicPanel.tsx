@@ -16,7 +16,7 @@ type Cycle = { key: string; period: string; season: Season };
 export function AkashicPanel() {
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [hasBirth, setHasBirth] = useState<boolean | null>(null);
-  const [open, setOpen] = useState<string | null>("day");
+  const [open, setOpen] = useState<string | null>(null);
   const [tab, setTab] = useState<"drop" | "reflect">("drop");
 
   useEffect(() => {

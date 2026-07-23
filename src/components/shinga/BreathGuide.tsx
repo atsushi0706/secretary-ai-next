@@ -3,38 +3,32 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * 波動を高める呼吸トレーニング（誘導音声つき）。
- * 画面のオーブが膨らむ／縮むのに合わせて、声で導く。
+ * 波動を高める呼吸トレーニング（誘導音声＋カウントダウン＋自分のペースで進む）。
  *
- * 手順（3回くり返し＋最後の一息）:
- *  口を軽く閉じて → 細く長く吐く → 吐ききる → ゆっくり吸う → 馴染ませる
- *  最後にもう一度、吐ききってから強く吸う。
+ * - AI/画面が呼吸をガイドする。
+ * - 各ステップに秒数のカウントダウン（5秒で吐き切る、など）。
+ * - カウントが終わったら「次へ」を押して進む＝体感覚に馴染ませる。
  */
 
-type Phase = { say: string; sec: number; scale: number; hint: string };
+type Step = { instr: string; say: string; count: number; scale: number };
 
-function buildPhases(): Phase[] {
-  const cycle: Phase[] = [
-    { say: "口を軽く閉じて", sec: 2.5, scale: 0.95, hint: "口を軽く閉じて" },
-    { say: "細く、長く……ふーっと吐いて", sec: 6, scale: 0.45, hint: "細く長く、吐く" },
-    { say: "最後まで、吐ききって", sec: 2.5, scale: 0.35, hint: "吐ききる" },
-    { say: "ゆっくり、吸って", sec: 4, scale: 1, hint: "ゆっくり吸う" },
-    { say: "目を閉じて、馴染ませて", sec: 3, scale: 1, hint: "馴染ませる" },
+function buildSteps(): Step[] {
+  const steps: Step[] = [
+    { instr: "立って、体を軽くゆらそう", say: "じゃあ始めよう。立てる人は立って、体を軽くゆらしてみて。", count: 5, scale: 1 },
   ];
-  const phases: Phase[] = [
-    { say: "じゃあ始めよう。立てる人は立って、体を軽く左右にゆらしてみて。", sec: 4.5, scale: 1, hint: "体をゆらす" },
-  ];
-  const roundLabel = ["1回目", "2回目", "3回目"];
   for (let i = 0; i < 3; i++) {
-    phases.push({ ...cycle[0], say: `${roundLabel[i]}。口を軽く閉じて` });
-    for (let j = 1; j < cycle.length; j++) phases.push({ ...cycle[j] });
+    steps.push(
+      { instr: `${i + 1}回目：口を閉じて、細く吐き切る`, say: `${i + 1}回目。口を閉じて、細く、吐き切って`, count: 5, scale: 0.4 },
+      { instr: "ゆっくり、吸う", say: "ゆっくり、吸って", count: 5, scale: 1 },
+      { instr: "そのまま、馴染ませる", say: "目を閉じて、その感覚を馴染ませて", count: 8, scale: 1 },
+    );
   }
-  phases.push(
-    { say: "最後にもう一度。口を閉じて、吐ききって", sec: 5, scale: 0.35, hint: "吐ききる" },
-    { say: "強く、吸って", sec: 3, scale: 1.08, hint: "強く吸う" },
-    { say: "いいね。ゆっくり、目を開けて。", sec: 3.5, scale: 1, hint: "ゆっくり目を開ける" },
+  steps.push(
+    { instr: "最後にもう一度、吐き切る", say: "最後にもう一度。口を閉じて、吐き切って", count: 5, scale: 0.35 },
+    { instr: "強く、吸う", say: "強く、吸って", count: 4, scale: 1.08 },
+    { instr: "ゆっくり、目を開ける", say: "いいね。ゆっくり、目を開けて。", count: 4, scale: 1 },
   );
-  return phases;
+  return steps;
 }
 
 function speak(text: string) {
@@ -42,85 +36,84 @@ function speak(text: string) {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ja-JP";
-    u.rate = 0.92;
-    u.pitch = 1;
+    u.lang = "ja-JP"; u.rate = 0.92;
     const v = window.speechSynthesis.getVoices().find((x) => x.lang?.startsWith("ja"));
     if (v) u.voice = v;
     window.speechSynthesis.speak(u);
-  } catch { /* 声が出せなくても、画面のガイドで進める */ }
+  } catch { /* 声が出なくても画面で進める */ }
 }
 
 export function BreathGuide({ onDone }: { onDone: () => void }) {
-  const [running, setRunning] = useState(false);
-  const [idx, setIdx] = useState(-1);
+  const [started, setStarted] = useState(false);
+  const [idx, setIdx] = useState(0);
+  const [remain, setRemain] = useState(0);
   const [scale, setScale] = useState(1);
-  const [hint, setHint] = useState("はじめると、声が導きます");
-  const phasesRef = useRef<Phase[]>([]);
-  const timerRef = useRef<any>(null);
+  const stepsRef = useRef<Step[]>([]);
+  const tickRef = useRef<any>(null);
 
-  useEffect(() => () => { clearTimeout(timerRef.current); try { window.speechSynthesis?.cancel(); } catch {} }, []);
+  useEffect(() => () => { clearInterval(tickRef.current); try { window.speechSynthesis?.cancel(); } catch {} }, []);
 
-  function start() {
-    phasesRef.current = buildPhases();
-    setRunning(true);
-    setIdx(0);
-    step(0);
+  function begin() {
+    stepsRef.current = buildSteps();
+    setStarted(true);
+    goto(0);
   }
 
-  function stop() {
-    clearTimeout(timerRef.current);
-    try { window.speechSynthesis?.cancel(); } catch {}
-    setRunning(false);
-    setIdx(-1);
-    setScale(1);
-    setHint("とめました。もう一度はじめてもいいよ");
-  }
-
-  function step(i: number) {
-    const phases = phasesRef.current;
-    if (i >= phases.length) {
-      setRunning(false);
-      setHint("おつかれさま");
+  function goto(i: number) {
+    const steps = stepsRef.current;
+    clearInterval(tickRef.current);
+    if (i >= steps.length) {
       try { window.speechSynthesis?.cancel(); } catch {}
       onDone();
       return;
     }
-    const p = phases[i];
+    const s = steps[i];
     setIdx(i);
-    setScale(p.scale);
-    setHint(p.hint);
-    speak(p.say);
-    timerRef.current = setTimeout(() => step(i + 1), p.sec * 1000);
+    setScale(s.scale);
+    setRemain(s.count);
+    speak(s.say);
+    tickRef.current = setInterval(() => {
+      setRemain((r) => {
+        if (r <= 1) { clearInterval(tickRef.current); return 0; }
+        return r - 1;
+      });
+    }, 1000);
   }
 
-  const total = phasesRef.current.length || 1;
-  const progress = running && idx >= 0 ? Math.round(((idx + 1) / total) * 100) : 0;
+  const steps = stepsRef.current;
+  const cur = started ? steps[idx] : null;
+  const ready = remain === 0;         // カウント終了＝次へ進める
+  const isLast = started && idx >= steps.length - 1;
 
   return (
     <div className="breath">
       <div className="breath-orb-wrap">
         <div
           className="breath-orb"
-          style={{ transform: `scale(${scale})`, transitionDuration: running && idx >= 0 ? `${phasesRef.current[idx]?.sec ?? 1}s` : ".4s" }}
+          style={{ transform: `scale(${scale})`, transitionDuration: cur ? `${Math.min(cur.count, 6)}s` : ".4s" }}
         />
-        <div className="breath-hint">{hint}</div>
+        {started && <div className="breath-count">{remain > 0 ? remain : "○"}</div>}
       </div>
 
-      {running && (
-        <div className="breath-bar"><span style={{ width: `${progress}%` }} /></div>
+      <div className="breath-instr">
+        {cur ? cur.instr : "はじめると、声とカウントが導きます"}
+      </div>
+
+      {!started ? (
+        <div className="breath-row">
+          <button className="vbar-go breath-start" onClick={begin}>🌬 はじめる</button>
+          <button className="breath-skip" onClick={onDone}>スキップ</button>
+        </div>
+      ) : (
+        <div className="breath-row">
+          <button
+            className={`breath-next ${ready ? "is-ready" : ""}`}
+            onClick={() => goto(idx + 1)}
+          >
+            {isLast ? "おわる" : ready ? "次へ ▶" : "次へ（早く進む）"}
+          </button>
+        </div>
       )}
-
-      <div className="breath-row">
-        {!running ? (
-          <button className="vbar-btn is-send" onClick={start}>🌬 はじめる</button>
-        ) : (
-          <button className="vbar-btn" onClick={stop}>とめる</button>
-        )}
-        {!running && idx === -1 && (
-          <button className="vbar-btn" onClick={onDone}>スキップ</button>
-        )}
-      </div>
     </div>
   );
 }

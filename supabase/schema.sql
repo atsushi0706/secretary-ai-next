@@ -206,6 +206,7 @@ create unique index if not exists uq_emotion_user_date_slot
 -- 生年月日と名前（AIがその人に合わせて話すため。ユーザーには体系名を出さない）
 alter table public.user_settings add column if not exists birth_date date;
 alter table public.user_settings add column if not exists birth_name text;
+alter table public.user_settings add column if not exists birth_gender text; -- 'male'/'female'（大運の順行/逆行に必要）
 
 -- シンガワールドでの会話（既存の conversations は朝/夜しか入らないので分ける）
 create table if not exists public.shinga_conversations (

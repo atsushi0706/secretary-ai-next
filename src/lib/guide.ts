@@ -10,6 +10,7 @@ import { buildStarPrompt, computeCycles } from "./star";
 import { buildModePrompt, type ModeKey } from "./modes";
 import { diagnoseSeimei } from "./seimei";
 import { buildReframePrompt } from "./reframe";
+import { computeLife } from "./sanmei";
 
 /** 名前（姓名判断）から、その人の傾向を内部情報にする。用語は出さない */
 function buildNamePrompt(birthName: string | null | undefined, who: string): string {
@@ -34,14 +35,33 @@ function buildNamePrompt(birthName: string | null | undefined, who: string): str
 使い方: これを宣言しない。${who} に合った聞き方・励まし方に、そっと反映するだけ。`;
 }
 
-/** アカシックのとき、その人の年〜今日の流れをAIに渡す（体系名は出さない） */
-function buildCyclePrompt(birth: string | null | undefined, who: string): string {
+/** アカシックのとき、その人の年〜今日の流れ＋人生の10年周期をAIに渡す（体系名は出さない） */
+function buildCyclePrompt(
+  birth: string | null | undefined,
+  gender: string | null | undefined,
+  who: string,
+): string {
   const cycles = computeCycles(birth);
   if (!cycles) return "";
   const lines = cycles.map((c) => `- ${c.period}：${c.season.label}（${c.season.meaning} ／ ${c.season.advice}）`);
+
+  // 人生の10年周期（大運）— 精度の肝。性別があるときだけ
+  let lifeBlock = "";
+  const life = computeLife(birth, gender === "male" || gender === "female" ? gender : null);
+  if (life) {
+    const cur = life.periods[life.currentIndex];
+    const next = life.periods[life.currentIndex + 1];
+    lifeBlock = `
+
+## 人生の大きな流れ（10年ごと・本人の誕生日と性別から）
+- いまの10年（${cur.ageStart}歳〜${cur.ageEnd}歳）：${cur.label}。${cur.meaning}
+${next ? `- 次の10年（${next.ageStart}歳〜${next.ageEnd}歳）：${next.label}。${next.meaning}` : ""}
+（この大きな流れは、今日や今週より"効いている"背骨。${who}が人生の話に触れたときに、そっと添える）`;
+  }
+
   return `
 # いまの流れ（アカシック用・本人の誕生日から）
-${lines.join("\n")}
+${lines.join("\n")}${lifeBlock}
 
 ## この情報の扱い方（最重要・厳守）
 - これは「傾向」であって、${who}の一日を決めつける材料ではない。絶対に断定しない。
@@ -59,6 +79,7 @@ export function buildGuidePersona(opts: {
   userCallName?: string | null;
   birthDate?: string | null;
   birthName?: string | null;
+  birthGender?: string | null;
   place: PlaceKey;
   mode?: ModeKey;
 }): string {
@@ -69,7 +90,7 @@ export function buildGuidePersona(opts: {
   const star = buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined);
   const namePrompt = buildNamePrompt(opts.birthName, who);
   const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
-  const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate, who) : "";
+  const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate, opts.birthGender, who) : "";
   const reframePrompt = opts.mode === "breakthrough" ? buildReframePrompt() : "";
 
   return `

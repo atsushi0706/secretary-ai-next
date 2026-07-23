@@ -1784,3 +1784,23 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .82rem; color: var(--singa-ink-soft);
   background: rgba(255,255,255,.06); border: 1px solid rgba(224,189,114,.2);
 }
+
+/* ── アカシック：人生の10年周期（大運） ── */
+.akashic-life { display: flex; flex-direction: column; gap: 4px; margin-top: 8px; }
+.akashic-decade {
+  text-align: left; padding: 8px 11px; border-radius: 10px;
+  border: 1px solid rgba(224,189,114,.22);
+  background: rgba(255,255,255,.04);
+  transition: background .18s ease, border-color .18s ease;
+}
+.akashic-decade:hover { background: rgba(255,255,255,.09); }
+.akashic-decade .age { display: inline-block; min-width: 84px; font-size: .64rem; color: var(--singa-gold); letter-spacing: .04em; }
+.akashic-decade .lb { font-size: .82rem; font-weight: 700; }
+.akashic-decade .lb em { font-style: normal; font-size: .58rem; margin-left: 8px; color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e); padding: 1px 8px; border-radius: 999px; }
+.akashic-decade .mn { display: block; margin-top: 6px; font-size: .7rem; line-height: 1.7; color: var(--singa-ink-soft); }
+.akashic-decade.is-now {
+  border-color: rgba(232,193,90,.6);
+  background: rgba(232,193,90,.1);
+  box-shadow: 0 0 18px rgba(232,193,90,.18);
+}
+.akashic-decade.is-open { background: rgba(255,255,255,.1); border-color: rgba(232,189,114,.5); }

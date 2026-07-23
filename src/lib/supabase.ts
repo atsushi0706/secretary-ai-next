@@ -52,6 +52,7 @@ export async function upsertUserSettings(
     user_call_name: string;
     birth_date: string | null;
     birth_name: string;
+    birth_gender: string | null;
     weekly_schedule: WeeklySchedule | null;
   }>,
 ) {

@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getUserSettings, logError } from "@/lib/supabase";
 import { computeCycles } from "@/lib/star";
+import { computeLife } from "@/lib/sanmei";
 import { jstNow } from "@/lib/google";
 
 export async function GET() {
@@ -17,11 +18,14 @@ export async function GET() {
   try {
     const s: any = await getUserSettings(userId);
     const birth = s?.birth_date ?? null;
+    const gender = s?.birth_gender ?? null;
     if (!birth) {
-      return NextResponse.json({ hasBirth: false, cycles: null });
+      return NextResponse.json({ hasBirth: false, cycles: null, life: null });
     }
-    const cycles = computeCycles(birth, jstNow());
-    return NextResponse.json({ hasBirth: true, cycles });
+    const now = jstNow();
+    const cycles = computeCycles(birth, now);
+    const life = computeLife(birth, gender, now); // 性別が無ければ null
+    return NextResponse.json({ hasBirth: true, hasGender: !!gender, cycles, life });
   } catch (e: any) {
     await logError(userId, "/api/cycles", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

@@ -15,6 +15,7 @@ export default function SettingsPage() {
   const [userCallName, setUserCallName] = useState("");
   const [birthDate, setBirthDate] = useState("");
   const [birthName, setBirthName] = useState("");
+  const [birthGender, setBirthGender] = useState("");
 
   // 週次シフト
   type DayKey = "mon" | "tue" | "wed" | "thu" | "fri" | "sat" | "sun";
@@ -77,6 +78,7 @@ export default function SettingsPage() {
       setUserCallName(s.user_call_name ?? "");
       setBirthDate(s.birth_date ?? "");
       setBirthName(s.birth_name ?? "");
+      setBirthGender(s.birth_gender ?? "");
       // weekly_schedule = {mon: "09:00-17:00" | null, ...} を画面用に展開
       if (s.weekly_schedule && typeof s.weekly_schedule === "object") {
         const ws = s.weekly_schedule;
@@ -127,6 +129,7 @@ export default function SettingsPage() {
       user_call_name: userCallName,
       birth_date: birthDate,
       birth_name: birthName,
+      birth_gender: birthGender,
       weekly_schedule: buildWeeklySchedulePayload(),
     };
     if (geminiKey) body.gemini_api_key = geminiKey;
@@ -279,6 +282,27 @@ export default function SettingsPage() {
           <p className="text-xs text-gray-500 mt-1">
             <strong>姓と名の間に半角スペース</strong>を入れてください（画数を正しく読むため）。
             戸籍の漢字だと精度が上がります。空欄でも大丈夫です。
+          </p>
+        </div>
+
+        <div>
+          <label className="block font-bold text-sm mb-1">性別</label>
+          <div className="flex gap-2">
+            {[["male", "男性"], ["female", "女性"]].map(([v, lbl]) => (
+              <button
+                key={v}
+                type="button"
+                onClick={() => setBirthGender(v)}
+                className={`flex-1 py-2 rounded-lg text-sm font-bold border ${
+                  birthGender === v ? "bg-[var(--accent)] text-white border-transparent" : "bg-white text-gray-600 border-gray-200"
+                }`}
+              >
+                {lbl}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-500 mt-1">
+            人生の10年ごとの流れ（アカシックレコーダー）を読むのに使います。
           </p>
         </div>
       </div>

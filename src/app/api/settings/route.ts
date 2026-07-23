@@ -16,6 +16,7 @@ export async function GET() {
       user_call_name: s?.user_call_name ?? "",
       birth_date: s?.birth_date ?? "",
       birth_name: s?.birth_name ?? "",
+      birth_gender: s?.birth_gender ?? "",
       weekly_schedule: s?.weekly_schedule ?? null,
       quickmemo: await loadQuickmemo(userId),
     });
@@ -43,6 +44,7 @@ export async function POST(req: Request) {
     // 生年月日と名前（AIがその人に合わせて話すため。空文字なら未設定に戻す）
     if (typeof body.birth_date === "string") upd.birth_date = body.birth_date || null;
     if (typeof body.birth_name === "string") upd.birth_name = body.birth_name;
+    if (typeof body.birth_gender === "string") upd.birth_gender = body.birth_gender || null;
     // weekly_schedule: null か、または {mon: "HH:MM-HH:MM"|null, ...} 形式
     if (body.weekly_schedule === null || (body.weekly_schedule && typeof body.weekly_schedule === "object")) {
       upd.weekly_schedule = body.weekly_schedule;

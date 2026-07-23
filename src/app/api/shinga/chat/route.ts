@@ -58,6 +58,7 @@ export async function POST(req: Request) {
           userCallName: settings?.user_call_name,
           birthDate: settings?.birth_date,
           birthName: settings?.birth_name,
+          birthGender: settings?.birth_gender,
           place,
           mode,
         });

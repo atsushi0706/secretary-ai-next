@@ -63,10 +63,12 @@ export function VoiceInput({
     finalRef.current = "";
 
     recog.onresult = (e: any) => {
-      for (let i = e.resultIndex; i < e.results.length; i++) {
-        const r = e.results[i];
-        if (r.isFinal) finalRef.current += r[0].transcript;
+      // 追記せず、結果セット全体から確定分を毎回作り直す（二重取り込みを防ぐ）
+      let fin = "";
+      for (let i = 0; i < e.results.length; i++) {
+        if (e.results[i].isFinal) fin += e.results[i][0].transcript;
       }
+      finalRef.current = fin;
     };
     recog.onerror = (e: any) => {
       // no-speech は「黙っていただけ」なのでエラー表示しない

@@ -48,6 +48,14 @@ export function VoiceBar({
   const wakeLockRef = useRef<any>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
+  // 重複防止のための土台。
+  // baseRef = 録音開始時 / 前セッション確定分までの確定テキスト。
+  // sessRef = いまのセッションで確定した分（追記せず毎回作り直す）。
+  const baseRef = useRef("");
+  const sessRef = useRef("");
+  const textRef = useRef("");
+  useEffect(() => { textRef.current = text; }, [text]);
+
   useEffect(() => { setSupported(!!getSR()); }, []);
 
   // 入力量に合わせて高さを伸ばす（画面の4割まで）
@@ -101,13 +109,22 @@ export function VoiceBar({
     recog.interimResults = true;
     recog.maxAlternatives = 1;
 
+    // このセッションの起点を今のテキストにする
+    baseRef.current = textRef.current;
+    sessRef.current = "";
+
     recog.onresult = (e: any) => {
+      // 追記せず、いまの結果セット全体から「確定分」と「途中分」を作り直す。
+      // これで自動再開時に前の文を二重に足してしまうのを防ぐ。
+      let fin = "";
       let iv = "";
-      for (let i = e.resultIndex; i < e.results.length; i++) {
+      for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
-        if (r.isFinal) setText((prev) => (prev ? prev + r[0].transcript : r[0].transcript));
+        if (r.isFinal) fin += r[0].transcript;
         else iv += r[0].transcript;
       }
+      sessRef.current = fin;
+      setText(baseRef.current + fin);
       setInterim(iv);
     };
     recog.onerror = (e: any) => {
@@ -123,6 +140,9 @@ export function VoiceBar({
     recog.onend = () => {
       // ユーザーがまだ話したいなら、途切れても続ける（時間制限で勝手に終わらせない）
       if (wantRecording.current) {
+        // 今セッションの確定分を土台に繰り込んでから再開（結果セットが空に戻るので二重化しない）
+        baseRef.current = baseRef.current + sessRef.current;
+        sessRef.current = "";
         try { recog.start(); } catch { /* すぐ再試行される */ }
       }
     };

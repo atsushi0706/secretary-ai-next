@@ -786,6 +786,8 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .singa-back:hover { color: var(--singa-ink); background: rgba(40, 32, 20, .9); }
 
+
+
 /* ── 音声入力バー ── */
 .vbar {
   position: relative; z-index: 5;
@@ -1135,113 +1137,457 @@ body:has(.realverse-bg) { background: transparent; }
 .emeter-ends { display: flex; justify-content: space-between; font-size: .58rem; color: rgba(244,231,200,.6); margin-top: 5px; padding: 0 2px; }
 
 /* ── インナーワールドのホーム：相棒が世界の中で迎える ── */
+.singa-stage.is-home { display: block; }
 .singa-stage.is-home::before {
-  /* 相棒を引き立てるため、下側を少し暗くする */
-  background: linear-gradient(180deg, rgba(10,8,6,.32) 0%, rgba(10,8,6,.05) 26%, rgba(10,8,6,.15) 55%, rgba(10,8,6,.7) 100%);
+  background: linear-gradient(180deg, rgba(10,8,6,.30) 0%, rgba(10,8,6,.04) 24%, rgba(10,8,6,.12) 52%, rgba(10,8,6,.66) 100%);
 }
 .iw-home {
   position: absolute; inset: 0; z-index: 4;
   display: flex; flex-direction: column;
-  justify-content: flex-end;
-  padding: 0 16px 18px;
+  padding: 10px 12px 12px;
 }
-.iw-hero {
-  display: flex; align-items: flex-end; gap: 14px;
-  margin-bottom: 16px;
-}
-.iw-avatar {
-  flex: 0 0 auto;
-  width: clamp(140px, 22vw, 240px);
-  height: clamp(180px, 30vw, 320px);
-  border-radius: 20px 20px 0 0;
-  overflow: hidden;
-  filter: drop-shadow(0 12px 30px rgba(0,0,0,.7));
+/* キヨセリンクが立つ場面 */
+.iw-scene { position: relative; flex: 1; min-height: 0; }
+.iw-figure {
+  position: absolute;
+  left: 50%; bottom: 0;
+  transform: translateX(-50%);
+  width: auto;
+  height: min(100%, 360px);
+  max-width: 70%;
+  object-fit: contain;
+  object-position: bottom center;
+  filter: drop-shadow(0 14px 30px rgba(0,0,0,.75));
   animation: iw-breathe 5s ease-in-out infinite;
+  pointer-events: none;
 }
-.iw-avatar img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 6%; transform: scale(1.05); }
-@keyframes iw-breathe { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
-.iw-hello {
-  flex: 1; min-width: 0;
-  max-width: 460px;
-  margin-bottom: 14px;
-  padding: 14px 18px;
-  border-radius: 18px 18px 18px 6px;
-  background: rgba(20, 16, 11, .86);
-  border: 1px solid rgba(232,189,114,.3);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 8px 30px rgba(0,0,0,.55);
-  animation: iw-pop .5s cubic-bezier(.2,.8,.3,1);
-}
-@keyframes iw-pop { from{opacity:0; transform:translateY(10px);} to{opacity:1; transform:translateY(0);} }
-.iw-hello .who {
-  display: block; font-size: .6rem; letter-spacing: .16em;
-  color: var(--singa-gold); margin-bottom: 5px;
-}
-.iw-hello p {
-  font-size: .95rem; line-height: 1.9; white-space: pre-wrap;
-  color: var(--singa-ink);
-}
+@keyframes iw-breathe { 0%,100%{transform:translateX(-50%) translateY(0);} 50%{transform:translateX(-50%) translateY(-6px);} }
 
-/* 行き先＝相棒が差し出す扉 */
+/* 吹き出し（しっぽつき） */
+.iw-bubble {
+  position: absolute;
+  left: 6px; top: 8px;
+  max-width: min(360px, 62%);
+  padding: 13px 16px;
+  border-radius: 16px 16px 16px 4px;
+  background: rgba(20, 16, 11, .9);
+  border: 1px solid rgba(232,189,114,.35);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0,0,0,.55);
+  animation: iw-pop .5s cubic-bezier(.2,.8,.3,1);
+  z-index: 2;
+}
+.iw-bubble::after {
+  content: "";
+  position: absolute; right: -9px; bottom: 16px;
+  border: 8px solid transparent;
+  border-left-color: rgba(20,16,11,.9);
+  border-right: 0;
+}
+@keyframes iw-pop { from{opacity:0; transform:translateY(8px);} to{opacity:1; transform:translateY(0);} }
+.iw-bubble .who { display: block; font-size: .6rem; letter-spacing: .16em; color: var(--singa-gold); margin-bottom: 5px; }
+.iw-bubble p { font-size: .92rem; line-height: 1.85; white-space: pre-wrap; color: var(--singa-ink); }
+
+/* 行き先の扉（横スクロールの小カード） */
 .iw-doors {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
-  max-width: 760px; width: 100%; margin: 0 auto;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;
+  margin-top: 8px; padding-top: 12px;
 }
 .iw-door {
-  position: relative;
-  display: flex; flex-direction: column; align-items: center; gap: 3px;
-  padding: 16px 12px 14px;
-  border-radius: 16px;
-  text-align: center;
+  position: relative; flex: 0 0 auto;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  min-width: 96px; padding: 10px 12px;
+  border-radius: 14px;
   color: var(--singa-ink);
-  background: rgba(20, 16, 11, .8);
+  background: rgba(20, 16, 11, .82);
   border: 1px solid rgba(232,189,114,.3);
   backdrop-filter: blur(10px);
-  box-shadow: 0 8px 26px rgba(0,0,0,.5);
-  transition: transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+  box-shadow: 0 6px 20px rgba(0,0,0,.5);
+  transition: transform .18s ease, border-color .18s ease;
 }
-.iw-door:hover { transform: translateY(-4px); border-color: rgba(232,189,114,.7); }
+.iw-door:hover { transform: translateY(-3px); border-color: rgba(232,189,114,.7); }
 .iw-door.is-start {
   border-color: rgba(232,193,90,.6);
-  box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 26px 2px rgba(232,193,90,.28);
+  box-shadow: 0 6px 20px rgba(0,0,0,.5), 0 0 22px 2px rgba(232,193,90,.3);
   animation: iw-glow 2.6s ease-in-out infinite;
 }
-@keyframes iw-glow {
-  0%,100% { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 20px 0 rgba(232,193,90,.2); }
-  50%     { box-shadow: 0 8px 26px rgba(0,0,0,.5), 0 0 34px 6px rgba(232,193,90,.45); }
-}
+@keyframes iw-glow { 0%,100%{box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 16px 0 rgba(232,193,90,.2);} 50%{box-shadow:0 6px 20px rgba(0,0,0,.5),0 0 30px 6px rgba(232,193,90,.45);} }
+.iw-door.is-sub { min-width: 78px; opacity: .82; }
 .iw-door .tag {
-  position: absolute; top: -11px; left: 50%; transform: translateX(-50%);
-  white-space: nowrap; font-size: .58rem; font-weight: 700; letter-spacing: .06em;
-  color: #221b10; background: linear-gradient(160deg, #eed69b, #d9b463);
-  padding: 3px 12px; border-radius: 999px; box-shadow: 0 3px 10px rgba(0,0,0,.4);
+  position: absolute; top: -10px; left: 50%; transform: translateX(-50%);
+  white-space: nowrap; font-size: .54rem; font-weight: 700;
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#d9b463);
+  padding: 2px 9px; border-radius: 999px; box-shadow: 0 3px 8px rgba(0,0,0,.4);
 }
-.iw-door .emoji { font-size: 1.5rem; }
-.iw-door .ja { font-size: 1rem; font-weight: 700; letter-spacing: .04em; margin-top: 2px; }
-.iw-door .desc { font-size: .66rem; line-height: 1.65; color: var(--singa-ink-soft); margin-top: 3px; }
+.iw-door .emoji { font-size: 1.35rem; }
+.iw-door .ja { font-size: .74rem; font-weight: 700; white-space: nowrap; }
 
-.iw-doors-sub {
-  display: flex; justify-content: center; gap: 8px; margin-top: 10px;
-}
-.iw-door-s {
-  padding: 8px 16px; border-radius: 999px;
-  font-size: .78rem; font-weight: 700; color: var(--singa-ink);
-  background: rgba(20, 16, 11, .62);
-  border: 1px solid rgba(232,189,114,.22);
-  backdrop-filter: blur(8px);
-  transition: background .18s ease;
-}
-.iw-door-s:hover { background: rgba(34, 27, 16, .85); }
+/* ホームの音声バーは会話用のスタイルを流用（.vbar） */
+.iw-home .vbar { margin: 0 0 8px; }
 
 @media (max-width: 700px) {
-  .iw-hero { flex-direction: row; align-items: flex-end; gap: 8px; }
-  .iw-avatar { width: 42%; height: auto; aspect-ratio: 3/4; }
-  .iw-hello { font-size: .9rem; padding: 12px 14px; }
-  .iw-doors { grid-template-columns: 1fr; }
-  .iw-door { flex-direction: row; justify-content: center; gap: 8px; padding: 14px; }
-  .iw-door .ja { margin-top: 0; }
-  .iw-door .desc { display: none; }
+  .iw-home { padding: 8px 8px 10px; }
+  .iw-figure {
+    left: auto; right: -14px; transform: none;
+    height: min(100%, 230px); max-width: 40%;
+  }
+  @keyframes iw-breathe { 0%,100%{transform:translateY(0);} 50%{transform:translateY(-5px);} }
+  .iw-bubble { left: 4px; top: 4px; max-width: 60%; padding: 10px 12px; }
+  .iw-bubble::after { display: none; }
+  .iw-bubble p { font-size: .82rem; line-height: 1.7; }
+  .iw-doors { gap: 6px; }
+  .iw-door { flex: 1 1 44%; min-width: 0; flex-direction: row; justify-content: center; gap: 6px; padding: 11px 8px; }
+  .iw-door .emoji { font-size: 1.1rem; }
 }
+
+/* ── 音声入力バー ── */
+.vbar {
+  position: relative; z-index: 5;
+  margin: 0 12px 12px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(18, 15, 11, .86);
+  border: 1px solid rgba(224, 189, 114, .25);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 6px 26px rgba(0,0,0,.5);
+}
+.vbar-state {
+  display: flex; align-items: center; gap: 7px;
+  font-size: .64rem; letter-spacing: .08em;
+  color: var(--singa-gold);
+  margin-bottom: 7px;
+}
+.vbar-state.is-think { color: #9fc7f0; }
+.vbar-state .pulse {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: #e2574c;
+  animation: vbar-pulse 1.2s ease-in-out infinite;
+}
+@keyframes vbar-pulse {
+  0%,100% { opacity: 1; box-shadow: 0 0 0 0 rgba(226,87,76,.6); }
+  50%     { opacity: .5; box-shadow: 0 0 0 7px rgba(226,87,76,0); }
+}
+.vbar-live {
+  font-size: .86rem; line-height: 1.8;
+  padding: 8px 10px; margin-bottom: 8px;
+  border-radius: 10px;
+  background: rgba(0,0,0,.28);
+  border: 1px solid rgba(224, 189, 114, .16);
+  max-height: 120px; overflow-y: auto;
+}
+.vbar-live .dim { color: rgba(244, 231, 200, .45); }
+.vbar-text {
+  width: 100%;
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(224, 189, 114, .18);
+  border-radius: 10px;
+  padding: 9px 11px;
+  color: var(--singa-ink);
+  font-size: .9rem; line-height: 1.7;
+  font-family: inherit;
+  resize: none;
+  margin-bottom: 8px;
+}
+.vbar-text::placeholder { color: rgba(244, 231, 200, .4); }
+.vbar-text:focus { outline: 1px solid color-mix(in srgb, var(--place-hue, #c9a227) 65%, transparent); }
+.vbar-err { font-size: .68rem; color: #f0a8a0; margin-bottom: 8px; }
+.vbar-row { display: flex; gap: 8px; }
+.vbar-btn {
+  flex: 1;
+  padding: 11px 10px;
+  border-radius: 11px;
+  font-size: .82rem; font-weight: 700; letter-spacing: .04em;
+  color: var(--singa-ink);
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(224, 189, 114, .22);
+  transition: background .2s ease, opacity .2s ease;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+}
+.vbar-btn:hover:not(:disabled) { background: rgba(255,255,255,.16); }
+.vbar-btn:disabled { opacity: .38; }
+.vbar-btn .mic { font-size: 1rem; }
+.vbar-btn.is-rec {
+  color: #fff;
+  background: linear-gradient(160deg, #d46a5e, #b3453a);
+  border-color: transparent;
+}
+.vbar-btn.is-send {
+  color: #221b10;
+  background: linear-gradient(160deg, #eed69b, #c9a55e);
+  border-color: transparent;
+}
+
+/* ── セッションの着地 ── */
+.singa-summary {
+  align-self: center;
+  width: min(460px, 92%);
+  margin: 8px 0 4px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: rgba(28, 22, 12, .9);
+  border: 1px solid rgba(224, 189, 114, .5);
+  box-shadow: 0 8px 30px rgba(0,0,0,.55);
+  pointer-events: auto;
+}
+.singa-summary-title {
+  font-size: .58rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--singa-gold); margin-bottom: 10px; text-align: center;
+}
+.singa-summary .row { margin-bottom: 9px; }
+.singa-summary .row:last-child { margin-bottom: 0; }
+.singa-summary .k {
+  display: block;
+  font-size: .58rem; letter-spacing: .12em;
+  color: var(--singa-gold); margin-bottom: 2px;
+}
+.singa-summary .v { display: block; font-size: .86rem; line-height: 1.75; }
+
+@media (max-width: 700px) {
+  .singa-home-main { grid-template-columns: 1fr; }
+  .singa-entry { min-height: 0; flex-direction: row; flex-wrap: wrap; align-items: center; }
+  .singa-entry .en { margin-top: 0; }
+  .singa-entry .ja { width: 100%; }
+  .singa-entry .desc { width: 100%; }
+}
+
+/* ── 案内役の存在感（大きく・表情・話すと動く） ── */
+.singa-avatar {
+  width: clamp(120px, 20vw, 220px) !important;
+  height: clamp(120px, 20vw, 220px) !important;
+}
+.singa-avatar.is-talking {
+  animation: singa-talk 0.9s ease-in-out infinite !important;
+  box-shadow: 0 8px 28px rgba(0,0,0,.7), 0 0 0 6px rgba(18,15,11,.5),
+    0 0 30px 6px color-mix(in srgb, var(--place-hue, #c9a227) 55%, transparent) !important;
+}
+@keyframes singa-talk {
+  0%,100% { transform: translateY(0) rotate(-.6deg); }
+  50%     { transform: translateY(-5px) rotate(.6deg); }
+}
+
+/* ── 選択肢ボタン（案内役が出す分かれ道） ── */
+.singa-choices {
+  display: flex; flex-wrap: wrap; gap: 8px;
+  margin: 4px 0 6px;
+  pointer-events: auto;
+  animation: singa-rise .4s ease;
+}
+.singa-choice {
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: .84rem; font-weight: 700;
+  color: #221b10;
+  background: linear-gradient(160deg, #eed69b, #c9a55e);
+  border: 1px solid rgba(224,189,114,.5);
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  transition: transform .15s ease, filter .15s ease;
+}
+.singa-choice:hover { transform: translateY(-2px); filter: brightness(1.06); }
+
+/* ── ホーム：中央のピークステート ── */
+.singa-center-btn {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  max-width: 420px; width: 100%; margin: 0 auto;
+  padding: 20px 18px;
+  border-radius: 20px;
+  text-align: center;
+  color: var(--singa-ink);
+  background:
+    radial-gradient(ellipse 70% 80% at 50% 0%, rgba(232,193,90,.28), rgba(0,0,0,0) 70%),
+    rgba(24, 19, 11, .8);
+  border: 1px solid rgba(232,193,90,.55);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 34px rgba(0,0,0,.5), inset 0 0 0 1px rgba(232,193,90,.12);
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.singa-center-btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 16px 44px rgba(0,0,0,.55), 0 0 30px 4px rgba(232,193,90,.25);
+}
+.singa-center-btn .badge {
+  font-size: .58rem; letter-spacing: .16em;
+  color: #221b10; background: linear-gradient(160deg, #eed69b, #d9b463);
+  padding: 2px 12px; border-radius: 999px; font-weight: 700;
+  margin-bottom: 6px;
+}
+.singa-center-btn .en {
+  font-size: .58rem; letter-spacing: .22em; text-transform: uppercase; color: var(--singa-gold);
+}
+.singa-center-btn .ja { font-size: 1.5rem; font-weight: 700; letter-spacing: .1em; }
+.singa-center-btn .desc { font-size: .72rem; line-height: 1.8; color: var(--singa-ink-soft); margin-top: 4px; }
+
+/* ── 呼吸の手順（ピークステートの道具） ── */
+.singa-breath {
+  list-style: decimal inside;
+  font-size: .72rem; line-height: 1.85;
+  color: var(--singa-ink-soft);
+  padding: 8px 4px 4px;
+}
+.singa-breath li { margin-bottom: 4px; }
+
+/* ── 入力欄：量に合わせて伸びる ── */
+.vbar-text { max-height: none !important; overflow-y: auto; }
+
+/* ── パラレルウォーク：明るい空と海の画面 ── */
+.singa-stage.is-bright {
+  --singa-ink: #23324a;
+  --singa-ink-soft: rgba(35, 50, 74, .82);
+  --singa-gold: #2f7fb0;
+  background: #cfeaf7;
+}
+.singa-stage.is-bright .singa-map-img {
+  /* 地図の上に、明るい空をかぶせる */
+  background-image:
+    linear-gradient(180deg, rgba(126,192,238,.72) 0%, rgba(190,224,246,.55) 40%, rgba(224,243,251,.5) 100%),
+    url("/singa-map.jpg");
+}
+.singa-stage.is-bright::before {
+  /* 上下の暗幕をやめて、雲のような明るさに */
+  background:
+    radial-gradient(ellipse 200px 70px at 20% 16%, rgba(255,255,255,.9), rgba(255,255,255,0) 70%),
+    radial-gradient(ellipse 260px 80px at 78% 26%, rgba(255,255,255,.8), rgba(255,255,255,0) 70%),
+    linear-gradient(180deg, rgba(255,255,255,.35) 0%, rgba(255,255,255,0) 30%, rgba(255,255,255,0) 70%, rgba(210,235,248,.5) 100%);
+}
+.singa-stage.is-bright::after {
+  background: radial-gradient(circle at 50% 40%, rgba(255,246,210,.5), rgba(0,0,0,0) 60%);
+}
+.singa-stage.is-bright .singa-place-name .ja { text-shadow: 0 2px 10px rgba(255,255,255,.8); color: #1f3350; }
+.singa-stage.is-bright .singa-place-name .en { color: #2f7fb0; text-shadow: 0 1px 4px rgba(255,255,255,.8); }
+.singa-stage.is-bright .singa-line .who { color: #2f7fb0; text-shadow: none; }
+.singa-stage.is-bright .singa-line p {
+  background: rgba(255,255,255,.9);
+  color: #23324a;
+  border-color: rgba(120,170,210,.4);
+  box-shadow: 0 4px 16px rgba(90,140,190,.25);
+}
+.singa-stage.is-bright .singa-line.is-me p {
+  background: linear-gradient(135deg, #7ec0ee, #5aa0d8);
+  color: #fff; border-color: transparent;
+}
+.singa-stage.is-bright .vbar {
+  background: rgba(255,255,255,.86);
+  border-color: rgba(120,170,210,.4);
+}
+.singa-stage.is-bright .vbar-text {
+  background: rgba(255,255,255,.9); color: #23324a; border-color: rgba(120,170,210,.4);
+}
+.singa-stage.is-bright .vbar-text::placeholder { color: rgba(35,50,74,.45); }
+.singa-stage.is-bright .vbar-state { color: #2f7fb0; }
+.singa-stage.is-bright .vbar-btn { color: #23324a; background: rgba(90,150,200,.14); border-color: rgba(120,170,210,.4); }
+.singa-stage.is-bright .vbar-btn.is-rec { color:#fff; background: linear-gradient(160deg,#d46a5e,#b3453a); }
+.singa-stage.is-bright .vbar-btn.is-send { color:#fff; background: linear-gradient(160deg,#5aa0d8,#3d7fbf); }
+.singa-stage.is-bright .singa-back,
+.singa-stage.is-bright .singa-panel-open {
+  background: rgba(255,255,255,.8); color: #23324a; border-color: rgba(120,170,210,.4);
+}
+.singa-stage.is-bright .singa-avatar { border-color: rgba(120,170,210,.6); }
+
+/* ── ホーム：地図の絵そのものを押す ── */
+/* ホームでは地図をあまり暗くしない（描かれた文字を見せる） */
+.singa-stage.is-home::before {
+  background: linear-gradient(180deg, rgba(10,8,6,.28) 0%, rgba(10,8,6,0) 20%, rgba(10,8,6,0) 72%, rgba(10,8,6,.5) 100%);
+}
+.singa-home2 { position: absolute; inset: 0; z-index: 4; }
+.singa-hotspot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 18px;
+  background: transparent;
+  transition: background .2s ease;
+}
+.singa-hotspot .ring {
+  position: absolute; inset: 6%;
+  border-radius: 16px;
+  border: 2px solid transparent;
+  transition: border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.singa-hotspot:hover { background: rgba(232,193,90,.08); }
+.singa-hotspot:hover .ring {
+  border-color: rgba(232,193,90,.75);
+  box-shadow: 0 0 26px 4px rgba(232,193,90,.35), inset 0 0 40px rgba(232,193,90,.12);
+}
+/* ゾーン名の吹き出し（hover で出る） */
+.singa-hotspot .hs-name {
+  position: absolute; bottom: -6px; left: 50%; transform: translate(-50%, 100%);
+  min-width: 150px; max-width: 220px;
+  padding: 8px 12px; border-radius: 12px;
+  background: rgba(18,15,11,.94); border: 1px solid rgba(232,193,90,.4);
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+  opacity: 0; pointer-events: none; transition: opacity .2s ease;
+  text-align: center; z-index: 5;
+}
+.singa-hotspot:hover .hs-name { opacity: 1; }
+.singa-hotspot .hs-name b { display: block; font-size: .9rem; color: #f4e7c8; }
+.singa-hotspot .hs-name i { display: block; font-style: normal; font-size: .66rem; line-height: 1.6; color: rgba(244,231,200,.72); margin-top: 3px; }
+
+/* 「まずここから」— 常に光って始点を示す */
+.singa-hotspot.is-start .ring {
+  border-color: rgba(232,193,90,.6);
+  animation: hs-pulse 2.4s ease-in-out infinite;
+}
+@keyframes hs-pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(232,193,90,.0), inset 0 0 30px rgba(232,193,90,.1); border-color: rgba(232,193,90,.45); }
+  50%     { box-shadow: 0 0 30px 6px rgba(232,193,90,.4), inset 0 0 46px rgba(232,193,90,.18); border-color: rgba(232,193,90,.9); }
+}
+.singa-hotspot .start-tag {
+  position: absolute; top: -10px; left: 50%; transform: translate(-50%, -100%);
+  white-space: nowrap;
+  font-size: .64rem; font-weight: 700; letter-spacing: .08em;
+  color: #221b10; background: linear-gradient(160deg, #eed69b, #d9b463);
+  padding: 4px 12px; border-radius: 999px;
+  box-shadow: 0 4px 14px rgba(0,0,0,.4);
+  animation: hs-tag 2.4s ease-in-out infinite;
+}
+@keyframes hs-tag { 0%,100%{transform:translate(-50%,-100%) scale(1);} 50%{transform:translate(-50%,-110%) scale(1.05);} }
+
+.singa-home-hint {
+  position: absolute; left: 50%; bottom: 12px; transform: translateX(-50%);
+  z-index: 5;
+  font-size: .72rem; color: rgba(244,231,200,.9);
+  background: rgba(18,15,11,.78); border: 1px solid rgba(232,193,90,.3);
+  padding: 8px 16px; border-radius: 999px; backdrop-filter: blur(8px);
+  text-align: center; white-space: nowrap;
+  text-shadow: 0 1px 6px rgba(0,0,0,.9);
+}
+.singa-home-hint b { color: #f0d9a0; }
+
+/* ── 感情の10段階メーター ── */
+.emeter { margin-top: 2px; }
+.emeter-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; gap: 8px; }
+.emeter-title { font-size: .62rem; letter-spacing: .1em; color: var(--singa-gold); }
+.emeter-now { font-size: .82rem; font-weight: 700; text-align: right; }
+.emeter-bar {
+  display: flex; gap: 2px;
+  border-radius: 10px; overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,.25);
+}
+.emeter-seg {
+  position: relative;
+  flex: 1;
+  height: 34px;
+  display: flex; align-items: center; justify-content: center;
+  transition: transform .12s ease, filter .12s ease;
+  filter: saturate(.85) brightness(.86);
+}
+.emeter-seg:hover { filter: saturate(1) brightness(1); }
+.emeter-seg .num { font-size: .62rem; font-weight: 700; color: rgba(0,0,0,.5); }
+.emeter-seg.is-on {
+  filter: saturate(1.1) brightness(1.12);
+  transform: scaleY(1.35);
+  z-index: 2;
+  box-shadow: 0 0 0 2px #fff, 0 0 14px 2px rgba(255,255,255,.5);
+  border-radius: 4px;
+}
+.emeter-seg.is-on .num { color: #fff; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.emeter-seg .needle {
+  position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0;
+  border-left: 5px solid transparent; border-right: 5px solid transparent;
+  border-top: 7px solid #fff;
+}
+.emeter-ends { display: flex; justify-content: space-between; font-size: .58rem; color: rgba(244,231,200,.6); margin-top: 5px; padding: 0 2px; }
+
 
 /* ── アカシック：年→3ヶ月→月→週→今日 の流れ ── */
 .akashic-flow { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }

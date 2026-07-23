@@ -132,6 +132,16 @@ export function ShingaWorld({
     await talk("", true, m, MODES[m].place);
   }
 
+  // ホームでそのまま話しかけた → 行き先を決めず、自由に会話へ
+  async function enterFree(text: string) {
+    setMode(null);
+    setPlace("peak");
+    setView("talk");
+    setChoices(null);
+    setMessages([{ role: "assistant", content: greetLine() }]);
+    await talk(text, false, null, "peak");
+  }
+
   async function talk(textIn: string, greet = false, m: ModeKey | null = mode, p: PlaceKey = place) {
     if (sending) return;
     const body = textIn.trim();
@@ -236,7 +246,13 @@ export function ShingaWorld({
       </div>
 
       {view === "home" ? (
-        <Home guideName={guideName} avatarUrl={faceSrc} onPick={(m) => void enter(m)} />
+        <Home
+          guideName={guideName}
+          avatarUrl={faceSrc}
+          onPick={(m) => void enter(m)}
+          onTalk={(t) => void enterFree(t)}
+          sending={sending}
+        />
       ) : (
         <>
           <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>
@@ -345,33 +361,37 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
 ];
 
 function Home({
-  guideName, avatarUrl, onPick,
+  guideName, avatarUrl, onPick, onTalk, sending,
 }: {
   guideName: string;
   avatarUrl: string;
   onPick: (m: ModeKey) => void;
+  onTalk: (text: string) => void;
+  sending: boolean;
 }) {
   return (
     <div className="iw-home">
-      {/* キヨセリンク（世界の中に立って迎える） */}
-      <div className="iw-hero">
-        <div className="iw-hello">
+      {/* 世界の中に立つキヨセリンク＋吹き出し */}
+      <div className="iw-scene">
+        <div className="iw-bubble">
           <span className="who">{guideName}</span>
           <p>{greetLine()}</p>
         </div>
-        <div className="iw-avatar">
-          <Image
-            src={avatarUrl}
-            alt={guideName}
-            width={420}
-            height={640}
-            priority
-            unoptimized={avatarUrl.startsWith("http")}
-          />
-        </div>
+        <Image
+          className="iw-figure"
+          src={avatarUrl}
+          alt={guideName}
+          width={420}
+          height={640}
+          priority
+          unoptimized={avatarUrl.startsWith("http")}
+        />
       </div>
 
-      {/* 行き先（キヨセリンクが差し出す扉） */}
+      {/* 話しかける（ここで即・打てる／話せる） */}
+      <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
+
+      {/* または、行き先を選ぶ */}
       <div className="iw-doors">
         {DOORS.map((d) => {
           const m = MODES[d.key];
@@ -380,17 +400,15 @@ function Home({
               {d.key === "peak" && <span className="tag">まずここから</span>}
               <span className="emoji">{d.emoji}</span>
               <span className="ja">{m.label}</span>
-              <span className="desc">{m.desc}</span>
             </button>
           );
         })}
-      </div>
-      <div className="iw-doors-sub">
         {DOORS_SUB.map((d) => {
           const m = MODES[d.key];
           return (
-            <button key={d.key} className="iw-door-s" onClick={() => onPick(d.key)}>
-              <span>{d.emoji} {m.label}</span>
+            <button key={d.key} className="iw-door is-sub" onClick={() => onPick(d.key)}>
+              <span className="emoji">{d.emoji}</span>
+              <span className="ja">{m.label}</span>
             </button>
           );
         })}

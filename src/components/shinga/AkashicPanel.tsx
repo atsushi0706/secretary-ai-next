@@ -17,6 +17,7 @@ export function AkashicPanel() {
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [hasBirth, setHasBirth] = useState<boolean | null>(null);
   const [open, setOpen] = useState<string | null>("day");
+  const [tab, setTab] = useState<"drop" | "reflect">("drop");
 
   useEffect(() => {
     fetch("/api/cycles")
@@ -61,8 +62,11 @@ export function AkashicPanel() {
         </div>
       )}
 
-      <div className="singa-panel-sub">現実に落とし込む</div>
-      <QuestPanel embedded />
+      <div className="akashic-tabs">
+        <button className={tab === "drop" ? "is-on" : ""} onClick={() => setTab("drop")}>現実に落とし込む</button>
+        <button className={tab === "reflect" ? "is-on" : ""} onClick={() => setTab("reflect")}>やってみて振り返る</button>
+      </div>
+      <QuestPanel embedded reflectMode={tab === "reflect"} />
     </div>
   );
 }

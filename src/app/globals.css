@@ -1278,6 +1278,18 @@ body:has(.realverse-bg) { background: transparent; }
 .akashic-ring .detail em { display: block; margin-top: 4px; font-style: normal; color: var(--singa-gold); }
 .akashic-hint { font-size: .58rem; color: rgba(244,231,200,.55); margin-top: 6px; text-align: center; }
 
+/* アカシックのタブ（落とし込む / 振り返る） */
+.akashic-tabs { display: flex; gap: 4px; margin: 12px 0 8px; }
+.akashic-tabs button {
+  flex: 1; padding: 7px 6px; border-radius: 8px;
+  font-size: .68rem; font-weight: 700;
+  color: var(--singa-ink-soft);
+  background: rgba(255,255,255,.05); border: 1px solid rgba(224,189,114,.2);
+}
+.akashic-tabs button.is-on {
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e); border-color: transparent;
+}
+
 /* タイピング中の点ドット */
 .typing-dots { display: inline-flex; gap: 4px; padding: 4px 0; }
 .typing-dots span {

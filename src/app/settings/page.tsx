@@ -251,7 +251,7 @@ export default function SettingsPage() {
       <div className="card mt-6 space-y-3">
         <h2 className="font-bold text-base text-purple-700">✦ あなたの星（任意）</h2>
         <p className="text-xs text-gray-600 leading-relaxed">
-          生年月日を入れておくと、シンガワールドのAIが
+          生年月日を入れておくと、インナーワールドのAIが
           <strong className="text-purple-700">あなたに合った話し方</strong>をします。
           分類して決めつけたりはしません。表に出るのは、聞き方と励まし方が変わることだけです。
         </p>

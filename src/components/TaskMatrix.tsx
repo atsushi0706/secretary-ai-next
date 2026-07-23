@@ -16,7 +16,7 @@ type Task = {
   bucket: "urgent_work" | "important_work" | "personal" | "by_time";
   window: Win3;
   /**
-   * タスクの出自（シンガワールド連携）。
+   * タスクの出自（インナーワールド連携）。
    * クエストから作られたタスクだけ入る。既存タスクは undefined / null。
    */
   source?: { type: string | null; questId: string | null; conversationId: number | null } | null;
@@ -549,7 +549,7 @@ function TaskRow({
                   href="/shinga?place=akashic"
                   className="block px-2 py-1.5 rounded text-indigo-700 font-bold hover:bg-indigo-50"
                 >
-                  🌌 シンガワールドで振り返る
+                  🌌 インナーワールドで振り返る
                 </Link>
               </div>
             )}

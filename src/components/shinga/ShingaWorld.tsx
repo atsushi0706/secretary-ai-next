@@ -199,7 +199,7 @@ export function ShingaWorld({
         style={{
           transform:
             view === "home"
-              ? "scale(1)"
+              ? "scale(1.28)"
               : `scale(1.7) translate(${(50 - here.x) * 0.62}%, ${(50 - here.y) * 0.62}%)`,
         }}
       >
@@ -207,7 +207,7 @@ export function ShingaWorld({
       </div>
 
       {view === "home" ? (
-        <Home onPick={(m) => void enter(m)} />
+        <Home guideName={guideName} avatarUrl={faceSrc} onPick={(m) => void enter(m)} />
       ) : (
         <>
           <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>
@@ -282,41 +282,75 @@ export function ShingaWorld({
   );
 }
 
-// ── ホーム：地図の絵そのものを押す（描かれたゾーンにクリック領域を重ねる） ──
-// 位置(%) は地図画像に描かれた各ゾーンの見出しに合わせてある。
-const HOTSPOTS: { key: ModeKey; x: number; y: number; w: number; h: number; start?: boolean }[] = [
-  { key: "peak", x: 50, y: 52, w: 30, h: 40, start: true },
-  { key: "walk", x: 24, y: 40, w: 30, h: 34 },
-  { key: "akashic", x: 77, y: 40, w: 30, h: 34 },
-  { key: "higher", x: 16, y: 86, w: 26, h: 20 },
-  { key: "deep", x: 84, y: 86, w: 26, h: 20 },
+// ── ホーム：キヨセリンクが世界の中で出迎えて、行き先へ案内する ──
+// 「ただのシステム」ではなく、入り込める世界にするため、最初に必ず相棒が話す。
+
+function greetLine(): string {
+  const h = new Date().getHours();
+  const time = h < 5 ? "こんな時間まで起きてたの？" : h < 11 ? "おはよ😊" : h < 18 ? "よっ、来たね😊" : "おつかれ😊";
+  return `${time} ここは『インナーワールド』——きみの内側の世界だよ。\n今日はどこから行く？迷ったら、まず真ん中で“整える”のがおすすめ。`;
+}
+
+const DOORS: { key: ModeKey; emoji: string }[] = [
+  { key: "peak", emoji: "✨" },
+  { key: "walk", emoji: "🚶" },
+  { key: "akashic", emoji: "📖" },
+];
+const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
+  { key: "higher", emoji: "🔥" },
+  { key: "deep", emoji: "🪞" },
 ];
 
-function Home({ onPick }: { onPick: (m: ModeKey) => void }) {
+function Home({
+  guideName, avatarUrl, onPick,
+}: {
+  guideName: string;
+  avatarUrl: string;
+  onPick: (m: ModeKey) => void;
+}) {
   return (
-    <div className="singa-home2">
-      {HOTSPOTS.map((h) => {
-        const m = MODES[h.key];
-        return (
-          <button
-            key={h.key}
-            className={`singa-hotspot ${h.start ? "is-start" : ""}`}
-            style={{ left: `${h.x}%`, top: `${h.y}%`, width: `${h.w}%`, height: `${h.h}%` }}
-            onClick={() => onPick(h.key)}
-            aria-label={m.label}
-          >
-            <span className="ring" />
-            {h.start && <span className="start-tag">まずここから ▶</span>}
-            <span className="hs-name">
-              <b>{m.label}</b>
-              <i>{m.desc}</i>
-            </span>
-          </button>
-        );
-      })}
+    <div className="iw-home">
+      {/* キヨセリンク（世界の中に立って迎える） */}
+      <div className="iw-hero">
+        <div className="iw-hello">
+          <span className="who">{guideName}</span>
+          <p>{greetLine()}</p>
+        </div>
+        <div className="iw-avatar">
+          <Image
+            src={avatarUrl}
+            alt={guideName}
+            width={420}
+            height={640}
+            priority
+            unoptimized={avatarUrl.startsWith("http")}
+          />
+        </div>
+      </div>
 
-      <div className="singa-home-hint">
-        地図の場所をタップして始める。まずは中央の<b>ピークステート</b>から。
+      {/* 行き先（キヨセリンクが差し出す扉） */}
+      <div className="iw-doors">
+        {DOORS.map((d) => {
+          const m = MODES[d.key];
+          return (
+            <button key={d.key} className={`iw-door ${d.key === "peak" ? "is-start" : ""}`} onClick={() => onPick(d.key)}>
+              {d.key === "peak" && <span className="tag">まずここから</span>}
+              <span className="emoji">{d.emoji}</span>
+              <span className="ja">{m.label}</span>
+              <span className="desc">{m.desc}</span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="iw-doors-sub">
+        {DOORS_SUB.map((d) => {
+          const m = MODES[d.key];
+          return (
+            <button key={d.key} className="iw-door-s" onClick={() => onPick(d.key)}>
+              <span>{d.emoji} {m.label}</span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );

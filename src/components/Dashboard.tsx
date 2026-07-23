@@ -133,9 +133,9 @@ export function Dashboard({ userName }: { userName: string }) {
           >
             Google で再接続する
           </a>
-          {/* Google が切れていてもシンガワールドは使えるので、逃げ道を残す */}
+          {/* Google が切れていてもインナーワールドは使えるので、逃げ道を残す */}
           <Link href="/shinga" className="block mt-2 text-xs text-purple-600 hover:underline">
-            🌌 シンガワールドへ行く
+            🌌 インナーワールドへ行く
           </Link>
           <details className="mt-4 text-left">
             <summary className="text-xs text-gray-400 cursor-pointer">詳細情報（技術情報）</summary>
@@ -182,7 +182,7 @@ export function Dashboard({ userName }: { userName: string }) {
     <main className="min-h-screen">
       {/* 島々の世界を、画面の奥にうっすら敷く */}
       <div className="realverse-bg" />
-      {/* 最上位の領域切り替え（リアルバース / シンガワールド） */}
+      {/* 最上位の領域切り替え（リアルバース / インナーワールド） */}
       <div className="max-w-6xl mx-auto px-3 sm:px-5 pt-3 sm:pt-5">
         <RealmNav active="realverse" />
       </div>

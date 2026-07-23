@@ -1,5 +1,5 @@
 /**
- * シンガワールド（自己開示・自己探求の領域）のデータアクセス層。
+ * インナーワールド（自己開示・自己探求の領域）のデータアクセス層。
  *
  * 設計方針:
  * - 既存テーブル (user_settings / conversations / manual_labels ...) には一切触らない。
@@ -66,7 +66,7 @@ export function isMissingTable(e: any): boolean {
 }
 
 export const MIGRATION_HINT =
-  "シンガワールド用のテーブルがまだ作られていません。Supabase の SQL Editor で supabase/schema.sql を実行してください。";
+  "インナーワールド用のテーブルがまだ作られていません。Supabase の SQL Editor で supabase/schema.sql を実行してください。";
 
 // ── クエスト ────────────────────────────────────────────────
 
@@ -195,7 +195,7 @@ export async function countTasksByQuest(userId: string): Promise<Record<string, 
   return counts;
 }
 
-// ── シンガワールドでの会話 ──────────────────────────────────
+// ── インナーワールドでの会話 ──────────────────────────────────
 
 export type ShingaMessage = {
   id: number;

@@ -1,13 +1,13 @@
 import Link from "next/link";
 
 /**
- * アプリ最上位の領域切り替え（リアルバース / シンガワールド）。
+ * アプリ最上位の領域切り替え（リアルバース / インナーワールド）。
  *
  * - リアルバース = 青い海と島々の世界（PLAN IT. DO IT. BECOME IT.）
- * - シンガワールド = 心の宝の地図（EXPLORE. HEAL. REMEMBER. BECOME.）
+ * - インナーワールド = 心の宝の地図（EXPLORE. HEAL. REMEMBER. BECOME.）
  * - 既存の秘書AIトップ（リアルバース）のレイアウトを崩さないよう、
  *   コンテンツの一番上に置くだけの独立コンポーネントにしている。
- * - クエストはシンガワールド内の機能なので、ここには出さない。
+ * - クエストはインナーワールド内の機能なので、ここには出さない。
  */
 export type Realm = "realverse" | "shinga";
 
@@ -23,7 +23,7 @@ const REALMS: Array<{ key: Realm; href: string; emoji: string; label: string; ta
     key: "shinga",
     href: "/shinga",
     emoji: "🔑",
-    label: "シンガワールド",
+    label: "インナーワールド",
     tag: "Explore. Heal. Remember. Become.",
   },
 ];

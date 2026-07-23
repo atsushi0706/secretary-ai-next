@@ -12,8 +12,8 @@ import { useState } from "react";
  *  貼られた要約は蓄積され、いつ・どんなワークで・どう変化したかの記録になる。
  */
 
-// ★ 淳くんの ChatGPTs のリンク（後で入れる）。空なら「準備中」表示。
-const CHATGPT_WALK_URL = "";
+// ★ 淳くんの ChatGPTs のリンク。空なら「準備中」表示。
+const CHATGPT_WALK_URL = "https://chatgpt.com/g/g-67efcfaf9e6481918ed2b6b3e2593819-kiyohuratuku";
 
 const DESTINATIONS = [
   { emoji: "🌅", label: "海辺・水辺" },

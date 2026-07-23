@@ -3,24 +3,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
- * 会話の生命線になる音声入力バー。
+ * ChatGPT / Claude のような、シンプルな入力バー。
  *
- * 直したこと:
- * - 遅さ：話し終えたら AI 整形を待たず、聞き取った文字をすぐ出す。整形は任意ボタンで。
- * - 文字数：入力欄は打った量に合わせて大きく伸びる（上限なし・画面の4割まで）。
- * - 時間制限：無音や途切れで止まっても、自動で録音を再開し続ける。
- * - スリープ：録音中は画面が消えないようにする（Wake Lock）。
- * - 勝手に送らない：必ず文字を見せて、確認・編集してから送る。
+ * - テキスト欄 ＋ マイク ＋ 送信 の3つだけ。
+ * - マイクを押すと録音開始。もう一度押すと止まり、
+ *   自動で Typeless 風に整った文章が入力欄に入る（押すだけ）。
+ * - あとは送信するだけ。もちろん手で打ってもいい。
+ * - 録音は無音で途切れても自動で続く。録音中は画面を消させない。
  */
 
-type Phase = "idle" | "recording" | "paused" | "review";
-
-const STATE_LABEL: Record<Phase, string> = {
-  idle: "",
-  recording: "聞いています…",
-  paused: "一時停止中",
-  review: "内容を確認してください",
-};
+type Phase = "idle" | "recording" | "polishing";
 
 function getSR(): any {
   if (typeof window === "undefined") return null;
@@ -41,20 +33,19 @@ export function VoiceBar({
   const [interim, setInterim] = useState("");
   const [error, setError] = useState("");
   const [supported, setSupported] = useState(true);
-  const [polishing, setPolishing] = useState(false);
 
   const recogRef = useRef<any>(null);
   const wantRecording = useRef(false);
   const wakeLockRef = useRef<any>(null);
   const taRef = useRef<HTMLTextAreaElement>(null);
 
-  // 重複防止のための土台。
-  // baseRef = 録音開始時 / 前セッション確定分までの確定テキスト。
-  // sessRef = いまのセッションで確定した分（追記せず毎回作り直す）。
+  // 二重取り込み防止の土台（追記せず毎回作り直す）
   const baseRef = useRef("");
   const sessRef = useRef("");
   const textRef = useRef("");
+  const interimRef = useRef("");
   useEffect(() => { textRef.current = text; }, [text]);
+  useEffect(() => { interimRef.current = interim; }, [interim]);
 
   useEffect(() => { setSupported(!!getSR()); }, []);
 
@@ -66,21 +57,18 @@ export function VoiceBar({
     const max = Math.floor(window.innerHeight * 0.4);
     el.style.height = Math.min(el.scrollHeight, max) + "px";
   }, []);
-  useEffect(() => { autosize(); }, [text, phase, autosize]);
+  useEffect(() => { autosize(); }, [text, interim, phase, autosize]);
 
   // 画面を消させない（録音中）
   async function acquireWakeLock() {
     try {
-      if ("wakeLock" in navigator) {
-        wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
-      }
+      if ("wakeLock" in navigator) wakeLockRef.current = await (navigator as any).wakeLock.request("screen");
     } catch { /* 取れなくても録音は続ける */ }
   }
   function releaseWakeLock() {
     try { wakeLockRef.current?.release?.(); } catch { /* ignore */ }
     wakeLockRef.current = null;
   }
-  // タブに戻ったとき、録音中なら Wake Lock を取り直す
   useEffect(() => {
     function onVis() {
       if (document.visibilityState === "visible" && wantRecording.current) void acquireWakeLock();
@@ -95,12 +83,11 @@ export function VoiceBar({
     recogRef.current = null;
     releaseWakeLock();
   }, []);
-
   useEffect(() => () => stopRecognition(), [stopRecognition]);
 
-  function startRecognition() {
+  function startRecording() {
     const SR = getSR();
-    if (!SR) { setSupported(false); return; }
+    if (!SR) { setSupported(false); setError("この端末は音声入力に未対応です。文字で入力してください。"); return; }
     setError("");
 
     const recog = new SR();
@@ -109,15 +96,11 @@ export function VoiceBar({
     recog.interimResults = true;
     recog.maxAlternatives = 1;
 
-    // このセッションの起点を今のテキストにする
-    baseRef.current = textRef.current;
+    baseRef.current = textRef.current ? textRef.current + " " : "";
     sessRef.current = "";
 
     recog.onresult = (e: any) => {
-      // 追記せず、いまの結果セット全体から「確定分」と「途中分」を作り直す。
-      // これで自動再開時に前の文を二重に足してしまうのを防ぐ。
-      let fin = "";
-      let iv = "";
+      let fin = "", iv = "";
       for (let i = 0; i < e.results.length; i++) {
         const r = e.results[i];
         if (r.isFinal) fin += r[0].transcript;
@@ -130,20 +113,18 @@ export function VoiceBar({
     recog.onerror = (e: any) => {
       const err = e?.error ?? "";
       if (err === "not-allowed" || err === "service-not-allowed") {
-        setError("マイクの使用が許可されていません。ブラウザの設定で許可してください。文字入力もできます。");
+        setError("マイクが許可されていません。ブラウザの設定で許可してください。文字入力もできます。");
         wantRecording.current = false;
         setPhase("idle");
         releaseWakeLock();
       }
-      // no-speech / network / aborted は onend の自動再開に任せる
+      // no-speech / network / aborted は自動再開に任せる
     };
     recog.onend = () => {
-      // ユーザーがまだ話したいなら、途切れても続ける（時間制限で勝手に終わらせない）
       if (wantRecording.current) {
-        // 今セッションの確定分を土台に繰り込んでから再開（結果セットが空に戻るので二重化しない）
-        baseRef.current = baseRef.current + sessRef.current;
+        baseRef.current = baseRef.current + sessRef.current; // 確定分を土台へ（再開時の二重化を防ぐ）
         sessRef.current = "";
-        try { recog.start(); } catch { /* すぐ再試行される */ }
+        try { recog.start(); } catch { /* すぐ再試行 */ }
       }
     };
 
@@ -158,129 +139,101 @@ export function VoiceBar({
     }
   }
 
-  function pause() {
+  // 録音を止めて、自動で整える（Typeless 風）
+  async function stopAndPolish() {
     wantRecording.current = false;
     try { recogRef.current?.stop(); } catch { /* ignore */ }
     releaseWakeLock();
-    setInterim((iv) => { if (iv) setText((p) => p + iv); return ""; });
-    setPhase("paused");
-  }
 
-  function finish() {
-    wantRecording.current = false;
-    try { recogRef.current?.stop(); } catch { /* ignore */ }
-    releaseWakeLock();
-    setInterim((iv) => { if (iv) setText((p) => (p ? p + iv : iv)); return ""; });
-    setPhase(text.trim() || interim.trim() ? "review" : "idle");
-  }
+    const raw = (baseRef.current + sessRef.current + (interimRef.current ? interimRef.current : "")).trim();
+    setInterim("");
+    setText(raw);
+    if (!raw) { setPhase("idle"); return; }
 
-  // 任意：聞き取った文字を、読みやすく整える（遅いので押したときだけ）
-  async function polish() {
-    const t = text.trim();
-    if (!t) return;
-    setPolishing(true);
+    setPhase("polishing");
     try {
       const r = await fetch("/api/polish", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: t, mode: "speech" }),
+        body: JSON.stringify({ text: raw, mode: "speech" }),
       });
       const d = await r.json();
       if (d.text) setText(d.text);
-    } catch { /* 失敗しても原文のまま */ }
-    finally { setPolishing(false); }
+    } catch { /* 整えに失敗しても、話した内容はそのまま残る */ }
+    finally { setPhase("idle"); }
   }
 
-  function redo() {
-    setText(""); setInterim(""); setError(""); setPhase("idle");
+  function toggleMic() {
+    if (phase === "recording") void stopAndPolish();
+    else if (phase === "idle") startRecording();
   }
 
   async function submit() {
     const t = text.trim();
-    if (!t || disabled) return;
+    if (!t || disabled || phase !== "idle") return;
     stopRecognition();
     await onSend(t);
-    setText(""); setInterim(""); setPhase("idle");
+    setText(""); setInterim("");
   }
 
-  const stateLabel = disabled ? "考えています…" : STATE_LABEL[phase];
-  const canType = phase === "idle" || phase === "review";
+  const display = phase === "recording"
+    ? text + (interim ? (text ? " " : "") + interim : "")
+    : text;
+
+  const hint =
+    disabled ? "考えています…" :
+    phase === "recording" ? "聞いています… もう一度マイクで止める" :
+    phase === "polishing" ? "整えています…" : "";
 
   return (
     <div className="vbar">
-      {stateLabel && (
+      {hint && (
         <div className={`vbar-state ${disabled ? "is-think" : ""}`}>
           {phase === "recording" && <span className="pulse" />}
-          {stateLabel}
+          {hint}
         </div>
       )}
+      {error && <div className="vbar-err">{error}</div>}
 
-      {/* 録音中も、聞き取った文字がそのまま入力欄に増えていくのが見える */}
-      {(canType || phase === "recording" || phase === "paused") && (
+      <div className="vbar-input">
         <textarea
           ref={taRef}
-          value={text + (interim ? (text ? " " : "") + interim : "")}
-          onChange={(e) => { setInterim(""); setText(e.target.value); }}
+          value={display}
+          onChange={(e) => setText(e.target.value)}
           onInput={autosize}
           onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && canType) {
+            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && phase === "idle") {
               e.preventDefault();
               void submit();
             }
           }}
           placeholder={placeholder}
           className="vbar-text"
-          disabled={disabled || phase === "recording"}
           rows={1}
+          disabled={disabled || phase !== "idle"}
         />
-      )}
 
-      {error && <div className="vbar-err">{error}</div>}
-
-      <div className="vbar-row">
-        {phase === "idle" && (
-          <>
-            {supported && (
-              <button className="vbar-btn is-rec" onClick={startRecognition} disabled={disabled}>
-                <span className="mic">🎙</span> 話す
-              </button>
-            )}
-            <button className="vbar-btn is-send" onClick={() => void submit()} disabled={disabled || !text.trim()}>
-              送信
-            </button>
-          </>
+        {supported && (
+          <button
+            type="button"
+            className={`vbar-mic ${phase === "recording" ? "is-on" : ""}`}
+            onClick={toggleMic}
+            disabled={disabled || phase === "polishing"}
+            title={phase === "recording" ? "止めて文字にする" : "押して話す"}
+          >
+            {phase === "recording" ? "■" : phase === "polishing" ? "…" : "🎙"}
+          </button>
         )}
 
-        {phase === "recording" && (
-          <>
-            <button className="vbar-btn" onClick={pause}>一時停止</button>
-            <button className="vbar-btn is-send" onClick={finish}>完了</button>
-          </>
-        )}
-
-        {phase === "paused" && (
-          <>
-            <button className="vbar-btn is-rec" onClick={startRecognition}>再開</button>
-            <button className="vbar-btn is-send" onClick={finish}>完了</button>
-          </>
-        )}
-
-        {phase === "review" && (
-          <>
-            <button className="vbar-btn" onClick={redo}>やり直す</button>
-            <button className="vbar-btn" onClick={polish} disabled={polishing || !text.trim()}>
-              {polishing ? "整え中…" : "✨整える"}
-            </button>
-            {supported && (
-              <button className="vbar-btn is-rec" onClick={startRecognition}>
-                <span className="mic">🎙</span> 続ける
-              </button>
-            )}
-            <button className="vbar-btn is-send" onClick={() => void submit()} disabled={disabled || !text.trim()}>
-              送信
-            </button>
-          </>
-        )}
+        <button
+          type="button"
+          className="vbar-go"
+          onClick={() => void submit()}
+          disabled={disabled || !text.trim() || phase !== "idle"}
+          title="送信"
+        >
+          ↑
+        </button>
       </div>
     </div>
   );

@@ -459,15 +459,17 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-talk {
   position: relative; z-index: 4;
   flex: 1;
-  overflow-y: auto;
+  min-height: 0;                /* flex 子で overflow を効かせる */
+  overflow-y: auto;             /* 履歴をスクロールできるように */
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: 14px 16px 6px;
   padding-left: clamp(124px, calc(15vw + 34px), 200px);
   display: flex; flex-direction: column; gap: 12px;
-  justify-content: flex-end;
   scrollbar-width: thin;
-  pointer-events: none;
+  pointer-events: auto;         /* none だとスクロール操作を拾えなかった（バグ修正） */
 }
-.singa-line { max-width: min(440px, 82%); pointer-events: auto; }
+.singa-line { max-width: min(440px, 82%); }
 .singa-line .who {
   display: block;
   font-size: .56rem; letter-spacing: .18em;
@@ -1684,3 +1686,55 @@ body:has(.realverse-bg) { background: transparent; }
   0%, 60%, 100% { transform: translateY(0); opacity: .5; }
   30% { transform: translateY(-3px); opacity: 1; }
 }
+
+/* ── 入力バー：ChatGPT風の最終上書き（重複定義に勝たせる） ── */
+.vbar { background: transparent !important; border: 0 !important; box-shadow: none !important; padding: 0 !important; backdrop-filter: none !important; }
+.vbar-input {
+  display: flex; align-items: flex-end; gap: 8px;
+  background: rgba(18, 15, 11, .86);
+  border: 1px solid rgba(224, 189, 114, .28);
+  border-radius: 18px;
+  padding: 6px 6px 6px 14px;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 22px rgba(0,0,0,.45);
+}
+.vbar-text {
+  flex: 1 !important; min-width: 0 !important; width: auto !important;
+  background: transparent !important; border: 0 !important; outline: none !important;
+  padding: 9px 2px !important; margin: 0 !important;
+  color: var(--singa-ink) !important;
+  font-size: .96rem !important; line-height: 1.6 !important;
+  font-family: inherit; resize: none;
+  max-height: 40vh !important; overflow-y: auto;
+}
+.vbar-text::placeholder { color: rgba(244, 231, 200, .4) !important; }
+.vbar-mic, .vbar-go {
+  flex: 0 0 auto;
+  width: 42px; height: 42px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: 1.05rem; font-weight: 700;
+  transition: background .18s ease, opacity .18s ease;
+}
+.vbar-mic {
+  color: var(--singa-ink);
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(224, 189, 114, .28);
+}
+.vbar-mic:hover:not(:disabled) { background: rgba(255,255,255,.18); }
+.vbar-mic.is-on {
+  color: #fff; border-color: transparent;
+  background: linear-gradient(160deg, #d46a5e, #b3453a);
+  animation: vbar-pulse 1.4s ease-in-out infinite;
+}
+.vbar-go {
+  color: #221b10; border: 0;
+  background: linear-gradient(160deg, #eed69b, #c9a55e);
+}
+.vbar-go:disabled { opacity: .35; }
+.vbar-mic:disabled { opacity: .5; }
+/* パラレルウォーク（明るい画面）用 */
+.singa-stage.is-bright .vbar-input { background: rgba(255,255,255,.9); border-color: rgba(120,170,210,.4); }
+.singa-stage.is-bright .vbar-text { color: #23324a !important; }
+.singa-stage.is-bright .vbar-text::placeholder { color: rgba(35,50,74,.45) !important; }
+.singa-stage.is-bright .vbar-mic { color: #23324a; background: rgba(90,150,200,.14); border-color: rgba(120,170,210,.4); }
+.singa-stage.is-bright .vbar-go { color: #fff; background: linear-gradient(160deg,#5aa0d8,#3d7fbf); }

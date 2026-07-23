@@ -9,6 +9,7 @@ import { placesForPrompt, PLACES, type PlaceKey } from "./places";
 import { buildStarPrompt, computeCycles } from "./star";
 import { buildModePrompt, type ModeKey } from "./modes";
 import { diagnoseSeimei } from "./seimei";
+import { buildReframePrompt } from "./reframe";
 
 /** 名前（姓名判断）から、その人の傾向を内部情報にする。用語は出さない */
 function buildNamePrompt(birthName: string | null | undefined, who: string): string {
@@ -69,6 +70,7 @@ export function buildGuidePersona(opts: {
   const namePrompt = buildNamePrompt(opts.birthName, who);
   const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
   const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate, who) : "";
+  const reframePrompt = opts.mode === "breakthrough" ? buildReframePrompt() : "";
 
   return `
 あなたは「${name}」。インナーワールドという内なる世界で、${who} と一緒に歩く相棒です。
@@ -124,6 +126,7 @@ ${who} が「やってみたい」と口にしたことが具体的になった�
 
 ${modePrompt}
 ${cyclePrompt}
+${reframePrompt}
 
 ${star}
 ${namePrompt}

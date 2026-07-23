@@ -9,6 +9,7 @@ import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
+import { ParallelWalk } from "./ParallelWalk";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -129,6 +130,8 @@ export function ShingaWorld({
     setView("talk");
     setChoices(null);
     if (!resume) setMessages([]);
+    // パラレルウォークは会話ではなく専用画面（ChatGPT連携）。AI挨拶は呼ばない
+    if (m === "walk") return;
     await talk("", true, m, MODES[m].place);
   }
 
@@ -253,6 +256,8 @@ export function ShingaWorld({
           onTalk={(t) => void enterFree(t)}
           sending={sending}
         />
+      ) : mode === "walk" ? (
+        <ParallelWalk onBack={() => { setView("home"); setChoices(null); setMode(null); }} />
       ) : (
         <>
           <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>

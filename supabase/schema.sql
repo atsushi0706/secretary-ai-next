@@ -208,6 +208,16 @@ alter table public.user_settings add column if not exists birth_date date;
 alter table public.user_settings add column if not exists birth_name text;
 alter table public.user_settings add column if not exists birth_gender text; -- 'male'/'female'（大運の順行/逆行に必要）
 
+-- パラレルウォークの記録（ChatGPTでのワーク後、要約を貼って蓄積）
+create table if not exists public.walk_logs (
+  id bigserial primary key,
+  user_id text not null,
+  date date not null,
+  summary text not null,
+  created_at timestamptz default now()
+);
+create index if not exists idx_walk_logs_user on public.walk_logs(user_id, created_at desc);
+
 -- シンガワールドでの会話（既存の conversations は朝/夜しか入らないので分ける）
 create table if not exists public.shinga_conversations (
   id bigserial primary key,
@@ -234,6 +244,7 @@ alter table public.task_links enable row level security;
 alter table public.quest_reflections enable row level security;
 alter table public.emotion_logs enable row level security;
 alter table public.shinga_conversations enable row level security;
+alter table public.walk_logs enable row level security;
 
 -- ポリシー（service_role キーは bypass されるので、サーバー側で user_id 一致を保証）
 -- 今はサービスロール経由で全アクセスする想定。クライアントから直接読まない。

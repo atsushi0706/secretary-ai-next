@@ -17,6 +17,7 @@ const TABLES = [
   "user_settings",
   "conversations",
   "shinga_conversations",
+  "walk_logs",
   "quests",
   "task_links",
   "quest_reflections",

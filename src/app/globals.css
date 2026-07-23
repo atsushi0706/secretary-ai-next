@@ -1804,3 +1804,71 @@ body:has(.realverse-bg) { background: transparent; }
   box-shadow: 0 0 18px rgba(232,193,90,.18);
 }
 .akashic-decade.is-open { background: rgba(255,255,255,.1); border-color: rgba(232,189,114,.5); }
+
+/* ── パラレルウォーク（ChatGPTs連携の専用画面） ── */
+.pwalk { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; padding: 10px 12px; overflow-y: auto; }
+.pwalk .singa-back { position: static; align-self: flex-start; margin-bottom: 8px; }
+.pwalk-card {
+  position: relative;
+  margin: auto; width: min(560px, 96%);
+  padding: 26px 22px;
+  border-radius: 22px;
+  text-align: center;
+  color: #1f3350;
+  background: rgba(255,255,255,.82);
+  border: 1px solid rgba(255,255,255,.9);
+  box-shadow: 0 16px 50px rgba(60,110,170,.25);
+  backdrop-filter: blur(8px);
+  overflow: hidden;
+}
+.pwalk-glow {
+  position: absolute; left: 50%; top: -40%; transform: translateX(-50%);
+  width: 120%; height: 100%;
+  background: radial-gradient(ellipse 50% 50% at 50% 50%, rgba(255,240,190,.7), rgba(255,255,255,0) 70%);
+  pointer-events: none;
+  animation: pwalk-float 6s ease-in-out infinite;
+}
+@keyframes pwalk-float { 0%,100%{transform:translateX(-50%) translateY(0);opacity:.8;} 50%{transform:translateX(-50%) translateY(14px);opacity:1;} }
+.pwalk-sub { position: relative; font-size: .6rem; letter-spacing: .24em; text-transform: uppercase; color: #3d7fbf; }
+.pwalk-card h1 { position: relative; font-size: 1.5rem; font-weight: 800; margin-top: 6px; color: #1f3350; }
+.pwalk-lead { position: relative; font-size: .88rem; line-height: 1.9; margin-top: 12px; color: #34506f; }
+.pwalk-lead b { color: #1f6fc0; }
+.pwalk-dests { position: relative; display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 16px 0 6px; }
+.pwalk-dest {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  min-width: 92px; padding: 12px 10px; border-radius: 14px;
+  font-size: .74rem; font-weight: 700; color: #34506f;
+  background: rgba(255,255,255,.7); border: 1px solid rgba(120,170,210,.4);
+  transition: transform .15s ease, background .15s ease, border-color .15s ease;
+}
+.pwalk-dest .e { font-size: 1.5rem; }
+.pwalk-dest:hover { transform: translateY(-2px); }
+.pwalk-dest.is-on { background: linear-gradient(160deg,#7ec0ee,#5aa0d8); color:#fff; border-color: transparent; box-shadow: 0 6px 18px rgba(90,140,190,.4); }
+.pwalk-note { position: relative; font-size: .78rem; line-height: 1.8; margin: 8px 0 4px; color: #4a6a8a; background: rgba(126,192,238,.14); border-radius: 12px; padding: 10px 12px; }
+.pwalk-note b { color: #1f6fc0; }
+.pwalk-go {
+  position: relative; display: inline-block; width: 100%;
+  margin-top: 16px; padding: 14px; border-radius: 14px;
+  font-size: .95rem; font-weight: 800; color: #fff;
+  background: linear-gradient(160deg,#5aa0d8,#3d7fbf);
+  box-shadow: 0 8px 22px rgba(60,110,170,.4);
+  transition: opacity .2s ease, transform .1s ease;
+}
+.pwalk-go:disabled { opacity: .4; }
+.pwalk-go.is-chat { background: linear-gradient(160deg,#10a37f,#0d8a6c); box-shadow: 0 8px 22px rgba(16,163,127,.4); }
+.pwalk-done {
+  position: relative; display: inline-block; width: 100%;
+  margin-top: 10px; padding: 13px; border-radius: 14px;
+  font-size: .9rem; font-weight: 700; color: #1f3350;
+  background: rgba(255,255,255,.85); border: 1px solid rgba(120,170,210,.5);
+}
+.pwalk-prep { position: relative; margin-top: 16px; padding: 13px; border-radius: 14px; font-size: .85rem; color: #4a6a8a; background: rgba(126,192,238,.14); border: 1px dashed rgba(120,170,210,.5); }
+.pwalk-paste {
+  position: relative; width: 100%; margin-top: 12px;
+  padding: 12px; border-radius: 14px;
+  background: rgba(255,255,255,.92); border: 1px solid rgba(120,170,210,.5);
+  color: #1f3350; font-size: .9rem; line-height: 1.7; resize: none; font-family: inherit;
+}
+.pwalk-row { display: flex; gap: 8px; }
+.pwalk-row .pwalk-go, .pwalk-row .pwalk-done { flex: 1; margin-top: 12px; }
+.pwalk-err { position: relative; font-size: .75rem; color: #c0392b; margin-top: 8px; }

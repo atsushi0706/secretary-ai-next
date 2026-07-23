@@ -229,6 +229,38 @@ export async function loadShingaMessages(userId: string, limit = 30): Promise<Sh
   return ((data ?? []) as ShingaMessage[]).reverse();
 }
 
+// ── パラレルウォークの記録 ──────────────────────────────────
+
+export type WalkLog = {
+  id: number;
+  date: string;
+  summary: string;
+  created_at: string;
+};
+
+export async function saveWalkLog(userId: string, date: string, summary: string): Promise<WalkLog> {
+  const supa = supabaseAdmin();
+  const { data, error } = await supa
+    .from("walk_logs")
+    .insert({ user_id: userId, date, summary })
+    .select("id, date, summary, created_at")
+    .single();
+  if (error) throw error;
+  return data as WalkLog;
+}
+
+export async function listWalkLogs(userId: string, limit = 30): Promise<WalkLog[]> {
+  const supa = supabaseAdmin();
+  const { data, error } = await supa
+    .from("walk_logs")
+    .select("id, date, summary, created_at")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  return (data ?? []) as WalkLog[];
+}
+
 // ── 振り返り ────────────────────────────────────────────────
 
 export async function listReflections(userId: string, questId?: string): Promise<Reflection[]> {

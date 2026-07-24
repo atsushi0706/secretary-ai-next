@@ -10,6 +10,7 @@ import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
 import { ParallelWalk } from "./ParallelWalk";
+import { ReportScreen } from "./ReportScreen";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -71,6 +72,7 @@ export function ShingaWorld({
   const [typing, setTyping] = useState(false);
   const [moving, setMoving] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
+  const [reportOpen, setReportOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // タイプ演出：流れてきた文字を一定ペースで少しずつ表示（考えながらピピピ）
@@ -248,12 +250,15 @@ export function ShingaWorld({
         <div className="singa-map-img" />
       </div>
 
-      {view === "home" ? (
+      {reportOpen ? (
+        <ReportScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setReportOpen(false)} />
+      ) : view === "home" ? (
         <Home
           guideName={guideName}
           avatarUrl={faceSrc}
           onPick={(m) => void enter(m)}
           onTalk={(t) => void enterFree(t)}
+          onReport={() => setReportOpen(true)}
           sending={sending}
         />
       ) : mode === "walk" ? (
@@ -363,12 +368,13 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
 ];
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, sending,
 }: {
   guideName: string;
   avatarUrl: string;
   onPick: (m: ModeKey) => void;
   onTalk: (text: string) => void;
+  onReport: () => void;
   sending: boolean;
 }) {
   return (
@@ -415,6 +421,9 @@ function Home({
           );
         })}
       </div>
+
+      {/* この頃のわたし（変化のふりかえり） */}
+      <button className="iw-report" onClick={onReport}>🌱 この頃のわたし（変化をみる）</button>
     </div>
   );
 }

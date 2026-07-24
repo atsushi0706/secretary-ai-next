@@ -1872,3 +1872,36 @@ body:has(.realverse-bg) { background: transparent; }
 .pwalk-row { display: flex; gap: 8px; }
 .pwalk-row .pwalk-go, .pwalk-row .pwalk-done { flex: 1; margin-top: 12px; }
 .pwalk-err { position: relative; font-size: .75rem; color: #c0392b; margin-top: 8px; }
+
+/* ── この頃のわたし（変化のふりかえり） ── */
+.iw-report {
+  margin: 8px auto 0; display: block;
+  padding: 9px 18px; border-radius: 999px;
+  font-size: .78rem; font-weight: 700; color: var(--singa-ink);
+  background: rgba(20,16,11,.7); border: 1px solid rgba(232,189,114,.3);
+  backdrop-filter: blur(8px);
+}
+.iw-report:hover { background: rgba(34,27,16,.85); }
+
+.rep { position: absolute; inset: 0; z-index: 5; display: flex; flex-direction: column; padding: 10px 12px; overflow-y: auto; }
+.rep .singa-back { position: static; align-self: flex-start; margin-bottom: 8px; }
+.rep-card {
+  margin: auto; width: min(560px, 96%);
+  padding: 22px; border-radius: 20px;
+  background: rgba(20,16,11,.9); border: 1px solid rgba(232,189,114,.3);
+  box-shadow: 0 14px 44px rgba(0,0,0,.55); backdrop-filter: blur(10px);
+}
+.rep-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
+.rep-head .singa-face { width: 44px; height: 44px; }
+.rep-sub { font-size: .6rem; letter-spacing: .2em; text-transform: uppercase; color: var(--singa-gold); }
+.rep-who { font-size: .8rem; font-weight: 700; }
+.rep-loading, .rep-empty, .rep-err { font-size: .85rem; line-height: 1.9; color: var(--singa-ink-soft); }
+.rep-err { color: #f0a8a0; }
+.rep-body { font-size: .95rem; line-height: 2; white-space: pre-wrap; }
+.rep-glance { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(232,189,114,.18); }
+.rep-stat { margin-bottom: 12px; }
+.rep-stat .k { display: block; font-size: .58rem; letter-spacing: .12em; color: var(--singa-gold); margin-bottom: 6px; }
+.rep-stat .bars { display: flex; align-items: flex-end; gap: 2px; height: 44px; }
+.rep-stat .bars span { flex: 1; min-width: 3px; border-radius: 2px; }
+.rep-nums { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .74rem; color: var(--singa-ink-soft); }
+.rep-nums b { color: var(--singa-ink); font-size: .9rem; }

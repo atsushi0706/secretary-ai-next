@@ -241,7 +241,15 @@ export function ShingaWorld({
       <div className="singa-map" style={{ transform: view === "home" ? "scale(1.02)" : "scale(1.05)" }}>
         <div
           className="singa-map-img"
-          style={{ backgroundImage: `url(${view === "home" || reportOpen ? "/singa-map.jpg" : here.image})` }}
+          style={{
+            backgroundImage: `url(${
+              view === "home" || reportOpen
+                ? "/singa-map.jpg"
+                : mode === "breakthrough"
+                  ? "/zone-breakthrough.jpg" // 専用の門の絵
+                  : here.image
+            })`,
+          }}
         />
       </div>
 

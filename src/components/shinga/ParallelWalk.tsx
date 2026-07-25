@@ -5,27 +5,19 @@ import { useState } from "react";
 /**
  * パラレルウォーク（ChatGPTs 連携）。
  *
+ * 行き先の選択はしない。「じゃあ、理想の未来をたくさん語ってきて。
+ * 上を見て歩いて、その感覚を体に落としてきて。いってらっしゃい」の温度で送り出す。
+ *
  * フロー:
- *  1. 「これから、どこへ行く？」で行き先を選ぶ（直感）。
- *  2. ChatGPT でパラレルウォークする（外部リンク）。
- *  3. 戻ってきたら「終わった」→ ChatGPT の要約を貼って保存。
- *  貼られた要約は蓄積され、いつ・どんなワークで・どう変化したかの記録になる。
+ *  1. 送り出し → ChatGPT でパラレルウォーク（外部リンク）。
+ *  2. 戻ってきたら「終わった」→ ChatGPT の要約を貼って保存（蓄積）。
  */
 
 // ★ 淳くんの ChatGPTs のリンク。空なら「準備中」表示。
 const CHATGPT_WALK_URL = "https://chatgpt.com/g/g-67efcfaf9e6481918ed2b6b3e2593819-kiyohuratuku";
 
-const DESTINATIONS = [
-  { emoji: "🌅", label: "海辺・水辺" },
-  { emoji: "🌲", label: "森・自然の中" },
-  { emoji: "🏙", label: "街・にぎやかな場所" },
-  { emoji: "🏡", label: "家の近く・いつもの道" },
-  { emoji: "🌧", label: "外に出られない（その場でOK）" },
-];
-
 export function ParallelWalk({ onBack }: { onBack: () => void }) {
-  const [dest, setDest] = useState<string | null>(null);
-  const [phase, setPhase] = useState<"choose" | "walk" | "paste" | "done">("choose");
+  const [phase, setPhase] = useState<"walk" | "paste" | "done">("walk");
   const [summary, setSummary] = useState("");
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -55,44 +47,15 @@ export function ParallelWalk({ onBack }: { onBack: () => void }) {
     <div className="pwalk">
       <button className="singa-back" onClick={onBack}>← 地図にもどる</button>
 
-      {phase === "choose" && (
-        <div className="pwalk-card">
-          <div className="pwalk-glow" />
-          <div className="pwalk-sub">PARALLEL WALK</div>
-          <h1>これから、どこへ行く？</h1>
-          <p className="pwalk-lead">
-            歩きながら、望む世界を声にする。<br />
-            <b>理想の現実をつくりたいなら、パラレルウォークは絶対にやってね。</b>
-          </p>
-          <div className="pwalk-dests">
-            {DESTINATIONS.map((d) => (
-              <button
-                key={d.label}
-                className={`pwalk-dest ${dest === d.label ? "is-on" : ""}`}
-                onClick={() => setDest(d.label)}
-              >
-                <span className="e">{d.emoji}</span>
-                <span>{d.label}</span>
-              </button>
-            ))}
-          </div>
-          <p className="pwalk-note">
-            🌧 雨の日など、外を歩けないときは、その場でとりあえず<b>喋り続けるだけでもOK！</b>
-          </p>
-          <button className="pwalk-go" disabled={!dest} onClick={() => setPhase("walk")}>
-            この行き先で、はじめる →
-          </button>
-        </div>
-      )}
-
       {phase === "walk" && (
         <div className="pwalk-card">
           <div className="pwalk-glow" />
-          <div className="pwalk-sub">{dest}</div>
-          <h1>歩きながら、話そう</h1>
+          <div className="pwalk-sub">PARALLEL WALK</div>
+          <h1>いってらっしゃい 🌅</h1>
           <p className="pwalk-lead">
-            下のボタンから ChatGPT を開いて、パラレルウォークをはじめてね。<br />
-            終わったら、ここに戻ってきて「終わった」を押して。
+            じゃあ——きみの<b>理想の未来</b>を、たくさん語ってきて。<br />
+            上を見ながら歩いて、その<b>体の感覚</b>を、ちゃんと体に落としてきてね。<br />
+            <span className="pwalk-small">本当の自分がつくりたい世界を、見てきて。</span>
           </p>
 
           {CHATGPT_WALK_URL ? (
@@ -102,6 +65,10 @@ export function ParallelWalk({ onBack }: { onBack: () => void }) {
           ) : (
             <div className="pwalk-prep">💬 ChatGPTのリンクは準備中です（もうすぐ）</div>
           )}
+
+          <p className="pwalk-note">
+            🌧 雨の日など、外を歩けないときは、その場でとりあえず<b>喋り続けるだけでもOK！</b>
+          </p>
 
           <button className="pwalk-done" onClick={() => setPhase("paste")}>
             終わった

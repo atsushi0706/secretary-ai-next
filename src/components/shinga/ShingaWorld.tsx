@@ -237,17 +237,12 @@ export function ShingaWorld({
       className={`singa-stage ${moving ? "is-moving" : ""} ${bright ? "is-bright" : ""} ${view === "home" ? "is-home" : ""}`}
       style={{ ["--place-hue" as any]: here.hue }}
     >
-      {/* 地図（背景）— 会話中はその場所へ上がっていく */}
-      <div
-        className="singa-map"
-        style={{
-          transform:
-            view === "home"
-              ? "scale(1.28)"
-              : `scale(1.7) translate(${(50 - here.x) * 0.62}%, ${(50 - here.y) * 0.62}%)`,
-        }}
-      >
-        <div className="singa-map-img" />
+      {/* 背景。ホームは全体マップ、各ゾーンはそのゾーン専用の絵に切り替わる */}
+      <div className="singa-map" style={{ transform: view === "home" ? "scale(1.02)" : "scale(1.05)" }}>
+        <div
+          className="singa-map-img"
+          style={{ backgroundImage: `url(${view === "home" || reportOpen ? "/singa-map.jpg" : here.image})` }}
+        />
       </div>
 
       {reportOpen ? (

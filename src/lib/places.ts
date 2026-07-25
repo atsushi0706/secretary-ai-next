@@ -27,6 +27,8 @@ export type Place = {
   tagline: string;
   /** この場所で開く道具（UIパネル） */
   panel: "none" | "peak" | "akashic";
+  /** そのゾーン専用の背景画像 */
+  image: string;
 };
 
 export const PLACES: Record<PlaceKey, Place> = {
@@ -34,31 +36,31 @@ export const PLACES: Record<PlaceKey, Place> = {
     key: "peak", en: "Peak State", ja: "ピークステート", x: 50, y: 54,
     hue: "#e8c15a",
     tagline: "すべての土台になる、状態づくりの中核。",
-    panel: "none",
+    panel: "none", image: "/zone-peak.jpg",
   },
   walk: {
     key: "walk", en: "Parallel Walk", ja: "パラレルウォーク", x: 24, y: 26,
     hue: "#6f78d0",
     tagline: "可能性の道を歩き、自分の未来を探索する。",
-    panel: "none",
+    panel: "none", image: "/zone-walk.jpg",
   },
   akashic: {
     key: "akashic", en: "Akashic Recorder", ja: "アカシックレコーダー", x: 78, y: 24,
     hue: "#e0b45a",
     tagline: "記録から洞察を受け取り、サイクルを見て現実に活かす。",
-    panel: "akashic",
+    panel: "akashic", image: "/zone-akashic.jpg",
   },
   higher: {
     key: "higher", en: "Higher Quest", ja: "ハイヤークエスト", x: 17, y: 84,
     hue: "#c9a24a",
     tagline: "魂が本当に何を求めているのかを確かめる、上昇のワーク。",
-    panel: "none",
+    panel: "none", image: "/zone-higher.jpg",
   },
   deep: {
     key: "deep", en: "Deep Identity", ja: "ディープアイデンティティ", x: 84, y: 84,
     hue: "#8a6bc0",
     tagline: "今の現実をつくっている、深層の自分を見つめる。",
-    panel: "none",
+    panel: "none", image: "/zone-deep.jpg",
   },
 };
 

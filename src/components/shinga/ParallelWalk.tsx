@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { EmotionMeter, emoName } from "./EmotionMeter";
 
 /**
  * パラレルウォーク（ChatGPTs 連携）。
@@ -106,13 +107,52 @@ export function ParallelWalk({ onBack }: { onBack: () => void }) {
       {phase === "done" && (
         <div className="pwalk-card">
           <div className="pwalk-glow" />
-          <div className="pwalk-sub">保存しました</div>
-          <h1>おつかれさま 🌱</h1>
+          <div className="pwalk-sub">おつかれさま 🌱</div>
+          <h1>歩いてみて、今どう？</h1>
           <p className="pwalk-lead">
-            今日の歩きを記録したよ。こうやって溜まっていくと、<br />
-            きみの変化がだんだん見えてくる。
+            さっきと比べて、今の状態はどのへん？<br />
+            <span className="pwalk-small">歩く前と後で、どう変わったか見てみよう。</span>
           </p>
-          <button className="pwalk-go" onClick={onBack}>地図にもどる</button>
+          <StateRecheck />
+          <button className="pwalk-done" onClick={onBack}>地図にもどる</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/** ワーク後の状態チェック（さっき→今の変化） */
+function StateRecheck() {
+  const [last, setLast] = useState<number | null>(null);
+  const [pick, setPick] = useState<number | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/emotions").then((r) => r.json()).then((d) => setLast(d?.last?.level ?? null)).catch(() => {});
+  }, []);
+
+  async function choose(n: number) {
+    setPick(n);
+    setSaved(false);
+    try {
+      await fetch("/api/emotions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ level: n }),
+      });
+      setSaved(true);
+    } catch { /* 保存に失敗しても表示はする */ }
+  }
+
+  return (
+    <div className="pwalk-recheck">
+      <EmotionMeter value={pick} onChange={choose} title="今の状態" />
+      {pick != null && (
+        <div className="pwalk-change">
+          {last != null ? (
+            <>さっきは<b>{emoName(last)}</b> → 今は<b>{emoName(pick)}</b>{saved ? "　記録したよ🌱" : ""}</>
+          ) : (
+            <>今は<b>{emoName(pick)}</b>{saved ? "　記録したよ🌱" : ""}</>
+          )}
         </div>
       )}
     </div>

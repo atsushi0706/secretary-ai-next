@@ -1,20 +1,13 @@
 /**
  * 状態パラメーター（心の状態＋体のエネルギー）。
- * 1日2回まで。朝の枠（〜15時）と夜の枠（15時〜）でそれぞれ1回ずつ。
- * 何度も記録できると「今この瞬間の気分」になってしまい、変化が読めなくなるため。
+ * ピークで最初に1回、ワークの後にもう1回…と、その都度チェックできる（変化を見るため）。
+ * 各記録は時刻つきで残し、1日の中の「さっき→今」の変化や、一日の流れが読める。
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { listEmotions, createEmotion, isMissingTable, MIGRATION_HINT } from "@/lib/shinga";
-import { jstDateStr, jstHour } from "@/lib/google";
+import { jstDateStr } from "@/lib/google";
 import { logError } from "@/lib/supabase";
-
-export type Slot = "morning" | "evening";
-
-/** いまが朝の枠か夜の枠か。リアルバース側の朝夜判定と同じ基準（15時）にそろえる */
-export function currentSlot(): Slot {
-  return jstHour() < 15 ? "morning" : "evening";
-}
 
 function fail(e: any) {
   if (isMissingTable(e)) {
@@ -31,16 +24,14 @@ export async function GET() {
   try {
     const emotions = await listEmotions(userId, 60);
     const today = jstDateStr();
-    const slot = currentSlot();
     const todays = emotions.filter((e) => e.date === today);
+    // 直近の記録（＝「さっき」の値）を返す。ワーク後の変化チェックに使う。
+    const last = emotions[0] ?? null;
     return NextResponse.json({
       emotions,
       today,
-      slot,
-      // この枠はもう記録済みか（UI がボタンを閉じるのに使う）
-      doneThisSlot: todays.some((e: any) => e.slot === slot),
-      doneMorning: todays.some((e: any) => e.slot === "morning"),
-      doneEvening: todays.some((e: any) => e.slot === "evening"),
+      todayCount: todays.length,
+      last: last ? { level: last.level, note: last.note, at: last.created_at } : null,
     });
   } catch (e: any) {
     if (!isMissingTable(e)) await logError(userId, "/api/emotions", e);
@@ -65,7 +56,8 @@ export async function POST(req: Request) {
     }
 
     const date = b.date || jstDateStr();
-    const slot: Slot = b.slot === "morning" || b.slot === "evening" ? b.slot : currentSlot();
+    // 時刻を slot にして、1日に何度でも記録できるようにする（さっき→今の変化を残す）
+    const slot = new Date().toISOString().slice(11, 23); // HH:MM:SS.mmm（一意マーカー）
 
     const emotion = await createEmotion(userId, {
       date,
@@ -77,13 +69,6 @@ export async function POST(req: Request) {
     });
     return NextResponse.json({ ok: true, emotion });
   } catch (e: any) {
-    // 同じ枠に2回目を入れようとした（DB側の一意制約で弾かれる）
-    if (e?.code === "23505") {
-      return NextResponse.json(
-        { error: "この枠はもう記録済みです。次は夜（または明日の朝）に。", alreadyDone: true },
-        { status: 409 },
-      );
-    }
     if (!isMissingTable(e)) await logError(userId, "/api/emotions", e);
     return fail(e);
   }

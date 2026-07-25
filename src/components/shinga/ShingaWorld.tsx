@@ -11,6 +11,7 @@ import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
 import { ParallelWalk } from "./ParallelWalk";
 import { ReportScreen } from "./ReportScreen";
+import { DailyReflection } from "./DailyReflection";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -73,6 +74,7 @@ export function ShingaWorld({
   const [moving, setMoving] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
+  const [dailyOpen, setDailyOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // タイプ演出：流れてきた文字を一定ペースで少しずつ表示（考えながらピピピ）
@@ -255,6 +257,8 @@ export function ShingaWorld({
 
       {reportOpen ? (
         <ReportScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setReportOpen(false)} />
+      ) : dailyOpen ? (
+        <DailyReflection guideName={guideName} avatarUrl={faceSrc} onBack={() => setDailyOpen(false)} />
       ) : view === "home" ? (
         <Home
           guideName={guideName}
@@ -262,6 +266,7 @@ export function ShingaWorld({
           onPick={(m) => void enter(m)}
           onTalk={(t) => void enterFree(t)}
           onReport={() => setReportOpen(true)}
+          onDaily={() => setDailyOpen(true)}
           sending={sending}
         />
       ) : mode === "walk" ? (
@@ -367,17 +372,17 @@ const DOORS: { key: ModeKey; emoji: string }[] = [
 const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "breakthrough", emoji: "🗝" },
   { key: "higher", emoji: "🔥" },
-  { key: "deep", emoji: "🪞" },
 ];
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, sending,
 }: {
   guideName: string;
   avatarUrl: string;
   onPick: (m: ModeKey) => void;
   onTalk: (text: string) => void;
   onReport: () => void;
+  onDaily: () => void;
   sending: boolean;
 }) {
   return (
@@ -425,8 +430,11 @@ function Home({
         })}
       </div>
 
-      {/* この頃のわたし（変化のふりかえり） */}
-      <button className="iw-report" onClick={onReport}>🌱 この頃のわたし（変化をみる）</button>
+      {/* ふりかえり */}
+      <div className="iw-reflect-row">
+        <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
+        <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
+      </div>
     </div>
   );
 }

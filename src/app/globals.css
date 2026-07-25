@@ -1905,3 +1905,22 @@ body:has(.realverse-bg) { background: transparent; }
 .rep-stat .bars span { flex: 1; min-width: 3px; border-radius: 2px; }
 .rep-nums { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: .74rem; color: var(--singa-ink-soft); }
 .rep-nums b { color: var(--singa-ink); font-size: .9rem; }
+
+/* ── ふりかえり導線＋1日の振り返りの状態アーク ── */
+.iw-reflect-row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; flex-wrap: wrap; }
+.daily-arc {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 6px 0 14px; padding: 12px; border-radius: 14px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(232,189,114,.2);
+}
+.daily-arc .pt { display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.daily-arc .dot { width: 22px; height: 22px; border-radius: 50%; box-shadow: 0 0 12px 2px rgba(0,0,0,.3); }
+.daily-arc .t { font-size: .56rem; letter-spacing: .1em; color: var(--singa-gold); }
+.daily-arc .v { font-size: .78rem; font-weight: 700; }
+.daily-arc .arrow { font-size: 1.2rem; color: var(--singa-ink-soft); }
+
+/* ワーク後の状態チェック */
+.pwalk-recheck { margin: 6px 0 12px; text-align: left; }
+.pwalk-change { margin-top: 10px; font-size: .85rem; color: #34506f; text-align: center; }
+.pwalk-change b { color: #1f6fc0; }
+.pwalk-small { font-size: .78rem; opacity: .8; }

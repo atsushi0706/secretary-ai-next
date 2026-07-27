@@ -1998,3 +1998,22 @@ body:has(.realverse-bg) { background: transparent; }
 .hero-change { margin: 4px 0 12px; }
 .hero-change .k { font-size: .58rem; letter-spacing: .12em; color: var(--singa-gold); margin-bottom: 4px; }
 .hero-line { width: 100%; height: 60px; }
+
+/* 主人公：現在地の選択＋不明表示 */
+.hero-pick-lead { font-size: .85rem; line-height: 1.8; margin-bottom: 10px; }
+.hero-pick-lead span { font-size: .72rem; color: var(--singa-ink-soft); }
+.hero-pick-domain { margin-bottom: 14px; }
+.hero-pick-domain .hd { font-size: .8rem; font-weight: 700; color: var(--singa-gold); margin-bottom: 6px; }
+.hero-pick-domain .hd span { font-size: .62rem; color: var(--singa-ink-soft); font-weight: 400; margin-left: 4px; }
+.hero-pick-domain .steps { display: flex; flex-direction: column; gap: 5px; }
+.hero-pick-domain .steps button {
+  text-align: left; padding: 9px 12px; border-radius: 10px; font-size: .8rem;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(232,189,114,.2); color: var(--singa-ink);
+}
+.hero-pick-domain .steps button.is-on { background: linear-gradient(160deg,#eed69b,#c9a55e); color: #221b10; border-color: transparent; font-weight: 700; }
+.hero-pick-domain .steps button.unk { color: var(--singa-ink-soft); font-size: .74rem; }
+.hero-pick-domain .steps button.unk.is-on { background: rgba(120,130,150,.5); color: #fff; }
+.hero-lv .bar.is-reach span { background: linear-gradient(90deg,#5aa0d8,#7ec0ee); }
+.hero-lv .bar.unk { background: repeating-linear-gradient(45deg, rgba(255,255,255,.06), rgba(255,255,255,.06) 6px, rgba(255,255,255,.02) 6px, rgba(255,255,255,.02) 12px); }
+.hero-note { font-size: .68rem; color: var(--singa-ink-soft); margin-top: 8px; line-height: 1.6; }
+.hero-change .k b { color: #7ec06e; margin-left: 6px; }

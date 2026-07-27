@@ -12,6 +12,7 @@ import { BreathGuide } from "./BreathGuide";
 import { ParallelWalk } from "./ParallelWalk";
 import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
+import { HeroScreen } from "./HeroScreen";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -75,6 +76,7 @@ export function ShingaWorld({
   const [panelOpen, setPanelOpen] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
+  const [heroOpen, setHeroOpen] = useState(false);
   const [debug, setDebug] = useState(false);
   const [debugAvailable, setDebugAvailable] = useState(false); // ?debug=1 のときだけ（お客さんには出さない）
   const [debugTrace, setDebugTrace] = useState<any[]>([]);
@@ -271,7 +273,9 @@ export function ShingaWorld({
         />
       </div>
 
-      {reportOpen ? (
+      {heroOpen ? (
+        <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
+      ) : reportOpen ? (
         <ReportScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setReportOpen(false)} />
       ) : dailyOpen ? (
         <DailyReflection guideName={guideName} avatarUrl={faceSrc} onBack={() => setDailyOpen(false)} />
@@ -283,6 +287,7 @@ export function ShingaWorld({
           onTalk={(t) => void enterFree(t)}
           onReport={() => setReportOpen(true)}
           onDaily={() => setDailyOpen(true)}
+          onHero={() => setHeroOpen(true)}
           sending={sending}
         />
       ) : mode === "walk" ? (
@@ -456,7 +461,7 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
 ];
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -464,6 +469,7 @@ function Home({
   onTalk: (text: string) => void;
   onReport: () => void;
   onDaily: () => void;
+  onHero: () => void;
   sending: boolean;
 }) {
   return (
@@ -511,8 +517,9 @@ function Home({
         })}
       </div>
 
-      {/* ふりかえり */}
+      {/* 主人公（レベル）＋ふりかえり */}
       <div className="iw-reflect-row">
+        <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
         <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
         <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
       </div>

@@ -72,11 +72,12 @@ export function ReportScreen({ guideName, avatarUrl, onBack }: { guideName: stri
           <>
             <p className="rep-body">{report}</p>
 
-            {glance && (
+            {/* 数字は「意味が出るもの」だけ。ゼロや空は出さない（顧客を迷わせない） */}
+            {glance && (glance.recentEmotions.length >= 3 || glance.walkCount7 > 0 || glance.quests > 0) && (
               <div className="rep-glance">
-                {glance.recentEmotions.length > 0 && (
+                {glance.recentEmotions.length >= 3 && (
                   <div className="rep-stat">
-                    <span className="k">状態の流れ</span>
+                    <span className="k">心の状態の流れ（左が前、右が今）</span>
                     <span className="bars">
                       {glance.recentEmotions.map((n, i) => (
                         <span key={i} style={{ height: `${n * 10}%`, background: emoColor(n) }} />
@@ -85,9 +86,8 @@ export function ReportScreen({ guideName, avatarUrl, onBack }: { guideName: stri
                   </div>
                 )}
                 <div className="rep-nums">
-                  <span>今週 歩いた <b>{glance.walkCount7}</b> 回</span>
-                  <span>クエスト <b>{glance.quests}</b>（達成 {glance.doneQuests}）</span>
-                  <span>現実の一歩 <b>{glance.taskTotal}</b></span>
+                  {glance.walkCount7 > 0 && <span>今週 歩いた <b>{glance.walkCount7}</b> 回</span>}
+                  {glance.quests > 0 && <span>やってみたいこと <b>{glance.quests}</b></span>}
                 </div>
               </div>
             )}

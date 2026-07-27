@@ -208,6 +208,20 @@ alter table public.user_settings add column if not exists birth_date date;
 alter table public.user_settings add column if not exists birth_name text;
 alter table public.user_settings add column if not exists birth_gender text; -- 'male'/'female'（大運の順行/逆行に必要）
 
+-- 主人公レベルアップ機能（1ユーザー1行）
+create table if not exists public.hero (
+  user_id text primary key,
+  enemy_world text default '',
+  desired_world text default '',
+  needed_people text default '',
+  hero_statement text default '',
+  levels jsonb,
+  assessment jsonb,
+  history jsonb,
+  updated_at timestamptz default now(),
+  assessed_at timestamptz
+);
+
 -- パラレルウォークの記録（ChatGPTでのワーク後、要約を貼って蓄積）
 create table if not exists public.walk_logs (
   id bigserial primary key,
@@ -245,6 +259,7 @@ alter table public.quest_reflections enable row level security;
 alter table public.emotion_logs enable row level security;
 alter table public.shinga_conversations enable row level security;
 alter table public.walk_logs enable row level security;
+alter table public.hero enable row level security;
 
 -- ポリシー（service_role キーは bypass されるので、サーバー側で user_id 一致を保証）
 -- 今はサービスロール経由で全アクセスする想定。クライアントから直接読まない。

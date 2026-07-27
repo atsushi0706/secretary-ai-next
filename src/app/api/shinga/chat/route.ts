@@ -61,18 +61,24 @@ export async function POST(req: Request) {
           birthGender: settings?.birth_gender,
           place,
           mode,
+          todayStr: today,
         });
 
-        // 直近30件だけ渡す（全部渡すと会話が伸びるほど重くなるため）
-        const past = await loadShingaMessages(userId, 30);
-        const history = past.map((m) => ({
-          role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
-          content: m.content,
-        }));
+        // 会話履歴は「今日ぶんだけ」に絞る（何日も前の話が混ざって時間軸が壊れるのを防ぐ）。
+        // さらに、特定のワークを greet で始めるときは、そのワークだけの新しいスレッドにする
+        //（＝過去の別の話を引きずらない）。
+        let history: { role: "assistant" | "user"; content: string }[] = [];
+        if (!(greet && mode)) {
+          const past = await loadShingaMessages(userId, 24, today);
+          history = past.map((m) => ({
+            role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+            content: m.content,
+          }));
+        }
 
         if (greet) {
           const openLine = mode
-            ? `（「${MODES[mode].label}」の時間を始める。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`
+            ? `（「${MODES[mode].label}」の時間を、いま新しく始める。過去の別の話は持ち出さない。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`
             : (history.length === 0
               ? "（はじめてこの世界に来た。まだ何も話していない。短く迎えて、今日はどこへ行きたいかを聞いて）"
               : "（また戻ってきた。短く迎えて、今日はどうしたいかを聞いて）");

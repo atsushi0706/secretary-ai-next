@@ -12,21 +12,24 @@ import { useEffect, useRef, useState } from "react";
 
 type Step = { instr: string; say: string; count: number; scale: number };
 
+// 各ステップ10秒に統一
+const SEC = 10;
+
 function buildSteps(): Step[] {
   const steps: Step[] = [
-    { instr: "立って、体を軽くゆらそう", say: "じゃあ始めよう。立てる人は立って、体を軽くゆらしてみて。", count: 5, scale: 1 },
+    { instr: "立って、体を軽くゆらそう", say: "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。", count: SEC, scale: 1 },
   ];
   for (let i = 0; i < 3; i++) {
     steps.push(
-      { instr: `${i + 1}回目：口を閉じて、細く吐き切る`, say: `${i + 1}回目。口を閉じて、細く、吐き切って`, count: 5, scale: 0.4 },
-      { instr: "ゆっくり、吸う", say: "ゆっくり、吸って", count: 5, scale: 1 },
-      { instr: "そのまま、馴染ませる", say: "目を閉じて、その感覚を馴染ませて", count: 8, scale: 1 },
+      { instr: `${i + 1}回目：口を閉じて、細く吐き切る`, say: `${i + 1}かいめ。お口をとじて、ほそーく、ふーって吐いてね`, count: SEC, scale: 0.4 },
+      { instr: "ゆっくり、吸う", say: "つぎは、ゆーっくり、すってー", count: SEC, scale: 1 },
+      { instr: "そのまま、馴染ませる", say: "目をとじて、いまのかんじを、からだになじませてね", count: SEC, scale: 1 },
     );
   }
   steps.push(
-    { instr: "最後にもう一度、吐き切る", say: "最後にもう一度。口を閉じて、吐き切って", count: 5, scale: 0.35 },
-    { instr: "強く、吸う", say: "強く、吸って", count: 4, scale: 1.08 },
-    { instr: "ゆっくり、目を開ける", say: "いいね。ゆっくり、目を開けて。", count: 4, scale: 1 },
+    { instr: "最後にもう一度、吐き切る", say: "さいごにもう一回。お口とじて、ぜんぶ吐いてー", count: SEC, scale: 0.35 },
+    { instr: "強く、吸う", say: "つよく、すってー", count: SEC, scale: 1.08 },
+    { instr: "ゆっくり、目を開ける", say: "いいね。ゆっくり、目をあけてね。", count: SEC, scale: 1 },
   );
   return steps;
 }
@@ -36,9 +39,14 @@ function speak(text: string) {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "ja-JP"; u.rate = 0.92;
-    const v = window.speechSynthesis.getVoices().find((x) => x.lang?.startsWith("ja"));
-    if (v) u.voice = v;
+    u.lang = "ja-JP";
+    // 小さい子どものキャラ：高めのピッチ＋ナチュラルな速さ
+    u.pitch = 1.6;
+    u.rate = 1.0;
+    const vs = window.speechSynthesis.getVoices().filter((x) => x.lang?.startsWith("ja"));
+    // 女性/子ども寄りの声があれば優先
+    const pref = vs.find((x) => /female|woman|girl|child|kyoko|o-ren|nanami|haruka/i.test(x.name)) || vs[0];
+    if (pref) u.voice = pref;
     window.speechSynthesis.speak(u);
   } catch { /* 声が出なくても画面で進める */ }
 }
@@ -90,7 +98,7 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
       <div className="breath-orb-wrap">
         <div
           className="breath-orb"
-          style={{ transform: `scale(${scale})`, transitionDuration: cur ? `${Math.min(cur.count, 6)}s` : ".4s" }}
+          style={{ transform: `scale(${scale})`, transitionDuration: cur ? `${cur.count}s` : ".4s" }}
         />
         {started && <div className="breath-count">{remain > 0 ? remain : "○"}</div>}
       </div>

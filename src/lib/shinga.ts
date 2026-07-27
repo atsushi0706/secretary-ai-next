@@ -216,15 +216,18 @@ export async function saveShingaMessage(
   if (error) throw error;
 }
 
-/** 直近 limit 件を古い順で返す（全件読むと会話が伸びるほど重くなるため） */
-export async function loadShingaMessages(userId: string, limit = 30): Promise<ShingaMessage[]> {
+/**
+ * 直近 limit 件を古い順で返す。
+ * date を渡すと、その日ぶんだけに絞る（時間軸が混ざらないように）。
+ */
+export async function loadShingaMessages(userId: string, limit = 30, date?: string): Promise<ShingaMessage[]> {
   const supa = supabaseAdmin();
-  const { data, error } = await supa
+  let q = supa
     .from("shinga_conversations")
     .select("id, role, content, place, created_at")
-    .eq("user_id", userId)
-    .order("id", { ascending: false })
-    .limit(limit);
+    .eq("user_id", userId);
+  if (date) q = q.eq("date", date);
+  const { data, error } = await q.order("id", { ascending: false }).limit(limit);
   if (error) throw error;
   return ((data ?? []) as ShingaMessage[]).reverse();
 }

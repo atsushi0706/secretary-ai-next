@@ -76,8 +76,19 @@ export function ShingaWorld({
   const [reportOpen, setReportOpen] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [debug, setDebug] = useState(false);
+  const [debugAvailable, setDebugAvailable] = useState(false); // ?debug=1 のときだけ（お客さんには出さない）
   const [debugTrace, setDebugTrace] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // URL に ?debug=1 が付いているときだけ、可視化パネルを使えるようにする（開発用）
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get("debug") === "1") {
+        setDebugAvailable(true);
+        setDebug(true);
+      }
+    } catch { /* ignore */ }
+  }, []);
 
   // タイプ演出：流れてきた文字を一定ペースで少しずつ表示（考えながらピピピ）
   const targetRef = useRef("");     // これまでに届いた生テキスト
@@ -173,7 +184,7 @@ export function ShingaWorld({
       const r = await fetch("/api/shinga/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet, debug }),
+        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet, debug: debugAvailable && debug }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -357,17 +368,19 @@ export function ShingaWorld({
         </>
       )}
 
-      {/* 可視化トグル（開発用・右上の小さな虫めがね） */}
-      <button
-        className="singa-debug-toggle"
-        onClick={() => setDebug((v) => !v)}
-        title="なかを見る（何を読み込みAIに渡したか）"
-      >
-        {debug ? "🔍ON" : "🔍"}
-      </button>
-
-      {/* 可視化パネル */}
-      {debug && debugTrace.length > 0 && <DebugPanel trace={debugTrace} onClear={() => setDebugTrace([])} />}
+      {/* 可視化トグル：URLに ?debug=1 を付けたときだけ（お客さんには出ない・開発用） */}
+      {debugAvailable && (
+        <>
+          <button
+            className="singa-debug-toggle"
+            onClick={() => setDebug((v) => !v)}
+            title="なかを見る（何を読み込みAIに渡したか）"
+          >
+            {debug ? "🔍ON" : "🔍OFF"}
+          </button>
+          {debug && debugTrace.length > 0 && <DebugPanel trace={debugTrace} onClear={() => setDebugTrace([])} />}
+        </>
+      )}
     </div>
   );
 }

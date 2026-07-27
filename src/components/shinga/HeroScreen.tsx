@@ -151,7 +151,7 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
                     );
                   })}
                 </div>
-                {hero?.history && hero.history.length >= 2 && <ChangeLine history={hero.history} />}
+                {hero?.history && hero.history.length >= 2 && <HeroChange history={hero.history} />}
                 <button className="hero-btn is-go" onClick={() => setPicking(true)}>今の現在地を選びなおす</button>
                 <p className="hero-note">選んだ値が基礎。これから会話（パラレルウォーク等）の中でも動いていくよ。</p>
               </>
@@ -165,20 +165,51 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
   );
 }
 
-/** 変化の線（分かっている領域の平均の推移） */
-function ChangeLine({ history }: { history: { at: string; levels: Levels }[] }) {
-  const avg = (lv: Levels) => {
-    const vals = Object.values(lv).filter((v): v is number => v != null);
-    return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
-  };
-  const pts = history.map((h) => avg(h.levels));
+/** 変化（今日/1週間/1か月の増減＋分かっている領域の平均の推移） */
+type Snap = { at: string; levels: Levels };
+function avgKnown(lv: Levels): number {
+  const vals = Object.values(lv).filter((v): v is number => v != null);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : 0;
+}
+
+/** 期間の変化 = 今の平均 − その期間が始まる直前（＝基準）の平均 */
+function periodDelta(history: Snap[], sinceMs: number): number | null {
+  if (history.length < 2) return null;
+  const now = avgKnown(history[history.length - 1].levels);
+  // 期間開始より前の最後のスナップショット（無ければ最古）を基準にする
+  let base: Snap | null = null;
+  for (const h of history) {
+    if (new Date(h.at).getTime() < sinceMs) base = h;
+  }
+  const baseAvg = avgKnown((base ?? history[0]).levels);
+  return Math.round(now - baseAvg);
+}
+
+function HeroChange({ history }: { history: Snap[] }) {
+  const now = Date.now();
+  const day = 86400000;
+  const periods: { label: string; d: number | null }[] = [
+    { label: "今日", d: periodDelta(history, now - day) },
+    { label: "1週間", d: periodDelta(history, now - 7 * day) },
+    { label: "1か月", d: periodDelta(history, now - 30 * day) },
+  ];
+
+  const pts = history.map((h) => avgKnown(h.levels));
   const w = 260, hgt = 56;
   const step = pts.length > 1 ? w / (pts.length - 1) : w;
   const path = pts.map((v, i) => `${i === 0 ? "M" : "L"} ${(i * step).toFixed(1)} ${(hgt - (v / 100) * hgt).toFixed(1)}`).join(" ");
-  const diff = pts.length >= 2 ? Math.round(pts[pts.length - 1] - pts[0]) : 0;
+
   return (
     <div className="hero-change">
-      <div className="k">変化の流れ（分かっている領域の平均）{diff !== 0 && <b>{diff > 0 ? `＋${diff}` : diff}</b>}</div>
+      <div className="k">この頃の変化（分かっている領域の平均）</div>
+      <div className="hero-deltas">
+        {periods.map((p) => (
+          <div key={p.label} className={`hd-chip ${p.d == null ? "z" : p.d > 0 ? "up" : p.d < 0 ? "down" : "z"}`}>
+            <span className="t">{p.label}</span>
+            <span className="v">{p.d == null ? "—" : p.d > 0 ? `＋${p.d}` : p.d < 0 ? `${p.d}` : "±0"}</span>
+          </div>
+        ))}
+      </div>
       <svg viewBox={`0 0 ${w} ${hgt}`} className="hero-line">
         <path d={path} fill="none" stroke="#eed69b" strokeWidth="2" />
         {pts.map((v, i) => <circle key={i} cx={i * step} cy={hgt - (v / 100) * hgt} r="2.5" fill="#eed69b" />)}

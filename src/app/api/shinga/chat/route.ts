@@ -19,6 +19,9 @@ import { getUserSettings, logError } from "@/lib/supabase";
 import {
   saveShingaMessage, loadShingaMessages, createQuest, isMissingTable, MIGRATION_HINT,
 } from "@/lib/shinga";
+import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type HeroDomain } from "@/lib/hero";
+
+const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
 function sseEvent(name: string, data: any): Uint8Array {
   return new TextEncoder().encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -38,6 +41,7 @@ export async function POST(req: Request) {
   const place: PlaceKey = isPlaceKey(body.place) ? body.place : "map";
   const mode: ModeKey | undefined = isModeKey(body.mode) ? body.mode : undefined;
   const greet = !!body.greet;   // 開いた直後の最初のひとこと
+  const opener = typeof body.opener === "string" ? body.opener.trim() : ""; // テンプレで出した開始の一言
   const debug = !!body.debug;   // 可視化用：何を読み込みAIに渡したかを返す
 
   const stream = new ReadableStream({
@@ -50,10 +54,15 @@ export async function POST(req: Request) {
         const today = jstDateStr();
 
         if (!greet && text) {
+          // テンプレで先に出した開始の一言を、履歴の頭に積んでおく（AIが自分の一言目を認識して続きから進める）
+          if (opener) await saveShingaMessage(userId, today, "assistant", opener, place);
           await saveShingaMessage(userId, today, "user", text, place);
         }
 
         const settings = await getUserSettings(userId).catch(() => null) as any;
+        // 主人公レベル：会話で増減させるため、実際の対話（greet以外）のときだけ読み込んで渡す
+        let hero: HeroRow | null = null;
+        if (!greet) hero = await getHero(userId).catch(() => null);
         const system = buildGuidePersona({
           guideName: settings?.secretary_name,
           userCallName: settings?.user_call_name,
@@ -63,6 +72,7 @@ export async function POST(req: Request) {
           place,
           mode,
           todayStr: today,
+          hero,
         });
 
         // 会話履歴は「今日ぶんだけ」に絞る（何日も前の話が混ざって時間軸が壊れるのを防ぐ）。
@@ -150,6 +160,28 @@ export async function POST(req: Request) {
           }
         }
 
+        // 主人公レベルの増減（会話で観測された変化）
+        let heroChanges: Array<{ domain: HeroDomain; label: string; from: number; to: number; reason?: string }> = [];
+        const heroMatch = full.match(/<hero_delta>([\s\S]*?)<\/hero_delta>/);
+        if (heroMatch && hero) {
+          try {
+            const cands = extractJson<any[]>(heroMatch[1]) ?? [];
+            const deltas: HeroDelta[] = cands
+              .map((c) => ({
+                domain: c?.domain as HeroDomain,
+                delta: Number(c?.delta),
+                reason: typeof c?.reason === "string" ? c.reason : undefined,
+              }))
+              .filter((d) => HERO_DOMAINS.includes(d.domain) && Number.isFinite(d.delta));
+            if (deltas.length) {
+              const { changed } = await applyHeroDeltas(userId, deltas, hero);
+              heroChanges = changed.map((c) => ({ ...c, label: labelOf(c.domain) }));
+            }
+          } catch (e) {
+            if (!isMissingTable(e)) console.error("[shinga/chat] applyHeroDeltas failed:", e);
+          }
+        }
+
         // クエスト
         const addedQuests: Array<{ id: string; title: string }> = [];
         const questMatch = full.match(/<quest_to_add>([\s\S]*?)<\/quest_to_add>/);
@@ -173,12 +205,13 @@ export async function POST(req: Request) {
           .replace(/<move>[\s\S]*?<\/move>/g, "")
           .replace(/<choices>[\s\S]*?<\/choices>/g, "")
           .replace(/<quest_to_add>[\s\S]*?<\/quest_to_add>/g, "")
+          .replace(/<hero_delta>[\s\S]*?<\/hero_delta>/g, "")
           .replace(/<emotion\s*\/?>/g, "")
           .replace(/<breath\s*\/?>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch || wantEmotion || wantBreath) {
+        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });
@@ -187,6 +220,7 @@ export async function POST(req: Request) {
         if (choices) send("choices", { choices });
         if (moveTo) send("move", { place: moveTo });
         if (addedQuests.length > 0) send("quests", { quests: addedQuests });
+        if (heroChanges.length > 0) send("hero", { changes: heroChanges });
 
         if (clean) {
           await saveShingaMessage(userId, today, "assistant", clean, moveTo ?? place);
@@ -196,7 +230,7 @@ export async function POST(req: Request) {
           send("debug", {
             stage: "output",
             raw: full,
-            extracted: { face, move: moveTo, choices, wantEmotion, wantBreath, addedQuests },
+            extracted: { face, move: moveTo, choices, wantEmotion, wantBreath, addedQuests, heroChanges },
           });
         }
         send("done", { ok: true });

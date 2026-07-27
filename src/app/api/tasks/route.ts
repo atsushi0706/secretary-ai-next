@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { addTask, completeTask, deleteTask } from "@/lib/google";
+import { addTask, completeTask, deleteTask, getTasks } from "@/lib/google";
 import { setManualLabel, clearManualLabel, logError } from "@/lib/supabase";
 import { linkTask, unlinkTask, isMissingTable } from "@/lib/shinga";
+
+// 未完了タスクの一覧（インナーワールドの「今日」タブなどから使う）
+export async function GET() {
+  const session = await auth();
+  const userId = (session?.user as any)?.id;
+  if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+  try {
+    const tasks = await getTasks(userId, false);
+    return NextResponse.json({ tasks });
+  } catch (e: any) {
+    await logError(userId, "/api/tasks", e);
+    return NextResponse.json({ error: String(e?.message ?? e), tasks: [] }, { status: 500 });
+  }
+}
 
 export async function POST(req: Request) {
   const session = await auth();

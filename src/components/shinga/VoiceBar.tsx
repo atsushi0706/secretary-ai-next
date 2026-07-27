@@ -172,8 +172,10 @@ export function VoiceBar({
     const t = text.trim();
     if (!t || disabled || phase !== "idle") return;
     stopRecognition();
-    await onSend(t);
+    // 送信した瞬間に空にする（応答を待たない。残り続けるストレスをなくす）
     setText(""); setInterim("");
+    baseRef.current = ""; sessRef.current = "";
+    await onSend(t);
   }
 
   const display = phase === "recording"

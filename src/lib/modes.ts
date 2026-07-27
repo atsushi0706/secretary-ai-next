@@ -205,6 +205,33 @@ export function isModeKey(v: unknown): v is ModeKey {
   return typeof v === "string" && v in MODES;
 }
 
+/**
+ * ゾーンに入った瞬間に出す「開始の定型文」。
+ * AIに考えさせず即表示 → 反応が速い。頭を使うのは、ユーザーが最初の一言を返した"あと"から。
+ * emotion=感情メーターを即出す / choices=最初の分かれ道を即出す。
+ */
+export type ModeOpener = { line: string; emotion?: boolean; choices?: { label: string; mode?: ModeKey }[] };
+
+export const MODE_OPENERS: Partial<Record<ModeKey, ModeOpener>> = {
+  peak: {
+    line: "よし、ピークステートから整えていこう😊 まず、いまの気分を教えて。近いところを1つ選んでみて。",
+    emotion: true,
+  },
+  akashic: {
+    line: "アカシックへようこそ📖 どのへんの流れが気になる？",
+    choices: [
+      { label: "今日の流れ" }, { label: "今週の流れ" }, { label: "今月の流れ" },
+      { label: "今年の流れ" }, { label: "なんで今こうなの？" },
+    ],
+  },
+  higher: {
+    line: "ハイヤークエストへ🔥 いま、何がある？ 抵抗でも望みでも、なんでもいいよ。",
+  },
+  breakthrough: {
+    line: "ここは「無理」を超える場所🗝 やりたいこと——でも“やっぱり無理かも”って思ってること、1つ聞かせて。",
+  },
+};
+
 const GUIDANCE = `
 # 進め方（枠にはめない）
 - 「セッション」という枠で考えない。決まった順で質問攻めにしない。相手が好きに話せるように。

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { QuestPanel } from "./QuestPanel";
+import { decadeUnlock } from "@/lib/akashic";
 
 type Season = { label: string; meaning: string; advice: string };
 type Cycle = { key: string; period: string; season: Season };
@@ -24,6 +25,7 @@ export function AkashicPanel() {
   const [lifeOpen, setLifeOpen] = useState<number | null>(null);
   const [tab, setTab] = useState<"drop" | "reflect">("drop");
   const [view, setView] = useState<"life" | "now">("life");
+  const [activeDays, setActiveDays] = useState(0);
 
   useEffect(() => {
     fetch("/api/cycles")
@@ -33,6 +35,7 @@ export function AkashicPanel() {
         setHasGender(!!d.hasGender);
         setCycles(d.cycles ?? null);
         setLife(d.life ?? null);
+        setActiveDays(d.activeDays ?? 0);
         if (d.life) setLifeOpen(d.life.currentIndex);
       })
       .catch(() => setHasBirth(false));
@@ -61,17 +64,31 @@ export function AkashicPanel() {
       {view === "life" && (
         life ? (
           <div className="akashic-life">
-            {life.periods.map((p, i) => (
-              <button
-                key={i}
-                className={`akashic-decade ${p.isCurrent ? "is-now" : ""} ${lifeOpen === i ? "is-open" : ""}`}
-                onClick={() => setLifeOpen(lifeOpen === i ? null : i)}
-              >
-                <span className="age">{p.ageStart}〜{p.ageEnd}歳</span>
-                <span className="lb">{p.label}{p.isCurrent && <em>いまここ</em>}</span>
-                {lifeOpen === i && <span className="mn">{p.meaning}</span>}
-              </button>
-            ))}
+            {life.periods.map((p, i) => {
+              const dist = Math.abs(i - life.currentIndex);
+              const u = decadeUnlock(dist, activeDays);
+              if (!u.unlocked) {
+                // まだ開いていない10年：内容は見せず、「あと◯日で解放」だけ明記する
+                return (
+                  <div key={i} className="akashic-decade is-locked" aria-disabled>
+                    <span className="age">{p.ageStart}〜{p.ageEnd}歳</span>
+                    <span className="lb"><span className="lock">🔒</span>あと{u.remaining}日で解放</span>
+                  </div>
+                );
+              }
+              return (
+                <button
+                  key={i}
+                  className={`akashic-decade ${p.isCurrent ? "is-now" : ""} ${lifeOpen === i ? "is-open" : ""}`}
+                  onClick={() => setLifeOpen(lifeOpen === i ? null : i)}
+                >
+                  <span className="age">{p.ageStart}〜{p.ageEnd}歳</span>
+                  <span className="lb">{p.label}{p.isCurrent && <em>いまここ</em>}</span>
+                  {lifeOpen === i && <span className="mn">{p.meaning}</span>}
+                </button>
+              );
+            })}
+            <div className="akashic-hint">取り組んだ日：{activeDays}日。続けるほど、前後の10年が開いていくよ。</div>
             {life.nearBoundary && <div className="akashic-hint">※誕生日が季節の変わり目付近。境目は前後することがあります。</div>}
           </div>
         ) : hasBirth ? (

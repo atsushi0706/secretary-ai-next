@@ -1804,6 +1804,13 @@ body:has(.realverse-bg) { background: transparent; }
   box-shadow: 0 0 18px rgba(232,193,90,.18);
 }
 .akashic-decade.is-open { background: rgba(255,255,255,.1); border-color: rgba(232,189,114,.5); }
+.akashic-decade.is-locked {
+  border-style: dashed; border-color: rgba(224,189,114,.16);
+  background: rgba(255,255,255,.02); cursor: default; opacity: .72;
+}
+.akashic-decade.is-locked .age { color: rgba(238,214,155,.5); }
+.akashic-decade.is-locked .lb { font-weight: 600; font-size: .74rem; color: var(--singa-ink-soft); }
+.akashic-decade.is-locked .lock { margin-right: 6px; opacity: .8; }
 
 /* ── パラレルウォーク（ChatGPTs連携の専用画面） ── */
 .pwalk { position: absolute; inset: 0; z-index: 4; display: flex; flex-direction: column; padding: 10px 12px; overflow-y: auto; }
@@ -2017,3 +2024,71 @@ body:has(.realverse-bg) { background: transparent; }
 .hero-lv .bar.unk { background: repeating-linear-gradient(45deg, rgba(255,255,255,.06), rgba(255,255,255,.06) 6px, rgba(255,255,255,.02) 6px, rgba(255,255,255,.02) 12px); }
 .hero-note { font-size: .68rem; color: var(--singa-ink-soft); margin-top: 8px; line-height: 1.6; }
 .hero-change .k b { color: #7ec06e; margin-left: 6px; }
+.hero-deltas { display: flex; gap: 8px; margin: 6px 0 8px; }
+.hero-deltas .hd-chip {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 4px; border-radius: 10px; background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.hero-deltas .hd-chip .t { font-size: .58rem; letter-spacing: .1em; color: var(--singa-ink-soft); }
+.hero-deltas .hd-chip .v { font-size: .95rem; font-weight: 700; color: var(--singa-ink-soft); }
+.hero-deltas .hd-chip.up .v { color: #8fd07a; }
+.hero-deltas .hd-chip.down .v { color: #e6b25a; }
+
+/* ── タスクリスト（旧・道具箱） ── */
+.tl { position: absolute; inset: 0; z-index: 30; overflow-y: auto; padding: 52px 16px 32px; }
+.tl-card { max-width: 560px; margin: 0 auto; background: rgba(24,20,34,.86); backdrop-filter: blur(10px);
+  border: 1px solid rgba(238,214,155,.22); border-radius: 18px; padding: 16px 16px 20px; }
+.tl-tabs { display: flex; gap: 6px; margin: 12px 0 14px; }
+.tl-tabs button { flex: 1; padding: 8px 4px; border-radius: 10px; font-size: .74rem; font-weight: 700;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); color: var(--singa-ink-soft); }
+.tl-tabs button.on { background: linear-gradient(160deg,#eed69b,#c9a55e); color: #221b10; border-color: transparent; }
+.tl-field { margin-bottom: 14px; }
+.tl-field > label { display: block; font-size: .72rem; color: var(--singa-gold); margin-bottom: 6px; line-height: 1.5; }
+.tl-field textarea { width: 100%; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px; padding: 10px; color: var(--singa-ink); font-size: .84rem; line-height: 1.7; resize: vertical; }
+.tl-save { margin-top: 8px; padding: 7px 16px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+  background: linear-gradient(160deg,#eed69b,#c9a55e); color: #221b10; }
+.tl-save:disabled { opacity: .5; }
+.tl-emo { display: flex; gap: 6px; }
+.tl-emo input { flex: 1; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px; padding: 9px 10px; color: var(--singa-ink); font-size: .84rem; }
+.tl-emo .tl-save { margin-top: 0; padding: 7px 12px; }
+.tl-ref { background: rgba(255,255,255,.04); border-left: 2px solid rgba(238,214,155,.5);
+  border-radius: 0 8px 8px 0; padding: 7px 10px; margin-bottom: 10px; }
+.tl-ref .k { display: block; font-size: .58rem; letter-spacing: .1em; color: var(--singa-gold); margin-bottom: 2px; }
+.tl-ref p { font-size: .76rem; line-height: 1.6; color: var(--singa-ink-soft); white-space: pre-wrap; }
+.tl-nudge { font-size: .76rem; line-height: 1.7; color: var(--singa-ink); margin: 6px 0 12px; }
+.tl-add { display: flex; gap: 6px; margin-bottom: 12px; }
+.tl-add input { flex: 1; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+  border-radius: 10px; padding: 10px; color: var(--singa-ink); font-size: .84rem; }
+.tl-add button { width: 44px; border-radius: 10px; font-size: 1.2rem; font-weight: 700;
+  background: linear-gradient(160deg,#eed69b,#c9a55e); color: #221b10; }
+.tl-add button:disabled { opacity: .5; }
+.tl-tasks { list-style: none; display: flex; flex-direction: column; gap: 6px; }
+.tl-tasks li { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: 10px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); }
+.tl-tasks li.empty { justify-content: center; font-size: .76rem; color: var(--singa-ink-soft); background: transparent; border-style: dashed; }
+.tl-tasks .chk { width: 24px; height: 24px; border-radius: 999px; border: 1.5px solid rgba(238,214,155,.6);
+  color: transparent; flex-shrink: 0; transition: background .15s ease; }
+.tl-tasks .chk:hover { background: rgba(238,214,155,.2); }
+.tl-tasks .t { font-size: .84rem; color: var(--singa-ink); }
+.tl-sync { font-size: .68rem; color: var(--singa-ink-soft); margin-top: 10px; line-height: 1.6; }
+.iw-report.is-tasks { border-color: rgba(238,214,155,.3); }
+
+/* 会話で主人公レベルが動いたときのトースト（そっと出て消える） */
+.hero-toast {
+  position: absolute; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 40; display: flex; align-items: center; gap: 8px;
+  max-width: min(88vw, 420px); padding: 8px 14px; cursor: pointer;
+  background: rgba(28, 24, 40, .82); backdrop-filter: blur(8px);
+  border: 1px solid rgba(238, 214, 155, .35); border-radius: 999px;
+  box-shadow: 0 6px 24px rgba(0,0,0,.35);
+  animation: heroToastIn .45s ease both;
+}
+@keyframes heroToastIn { from { opacity: 0; transform: translate(-50%, -10px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.hero-toast .ht-ico { font-size: 1.1rem; }
+.hero-toast .ht-body { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: .72rem; color: var(--singa-ink); }
+.hero-toast .ht-row b { margin-left: 3px; }
+.hero-toast .ht-row.up b { color: #8fd07a; }
+.hero-toast .ht-row.down b { color: #e6b25a; }

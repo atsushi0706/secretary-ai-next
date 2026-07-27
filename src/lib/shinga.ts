@@ -253,6 +253,23 @@ export async function saveWalkLog(userId: string, date: string, summary: string)
   return data as WalkLog;
 }
 
+/**
+ * 「取り組んだ日数」＝この世界に触れた、別々の日の数（延べ日数）。
+ * 一度でも解放したものは戻さないので、連続ストリークではなく累計の active-day を数える。
+ * 会話（自分の発言があった日）とウォーク提出の日を合算し、重複日は1日として数える。
+ */
+export async function countActiveDays(userId: string): Promise<number> {
+  const supa = supabaseAdmin();
+  const days = new Set<string>();
+  const [conv, walks] = await Promise.all([
+    supa.from("shinga_conversations").select("date").eq("user_id", userId).eq("role", "user").limit(2000),
+    supa.from("walk_logs").select("date").eq("user_id", userId).limit(2000),
+  ]);
+  for (const r of (conv.data ?? []) as { date: string }[]) if (r.date) days.add(r.date);
+  for (const r of (walks.data ?? []) as { date: string }[]) if (r.date) days.add(r.date);
+  return days.size;
+}
+
 export async function listWalkLogs(userId: string, limit = 30): Promise<WalkLog[]> {
   const supa = supabaseAdmin();
   const { data, error } = await supa

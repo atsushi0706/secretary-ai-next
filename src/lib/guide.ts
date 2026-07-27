@@ -11,6 +11,7 @@ import { buildModePrompt, type ModeKey } from "./modes";
 import { diagnoseSeimei } from "./seimei";
 import { buildReframePrompt } from "./reframe";
 import { computeLife } from "./sanmei";
+import { buildHeroLevelPrompt, type HeroRow } from "./hero";
 
 /** 名前（姓名判断）から、その人の傾向を内部情報にする。用語は出さない */
 function buildNamePrompt(birthName: string | null | undefined, who: string): string {
@@ -83,6 +84,7 @@ export function buildGuidePersona(opts: {
   place: PlaceKey;
   mode?: ModeKey;
   todayStr?: string | null;
+  hero?: HeroRow | null;         // 主人公レベル（会話で増減させるため）
 }): string {
   const name = opts.guideName || "清瀬リンク";
   const who = opts.userCallName || "きみ";
@@ -93,6 +95,7 @@ export function buildGuidePersona(opts: {
   const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
   const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate, opts.birthGender, who) : "";
   const reframePrompt = opts.mode === "breakthrough" ? buildReframePrompt() : "";
+  const heroPrompt = buildHeroLevelPrompt(opts.hero ?? null, who);
 
   return `
 あなたは「${name}」。インナーワールドという内なる世界で、${who} と一緒に歩く相棒です。
@@ -155,6 +158,7 @@ ${who} が「やってみたい」と口にしたことが具体的になった�
 ${modePrompt}
 ${cyclePrompt}
 ${reframePrompt}
+${heroPrompt}
 
 ${star}
 ${namePrompt}

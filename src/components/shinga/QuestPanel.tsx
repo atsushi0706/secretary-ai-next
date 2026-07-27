@@ -62,7 +62,7 @@ export function QuestPanel({ bump, reflectMode, embedded }: { bump?: number; ref
     <div className={embedded ? "" : "singa-panel"}>
       {!embedded && (
         <div className="singa-panel-title">
-          {reflectMode ? "やってみたこと" : "置いてあるもの"}
+          {reflectMode ? "やってみたこと" : "やってみたいこと"}
         </div>
       )}
 

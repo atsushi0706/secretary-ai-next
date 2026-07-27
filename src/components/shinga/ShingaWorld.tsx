@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { PLACES, type PlaceKey } from "@/lib/places";
-import { MODES, type ModeKey } from "@/lib/modes";
+import { MODES, MODE_OPENERS, type ModeKey } from "@/lib/modes";
 import { VoiceBar } from "./VoiceBar";
 import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
@@ -13,6 +13,7 @@ import { ParallelWalk } from "./ParallelWalk";
 import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
+import { TaskListPanel } from "./TaskListPanel";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -20,7 +21,7 @@ type Message = { role: "user" | "assistant"; content: string };
 
 // タグが本文に混じっても画面に出さない（最初のタグ開始で切る）
 function stripTags(t: string): string {
-  const i = t.search(/<(face|move|choices|quest_to_add)\b/);
+  const i = t.search(/<(face|move|choices|quest_to_add|hero_delta)\b/);
   return (i >= 0 ? t.slice(0, i) : t).trimEnd();
 }
 
@@ -77,6 +78,9 @@ export function ShingaWorld({
   const [reportOpen, setReportOpen] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
+  const [tasksOpen, setTasksOpen] = useState(false);
+  const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
+  const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debug, setDebug] = useState(false);
   const [debugAvailable, setDebugAvailable] = useState(false); // ?debug=1 のときだけ（お客さんには出さない）
   const [debugTrace, setDebugTrace] = useState<any[]>([]);
@@ -96,6 +100,8 @@ export function ShingaWorld({
   const targetRef = useRef("");     // これまでに届いた生テキスト
   const shownRef = useRef(0);        // 表示済み文字数
   const finalRef = useRef(false);    // 生成終了フラグ
+  // テンプレで出した開始の一言。最初の返事のときだけAIへ渡して文脈をつなぐ（DBにも積む）
+  const pendingOpenerRef = useRef<{ mode: ModeKey; line: string } | null>(null);
 
   const here = PLACES[place];
   const isDefaultFace = avatarUrl === "/kiyose.png";
@@ -151,6 +157,18 @@ export function ShingaWorld({
     if (!resume) setMessages([]);
     // パラレルウォークは会話ではなく専用画面（ChatGPT連携）。AI挨拶は呼ばない
     if (m === "walk") return;
+
+    // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
+    // 頭を使うのは、ユーザーが最初の返事をした"あと"から。
+    const op = MODE_OPENERS[m];
+    if (op) {
+      setMessages([{ role: "assistant", content: op.line }]);
+      setFace("smile");
+      pendingOpenerRef.current = { mode: m, line: op.line };
+      if (op.emotion) { setEmoPick(null); setWidget("emotion"); }
+      if (op.choices) setChoices(op.choices as Choice[]);
+      return;
+    }
     await talk("", true, m, MODES[m].place);
   }
 
@@ -182,11 +200,18 @@ export function ShingaWorld({
     finalRef.current = false;
     setTyping(true);
 
+    // テンプレで出した開始の一言を、最初の返事のときだけ一緒に渡す（AIの文脈＆履歴に載せる）
+    let opener: string | undefined;
+    if (!greet && pendingOpenerRef.current && pendingOpenerRef.current.mode === m) {
+      opener = pendingOpenerRef.current.line;
+    }
+    pendingOpenerRef.current = null;
+
     try {
       const r = await fetch("/api/shinga/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet, debug: debugAvailable && debug }),
+        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet, opener, debug: debugAvailable && debug }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -211,6 +236,13 @@ export function ShingaWorld({
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
+        } else if (name === "hero") {
+          const changes = (data.changes as { label: string; from: number; to: number }[]) ?? [];
+          if (changes.length) {
+            setHeroToast(changes);
+            if (heroToastTimer.current) clearTimeout(heroToastTimer.current);
+            heroToastTimer.current = setTimeout(() => setHeroToast(null), 5200);
+          }
         } else if (name === "debug") {
           setDebugTrace((prev) => [...prev, data]);
         }
@@ -273,8 +305,27 @@ export function ShingaWorld({
         />
       </div>
 
+      {/* 会話で主人公レベルが動いたときの、そっと出るお知らせ */}
+      {heroToast && (
+        <div className="hero-toast" onClick={() => { setHeroToast(null); setHeroOpen(true); }}>
+          <span className="ht-ico">🦸</span>
+          <span className="ht-body">
+            {heroToast.map((c, i) => {
+              const up = c.to >= c.from;
+              return (
+                <span key={i} className={`ht-row ${up ? "up" : "down"}`}>
+                  {c.label} <b>{up ? "＋" : "−"}{Math.abs(c.to - c.from)}</b>
+                </span>
+              );
+            })}
+          </span>
+        </div>
+      )}
+
       {heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
+      ) : tasksOpen ? (
+        <TaskListPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setTasksOpen(false)} />
       ) : reportOpen ? (
         <ReportScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setReportOpen(false)} />
       ) : dailyOpen ? (
@@ -288,6 +339,7 @@ export function ShingaWorld({
           onReport={() => setReportOpen(true)}
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
+          onTasks={() => setTasksOpen(true)}
           sending={sending}
         />
       ) : mode === "walk" ? (
@@ -359,7 +411,7 @@ export function ShingaWorld({
           {/* 音声入力バー */}
           <VoiceBar onSend={(t) => talk(t)} disabled={sending} />
 
-          {/* その場所の道具 */}
+          {/* その場所のパネル */}
           {hasPanel && panelOpen && (
             <div className="singa-panel-wrap">
               <button className="singa-panel-close" onClick={() => setPanelOpen(false)} title="しまう">×</button>
@@ -368,7 +420,9 @@ export function ShingaWorld({
             </div>
           )}
           {hasPanel && !panelOpen && (
-            <button className="singa-panel-open" onClick={() => setPanelOpen(true)}>道具をひらく</button>
+            <button className="singa-panel-open" onClick={() => setPanelOpen(true)}>
+              {here.panel === "peak" ? "🌬 呼吸で整える" : here.panel === "akashic" ? "📖 流れを読む・落とし込む" : "ひらく"}
+            </button>
           )}
         </>
       )}
@@ -461,7 +515,7 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
 ];
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -470,6 +524,7 @@ function Home({
   onReport: () => void;
   onDaily: () => void;
   onHero: () => void;
+  onTasks: () => void;
   sending: boolean;
 }) {
   return (
@@ -520,6 +575,7 @@ function Home({
       {/* 主人公（レベル）＋ふりかえり */}
       <div className="iw-reflect-row">
         <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
+        <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
         <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
         <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
       </div>

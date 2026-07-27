@@ -1924,3 +1924,36 @@ body:has(.realverse-bg) { background: transparent; }
 .pwalk-change { margin-top: 10px; font-size: .85rem; color: #34506f; text-align: center; }
 .pwalk-change b { color: #1f6fc0; }
 .pwalk-small { font-size: .78rem; opacity: .8; }
+
+/* ── 可視化パネル（開発用） ── */
+.singa-debug-toggle {
+  position: absolute; right: 10px; top: 10px; z-index: 20;
+  font-size: .62rem; font-weight: 700;
+  padding: 4px 8px; border-radius: 999px;
+  background: rgba(0,0,0,.55); color: #fff; border: 1px solid rgba(255,255,255,.25);
+}
+.dbg {
+  position: absolute; right: 8px; bottom: 8px; z-index: 21;
+  width: min(440px, calc(100% - 16px)); max-height: 70%;
+  overflow-y: auto;
+  background: rgba(10,12,16,.96); color: #d8e0ea;
+  border: 1px solid #3a4656; border-radius: 12px;
+  padding: 10px 12px; font-size: 11px; line-height: 1.6;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  box-shadow: 0 10px 40px rgba(0,0,0,.6);
+}
+.dbg-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.dbg-head button { font-size: 10px; background: #2a3340; color: #9fb0c4; border-radius: 6px; padding: 2px 8px; }
+.dbg-row { display: flex; gap: 6px; padding: 2px 0; border-bottom: 1px solid rgba(255,255,255,.06); }
+.dbg-row .k { color: #7fd0e0; flex: 0 0 68px; }
+.dbg-sec { margin: 8px 0 4px; color: #eed69b; font-weight: 700; }
+.dbg-empty { color: #7a8697; padding: 2px 0; }
+.dbg-msg { display: flex; gap: 6px; padding: 3px 0; border-bottom: 1px dashed rgba(255,255,255,.07); }
+.dbg-msg .d { color: #8aa0b6; flex: 0 0 auto; }
+.dbg-msg .r { color: #c9a55e; flex: 0 0 64px; }
+.dbg-msg .c { flex: 1; white-space: pre-wrap; word-break: break-word; }
+.dbg-msg.is-old { background: rgba(226,87,76,.14); }
+.dbg-msg.is-old .d { color: #f0a8a0; }
+.dbg-sys { margin-top: 8px; }
+.dbg-sys summary { cursor: pointer; color: #eed69b; }
+.dbg-sys pre { white-space: pre-wrap; word-break: break-word; margin: 6px 0; color: #b8c4d2; max-height: 300px; overflow-y: auto; background: rgba(0,0,0,.3); padding: 8px; border-radius: 8px; }

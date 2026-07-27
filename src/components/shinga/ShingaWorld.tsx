@@ -75,6 +75,8 @@ export function ShingaWorld({
   const [panelOpen, setPanelOpen] = useState(true);
   const [reportOpen, setReportOpen] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
+  const [debug, setDebug] = useState(false);
+  const [debugTrace, setDebugTrace] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // タイプ演出：流れてきた文字を一定ペースで少しずつ表示（考えながらピピピ）
@@ -157,6 +159,7 @@ export function ShingaWorld({
     setSending(true);
     setChoices(null);
     setWidget(null);
+    if (debug) setDebugTrace([]);
     if (!greet) setMessages((prev) => [...prev, { role: "user", content: body }]);
 
     // 新しい assistant 行を用意して、タイプ演出を開始
@@ -170,7 +173,7 @@ export function ShingaWorld({
       const r = await fetch("/api/shinga/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet }),
+        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet, debug }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -195,6 +198,8 @@ export function ShingaWorld({
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
+        } else if (name === "debug") {
+          setDebugTrace((prev) => [...prev, data]);
         }
       });
     } catch (e: any) {
@@ -350,6 +355,69 @@ export function ShingaWorld({
             <button className="singa-panel-open" onClick={() => setPanelOpen(true)}>道具をひらく</button>
           )}
         </>
+      )}
+
+      {/* 可視化トグル（開発用・右上の小さな虫めがね） */}
+      <button
+        className="singa-debug-toggle"
+        onClick={() => setDebug((v) => !v)}
+        title="なかを見る（何を読み込みAIに渡したか）"
+      >
+        {debug ? "🔍ON" : "🔍"}
+      </button>
+
+      {/* 可視化パネル */}
+      {debug && debugTrace.length > 0 && <DebugPanel trace={debugTrace} onClear={() => setDebugTrace([])} />}
+    </div>
+  );
+}
+
+// ── 可視化パネル：どのタイミングで何を読み込み、AIがどう反応したか ──
+function DebugPanel({ trace, onClear }: { trace: any[]; onClear: () => void }) {
+  const input = trace.find((t) => t.stage === "input");
+  const output = trace.find((t) => t.stage === "output");
+  return (
+    <div className="dbg">
+      <div className="dbg-head">
+        <b>🔍 なかを見る</b>
+        <button onClick={onClear}>クリア</button>
+      </div>
+      {input && (
+        <>
+          <div className="dbg-row"><span className="k">今日</span><span>{input.today}／モード:{String(input.mode)}／place:{input.place}／greet:{String(input.greet)}</span></div>
+          <div className="dbg-row"><span className="k">誕生日等</span><span>date:{String(input.settingsBirth?.date)} name:{String(input.settingsBirth?.name)} gender:{String(input.settingsBirth?.gender)}</span></div>
+
+          <div className="dbg-sec">① DBから読んだ履歴（{input.loadedFromDb?.length ?? 0}件）</div>
+          {(!input.loadedFromDb || input.loadedFromDb.length === 0)
+            ? <div className="dbg-empty">なし（新しいスレッド）</div>
+            : input.loadedFromDb.map((m: any, i: number) => (
+                <div key={i} className={`dbg-msg ${m.date !== input.today ? "is-old" : ""}`}>
+                  <span className="d">{m.date}{m.date !== input.today ? " ⚠別日" : ""}</span>
+                  <span className="r">{m.role}</span>
+                  <span className="c">{m.content}</span>
+                </div>
+              ))}
+
+          <div className="dbg-sec">② AIに渡したメッセージ列（{input.sentToAI?.length ?? 0}件）</div>
+          {input.sentToAI?.map((m: any, i: number) => (
+            <div key={i} className="dbg-msg">
+              <span className="r">{m.role}</span>
+              <span className="c">{m.content}</span>
+            </div>
+          ))}
+
+          <details className="dbg-sys">
+            <summary>③ システムプロンプト（{input.systemPrompt?.length ?? 0}字）</summary>
+            <pre>{input.systemPrompt}</pre>
+          </details>
+        </>
+      )}
+      {output && (
+        <details className="dbg-sys" open>
+          <summary>④ AIの生レスポンス</summary>
+          <pre>{output.raw}</pre>
+          <div className="dbg-row"><span className="k">抽出</span><span>{JSON.stringify(output.extracted)}</span></div>
+        </details>
       )}
     </div>
   );

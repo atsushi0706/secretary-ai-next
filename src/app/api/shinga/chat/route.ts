@@ -38,6 +38,7 @@ export async function POST(req: Request) {
   const place: PlaceKey = isPlaceKey(body.place) ? body.place : "map";
   const mode: ModeKey | undefined = isModeKey(body.mode) ? body.mode : undefined;
   const greet = !!body.greet;   // 開いた直後の最初のひとこと
+  const debug = !!body.debug;   // 可視化用：何を読み込みAIに渡したかを返す
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -68,8 +69,10 @@ export async function POST(req: Request) {
         // さらに、特定のワークを greet で始めるときは、そのワークだけの新しいスレッドにする
         //（＝過去の別の話を引きずらない）。
         let history: { role: "assistant" | "user"; content: string }[] = [];
+        let debugHistory: any[] = [];
         if (!(greet && mode)) {
           const past = await loadShingaMessages(userId, 24, today);
+          debugHistory = past.map((m) => ({ role: m.role, date: m.date, at: m.created_at, content: m.content }));
           history = past.map((m) => ({
             role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
             content: m.content,
@@ -85,6 +88,18 @@ export async function POST(req: Request) {
           history.push({ role: "user", content: openLine });
         } else if (history.length === 0 || history[history.length - 1].role !== "user") {
           history.push({ role: "user", content: text });
+        }
+
+        // 可視化：AIに渡す直前の状態を丸ごと返す（何をいつ読み込んだか）
+        if (debug) {
+          send("debug", {
+            stage: "input",
+            today, mode: mode ?? null, place, greet,
+            loadedFromDb: debugHistory,               // DBから読んだ履歴（日付つき）
+            sentToAI: history,                         // 実際にAIへ渡したメッセージ列
+            systemPrompt: system,                      // システムプロンプト全文
+            settingsBirth: { date: settings?.birth_date ?? null, name: settings?.birth_name ?? null, gender: settings?.birth_gender ?? null },
+          });
         }
 
         let full = "";
@@ -175,6 +190,14 @@ export async function POST(req: Request) {
 
         if (clean) {
           await saveShingaMessage(userId, today, "assistant", clean, moveTo ?? place);
+        }
+        // 可視化：AIの生レスポンス（タグ込み）と、抽出したもの
+        if (debug) {
+          send("debug", {
+            stage: "output",
+            raw: full,
+            extracted: { face, move: moveTo, choices, wantEmotion, wantBreath, addedQuests },
+          });
         }
         send("done", { ok: true });
       } catch (e: any) {

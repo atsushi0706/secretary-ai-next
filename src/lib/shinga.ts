@@ -202,6 +202,7 @@ export type ShingaMessage = {
   role: "user" | "assistant";
   content: string;
   place: string | null;
+  date: string;
   created_at: string;
 };
 
@@ -224,7 +225,7 @@ export async function loadShingaMessages(userId: string, limit = 30, date?: stri
   const supa = supabaseAdmin();
   let q = supa
     .from("shinga_conversations")
-    .select("id, role, content, place, created_at")
+    .select("id, role, content, place, date, created_at")
     .eq("user_id", userId);
   if (date) q = q.eq("date", date);
   const { data, error } = await q.order("id", { ascending: false }).limit(limit);

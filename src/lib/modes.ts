@@ -246,6 +246,9 @@ export const MODE_OPENERS: Partial<Record<ModeKey, ModeOpener>> = {
     line: "よし、ピークステートから整えていこう😊 まず、いまの気分を教えて。近いところを1つ選んでみて。",
     emotion: true,
   },
+  walk: {
+    line: "整ったね🚶 じゃあ上を向いて、きみの理想の未来を一緒に歩こう。いま、どんな世界にいたい？ 現実の制約はいったん忘れて、思いつくまま話してみて。",
+  },
   akashic: {
     line: "アカシックへようこそ📖 どのへんの流れが気になる？",
     choices: [

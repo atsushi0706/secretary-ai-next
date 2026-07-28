@@ -1923,6 +1923,15 @@ body:has(.realverse-bg) { background: transparent; }
 .pwalk-row { display: flex; gap: 8px; }
 .pwalk-row .pwalk-go, .pwalk-row .pwalk-done { flex: 1; margin-top: 12px; }
 .pwalk-err { position: relative; font-size: .75rem; color: #c0392b; margin-top: 8px; }
+/* パラレルウォーク：終わるボタン（会話の下）。明るい背景でも見えるよう高コントラスト＋前面に */
+.walk-end-btn {
+  position: relative; z-index: 6;
+  display: block; margin: 0 auto 8px; padding: 9px 22px; border-radius: 999px;
+  font-size: .8rem; font-weight: 800; color: #fff;
+  background: linear-gradient(160deg,#3f8f4f,#2c6b3a);
+  border: 1px solid rgba(255,255,255,.55);
+  box-shadow: 0 4px 16px rgba(0,0,0,.35);
+}
 .pwalk-focus { position: relative; text-align: left; }
 .pwalk-focus label { display: block; font-size: .82rem; font-weight: 700; margin-top: 14px; color: #f4e7c8; }
 .pwalk-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }

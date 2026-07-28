@@ -11,7 +11,7 @@
 import { auth } from "@/auth";
 import { streamChat, AIRateLimitError, formatRateLimitForUser } from "@/lib/ai";
 import { extractJson } from "@/lib/claude";
-import { buildGuidePersona } from "@/lib/guide";
+import { buildGuidePersona, buildWalkPersona } from "@/lib/guide";
 import { isPlaceKey, type PlaceKey } from "@/lib/places";
 import { isModeKey, MODES, type ModeKey } from "@/lib/modes";
 import { jstDateStr } from "@/lib/google";
@@ -63,17 +63,26 @@ export async function POST(req: Request) {
         // 主人公レベル：会話で増減させるため、実際の対話（greet以外）のときだけ読み込んで渡す
         let hero: HeroRow | null = null;
         if (!greet) hero = await getHero(userId).catch(() => null);
-        const system = buildGuidePersona({
-          guideName: settings?.secretary_name,
-          userCallName: settings?.user_call_name,
-          birthDate: settings?.birth_date,
-          birthName: settings?.birth_name,
-          birthGender: settings?.birth_gender,
-          place,
-          mode,
-          todayStr: today,
-          hero,
-        });
+        // パラレルウォークは「きよブラック」＝普通に受け止めて普通に返す1対1の人格（構造化フローなし）
+        const system = mode === "walk"
+          ? buildWalkPersona({
+              guideName: settings?.secretary_name,
+              userCallName: settings?.user_call_name,
+              birthDate: settings?.birth_date,
+              birthName: settings?.birth_name,
+              todayStr: today,
+            })
+          : buildGuidePersona({
+              guideName: settings?.secretary_name,
+              userCallName: settings?.user_call_name,
+              birthDate: settings?.birth_date,
+              birthName: settings?.birth_name,
+              birthGender: settings?.birth_gender,
+              place,
+              mode,
+              todayStr: today,
+              hero,
+            });
 
         // 会話履歴は「今日ぶんだけ」に絞る（何日も前の話が混ざって時間軸が壊れるのを防ぐ）。
         // さらに、特定のワークを greet で始めるときは、そのワークだけの新しいスレッドにする

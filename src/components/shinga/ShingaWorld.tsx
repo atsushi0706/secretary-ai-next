@@ -9,7 +9,6 @@ import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
-import { ParallelWalk } from "./ParallelWalk";
 import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
@@ -176,8 +175,6 @@ export function ShingaWorld({
     emotionDoneRef.current = false; // 新しいセッション＝気分メーター・呼吸は一度だけ許可
     breathDoneRef.current = false;
     if (!resume) setMessages([]);
-    // パラレルウォークは会話ではなく専用画面（ChatGPT連携）。AI挨拶は呼ばない
-    if (m === "walk") return;
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
     // 頭を使うのは、ユーザーが最初の返事をした"あと"から。
@@ -297,6 +294,18 @@ export function ShingaWorld({
     void talk(`いまの気分は「${emoName(n)}」`);
   }
 
+  // パラレルウォークを終える → 歩いた記録を残して地図へ
+  function endWalk() {
+    const transcript = messages.filter((m) => m.role === "user").map((m) => m.content).join("\n").trim();
+    if (transcript) {
+      fetch("/api/walk-logs", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ summary: transcript.slice(0, 2000) }),
+      }).catch(() => {});
+    }
+    setView("home"); setChoices(null); setMode(null);
+  }
+
   // 呼吸トレーニングが終わった → AIに知らせる
   function breathDone() {
     breathDoneRef.current = true; // 以後この呼吸ガイドは出さない
@@ -375,8 +384,6 @@ export function ShingaWorld({
           onLetter={letter ? () => setLetterOpen(true) : undefined}
           sending={sending}
         />
-      ) : mode === "walk" ? (
-        <ParallelWalk onBack={() => { setView("home"); setChoices(null); setMode(null); }} />
       ) : (
         <>
           <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>
@@ -440,6 +447,11 @@ export function ShingaWorld({
               </div>
             )}
           </div>
+
+          {/* パラレルウォーク：1対1で完結。終わるボタンだけ出す */}
+          {mode === "walk" && (
+            <button className="walk-end-btn" onClick={endWalk}>🌱 終わる</button>
+          )}
 
           {/* 音声入力バー */}
           <VoiceBar onSend={(t) => talk(t)} disabled={sending} />

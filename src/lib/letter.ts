@@ -23,14 +23,16 @@ export async function getTodayLetter(userId: string): Promise<FutureLetter> {
   const settings: any = await getUserSettings(userId).catch(() => null);
   const who = settings?.user_call_name?.trim() || "きみ";
 
-  // ── 初期設定ゲート：名前・生年月日・呼んでほしい名前 が揃うまでは手紙を出さず、設定へ誘導 ──
+  // ── 初期設定ゲート：名前・生年月日・性別・呼んでほしい名前 が揃うまでは手紙を出さず、設定へ誘導 ──
+  // （性別と生年月日は、10年後のステージ＝算命学の大運に必須）
   const hasName = !!settings?.birth_name?.trim();
   const hasBirth = !!settings?.birth_date?.trim();
+  const hasGender = settings?.birth_gender === "male" || settings?.birth_gender === "female";
   const hasCallName = !!settings?.user_call_name?.trim();
-  if (!hasName || !hasBirth || !hasCallName) {
+  if (!hasName || !hasBirth || !hasGender || !hasCallName) {
     return {
       date, hasIdeal: false, needsSetup: true, emotion: "",
-      body: `手紙を届けたいんだけど、まだ準備が要るんだ。\nきみの「名前」「生年月日」「呼んでほしい名前」を教えてくれる？\nそれが揃ったら——きみが叶えた世界から、ちゃんと手紙が届くよ。`,
+      body: `手紙を届けたいんだけど、まだ準備が要るんだ。\nきみの「名前」「生年月日」「性別」「呼んでほしい名前」を教えてくれる？\nそれが揃ったら——きみが叶えた世界から、ちゃんと手紙が届くよ。`,
     };
   }
 

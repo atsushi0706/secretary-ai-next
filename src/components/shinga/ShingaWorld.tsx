@@ -118,8 +118,9 @@ export function ShingaWorld({
   const finalRef = useRef(false);    // 生成終了フラグ
   // テンプレで出した開始の一言。最初の返事のときだけAIへ渡して文脈をつなぐ（DBにも積む）
   const pendingOpenerRef = useRef<{ mode: ModeKey; line: string } | null>(null);
-  // 気分メーターは1セッション1回だけ（一度答えたら二度と出さない）
+  // 気分メーター・呼吸ガイドは1セッション1回だけ（一度終えたら二度と出さない）
   const emotionDoneRef = useRef(false);
+  const breathDoneRef = useRef(false);
 
   const here = PLACES[place];
   const isDefaultFace = avatarUrl === "/kiyose.png";
@@ -172,7 +173,8 @@ export function ShingaWorld({
     setPlace(MODES[m].place);
     setView("talk");
     setChoices(null);
-    emotionDoneRef.current = false; // 新しいセッション＝気分メーターは一度だけ許可
+    emotionDoneRef.current = false; // 新しいセッション＝気分メーター・呼吸は一度だけ許可
+    breathDoneRef.current = false;
     if (!resume) setMessages([]);
     // パラレルウォークは会話ではなく専用画面（ChatGPT連携）。AI挨拶は呼ばない
     if (m === "walk") return;
@@ -251,7 +253,8 @@ export function ShingaWorld({
           // 一度でも気分を答えていたら、二度と出さない（被り防止）
           if (!emotionDoneRef.current) { setEmoPick(null); setWidget("emotion"); }
         } else if (name === "breath") {
-          setWidget("breath");
+          // 一度呼吸を終えていたら、二度と出さない（被り防止）
+          if (!breathDoneRef.current) setWidget("breath");
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
@@ -296,6 +299,7 @@ export function ShingaWorld({
 
   // 呼吸トレーニングが終わった → AIに知らせる
   function breathDone() {
+    breathDoneRef.current = true; // 以後この呼吸ガイドは出さない
     setWidget(null);
     void talk("（呼吸トレーニングが終わった）");
   }

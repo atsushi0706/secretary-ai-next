@@ -411,7 +411,7 @@ export function ShingaWorld({
           {/* 音声入力バー */}
           <VoiceBar onSend={(t) => talk(t)} disabled={sending} />
 
-          {/* その場所のパネル */}
+          {/* その場所のパネル（ゾーンに応じて中身が変わる） */}
           {hasPanel && panelOpen && (
             <div className="singa-panel-wrap">
               <button className="singa-panel-close" onClick={() => setPanelOpen(false)} title="しまう">×</button>

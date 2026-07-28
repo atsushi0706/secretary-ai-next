@@ -566,7 +566,7 @@ body:has(.realverse-bg) { background: transparent; }
   50%      { box-shadow: 0 0 0 8px rgba(200, 70, 60, 0); }
 }
 
-/* その場所の道具 */
+/* その場所のパネル */
 .singa-panel-wrap {
   position: absolute;
   right: 12px; top: 76px;
@@ -978,7 +978,7 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-center-btn .ja { font-size: 1.5rem; font-weight: 700; letter-spacing: .1em; }
 .singa-center-btn .desc { font-size: .72rem; line-height: 1.8; color: var(--singa-ink-soft); margin-top: 4px; }
 
-/* ── 呼吸の手順（ピークステートの道具） ── */
+/* ── 呼吸の手順（ピークステート） ── */
 .singa-breath {
   list-style: decimal inside;
   font-size: .72rem; line-height: 1.85;
@@ -1430,7 +1430,7 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-center-btn .ja { font-size: 1.5rem; font-weight: 700; letter-spacing: .1em; }
 .singa-center-btn .desc { font-size: .72rem; line-height: 1.8; color: var(--singa-ink-soft); margin-top: 4px; }
 
-/* ── 呼吸の手順（ピークステートの道具） ── */
+/* ── 呼吸の手順（ピークステート） ── */
 .singa-breath {
   list-style: decimal inside;
   font-size: .72rem; line-height: 1.85;
@@ -2035,7 +2035,7 @@ body:has(.realverse-bg) { background: transparent; }
 .hero-deltas .hd-chip.up .v { color: #8fd07a; }
 .hero-deltas .hd-chip.down .v { color: #e6b25a; }
 
-/* ── タスクリスト（旧・道具箱） ── */
+/* ── タスクリスト ── */
 .tl { position: absolute; inset: 0; z-index: 30; overflow-y: auto; padding: 52px 16px 32px; }
 .tl-card { max-width: 560px; margin: 0 auto; background: rgba(24,20,34,.86); backdrop-filter: blur(10px);
   border: 1px solid rgba(238,214,155,.22); border-radius: 18px; padding: 16px 16px 20px; }

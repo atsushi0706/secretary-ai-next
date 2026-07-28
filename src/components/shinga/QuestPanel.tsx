@@ -20,7 +20,7 @@ const TIME_LABEL: Record<TimeKey, string> = {
 };
 
 /**
- * 可能性の空（クエスト）と、心の宝（振り返り）で開く道具。
+ * 可能性の空（クエスト）と、心の宝（振り返り）のパネル。
  * 会話でここへ来たときに開くので、入口ボタンは持たない。
  */
 export function QuestPanel({ bump, reflectMode, embedded }: { bump?: number; reflectMode?: boolean; embedded?: boolean }) {

@@ -25,7 +25,7 @@ export type Place = {
   hue: string;
   /** 一言 */
   tagline: string;
-  /** この場所で開く道具（UIパネル） */
+  /** この場所で開くパネル（UI） */
   panel: "none" | "peak" | "akashic";
   /** そのゾーン専用の背景画像 */
   image: string;

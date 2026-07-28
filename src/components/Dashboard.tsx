@@ -579,28 +579,23 @@ function DailyProgress({
 }) {
   const { pct, pctClamped, baselineMin, completedMin, baselineCount, completedCount } = progress;
   const isOver = pct > 100;
-  const remainMin = Math.max(0, baselineMin - completedMin);
-  const rh = Math.floor(remainMin / 60), rm = remainMin % 60;
-  const remainLabel = remainMin <= 0
-    ? "🎉 今日クリア！"
-    : `あと${rh > 0 ? `${rh}時間` : ""}${rm}分で今日クリア`;
   return (
     <section className="card flex items-center gap-4 flex-wrap">
       <ProgressRing
         percent={pctClamped}
         size={120}
-        centerLabel={remainMin <= 0 ? "✓" : (rh > 0 ? `${rh}h${rm}m` : `${rm}分`)}
+        centerLabel={`${pct}%`}
         accentOver={isOver}
       />
       <div className="flex-1 min-w-0">
         <div className="font-bold text-base">
-          🎯 {remainLabel}
+          🎯 今日の進捗
           {isOver && <span className="ml-2 text-xs text-amber-600 font-normal">🎉 ベース超え！</span>}
         </div>
         <div className="text-xs text-gray-600 mt-1">
           {completedCount}/{baselineCount} 完了
-          ／ 済 {Math.floor(completedMin / 60)}h{completedMin % 60}m
-          ／ ベース {Math.floor(baselineMin / 60)}h{baselineMin % 60}m（{pct}%）
+          ／ {Math.floor(completedMin / 60)}h{completedMin % 60}m 済
+          ／ ベース {Math.floor(baselineMin / 60)}h{baselineMin % 60}m
         </div>
         <div className="text-[11px] text-gray-400 mt-1">
           ※「今日終わらす」タスクと自動連動・1日マイでリセット

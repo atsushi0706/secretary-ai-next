@@ -3,7 +3,6 @@ import { auth } from "@/auth";
 import { addTask, completeTask, deleteTask, getTasks } from "@/lib/google";
 import { setManualLabel, clearManualLabel, logError } from "@/lib/supabase";
 import { linkTask, unlinkTask, isMissingTable } from "@/lib/shinga";
-import { getHero, applyHeroDeltas } from "@/lib/hero";
 
 // 未完了タスクの一覧（インナーワールドの「今日」タブなどから使う）
 export async function GET() {
@@ -55,17 +54,7 @@ export async function POST(req: Request) {
     }
     if (action === "complete") {
       await completeTask(userId, body.tasklistId, body.taskId);
-      // 現実で1つ終わらせると、主人公Lv（体現）が上がる（理由つき・驚愕→納得）
-      let heroChange: any = null;
-      try {
-        const hero = await getHero(userId).catch(() => null);
-        if (hero?.levels) {
-          const title = String(body.title ?? "タスク").slice(0, 30);
-          const { changed } = await applyHeroDeltas(userId, [{ domain: "embodiment", delta: 1, reason: `「${title}」を現実で終わらせたから` }], hero);
-          if (changed[0]) heroChange = changed[0];
-        }
-      } catch { /* Lvが無くても完了は成功扱い */ }
-      return NextResponse.json({ ok: true, heroChange });
+      return NextResponse.json({ ok: true });
     }
     if (action === "delete") {
       await deleteTask(userId, body.tasklistId, body.taskId);

@@ -9,13 +9,12 @@ import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
-import { WalkLanding } from "./WalkLanding";
+import { ParallelWalk } from "./ParallelWalk";
 import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
 import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
-import { LinkLetter } from "./LinkLetter";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -55,44 +54,8 @@ async function readSse(resp: Response, onEvent: (event: string, data: any) => vo
 const FACE_SRC: Record<Face, string> = {
   neutral: "/kiyose.png",
   smile: "/kiyose_smile.png",
-  anxious: "/kiyose.png", // ※ kiyose_anxious.png が未提供のため、当面は neutral で代用（画像切れ防止）
+  anxious: "/kiyose.png", // ※ kiyose_anxious.png が未提供のため neutral で代用（画像切れ防止）
 };
-
-// タップした瞬間に鳴る、やさしい単音（外部ファイル不要・Web Audio）。
-// 穏やか(1)ほど高く澄んだ音、しんどい(10)ほど低くやわらかい音。
-function playChime(n: number) {
-  try {
-    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
-    if (!Ctx) return;
-    const ctx = new Ctx();
-    const o = ctx.createOscillator();
-    const g = ctx.createGain();
-    o.type = "sine";
-    o.frequency.value = 680 - ((n - 1) / 9) * (680 - 320);
-    o.connect(g); g.connect(ctx.destination);
-    const t = ctx.currentTime;
-    g.gain.setValueAtTime(0.0001, t);
-    g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
-    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
-    o.start(t); o.stop(t + 0.72);
-    o.onended = () => { try { ctx.close(); } catch { /* ignore */ } };
-  } catch { /* 音が出なくても体験は進む */ }
-}
-
-// 地図の光の粒の位置（取り組み日数ぶん・決定的にばらす）
-function moteStyle(i: number) {
-  const gx = (i * 37) % 100, gy = (i * 61) % 100;
-  return { left: `${6 + gx * 0.86}%`, top: `${14 + gy * 0.66}%`, animationDelay: `${(i % 8) * 0.45}s` } as const;
-}
-
-// 気分に応じた、キヨセリンクの一言（低い数字＝穏やかを責めない・高い数字＝しんどいを休ませる）
-function moodLineFor(n: number): string {
-  if (n <= 2) return "いい感じだね😊 その穏やかさのまま、今日の理想を歩きにいこ。";
-  if (n <= 4) return "落ち着いてるね。ここから整えていけるよ。まずピークステート、どう？";
-  if (n <= 6) return "ふつうくらいか😊 じゃあ軽く整えてから、やりたいこと見にいこ。";
-  if (n <= 8) return "ちょっとしんどめだね。無理しなくていいよ。まず呼吸で整えよっか。";
-  return "今日はよく来たね。ここで休んでいいよ。何もしなくて、大丈夫。";
-}
 
 export function ShingaWorld({
   guideName, avatarUrl, initialPlace,
@@ -117,18 +80,6 @@ export function ShingaWorld({
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
-  const [walkLanding, setWalkLanding] = useState(false); // パラレルウォーク→今日に落とす着地
-  const [homeMood, setHomeMood] = useState<number | null>(null); // 起動直後の「気分1タップ」
-  const [moodLine, setMoodLine] = useState<string | null>(null);
-  const [activeDays, setActiveDays] = useState(0);               // 地図の育ち（取り組み日数）
-  const [heroStatement, setHeroStatement] = useState("");        // 常設する主人公像（物語の核）
-
-  // 主人公像を読み込んで、常に見える場所に置く（物語をモーダルに隠さない）
-  useEffect(() => {
-    fetch("/api/hero").then((r) => r.json()).then((d) => {
-      setHeroStatement(d?.hero?.hero_statement?.trim() || d?.hero?.desired_world?.trim() || "");
-    }).catch(() => {});
-  }, []);
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debug, setDebug] = useState(false);
@@ -199,25 +150,14 @@ export function ShingaWorld({
     setTimeout(() => setMoving(false), 1100);
   }, []);
 
-  // 起動直後の「気分1タップ」→ 押した瞬間に世界が反応する（光・表情・音）。責めない。
-  function moodReact(n: number) {
-    setHomeMood(n);
-    setMoodLine(moodLineFor(n));
-    setFace(n <= 4 ? "smile" : n <= 7 ? "neutral" : "anxious");
-    playChime(n);
-    fetch("/api/emotions", {
-      method: "POST", headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ level: n }),
-    }).catch(() => {});
-  }
-
   async function enter(m: ModeKey, resume = false) {
     setMode(m);
     setPlace(MODES[m].place);
     setView("talk");
     setChoices(null);
     if (!resume) setMessages([]);
-    setWalkLanding(false);
+    // パラレルウォークは会話ではなく専用画面（ChatGPT連携）。AI挨拶は呼ばない
+    if (m === "walk") return;
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
     // 頭を使うのは、ユーザーが最初の返事をした"あと"から。
@@ -366,23 +306,6 @@ export function ShingaWorld({
         />
       </div>
 
-      {/* 地図が育つ：取り組んだ日数だけ、光の粒がマップに増える（数字より景色） */}
-      {view === "home" && activeDays > 0 && (
-        <div className="iw-grow" aria-hidden>
-          {Array.from({ length: Math.min(activeDays, 24) }).map((_, i) => (
-            <span key={i} className="mote" style={moteStyle(i)} />
-          ))}
-        </div>
-      )}
-
-      {/* 気分タップで世界が反応：穏やかなら朝の光、しんどいなら夜に沈む */}
-      {view === "home" && homeMood != null && (
-        <>
-          <div className="iw-glow" style={{ opacity: Math.max(0, (5 - homeMood) / 4) * 0.5 }} />
-          <div className="iw-veil" style={{ opacity: Math.max(0, (homeMood - 5) / 5) * 0.72 }} />
-        </>
-      )}
-
       {/* 会話で主人公レベルが動いたときの、そっと出るお知らせ */}
       {heroToast && (
         <div className="hero-toast" onClick={() => { setHeroToast(null); setHeroOpen(true); }}>
@@ -418,18 +341,10 @@ export function ShingaWorld({
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onTasks={() => setTasksOpen(true)}
-          mood={homeMood}
-          moodLine={moodLine}
-          onMood={moodReact}
-          heroStatement={heroStatement}
-          onStats={(s) => setActiveDays(s.activeDays)}
           sending={sending}
         />
-      ) : walkLanding ? (
-        <WalkLanding
-          transcript={messages.filter((m) => m.role === "user").map((m) => m.content).join("\n")}
-          onDone={() => { setWalkLanding(false); setView("home"); setChoices(null); setMode(null); }}
-        />
+      ) : mode === "walk" ? (
+        <ParallelWalk onBack={() => { setView("home"); setChoices(null); setMode(null); }} />
       ) : (
         <>
           <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>
@@ -493,13 +408,6 @@ export function ShingaWorld({
               </div>
             )}
           </div>
-
-          {/* パラレルウォーク：歩き終えて、理想を今日に落とす */}
-          {mode === "walk" && messages.some((m) => m.role === "user") && (
-            <button className="walk-land-btn" onClick={() => setWalkLanding(true)}>
-              🌱 歩き終わる → 今日に落とす
-            </button>
-          )}
 
           {/* 音声入力バー */}
           <VoiceBar onSend={(t) => talk(t)} disabled={sending} />
@@ -597,14 +505,6 @@ function greetLine(): string {
   return `${time} ここは『インナーワールド』——きみの内側の世界だよ。\n今日はまず、ピークステートから。ぜったい、そこで“整える”のが先だよ😊`;
 }
 
-// カタカナ名だけだと「押す前に何が起きるか」の仮説が立たない → 動詞を添える（玉樹式・直感のデザイン）
-const VERB: Record<string, string> = {
-  peak: "いまを整える",
-  walk: "歩きながら未来を決める",
-  akashic: "流れを読む",
-  breakthrough: "壁をこわす",
-  travel: "「どうなる？」で上げる",
-};
 const DOORS: { key: ModeKey; emoji: string }[] = [
   { key: "peak", emoji: "✨" },
   { key: "walk", emoji: "🚶" },
@@ -616,7 +516,7 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
 ];
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, mood, moodLine, onMood, heroStatement, onStats, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -626,26 +526,15 @@ function Home({
   onDaily: () => void;
   onHero: () => void;
   onTasks: () => void;
-  mood: number | null;
-  moodLine: string | null;
-  onMood: (n: number) => void;
-  heroStatement: string;
-  onStats?: (s: { activeDays: number }) => void;
   sending: boolean;
 }) {
-  const [menuOpen, setMenuOpen] = useState(false);
-  // 最初の画面は「気分タップ1つ」に絞る。押したら世界が開く（残りが出てくる）。
-  const showMore = menuOpen || mood != null;
   return (
     <div className="iw-home">
-      {/* リンクからの便り：理想が向こうから会いに来る（届くだけ・読むだけ） */}
-      <LinkLetter guideName={guideName} />
-
-      {/* 世界の中に立つキヨセリンク＋吹き出し（気分を押すと反応が変わる） */}
+      {/* 世界の中に立つキヨセリンク＋吹き出し */}
       <div className="iw-scene">
         <div className="iw-bubble">
           <span className="who">{guideName}</span>
-          <p>{moodLine ?? greetLine()}</p>
+          <p>{greetLine()}</p>
         </div>
         <Image
           className="iw-figure"
@@ -658,62 +547,42 @@ function Home({
         />
       </div>
 
-      {/* ★ 唯一の入口：いまの気分を1タップ（押した瞬間に世界が反応する） */}
-      <div className="iw-mood is-primary">
-        <EmotionMeter value={mood} onChange={onMood}
-          title={mood == null ? "まず、いまの気分をタップ 👇" : "気分、変わったら押してね"} />
+      {/* 話しかける（ここで即・打てる／話せる） */}
+      <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
+
+      {/* ゲームHUD：🔮イメージ力／🔨現実化力＋今日のナゾ */}
+      <InnerHud guideName={guideName} />
+
+      {/* または、行き先を選ぶ */}
+      <div className="iw-doors">
+        {DOORS.map((d) => {
+          const m = MODES[d.key];
+          return (
+            <button key={d.key} className={`iw-door ${d.key === "peak" ? "is-start" : ""}`} onClick={() => onPick(d.key)}>
+              {d.key === "peak" && <span className="tag">まずここから</span>}
+              <span className="emoji">{d.emoji}</span>
+              <span className="ja">{m.label}</span>
+            </button>
+          );
+        })}
+        {DOORS_SUB.map((d) => {
+          const m = MODES[d.key];
+          return (
+            <button key={d.key} className="iw-door is-sub" onClick={() => onPick(d.key)}>
+              <span className="emoji">{d.emoji}</span>
+              <span className="ja">{m.label}</span>
+            </button>
+          );
+        })}
       </div>
 
-      {!showMore ? (
-        <button className="iw-more" onClick={() => setMenuOpen(true)}>▾ 今日のメニュー（ナゾ・ツール）を開く</button>
-      ) : (
-        <>
-          {/* 主人公の物語（役） */}
-          {heroStatement && (
-            <button className="iw-hero-banner" onClick={onHero} title="主人公を見る">
-              🦸 <span>{heroStatement}</span>
-            </button>
-          )}
-
-          {/* ゲームHUD：想像↔現実の綱引き＋今日のナゾ（役としての1手） */}
-          <InnerHud guideName={guideName} onStats={onStats} heroStatement={heroStatement} />
-
-          {/* 行き先を選ぶ */}
-          <div className="iw-doors">
-            {DOORS.map((d) => {
-              const m = MODES[d.key];
-              return (
-                <button key={d.key} className={`iw-door ${d.key === "peak" ? "is-start" : ""}`} onClick={() => onPick(d.key)}>
-                  {d.key === "peak" && <span className="tag">まずここから</span>}
-                  <span className="emoji">{d.emoji}</span>
-                  <span className="ja">{m.label}</span>
-                  <span className="verb">{VERB[d.key]}</span>
-                </button>
-              );
-            })}
-            {DOORS_SUB.map((d) => {
-              const m = MODES[d.key];
-              return (
-                <button key={d.key} className="iw-door is-sub" onClick={() => onPick(d.key)}>
-                  <span className="emoji">{d.emoji}</span>
-                  <span className="ja">{m.label}</span>
-                  <span className="verb">{VERB[d.key]}</span>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* 話しかける（テキストのみ） */}
-          <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
-
-          {/* ふりかえり */}
-          <div className="iw-reflect-row">
-            <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
-            <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
-            <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
-          </div>
-        </>
-      )}
+      {/* 主人公（レベル）＋ふりかえり */}
+      <div className="iw-reflect-row">
+        <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
+        <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
+        <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
+        <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
+      </div>
     </div>
   );
 }

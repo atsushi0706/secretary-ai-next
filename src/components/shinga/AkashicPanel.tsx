@@ -37,7 +37,6 @@ export function AkashicPanel() {
   const [lifeOpen, setLifeOpen] = useState<number | null>(null);
   const [view, setView] = useState<"life" | "now">("life");
   const [activeDays, setActiveDays] = useState(0);
-  const [walkCount, setWalkCount] = useState(0);
   const [master, setMaster] = useState(false);
 
   useEffect(() => {
@@ -49,7 +48,6 @@ export function AkashicPanel() {
         setCycles(d.cycles ?? null);
         setLife(d.life ?? null);
         setActiveDays(d.activeDays ?? 0);
-        setWalkCount(d.walkCount ?? 0);
         setMaster(!!d.master);
         if (d.life) setLifeOpen(d.life.currentIndex);
       })
@@ -81,13 +79,13 @@ export function AkashicPanel() {
           <div className="akashic-life">
             {life.periods.map((p, i) => {
               const offset = i - life.currentIndex; // 過去=負 / 今=0 / 未来=正
-              const u = decadeUnlock(offset, walkCount, master);
+              const u = decadeUnlock(offset, activeDays, master);
               if (!u.unlocked) {
-                // まだ開いていない未来の10年：内容は見せず、「あと◯回歩くと開く」＝鍵を自分の手の中に
+                // まだ開いていない未来の10年：内容は見せず、「あと◯日で解放」だけ明記する
                 return (
                   <div key={i} className="akashic-decade is-locked" aria-disabled>
                     <span className="age">{p.ageStart}〜{p.ageEnd}歳</span>
-                    <span className="lb"><span className="lock">🔒</span>あと{u.remaining}回 歩くと開く</span>
+                    <span className="lb"><span className="lock">🔒</span>あと{u.remaining}日で解放</span>
                   </div>
                 );
               }
@@ -111,7 +109,7 @@ export function AkashicPanel() {
               );
             })}
             <div className="akashic-hint">
-              {master ? "マスター表示：すべて開放中。" : `歩いた回数：${walkCount}回。パラレルウォークを重ねるほど、これからの10年が開く。`}
+              {master ? "マスター表示：すべて開放中。" : `取り組んだ日：${activeDays}日。続けるほど、これからの10年が開いていくよ。`}
             </div>
             {life.nearBoundary && <div className="akashic-hint">※誕生日が季節の変わり目付近。境目は前後することがあります。</div>}
           </div>

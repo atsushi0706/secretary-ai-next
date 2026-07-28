@@ -13,8 +13,7 @@
 import { supabaseAdmin } from "./supabase";
 import { jstDateStr } from "./google";
 
-// image/real は日数（0〜7）。満点(%)を作らないための"綱引き"用の生の値。
-export type Grounding = { image: number; real: number; imageDays: number; realDays: number };
+export type Grounding = { image: number; real: number };
 export type QuestItem = { text: string; done: boolean };
 export type TodayQuest = { date: string; items: QuestItem[]; percent: number };
 
@@ -47,8 +46,6 @@ export async function computeGrounding(userId: string): Promise<Grounding> {
   return {
     image: Math.min(100, Math.round((imgDays.size / 7) * 100)),
     real: Math.min(100, Math.round((realDays.size / 7) * 100)),
-    imageDays: imgDays.size,
-    realDays: realDays.size,
   };
 }
 

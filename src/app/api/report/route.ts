@@ -100,22 +100,11 @@ export async function GET() {
 # ${who}の記録
 ${material}`;
 
-    // 事実ベースのフォールバック（AIが落ちても・薄くても、絶対に空で返さない）
-    const fallback = signals.length
-      ? `この頃のきみ、ちゃんと動いてるよ。${signals.map((s) => s.replace(/：/g, "は")).join("。")}。${trend ? `${trend}。` : ""}忘れがちだけど、記録がそう言ってる🌱`
-      : `まだ記録は少なめだけど、この世界に来てくれてるだけで十分だよ。もう少し歩いたら、変化がここに見えてくる🌱`;
-
-    let report = "";
-    try {
-      report = String(await complete({ userId, prompt, maxTokens: 1600, temperature: 0.8 }) ?? "").trim();
-    } catch (e) {
-      if (!isMissingTable(e)) console.error("[/api/report] complete failed, using fallback:", e);
-    }
-    if (report.length < 8) report = fallback;
+    const report = await complete({ userId, prompt, maxTokens: 1600, temperature: 0.8 });
 
     return NextResponse.json({
       empty: false,
-      report,
+      report: String(report ?? "").trim(),
       glance: {
         walkCount7,
         emotionTrend: trend,

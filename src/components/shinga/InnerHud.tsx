@@ -7,25 +7,21 @@ import { useEffect, useRef, useState } from "react";
  * - 🔮イメージ力 / 🔨現実化力 の2ゲージ。
  * - 今日のナゾ（最大3・1つ解けば今日100%）。解いた瞬間、ゲージがフワッと伸びる＝歓喜のフィードバック。
  */
-type Grounding = { image: number; real: number; imageDays: number; realDays: number };
+type Grounding = { image: number; real: number };
 type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
 
-type HeroChange = { label: string; from: number; to: number; reason?: string };
-
-export function InnerHud({ guideName, onStats, heroStatement }: { guideName: string; onStats?: (s: { activeDays: number }) => void; heroStatement?: string }) {
-  const [g, setG] = useState<Grounding>({ image: 0, real: 0, imageDays: 0, realDays: 0 });
+export function InnerHud({ guideName }: { guideName: string }) {
+  const [g, setG] = useState<Grounding>({ image: 0, real: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [ready, setReady] = useState(false);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const [burst, setBurst] = useState<null | "image" | "real">(null);
-  const [heroToast, setHeroToast] = useState<HeroChange | null>(null);
   const prevReal = useRef(0);
   const prevImage = useRef(0);
-  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function apply(d: { grounding?: Grounding; quest?: Quest; activeDays?: number; heroChange?: HeroChange | null }) {
+  function apply(d: { grounding?: Grounding; quest?: Quest }) {
     if (d.grounding) {
       // 上がった方を一瞬光らせる（歓喜）
       if (d.grounding.real > prevReal.current) setBurst("real");
@@ -35,12 +31,6 @@ export function InnerHud({ guideName, onStats, heroStatement }: { guideName: str
       setG(d.grounding);
     }
     if (d.quest) setQuest(d.quest);
-    if (typeof d.activeDays === "number") onStats?.({ activeDays: d.activeDays });
-    if (d.heroChange) {
-      setHeroToast(d.heroChange);
-      if (toastTimer.current) clearTimeout(toastTimer.current);
-      toastTimer.current = setTimeout(() => setHeroToast(null), 5000);
-    }
   }
 
   useEffect(() => {
@@ -70,16 +60,11 @@ export function InnerHud({ guideName, onStats, heroStatement }: { guideName: str
 
   return (
     <div className="ihud">
-      {/* Lvが上がった理由を後から見せる（驚愕→納得） */}
-      {heroToast && (
-        <div className="ihud-hero-toast">
-          🦸 <b>{heroToast.label} ＋{heroToast.to - heroToast.from}</b>
-          {heroToast.reason && <span className="rz">{heroToast.reason}</span>}
-        </div>
-      )}
-
-      {/* 想像 vs 現実の綱引き（%も満点も0%も出さない・常にどちらかが足りない） */}
-      <TugOfWar image={g.imageDays} real={g.realDays} pop={burst} />
+      {/* ステータス2ゲージ */}
+      <div className="ihud-gauges">
+        <Gauge icon="🔮" name="イメージ力" value={g.image} tone="image" pop={burst === "image"} />
+        <Gauge icon="🔨" name="現実化力" value={g.real} tone="real" pop={burst === "real"} />
+      </div>
 
       {/* 今日のナゾ */}
       <div className={`ihud-quest ${solvedToday ? "is-solved" : ""}`}>
@@ -89,11 +74,8 @@ export function InnerHud({ guideName, onStats, heroStatement }: { guideName: str
             ? <span className="q-badge done">解けた！ 100%</span>
             : quest.items.length > 0
               ? <span className="q-badge">1つ解けば今日クリア</span>
-              : <span className="q-badge">{heroStatement ? "その役として、今日できる1手は？" : "理想を1つ、今日に置いてみよ"}</span>}
+              : <span className="q-badge">{guideName}「理想を1つ、今日に置いてみよ」</span>}
         </div>
-        {!solvedToday && quest.items.length === 0 && heroStatement && (
-          <p className="q-role">きみは「{heroStatement}」。<b>叶えるんじゃなく、今日その人として動く。</b></p>
-        )}
 
         {quest.items.length > 0 && (
           <ul className="q-list">
@@ -120,7 +102,7 @@ export function InnerHud({ guideName, onStats, heroStatement }: { guideName: str
                     post({ action: "add", text }); setText(""); setAdding(false);
                   }
                 }}
-                placeholder={heroStatement ? "例：後輩に「やらなくていい」と言う／誰か1人の“無理”を1つ壊す" : "例：鏡の前で背筋を伸ばして深呼吸する"}
+                placeholder="例：鏡の前で背筋を伸ばして深呼吸する"
               />
               <button onClick={() => { if (text.trim()) { post({ action: "add", text }); setText(""); } setAdding(false); }}>置く</button>
             </div>
@@ -135,22 +117,11 @@ export function InnerHud({ guideName, onStats, heroStatement }: { guideName: str
   );
 }
 
-function TugOfWar({ image, real, pop }: { image: number; real: number; pop: null | "image" | "real" }) {
-  const lead = image - real;                       // 想像が現実より何歩先か
-  const pivot = Math.max(10, Math.min(90, 50 + lead * 6));
-  const msg =
-    image === 0 && real === 0 ? "まだ静か。まず気分をタップして、1歩ふみ出そう。"
-    : lead > 0 ? `想像が現実より ${lead}歩 先を歩いてる。いい状態、あとは動くだけ🔨`
-    : lead < 0 ? `現実が ${-lead}歩 先。想像が止まってるかも。パラレルウォーク行こ🔮`
-    : "想像と現実、いいバランス。この調子。";
+function Gauge({ icon, name, value, tone, pop }: { icon: string; name: string; value: number; tone: "image" | "real"; pop: boolean }) {
   return (
-    <div className="tug">
-      <div className="tug-bar">
-        <span className={`side img ${pop === "image" ? "pop" : ""}`}>🔮 想像</span>
-        <span className="track"><span className="pivot" style={{ left: `${pivot}%` }} /></span>
-        <span className={`side real ${pop === "real" ? "pop" : ""}`}>現実 🔨</span>
-      </div>
-      <div className="tug-msg">{msg}</div>
+    <div className={`gauge ${tone} ${pop ? "pop" : ""}`}>
+      <div className="g-top"><span className="g-ico">{icon}</span><span className="g-name">{name}</span><span className="g-val">{value}%</span></div>
+      <div className="g-bar"><span style={{ width: `${value}%` }} /></div>
     </div>
   );
 }

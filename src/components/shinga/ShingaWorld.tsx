@@ -15,6 +15,7 @@ import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
 import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
+import { LinkLetter } from "./LinkLetter";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -634,6 +635,9 @@ function Home({
 }) {
   return (
     <div className="iw-home">
+      {/* リンクからの便り：理想が向こうから会いに来る（未来の手紙／置き忘れの回収） */}
+      <LinkLetter guideName={guideName} />
+
       {/* 主人公の物語を常設（モーダルに隠さない） */}
       {heroStatement && (
         <button className="iw-hero-banner" onClick={onHero} title="主人公を見る">
@@ -667,8 +671,8 @@ function Home({
       {/* 話しかける（ここで即・打てる／話せる） */}
       <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
 
-      {/* ゲームHUD：🔮イメージ力／🔨現実化力＋今日のナゾ */}
-      <InnerHud guideName={guideName} onStats={onStats} />
+      {/* ゲームHUD：想像↔現実の綱引き＋今日のナゾ（役としての1手） */}
+      <InnerHud guideName={guideName} onStats={onStats} heroStatement={heroStatement} />
 
       {/* または、行き先を選ぶ */}
       <div className="iw-doors">

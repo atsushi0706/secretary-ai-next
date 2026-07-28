@@ -1261,6 +1261,28 @@ body:has(.realverse-bg) { background: transparent; }
 }
 @keyframes moteFloat { 0%,100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-6px); opacity: 1; } }
 
+/* リンクからの便り（理想が向こうから会いに来る） */
+.iw-letter { position: relative; z-index: 3; width: min(560px, 96%); margin: 0 auto; }
+.iw-letter-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 9px 14px; border-radius: 12px; text-align: left;
+  background: linear-gradient(160deg, rgba(60,48,90,.82), rgba(40,32,64,.82));
+  border: 1px solid rgba(200,180,240,.4); backdrop-filter: blur(6px);
+  box-shadow: 0 4px 18px rgba(0,0,0,.4); animation: heroToastIn .5s ease both;
+}
+.iw-letter-head .ttl { font-size: .78rem; font-weight: 700; color: #efe6ff; }
+.iw-letter-head .chev { font-size: .64rem; color: rgba(220,210,245,.8); white-space: nowrap; }
+.iw-letter-body {
+  margin-top: 6px; padding: 14px 16px; border-radius: 12px;
+  background: rgba(24,20,34,.9); border: 1px solid rgba(200,180,240,.3);
+}
+.iw-letter-body p { font-size: .86rem; line-height: 1.95; white-space: pre-wrap; color: var(--singa-ink); }
+.iw-letter-body .sign { margin-top: 10px; font-size: .68rem; color: var(--singa-ink-soft); text-align: right; }
+
+/* 今日のナゾ：役としての1手 */
+.ihud-quest .q-role { font-size: .72rem; line-height: 1.6; color: var(--singa-ink-soft); margin: 2px 0 8px; }
+.ihud-quest .q-role b { color: var(--singa-ink); }
+
 /* 主人公カード常設（物語をいつも見せる） */
 .iw-hero-banner {
   position: relative; z-index: 3; display: flex; align-items: center; gap: 8px;

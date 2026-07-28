@@ -13,7 +13,7 @@ type Quest = { date: string; items: QuestItem[]; percent: number };
 
 type HeroChange = { label: string; from: number; to: number; reason?: string };
 
-export function InnerHud({ guideName, onStats }: { guideName: string; onStats?: (s: { activeDays: number }) => void }) {
+export function InnerHud({ guideName, onStats, heroStatement }: { guideName: string; onStats?: (s: { activeDays: number }) => void; heroStatement?: string }) {
   const [g, setG] = useState<Grounding>({ image: 0, real: 0, imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [ready, setReady] = useState(false);
@@ -89,8 +89,11 @@ export function InnerHud({ guideName, onStats }: { guideName: string; onStats?: 
             ? <span className="q-badge done">解けた！ 100%</span>
             : quest.items.length > 0
               ? <span className="q-badge">1つ解けば今日クリア</span>
-              : <span className="q-badge">{guideName}「理想を1つ、今日に置いてみよ」</span>}
+              : <span className="q-badge">{heroStatement ? "その役として、今日できる1手は？" : "理想を1つ、今日に置いてみよ"}</span>}
         </div>
+        {!solvedToday && quest.items.length === 0 && heroStatement && (
+          <p className="q-role">きみは「{heroStatement}」。<b>叶えるんじゃなく、今日その人として動く。</b></p>
+        )}
 
         {quest.items.length > 0 && (
           <ul className="q-list">
@@ -117,7 +120,7 @@ export function InnerHud({ guideName, onStats }: { guideName: string; onStats?: 
                     post({ action: "add", text }); setText(""); setAdding(false);
                   }
                 }}
-                placeholder="例：鏡の前で背筋を伸ばして深呼吸する"
+                placeholder={heroStatement ? "例：後輩に「やらなくていい」と言う／誰か1人の“無理”を1つ壊す" : "例：鏡の前で背筋を伸ばして深呼吸する"}
               />
               <button onClick={() => { if (text.trim()) { post({ action: "add", text }); setText(""); } setAdding(false); }}>置く</button>
             </div>

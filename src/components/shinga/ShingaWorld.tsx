@@ -14,6 +14,7 @@ import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
 import { TaskListPanel } from "./TaskListPanel";
+import { InnerHud } from "./InnerHud";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -501,7 +502,7 @@ function DebugPanel({ trace, onClear }: { trace: any[]; onClear: () => void }) {
 function greetLine(): string {
   const h = new Date().getHours();
   const time = h < 5 ? "こんな時間まで起きてたの？" : h < 11 ? "おはよ😊" : h < 18 ? "よっ、来たね😊" : "おつかれ😊";
-  return `${time} ここは『インナーワールド』——きみの内側の世界だよ。\n今日はどこから行く？迷ったら、まず真ん中で“整える”のがおすすめ。`;
+  return `${time} ここは『インナーワールド』——きみの内側の世界だよ。\n今日はまず、ピークステートから。ぜったい、そこで“整える”のが先だよ😊`;
 }
 
 const DOORS: { key: ModeKey; emoji: string }[] = [
@@ -511,7 +512,7 @@ const DOORS: { key: ModeKey; emoji: string }[] = [
 ];
 const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "breakthrough", emoji: "🗝" },
-  { key: "higher", emoji: "🔥" },
+  { key: "travel", emoji: "🚀" },
 ];
 
 function Home({
@@ -548,6 +549,9 @@ function Home({
 
       {/* 話しかける（ここで即・打てる／話せる） */}
       <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
+
+      {/* ゲームHUD：🔮イメージ力／🔨現実化力＋今日のナゾ */}
+      <InnerHud guideName={guideName} />
 
       {/* または、行き先を選ぶ */}
       <div className="iw-doors">

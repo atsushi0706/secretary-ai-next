@@ -12,24 +12,29 @@ import { useEffect, useRef, useState } from "react";
 
 type Step = { instr: string; say: string; count: number; scale: number };
 
-// 各ステップ10秒に統一
-const SEC = 10;
+// 吐く＝口をすぼめて細く強く少しずつ吐ききる → 吐いたら少し止めて真空を作る(5秒) → 強く吸う → ゆっくり整える
+const EXHALE = 10; // すぼめて少しずつ吐ききる
+const HOLD = 5;    // 吐ききったら少し止める＝真空の状態を作る（5秒）
+const INHALE = 4;  // 一気に、強く吸う
+const SETTLE = 15; // ゆっくり呼吸で、15秒かけてならす
 
 function buildSteps(): Step[] {
   const steps: Step[] = [
-    { instr: "立って、体を軽くゆらそう", say: "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。", count: SEC, scale: 1 },
+    { instr: "立って、体を軽くゆらそう", say: "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。", count: SETTLE, scale: 1 },
   ];
   for (let i = 0; i < 3; i++) {
     steps.push(
-      { instr: `${i + 1}回目：口を閉じて、細く吐き切る`, say: `${i + 1}かいめ。お口をとじて、ほそーく、ふーって吐いてね`, count: SEC, scale: 0.4 },
-      { instr: "ゆっくり、吸う", say: "つぎは、ゆーっくり、すってー", count: SEC, scale: 1 },
-      { instr: "そのまま、馴染ませる", say: "目をとじて、いまのかんじを、からだになじませてね", count: SEC, scale: 1 },
+      { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, say: `${i + 1}かいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね`, count: EXHALE, scale: 0.35 },
+      { instr: "吐ききったら、少し止める（真空を作る・5秒）", say: "そのまま、すこし止めてね。からっぽの真空をつくるよ", count: HOLD, scale: 0.28 },
+      { instr: "一気に、強く吸う", say: "つぎは、いっきに、つよく、すってー", count: INHALE, scale: 1.1 },
+      { instr: "ゆっくり、呼吸を整える", say: "目をとじて、ゆっくり呼吸を整えてね", count: SETTLE, scale: 1 },
     );
   }
   steps.push(
-    { instr: "最後にもう一度、吐き切る", say: "さいごにもう一回。お口とじて、ぜんぶ吐いてー", count: SEC, scale: 0.35 },
-    { instr: "強く、吸う", say: "つよく、すってー", count: SEC, scale: 1.08 },
-    { instr: "ゆっくり、目を開ける", say: "いいね。ゆっくり、目をあけてね。", count: SEC, scale: 1 },
+    { instr: "最後にもう一度、口をすぼめて吐ききる", say: "さいごにもう一回。お口をすぼめて、ぜんぶ吐いてー", count: EXHALE, scale: 0.3 },
+    { instr: "少し止める（真空を作る・5秒）", say: "そのまま、すこし止めて、真空をつくってね", count: HOLD, scale: 0.24 },
+    { instr: "一気に、強く吸う", say: "いっきに、つよく、すってー", count: INHALE, scale: 1.12 },
+    { instr: "ゆっくり、呼吸を整えて、目を開ける", say: "いいね。ゆっくり呼吸を整えて、目をあけてね。", count: SETTLE, scale: 1 },
   );
   return steps;
 }

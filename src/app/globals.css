@@ -2089,6 +2089,42 @@ body:has(.realverse-bg) { background: transparent; }
 .tl-sync { font-size: .68rem; color: var(--singa-ink-soft); margin-top: 10px; line-height: 1.6; }
 .iw-report.is-tasks { border-color: rgba(238,214,155,.3); }
 
+/* ── インナーワールドのゲームHUD（🔮イメージ力／🔨現実化力＋今日のナゾ） ── */
+.ihud { width: min(560px, 96%); margin: 10px auto 0; display: flex; flex-direction: column; gap: 10px; }
+.ihud-gauges { display: flex; gap: 10px; }
+.gauge { flex: 1; padding: 8px 12px; border-radius: 12px; background: rgba(20,16,28,.6); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
+.gauge .g-top { display: flex; align-items: center; gap: 6px; font-size: .72rem; margin-bottom: 5px; }
+.gauge .g-ico { font-size: .9rem; }
+.gauge .g-name { font-weight: 700; color: var(--singa-ink); }
+.gauge .g-val { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; }
+.gauge .g-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+.gauge .g-bar span { display: block; height: 100%; border-radius: 999px; transition: width .8s cubic-bezier(.2,.9,.2,1); }
+.gauge.image .g-bar span { background: linear-gradient(90deg,#7b8ff0,#b39cf0); }
+.gauge.image .g-val { color: #b7a6f5; }
+.gauge.real .g-bar span { background: linear-gradient(90deg,#e0a94a,#eed69b); }
+.gauge.real .g-val { color: #eed69b; }
+.gauge.pop { animation: gaugePop .6s ease; }
+@keyframes gaugePop { 0% { transform: scale(1); } 40% { transform: scale(1.05); box-shadow: 0 0 22px rgba(238,214,155,.5); } 100% { transform: scale(1); } }
+
+.ihud-quest { padding: 12px 14px; border-radius: 14px; background: rgba(20,16,28,.62); border: 1px solid rgba(238,214,155,.28); backdrop-filter: blur(6px); }
+.ihud-quest.is-solved { border-color: rgba(143,208,122,.5); background: rgba(30,40,28,.55); }
+.ihud-quest .q-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.ihud-quest .q-title { font-weight: 700; font-size: .86rem; }
+.ihud-quest .q-badge { font-size: .64rem; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.1); color: var(--singa-ink-soft); }
+.ihud-quest .q-badge.done { background: linear-gradient(160deg,#8fd07a,#5aa04a); color: #0e1a0b; font-weight: 700; }
+.ihud-quest .q-list { list-style: none; display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+.ihud-quest .q-list li { display: flex; align-items: center; gap: 9px; }
+.ihud-quest .q-chk { width: 24px; height: 24px; flex-shrink: 0; border-radius: 999px; border: 1.5px solid rgba(238,214,155,.6); color: #eed69b; font-size: .8rem; transition: background .15s ease; }
+.ihud-quest .q-list li.done .q-chk { background: linear-gradient(160deg,#8fd07a,#5aa04a); border-color: transparent; color: #0e1a0b; }
+.ihud-quest .q-text { flex: 1; font-size: .84rem; }
+.ihud-quest .q-list li.done .q-text { text-decoration: line-through; color: var(--singa-ink-soft); }
+.ihud-quest .q-del { color: var(--singa-ink-soft); opacity: .5; font-size: .9rem; padding: 0 4px; }
+.ihud-quest .q-del:hover { opacity: 1; color: #e6867a; }
+.ihud-quest .q-open { width: 100%; padding: 8px; border-radius: 10px; font-size: .78rem; color: var(--singa-gold); background: rgba(255,255,255,.05); border: 1px dashed rgba(238,214,155,.35); }
+.ihud-quest .q-add { display: flex; gap: 6px; }
+.ihud-quest .q-add input { flex: 1; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 8px 10px; color: var(--singa-ink); font-size: .82rem; }
+.ihud-quest .q-add button { padding: 0 14px; border-radius: 10px; font-weight: 700; font-size: .78rem; color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e); }
+
 /* 会話で主人公レベルが動いたときのトースト（そっと出て消える） */
 .hero-toast {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%);

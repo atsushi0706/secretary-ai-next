@@ -55,7 +55,7 @@ export async function GET() {
 # 今日の記録
 ${material}`;
 
-    const closing = await complete({ userId, prompt, maxTokens: 600, temperature: 0.8 });
+    const closing = await complete({ userId, prompt, maxTokens: 1400, temperature: 0.8 });
 
     return NextResponse.json({
       empty: false,

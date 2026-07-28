@@ -54,35 +54,53 @@ export async function GET() {
     }
 
     const walkCount7 = walks.filter((w) => daysAgo(w.created_at) <= 7).length;
+    const walkCountPrev7 = walks.filter((w) => { const d = daysAgo(w.created_at); return d > 7 && d <= 14; }).length;
     const doneQuests = quests.filter((q) => q.status === "done").length;
     const taskTotal = Object.values(taskCounts).reduce((a: number, b: number) => a + b, 0);
+
+    // 変化のサイン（前と今を具体的に比べる。AIがふわっとせず"進み"を言えるように）
+    const signals: string[] = [];
+    if (emotions.length >= 4) {
+      const half = Math.floor(emotions.length / 2);
+      const newAvg = emotions.slice(0, half).reduce((a, e) => a + e.level, 0) / half;
+      const oldAvg = emotions.slice(half).reduce((a, e) => a + e.level, 0) / (emotions.length - half);
+      signals.push(`感情の平均：前半${oldAvg.toFixed(1)} → 最近${newAvg.toFixed(1)}（1=穏やか〜10=しんどい）＝${trend}`);
+    }
+    if (walks.length) signals.push(`歩いた回数：先週${walkCountPrev7}回 → 今週${walkCount7}回`);
+    if (quests.length) signals.push(`やってみたいこと：${quests.length}件、うち現実の一歩に落とした数：${taskTotal}、達成${doneQuests}件`);
+    if (walks.length >= 2) signals.push(`歩いた記録が${walks.length}件たまってきている（＝続いている証拠）`);
 
     // AIに渡す素材（コンパクトに）
     const material = [
       `# ${who}のこの頃の記録（内部素材）`,
+      signals.length ? `## 変化のサイン（ここを根拠に"進み"を語る）\n${signals.map((s) => `- ${s}`).join("\n")}` : "",
       walks.length ? `## 歩いた記録（新しい順・最大8件）\n${walks.map((w) => `- ${w.date}: ${w.summary.slice(0, 240)}`).join("\n")}` : "歩いた記録：まだなし",
-      emotions.length ? `## 状態の記録\n直近${emotions.length}件。傾向：${trend || "データ少なめ"}。（1=穏やか〜10=しんどい）` : "状態の記録：まだなし",
-      quests.length ? `## クエスト\n合計${quests.length}件（うち達成${doneQuests}件）。現実の一歩に変えた数：${taskTotal}。最近のテーマ：${quests.slice(0, 5).map((q) => q.title).join(" / ")}` : "クエスト：まだなし",
+      quests.length ? `## クエスト\n最近のテーマ：${quests.slice(0, 5).map((q) => q.title).join(" / ")}` : "クエスト：まだなし",
       reflections.length ? `## 振り返り（最新3件）\n${reflections.slice(0, 3).map((r) => `- ${r.body.slice(0, 160)}`).join("\n")}` : "",
-      `## 今週：歩いた回数 ${walkCount7} 回`,
     ].filter(Boolean).join("\n\n");
 
     const prompt = `あなたは ${settings?.secretary_name || "清瀬リンク"}。${who} の相棒。
-下の記録を読んで、${who} に向けて「この頃のふりかえり」を短く返す。
+下の記録を読んで、${who} に向けて「この頃、どんな変化が起きているか／何が進んでいるか」を返す。
+これは "無理" の反証を積む装置。忘れがちな自分の前進を、証拠から拾って見せてあげる。
+
+# ここが肝（必ず）
+- 「変化のサイン」の数字を根拠に、"前はこうだったのが、今はこう変わってきてるね" と具体的に言う。
+  （例：「前はしんどさ強めだったのが、最近は落ち着いてきてるね」「歩くのが続いてるね」）
+- ふわっとした励ましで終わらせない。何が動いたか・進んだかを、1つは具体的に指させる。
+- 歩いて掴んだこと・感情の動き・現実の一歩を、ゆるく一本につなぐ。
 
 # ルール（厳守）
 - 友達の距離。タメ口。絵文字は少し。あたたかく。
-- 判定・決めつけをしない。「〜な傾向があるね」「〜な気がする」と余白を残す。
-- できていないことを責めない。むしろ「ここ、変わってきてるね」を証拠から拾って返す（無理の反証）。
-- 歩いて掴んだこと・感情の動き・現実の一歩を、ゆるく一本につなぐ。
+- 判定・決めつけはしない。「〜な傾向があるね」「〜な気がする」と余白を残す。
+- できていないことは責めない。進みを拾う方向で。
 - 最後に、そっと次の一歩を1つだけ（押し付けない）。
 - 算命学・占い等の用語は出さない。
-- 全体で5〜7行くらい。見出しや箇条書きは使わず、話しかけるように。
+- 全体で5〜7行くらい。見出しや箇条書きは使わず、話しかけるように最後まで書ききる（途中で切らない）。
 
 # ${who}の記録
 ${material}`;
 
-    const report = await complete({ userId, prompt, maxTokens: 700, temperature: 0.8 });
+    const report = await complete({ userId, prompt, maxTokens: 1600, temperature: 0.8 });
 
     return NextResponse.json({
       empty: false,

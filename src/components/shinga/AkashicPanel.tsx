@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { QuestPanel } from "./QuestPanel";
 import { decadeUnlock } from "@/lib/akashic";
 
 type Season = { label: string; meaning: string; advice: string };
@@ -36,7 +35,6 @@ export function AkashicPanel() {
   const [hasGender, setHasGender] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [lifeOpen, setLifeOpen] = useState<number | null>(null);
-  const [tab, setTab] = useState<"drop" | "reflect">("drop");
   const [view, setView] = useState<"life" | "now">("life");
   const [activeDays, setActiveDays] = useState(0);
   const [master, setMaster] = useState(false);
@@ -147,12 +145,6 @@ export function AkashicPanel() {
           <div className="akashic-hint">大きい流れから今日へ。タップで詳しく。</div>
         </div>
       )}
-
-      <div className="akashic-tabs">
-        <button className={tab === "drop" ? "is-on" : ""} onClick={() => setTab("drop")}>現実に落とし込む</button>
-        <button className={tab === "reflect" ? "is-on" : ""} onClick={() => setTab("reflect")}>やってみて振り返る</button>
-      </div>
-      <QuestPanel embedded reflectMode={tab === "reflect"} />
     </div>
   );
 }

@@ -54,7 +54,7 @@ async function readSse(resp: Response, onEvent: (event: string, data: any) => vo
 const FACE_SRC: Record<Face, string> = {
   neutral: "/kiyose.png",
   smile: "/kiyose_smile.png",
-  anxious: "/kiyose_anxious.png",
+  anxious: "/kiyose.png", // ※ kiyose_anxious.png が未提供のため、当面は neutral で代用（画像切れ防止）
 };
 
 // タップした瞬間に鳴る、やさしい単音（外部ファイル不要・Web Audio）。
@@ -614,15 +614,6 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "travel", emoji: "🚀" },
 ];
 
-// 地図の場所そのものを押せるホットスポット（絵の外のボタン列だけに頼らない）
-const HOTSPOTS: { key: ModeKey; x: number; y: number; label: string }[] = [
-  { key: "peak", x: 50, y: 40, label: "✨ 整える" },
-  { key: "walk", x: 40, y: 66, label: "🚶 歩く" },
-  { key: "akashic", x: 82, y: 44, label: "📖 流れ" },
-  { key: "breakthrough", x: 15, y: 70, label: "🗝 壁" },
-  { key: "travel", x: 68, y: 24, label: "🚀 上へ" },
-];
-
 function Home({
   guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, mood, moodLine, onMood, heroStatement, onStats, sending,
 }: {
@@ -650,16 +641,6 @@ function Home({
         </button>
       )}
 
-      {/* 地図の場所そのものを押せる（世界観と操作を一致させる） */}
-      <div className="iw-hotspots">
-        {HOTSPOTS.map((h) => (
-          <button key={h.key} className={`iw-spot ${h.key === "peak" ? "is-start" : ""}`}
-            style={{ left: `${h.x}%`, top: `${h.y}%` }} onClick={() => onPick(h.key)}>
-            <span className="dot" /><span className="lb">{h.label}</span>
-          </button>
-        ))}
-      </div>
-
       {/* 世界の中に立つキヨセリンク＋吹き出し（気分を押すと反応が変わる） */}
       <div className="iw-scene">
         <div className="iw-bubble">
@@ -679,8 +660,8 @@ function Home({
 
       {/* まず1タップ：いまの気分（押した瞬間に世界が反応する＝直感の入口） */}
       <div className="iw-mood">
-        <div className="iw-mood-q">{mood == null ? "まず、いまの気分をタップ" : "気分、変わったら押してね"}</div>
-        <EmotionMeter value={mood} onChange={onMood} />
+        <EmotionMeter value={mood} onChange={onMood}
+          title={mood == null ? "まず、いまの気分をタップ 👇" : "気分、変わったら押してね"} />
       </div>
 
       {/* 話しかける（ここで即・打てる／話せる） */}

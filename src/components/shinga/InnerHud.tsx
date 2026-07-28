@@ -7,14 +7,14 @@ import { useEffect, useRef, useState } from "react";
  * - 🔮イメージ力 / 🔨現実化力 の2ゲージ。
  * - 今日のナゾ（最大3・1つ解けば今日100%）。解いた瞬間、ゲージがフワッと伸びる＝歓喜のフィードバック。
  */
-type Grounding = { image: number; real: number };
+type Grounding = { image: number; real: number; imageDays: number; realDays: number };
 type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
 
 type HeroChange = { label: string; from: number; to: number; reason?: string };
 
 export function InnerHud({ guideName, onStats }: { guideName: string; onStats?: (s: { activeDays: number }) => void }) {
-  const [g, setG] = useState<Grounding>({ image: 0, real: 0 });
+  const [g, setG] = useState<Grounding>({ image: 0, real: 0, imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [ready, setReady] = useState(false);
   const [adding, setAdding] = useState(false);
@@ -78,11 +78,8 @@ export function InnerHud({ guideName, onStats }: { guideName: string; onStats?: 
         </div>
       )}
 
-      {/* ステータス2ゲージ */}
-      <div className="ihud-gauges">
-        <Gauge icon="🔮" name="イメージ力" value={g.image} tone="image" pop={burst === "image"} />
-        <Gauge icon="🔨" name="現実化力" value={g.real} tone="real" pop={burst === "real"} />
-      </div>
+      {/* 想像 vs 現実の綱引き（%も満点も0%も出さない・常にどちらかが足りない） */}
+      <TugOfWar image={g.imageDays} real={g.realDays} pop={burst} />
 
       {/* 今日のナゾ */}
       <div className={`ihud-quest ${solvedToday ? "is-solved" : ""}`}>
@@ -135,11 +132,22 @@ export function InnerHud({ guideName, onStats }: { guideName: string; onStats?: 
   );
 }
 
-function Gauge({ icon, name, value, tone, pop }: { icon: string; name: string; value: number; tone: "image" | "real"; pop: boolean }) {
+function TugOfWar({ image, real, pop }: { image: number; real: number; pop: null | "image" | "real" }) {
+  const lead = image - real;                       // 想像が現実より何歩先か
+  const pivot = Math.max(10, Math.min(90, 50 + lead * 6));
+  const msg =
+    image === 0 && real === 0 ? "まだ静か。まず気分をタップして、1歩ふみ出そう。"
+    : lead > 0 ? `想像が現実より ${lead}歩 先を歩いてる。いい状態、あとは動くだけ🔨`
+    : lead < 0 ? `現実が ${-lead}歩 先。想像が止まってるかも。パラレルウォーク行こ🔮`
+    : "想像と現実、いいバランス。この調子。";
   return (
-    <div className={`gauge ${tone} ${pop ? "pop" : ""}`}>
-      <div className="g-top"><span className="g-ico">{icon}</span><span className="g-name">{name}</span><span className="g-val">{value}%</span></div>
-      <div className="g-bar"><span style={{ width: `${value}%` }} /></div>
+    <div className="tug">
+      <div className="tug-bar">
+        <span className={`side img ${pop === "image" ? "pop" : ""}`}>🔮 想像</span>
+        <span className="track"><span className="pivot" style={{ left: `${pivot}%` }} /></span>
+        <span className={`side real ${pop === "real" ? "pop" : ""}`}>現実 🔨</span>
+      </div>
+      <div className="tug-msg">{msg}</div>
     </div>
   );
 }

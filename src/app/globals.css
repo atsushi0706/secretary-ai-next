@@ -1157,11 +1157,12 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .iw-home {
   position: absolute; inset: 0; z-index: 4;
-  display: flex; flex-direction: column;
-  padding: 10px 12px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px 16px;
+  overflow-y: auto;               /* 中身が増えても潰れず、はみ出たらスクロール */
 }
-/* キヨセリンクが立つ場面 */
-.iw-scene { position: relative; flex: 1; min-height: 0; }
+/* キヨセリンクが立つ場面（固定の高さを持たせて、下の要素と重ならないように） */
+.iw-scene { position: relative; flex: 0 0 auto; height: 200px; }
 .iw-figure {
   position: absolute;
   left: 50%; bottom: 0;
@@ -2156,6 +2157,17 @@ body:has(.realverse-bg) { background: transparent; }
 
 /* ── インナーワールドのゲームHUD（🔮イメージ力／🔨現実化力＋今日のナゾ） ── */
 .ihud { width: min(560px, 96%); margin: 10px auto 0; display: flex; flex-direction: column; gap: 10px; }
+
+/* 想像 vs 現実の綱引き（%なし・満点なし） */
+.tug { padding: 10px 14px; border-radius: 12px; background: rgba(20,16,28,.6); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
+.tug-bar { display: flex; align-items: center; gap: 8px; }
+.tug-bar .side { font-size: .72rem; font-weight: 700; white-space: nowrap; transition: text-shadow .3s ease, transform .3s ease; }
+.tug-bar .side.img { color: #b7a6f5; }
+.tug-bar .side.real { color: #eed69b; }
+.tug-bar .side.pop { transform: scale(1.12); text-shadow: 0 0 12px currentColor; }
+.tug-bar .track { position: relative; flex: 1; height: 8px; border-radius: 999px; background: linear-gradient(90deg, rgba(123,143,240,.5), rgba(255,255,255,.12) 50%, rgba(224,169,74,.5)); }
+.tug-bar .pivot { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 999px; background: #fff; box-shadow: 0 0 10px 2px rgba(255,255,255,.6); transform: translate(-50%, -50%); transition: left .8s cubic-bezier(.2,.9,.2,1); }
+.tug-msg { margin-top: 8px; font-size: .74rem; line-height: 1.6; color: var(--singa-ink); }
 .ihud-gauges { display: flex; gap: 10px; }
 .gauge { flex: 1; padding: 8px 12px; border-radius: 12px; background: rgba(20,16,28,.6); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
 .gauge .g-top { display: flex; align-items: center; gap: 6px; font-size: .72rem; margin-bottom: 5px; }

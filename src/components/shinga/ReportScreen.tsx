@@ -63,8 +63,8 @@ export function ReportScreen({ guideName, avatarUrl, onBack }: { guideName: stri
         {err && <div className="rep-err">{err}</div>}
         {empty && (
           <p className="rep-empty">
-            まだ振り返る記録が少ないみたい。<br />
-            状態を記録したり、パラレルウォークをしていくと、ここに「変化」が見えてくるよ🌱
+            まだ記録が少ないよ。あと何日か歩いたら、ここが読めるようになる📖<br />
+            気分をタップしたり、パラレルウォークをすると、きみの「変化」が溜まっていくよ🌱
           </p>
         )}
 

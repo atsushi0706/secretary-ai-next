@@ -13,6 +13,7 @@ type Daily = {
   now: { level: number } | null;
   count: number;
   closing: string;
+  oneLine?: string;
 };
 
 export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: string; avatarUrl: string; onBack: () => void }) {
@@ -67,6 +68,16 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
               </div>
             )}
             <p className="rep-body">{d.closing}</p>
+
+            {/* 今日の1行カード（他人に語れる＝物語になる／コピーできる） */}
+            {d.oneLine && (
+              <div className="daily-oneline">
+                <div className="ol-text">{d.oneLine}</div>
+                <button className="ol-copy" onClick={() => { try { navigator.clipboard?.writeText(d.oneLine!); } catch { /* ignore */ } }}>
+                  📋 コピー
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

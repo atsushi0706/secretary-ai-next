@@ -270,6 +270,15 @@ export async function countActiveDays(userId: string): Promise<number> {
   return days.size;
 }
 
+/** 歩いた回数（パラレルウォークの記録の総数）。アカシックの行動ロックに使う。 */
+export async function countWalks(userId: string): Promise<number> {
+  const supa = supabaseAdmin();
+  const { count, error } = await supa
+    .from("walk_logs").select("id", { count: "exact", head: true }).eq("user_id", userId);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 export async function listWalkLogs(userId: string, limit = 30): Promise<WalkLog[]> {
   const supa = supabaseAdmin();
   const { data, error } = await supa

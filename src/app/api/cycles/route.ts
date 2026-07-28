@@ -8,7 +8,7 @@ import { auth } from "@/auth";
 import { getUserSettings, logError } from "@/lib/supabase";
 import { computeCycles } from "@/lib/star";
 import { computeLife } from "@/lib/sanmei";
-import { countActiveDays } from "@/lib/shinga";
+import { countActiveDays, countWalks } from "@/lib/shinga";
 import { isMaster } from "@/lib/akashic";
 import { jstNow } from "@/lib/google";
 
@@ -27,9 +27,12 @@ export async function GET() {
     const now = jstNow();
     const cycles = computeCycles(birth, now);
     const life = computeLife(birth, gender, now); // 性別が無ければ null
-    const activeDays = await countActiveDays(userId).catch(() => 0); // 段階解放の判定に使う
+    const [activeDays, walkCount] = await Promise.all([
+      countActiveDays(userId).catch(() => 0), // 地図の育ち（取り組み日数）
+      countWalks(userId).catch(() => 0),      // 段階解放（歩いた回数）
+    ]);
     const master = isMaster((session?.user as any)?.email);           // マスターは全開放
-    return NextResponse.json({ hasBirth: true, hasGender: !!gender, cycles, life, activeDays, master });
+    return NextResponse.json({ hasBirth: true, hasGender: !!gender, cycles, life, activeDays, walkCount, master });
   } catch (e: any) {
     await logError(userId, "/api/cycles", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

@@ -78,6 +78,12 @@ function playChime(n: number) {
   } catch { /* 音が出なくても体験は進む */ }
 }
 
+// 地図の光の粒の位置（取り組み日数ぶん・決定的にばらす）
+function moteStyle(i: number) {
+  const gx = (i * 37) % 100, gy = (i * 61) % 100;
+  return { left: `${6 + gx * 0.86}%`, top: `${14 + gy * 0.66}%`, animationDelay: `${(i % 8) * 0.45}s` } as const;
+}
+
 // 気分に応じた、キヨセリンクの一言（低い数字＝穏やかを責めない・高い数字＝しんどいを休ませる）
 function moodLineFor(n: number): string {
   if (n <= 2) return "いい感じだね😊 その穏やかさのまま、今日の理想を歩きにいこ。";
@@ -113,6 +119,15 @@ export function ShingaWorld({
   const [walkLanding, setWalkLanding] = useState(false); // パラレルウォーク→今日に落とす着地
   const [homeMood, setHomeMood] = useState<number | null>(null); // 起動直後の「気分1タップ」
   const [moodLine, setMoodLine] = useState<string | null>(null);
+  const [activeDays, setActiveDays] = useState(0);               // 地図の育ち（取り組み日数）
+  const [heroStatement, setHeroStatement] = useState("");        // 常設する主人公像（物語の核）
+
+  // 主人公像を読み込んで、常に見える場所に置く（物語をモーダルに隠さない）
+  useEffect(() => {
+    fetch("/api/hero").then((r) => r.json()).then((d) => {
+      setHeroStatement(d?.hero?.hero_statement?.trim() || d?.hero?.desired_world?.trim() || "");
+    }).catch(() => {});
+  }, []);
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debug, setDebug] = useState(false);
@@ -350,6 +365,15 @@ export function ShingaWorld({
         />
       </div>
 
+      {/* 地図が育つ：取り組んだ日数だけ、光の粒がマップに増える（数字より景色） */}
+      {view === "home" && activeDays > 0 && (
+        <div className="iw-grow" aria-hidden>
+          {Array.from({ length: Math.min(activeDays, 24) }).map((_, i) => (
+            <span key={i} className="mote" style={moteStyle(i)} />
+          ))}
+        </div>
+      )}
+
       {/* 気分タップで世界が反応：穏やかなら朝の光、しんどいなら夜に沈む */}
       {view === "home" && homeMood != null && (
         <>
@@ -396,6 +420,8 @@ export function ShingaWorld({
           mood={homeMood}
           moodLine={moodLine}
           onMood={moodReact}
+          heroStatement={heroStatement}
+          onStats={(s) => setActiveDays(s.activeDays)}
           sending={sending}
         />
       ) : walkLanding ? (
@@ -588,8 +614,17 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "travel", emoji: "🚀" },
 ];
 
+// 地図の場所そのものを押せるホットスポット（絵の外のボタン列だけに頼らない）
+const HOTSPOTS: { key: ModeKey; x: number; y: number; label: string }[] = [
+  { key: "peak", x: 50, y: 40, label: "✨ 整える" },
+  { key: "walk", x: 40, y: 66, label: "🚶 歩く" },
+  { key: "akashic", x: 82, y: 44, label: "📖 流れ" },
+  { key: "breakthrough", x: 15, y: 70, label: "🗝 壁" },
+  { key: "travel", x: 68, y: 24, label: "🚀 上へ" },
+];
+
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, mood, moodLine, onMood, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, mood, moodLine, onMood, heroStatement, onStats, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -602,10 +637,29 @@ function Home({
   mood: number | null;
   moodLine: string | null;
   onMood: (n: number) => void;
+  heroStatement: string;
+  onStats?: (s: { activeDays: number }) => void;
   sending: boolean;
 }) {
   return (
     <div className="iw-home">
+      {/* 主人公の物語を常設（モーダルに隠さない） */}
+      {heroStatement && (
+        <button className="iw-hero-banner" onClick={onHero} title="主人公を見る">
+          🦸 <span>{heroStatement}</span>
+        </button>
+      )}
+
+      {/* 地図の場所そのものを押せる（世界観と操作を一致させる） */}
+      <div className="iw-hotspots">
+        {HOTSPOTS.map((h) => (
+          <button key={h.key} className={`iw-spot ${h.key === "peak" ? "is-start" : ""}`}
+            style={{ left: `${h.x}%`, top: `${h.y}%` }} onClick={() => onPick(h.key)}>
+            <span className="dot" /><span className="lb">{h.label}</span>
+          </button>
+        ))}
+      </div>
+
       {/* 世界の中に立つキヨセリンク＋吹き出し（気分を押すと反応が変わる） */}
       <div className="iw-scene">
         <div className="iw-bubble">
@@ -633,7 +687,7 @@ function Home({
       <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
 
       {/* ゲームHUD：🔮イメージ力／🔨現実化力＋今日のナゾ */}
-      <InnerHud guideName={guideName} />
+      <InnerHud guideName={guideName} onStats={onStats} />
 
       {/* または、行き先を選ぶ */}
       <div className="iw-doors">

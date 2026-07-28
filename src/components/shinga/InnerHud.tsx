@@ -11,17 +11,21 @@ type Grounding = { image: number; real: number };
 type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
 
-export function InnerHud({ guideName }: { guideName: string }) {
+type HeroChange = { label: string; from: number; to: number; reason?: string };
+
+export function InnerHud({ guideName, onStats }: { guideName: string; onStats?: (s: { activeDays: number }) => void }) {
   const [g, setG] = useState<Grounding>({ image: 0, real: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [ready, setReady] = useState(false);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
   const [burst, setBurst] = useState<null | "image" | "real">(null);
+  const [heroToast, setHeroToast] = useState<HeroChange | null>(null);
   const prevReal = useRef(0);
   const prevImage = useRef(0);
+  const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function apply(d: { grounding?: Grounding; quest?: Quest }) {
+  function apply(d: { grounding?: Grounding; quest?: Quest; activeDays?: number; heroChange?: HeroChange | null }) {
     if (d.grounding) {
       // 上がった方を一瞬光らせる（歓喜）
       if (d.grounding.real > prevReal.current) setBurst("real");
@@ -31,6 +35,12 @@ export function InnerHud({ guideName }: { guideName: string }) {
       setG(d.grounding);
     }
     if (d.quest) setQuest(d.quest);
+    if (typeof d.activeDays === "number") onStats?.({ activeDays: d.activeDays });
+    if (d.heroChange) {
+      setHeroToast(d.heroChange);
+      if (toastTimer.current) clearTimeout(toastTimer.current);
+      toastTimer.current = setTimeout(() => setHeroToast(null), 5000);
+    }
   }
 
   useEffect(() => {
@@ -60,6 +70,14 @@ export function InnerHud({ guideName }: { guideName: string }) {
 
   return (
     <div className="ihud">
+      {/* Lvが上がった理由を後から見せる（驚愕→納得） */}
+      {heroToast && (
+        <div className="ihud-hero-toast">
+          🦸 <b>{heroToast.label} ＋{heroToast.to - heroToast.from}</b>
+          {heroToast.reason && <span className="rz">{heroToast.reason}</span>}
+        </div>
+      )}
+
       {/* ステータス2ゲージ */}
       <div className="ihud-gauges">
         <Gauge icon="🔮" name="イメージ力" value={g.image} tone="image" pop={burst === "image"} />

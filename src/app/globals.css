@@ -1250,6 +1250,52 @@ body:has(.realverse-bg) { background: transparent; }
 .iw-glow { background: radial-gradient(120% 80% at 50% -5%, rgba(255,226,165,.85), rgba(255,208,140,.25) 45%, transparent 72%); mix-blend-mode: screen; transition: opacity 1s ease; }
 .iw-veil { background: linear-gradient(180deg, rgba(12,16,44,.5), rgba(5,7,22,.9)); transition: opacity 1.1s ease; }
 
+/* 地図が育つ：光の粒（取り組み日数ぶん） */
+.iw-grow { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.iw-grow .mote {
+  position: absolute; width: 7px; height: 7px; border-radius: 999px;
+  background: radial-gradient(circle, rgba(255,240,190,.95), rgba(255,220,150,.2) 60%, transparent 70%);
+  box-shadow: 0 0 8px 2px rgba(255,225,160,.5);
+  animation: moteFloat 4.5s ease-in-out infinite;
+}
+@keyframes moteFloat { 0%,100% { transform: translateY(0); opacity: .5; } 50% { transform: translateY(-6px); opacity: 1; } }
+
+/* 主人公カード常設（物語をいつも見せる） */
+.iw-hero-banner {
+  position: relative; z-index: 3; display: flex; align-items: center; gap: 8px;
+  width: min(560px, 96%); margin: 0 auto 8px; padding: 7px 14px;
+  border-radius: 999px; text-align: left;
+  background: rgba(20,16,28,.6); border: 1px solid rgba(238,214,155,.3); backdrop-filter: blur(6px);
+}
+.iw-hero-banner span { font-size: .72rem; font-weight: 700; color: var(--singa-ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 地図のホットスポット（場所そのものを押せる） */
+.iw-hotspots { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.iw-spot { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+.iw-spot .dot {
+  width: 16px; height: 16px; border-radius: 999px;
+  background: radial-gradient(circle, #fff6d8, #e8c15a 65%, transparent 70%);
+  box-shadow: 0 0 12px 3px rgba(232,193,90,.6); animation: spotPulse 2.4s ease-in-out infinite;
+}
+.iw-spot.is-start .dot { background: radial-gradient(circle, #fff, #7ec0ee 65%, transparent 70%); box-shadow: 0 0 14px 4px rgba(126,192,238,.7); }
+.iw-spot .lb { font-size: .58rem; font-weight: 700; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.9); white-space: nowrap; }
+@keyframes spotPulse { 0%,100% { transform: scale(1); opacity: .85; } 50% { transform: scale(1.25); opacity: 1; } }
+
+/* Lvが上がった理由の後出しトースト（HUD内） */
+.ihud-hero-toast {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 7px 12px; border-radius: 12px; font-size: .74rem;
+  background: rgba(40,34,20,.82); border: 1px solid rgba(238,214,155,.45);
+  animation: heroToastIn .4s ease both;
+}
+.ihud-hero-toast b { color: #eed69b; }
+.ihud-hero-toast .rz { color: var(--singa-ink-soft); font-size: .68rem; }
+
+/* 1日の1行カード */
+.daily-oneline { margin-top: 14px; padding: 12px 14px; border-radius: 12px; background: rgba(232,193,90,.1); border: 1px solid rgba(232,193,90,.35); }
+.daily-oneline .ol-text { font-size: .92rem; font-weight: 700; line-height: 1.7; }
+.daily-oneline .ol-copy { margin-top: 8px; font-size: .68rem; color: var(--singa-ink-soft); background: rgba(255,255,255,.06); border: 1px solid rgba(232,189,114,.25); border-radius: 999px; padding: 4px 12px; }
+
 @media (max-width: 700px) {
   .iw-home { padding: 8px 8px 10px; }
   .iw-figure {

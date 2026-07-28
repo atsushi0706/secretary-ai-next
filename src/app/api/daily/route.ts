@@ -7,6 +7,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { complete } from "@/lib/ai";
 import { listEmotions, loadShingaMessages, listWalkLogs, isMissingTable } from "@/lib/shinga";
+import { getTodayQuest } from "@/lib/inner";
 import { getUserSettings, logError } from "@/lib/supabase";
 import { jstDateStr } from "@/lib/google";
 
@@ -58,12 +59,24 @@ ${material}`;
 
     const closing = await complete({ userId, prompt, maxTokens: 1400, temperature: 0.8 });
 
+    // 「今日、きみは◯◯した」の1行カード（他人に語れる＝物語になる）。事実から作る。
+    const quest = await getTodayQuest(userId).catch(() => null);
+    const solved = quest?.items.find((it) => it.done)?.text;
+    const oneLine = solved
+      ? `今日、きみは「${solved}」をやり切った。`
+      : walksToday.length
+        ? "今日、きみは理想の未来を歩いた。"
+        : todayMsgs.length
+          ? "今日、きみは自分の内側と、ちゃんと向き合った。"
+          : "今日、きみはこの世界に来た。それだけで、十分。";
+
     return NextResponse.json({
       empty: false,
       start: start ? { level: start.level } : null,
       now: now ? { level: now.level } : null,
       count: todayEmo.length,
       closing: String(closing ?? "").trim(),
+      oneLine,
     });
   } catch (e: any) {
     if (!isMissingTable(e)) await logError(userId, "/api/daily", e);

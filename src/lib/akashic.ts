@@ -11,21 +11,24 @@
  * offset = その10年が「今の10年」から何個ずれているか。過去= 負、今=0、未来= 正。
  */
 
-/** 未来へ n 個先の10年を開くのに必要な「取り組み日数」。future=1 が一番近い未来。 */
-export const UNLOCK_DAYS = [0, 3, 7, 14, 30, 50, 75, 100, 130, 165, 200];
+/**
+ * 未来へ n 個先の10年を開くのに必要な「歩いた回数」（パラレルウォーク＋トラベルの回数）。
+ * 鍵を自分の手の中に置く＝日数の壁ではなく「◯回やると開く」意志のロックにする。
+ */
+export const UNLOCK_WALKS = [0, 3, 7, 12, 20, 30, 42, 56, 72, 90, 110];
 
-export function needDaysForFuture(future: number): number {
-  const i = Math.max(0, Math.min(future, UNLOCK_DAYS.length - 1));
-  return UNLOCK_DAYS[i];
+export function needWalksForFuture(future: number): number {
+  const i = Math.max(0, Math.min(future, UNLOCK_WALKS.length - 1));
+  return UNLOCK_WALKS[i];
 }
 
 export type DecadeUnlock = { unlocked: boolean; need: number; remaining: number };
 
-/** その10年が今、開いているか。過去・今・マスターは常に開放。未来だけ日数でゲート。 */
-export function decadeUnlock(offset: number, activeDays: number, master = false): DecadeUnlock {
+/** その10年が今、開いているか。過去・今・マスターは常に開放。未来だけ「歩いた回数」でゲート。 */
+export function decadeUnlock(offset: number, walkCount: number, master = false): DecadeUnlock {
   if (master || offset <= 0) return { unlocked: true, need: 0, remaining: 0 };
-  const need = needDaysForFuture(offset);
-  return { unlocked: activeDays >= need, need, remaining: Math.max(0, need - activeDays) };
+  const need = needWalksForFuture(offset);
+  return { unlocked: walkCount >= need, need, remaining: Math.max(0, need - walkCount) };
 }
 
 /** マスター判定。MASTER_EMAILS（カンマ区切り）に一致すれば全開放。 */

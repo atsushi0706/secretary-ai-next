@@ -46,21 +46,55 @@ function buildSteps(emotion?: string): Step[] {
   return steps;
 }
 
-function speak(text: string) {
+// フォールバック（OpenAI TTSが使えないとき）：ブラウザ読み上げ
+function speakFallback(text: string) {
   try {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
     u.lang = "ja-JP";
-    // 小さい子どものキャラ：高めのピッチ＋ナチュラルな速さ
     u.pitch = 1.6;
     u.rate = 1.0;
     const vs = window.speechSynthesis.getVoices().filter((x) => x.lang?.startsWith("ja"));
-    // 女性/子ども寄りの声があれば優先
     const pref = vs.find((x) => /female|woman|girl|child|kyoko|o-ren|nanami|haruka/i.test(x.name)) || vs[0];
     if (pref) u.voice = pref;
     window.speechSynthesis.speak(u);
   } catch { /* 声が出なくても画面で進める */ }
+}
+
+// 自然な音声（OpenAI TTS）。固定セリフはブラウザにキャッシュ → 初回だけ生成、以後は再生のみ。
+let currentAudio: HTMLAudioElement | null = null;
+function stopVoice() {
+  try { currentAudio?.pause(); } catch { /* ignore */ }
+  currentAudio = null;
+  try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
+}
+async function speak(text: string) {
+  const t = text.trim();
+  if (!t) return;
+  stopVoice();
+  try {
+    const cache = await caches.open("iw-tts-v1");
+    const key = `/__tts__/${encodeURIComponent(t)}`;
+    let res = await cache.match(key);
+    if (!res) {
+      const r = await fetch("/api/tts", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: t }),
+      });
+      if (!r.ok) throw new Error("tts_unavailable");
+      await cache.put(key, r.clone());
+      res = r;
+    }
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = new Audio(url);
+    currentAudio = a;
+    a.onended = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } };
+    await a.play();
+  } catch {
+    // OpenAIキー未設定・失敗時は従来のブラウザ読み上げに退避
+    speakFallback(t);
+  }
 }
 
 export function BreathGuide({ onDone }: { onDone: () => void }) {
@@ -73,7 +107,7 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
   const emotionRef = useRef<string>(""); // 未来からの手紙の「理想の感情」を吸う
   const [emo, setEmo] = useState("");
 
-  useEffect(() => () => { clearInterval(tickRef.current); try { window.speechSynthesis?.cancel(); } catch {} }, []);
+  useEffect(() => () => { clearInterval(tickRef.current); stopVoice(); }, []);
 
   // その日の手紙の感情を取り込む（吸ってインストールする対象）
   useEffect(() => {
@@ -93,7 +127,7 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
     const steps = stepsRef.current;
     clearInterval(tickRef.current);
     if (i >= steps.length) {
-      try { window.speechSynthesis?.cancel(); } catch {}
+      stopVoice();
       onDone();
       return;
     }

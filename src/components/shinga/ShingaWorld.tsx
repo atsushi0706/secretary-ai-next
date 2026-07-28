@@ -9,7 +9,7 @@ import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
-import { ParallelWalk } from "./ParallelWalk";
+import { WalkLanding } from "./WalkLanding";
 import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
@@ -80,6 +80,7 @@ export function ShingaWorld({
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [walkLanding, setWalkLanding] = useState(false); // パラレルウォーク→今日に落とす着地
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debug, setDebug] = useState(false);
@@ -156,8 +157,7 @@ export function ShingaWorld({
     setView("talk");
     setChoices(null);
     if (!resume) setMessages([]);
-    // パラレルウォークは会話ではなく専用画面（ChatGPT連携）。AI挨拶は呼ばない
-    if (m === "walk") return;
+    setWalkLanding(false);
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
     // 頭を使うのは、ユーザーが最初の返事をした"あと"から。
@@ -343,8 +343,11 @@ export function ShingaWorld({
           onTasks={() => setTasksOpen(true)}
           sending={sending}
         />
-      ) : mode === "walk" ? (
-        <ParallelWalk onBack={() => { setView("home"); setChoices(null); setMode(null); }} />
+      ) : walkLanding ? (
+        <WalkLanding
+          transcript={messages.filter((m) => m.role === "user").map((m) => m.content).join("\n")}
+          onDone={() => { setWalkLanding(false); setView("home"); setChoices(null); setMode(null); }}
+        />
       ) : (
         <>
           <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>
@@ -408,6 +411,13 @@ export function ShingaWorld({
               </div>
             )}
           </div>
+
+          {/* パラレルウォーク：歩き終えて、理想を今日に落とす */}
+          {mode === "walk" && messages.some((m) => m.role === "user") && (
+            <button className="walk-land-btn" onClick={() => setWalkLanding(true)}>
+              🌱 歩き終わる → 今日に落とす
+            </button>
+          )}
 
           {/* 音声入力バー */}
           <VoiceBar onSend={(t) => talk(t)} disabled={sending} />

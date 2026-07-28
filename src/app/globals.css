@@ -1891,6 +1891,13 @@ body:has(.realverse-bg) { background: transparent; }
   background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.25); color: #f4e7c8;
 }
 .pwalk-chips button.on { background: linear-gradient(160deg,#eed69b,#c9a55e); color: #221b10; border-color: transparent; font-weight: 700; }
+/* パラレルウォーク：歩き終わるボタン（会話の下に出す） */
+.walk-land-btn {
+  display: block; margin: 0 auto 8px; padding: 8px 18px; border-radius: 999px;
+  font-size: .78rem; font-weight: 700; color: #0e1a0b;
+  background: linear-gradient(160deg,#a6e08a,#6fb85a);
+  box-shadow: 0 4px 14px rgba(111,184,90,.35);
+}
 
 /* ── この頃のわたし（変化のふりかえり） ── */
 .iw-report {

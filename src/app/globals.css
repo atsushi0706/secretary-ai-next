@@ -1157,11 +1157,39 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .iw-home {
   position: absolute; inset: 0; z-index: 4;
-  display: flex; flex-direction: column;
-  padding: 10px 12px 12px;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px 12px 14px;
+  overflow-y: auto;               /* 手紙を開いても潰れず、はみ出たらスクロール */
 }
 /* キヨセリンクが立つ場面 */
-.iw-scene { position: relative; flex: 1; min-height: 0; }
+.iw-scene { position: relative; flex: 0 0 auto; height: 190px; }
+
+/* 未来からの手紙（開いた最初に迎える） */
+.fletter { width: min(560px, 96%); margin: 0 auto; }
+.fletter-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 10px 14px; border-radius: 12px; text-align: left;
+  background: linear-gradient(160deg, rgba(74,60,40,.9), rgba(50,40,28,.9));
+  border: 1px solid rgba(232,208,150,.5); backdrop-filter: blur(6px);
+  box-shadow: 0 4px 18px rgba(0,0,0,.4);
+}
+.fletter-head .ttl { font-size: .82rem; font-weight: 700; color: #f4e7c8; }
+.fletter-head .chev { font-size: .64rem; color: rgba(244,231,200,.8); white-space: nowrap; }
+.fletter-body {
+  margin-top: 6px; padding: 16px 18px; border-radius: 12px;
+  background: linear-gradient(180deg, rgba(246,238,214,.97), rgba(238,226,196,.97));
+  border: 1px solid rgba(180,150,90,.5); box-shadow: 0 8px 26px rgba(0,0,0,.35);
+}
+.fletter-body .txt { font-size: .92rem; line-height: 2.05; white-space: pre-wrap; color: #3a2f1a;
+  font-family: "Noto Serif JP","Yu Mincho",serif; }
+.fletter-emo { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(120,95,50,.4); text-align: center; }
+.fletter-emo .k { font-size: .6rem; letter-spacing: .16em; color: #8a6d3a; }
+.fletter-emo .v { font-size: 1.15rem; font-weight: 800; color: #4a3a1a; margin: 3px 0 10px; }
+.fletter-cta {
+  display: inline-block; padding: 9px 18px; border-radius: 999px; font-size: .78rem; font-weight: 700;
+  color: #2a2010; background: linear-gradient(160deg,#eed69b,#c9a55e); border: none;
+}
+.fletter-body .sign { margin-top: 12px; font-size: .7rem; color: #8a6d3a; text-align: right; }
 .iw-figure {
   position: absolute;
   left: 50%; bottom: 0;

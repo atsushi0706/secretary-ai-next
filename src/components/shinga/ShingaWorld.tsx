@@ -15,6 +15,7 @@ import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
 import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
+import { FutureLetter } from "./FutureLetter";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -530,6 +531,9 @@ function Home({
 }) {
   return (
     <div className="iw-home">
+      {/* 未来からの手紙：開いた最初に、開いた状態で迎える */}
+      <FutureLetter guideName={guideName} onGoIdeal={onHero} onGoPeak={() => onPick("peak")} />
+
       {/* 世界の中に立つキヨセリンク＋吹き出し */}
       <div className="iw-scene">
         <div className="iw-bubble">

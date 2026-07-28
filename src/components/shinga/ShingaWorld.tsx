@@ -57,6 +57,36 @@ const FACE_SRC: Record<Face, string> = {
   anxious: "/kiyose_anxious.png",
 };
 
+// タップした瞬間に鳴る、やさしい単音（外部ファイル不要・Web Audio）。
+// 穏やか(1)ほど高く澄んだ音、しんどい(10)ほど低くやわらかい音。
+function playChime(n: number) {
+  try {
+    const Ctx = (window as any).AudioContext || (window as any).webkitAudioContext;
+    if (!Ctx) return;
+    const ctx = new Ctx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.type = "sine";
+    o.frequency.value = 680 - ((n - 1) / 9) * (680 - 320);
+    o.connect(g); g.connect(ctx.destination);
+    const t = ctx.currentTime;
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.07, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    o.start(t); o.stop(t + 0.72);
+    o.onended = () => { try { ctx.close(); } catch { /* ignore */ } };
+  } catch { /* 音が出なくても体験は進む */ }
+}
+
+// 気分に応じた、キヨセリンクの一言（低い数字＝穏やかを責めない・高い数字＝しんどいを休ませる）
+function moodLineFor(n: number): string {
+  if (n <= 2) return "いい感じだね😊 その穏やかさのまま、今日の理想を歩きにいこ。";
+  if (n <= 4) return "落ち着いてるね。ここから整えていけるよ。まずピークステート、どう？";
+  if (n <= 6) return "ふつうくらいか😊 じゃあ軽く整えてから、やりたいこと見にいこ。";
+  if (n <= 8) return "ちょっとしんどめだね。無理しなくていいよ。まず呼吸で整えよっか。";
+  return "今日はよく来たね。ここで休んでいいよ。何もしなくて、大丈夫。";
+}
+
 export function ShingaWorld({
   guideName, avatarUrl, initialPlace,
 }: {
@@ -81,6 +111,8 @@ export function ShingaWorld({
   const [heroOpen, setHeroOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
   const [walkLanding, setWalkLanding] = useState(false); // パラレルウォーク→今日に落とす着地
+  const [homeMood, setHomeMood] = useState<number | null>(null); // 起動直後の「気分1タップ」
+  const [moodLine, setMoodLine] = useState<string | null>(null);
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [debug, setDebug] = useState(false);
@@ -150,6 +182,18 @@ export function ShingaWorld({
     setTimeout(() => setPlace(next), 260);
     setTimeout(() => setMoving(false), 1100);
   }, []);
+
+  // 起動直後の「気分1タップ」→ 押した瞬間に世界が反応する（光・表情・音）。責めない。
+  function moodReact(n: number) {
+    setHomeMood(n);
+    setMoodLine(moodLineFor(n));
+    setFace(n <= 4 ? "smile" : n <= 7 ? "neutral" : "anxious");
+    playChime(n);
+    fetch("/api/emotions", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level: n }),
+    }).catch(() => {});
+  }
 
   async function enter(m: ModeKey, resume = false) {
     setMode(m);
@@ -306,6 +350,14 @@ export function ShingaWorld({
         />
       </div>
 
+      {/* 気分タップで世界が反応：穏やかなら朝の光、しんどいなら夜に沈む */}
+      {view === "home" && homeMood != null && (
+        <>
+          <div className="iw-glow" style={{ opacity: Math.max(0, (5 - homeMood) / 4) * 0.5 }} />
+          <div className="iw-veil" style={{ opacity: Math.max(0, (homeMood - 5) / 5) * 0.72 }} />
+        </>
+      )}
+
       {/* 会話で主人公レベルが動いたときの、そっと出るお知らせ */}
       {heroToast && (
         <div className="hero-toast" onClick={() => { setHeroToast(null); setHeroOpen(true); }}>
@@ -341,6 +393,9 @@ export function ShingaWorld({
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onTasks={() => setTasksOpen(true)}
+          mood={homeMood}
+          moodLine={moodLine}
+          onMood={moodReact}
           sending={sending}
         />
       ) : walkLanding ? (
@@ -534,7 +589,7 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
 ];
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, mood, moodLine, onMood, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -544,15 +599,18 @@ function Home({
   onDaily: () => void;
   onHero: () => void;
   onTasks: () => void;
+  mood: number | null;
+  moodLine: string | null;
+  onMood: (n: number) => void;
   sending: boolean;
 }) {
   return (
     <div className="iw-home">
-      {/* 世界の中に立つキヨセリンク＋吹き出し */}
+      {/* 世界の中に立つキヨセリンク＋吹き出し（気分を押すと反応が変わる） */}
       <div className="iw-scene">
         <div className="iw-bubble">
           <span className="who">{guideName}</span>
-          <p>{greetLine()}</p>
+          <p>{moodLine ?? greetLine()}</p>
         </div>
         <Image
           className="iw-figure"
@@ -563,6 +621,12 @@ function Home({
           priority
           unoptimized={avatarUrl.startsWith("http")}
         />
+      </div>
+
+      {/* まず1タップ：いまの気分（押した瞬間に世界が反応する＝直感の入口） */}
+      <div className="iw-mood">
+        <div className="iw-mood-q">{mood == null ? "まず、いまの気分をタップ" : "気分、変わったら押してね"}</div>
+        <EmotionMeter value={mood} onChange={onMood} />
       </div>
 
       {/* 話しかける（ここで即・打てる／話せる） */}

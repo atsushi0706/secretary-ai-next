@@ -1240,6 +1240,16 @@ body:has(.realverse-bg) { background: transparent; }
 /* ホームの音声バーは会話用のスタイルを流用（.vbar） */
 .iw-home .vbar { margin: 0 0 8px; }
 
+/* 気分1タップ（直感の入口） */
+.iw-home { position: relative; z-index: 3; }
+.iw-mood { width: min(560px, 96%); margin: 2px auto 8px; text-align: center; }
+.iw-mood-q { font-size: .78rem; font-weight: 700; color: var(--singa-gold); margin-bottom: 6px; letter-spacing: .04em; }
+
+/* 気分タップで世界が反応：朝の光／夜の帳（マップだけ染めて、UIは読めるまま） */
+.iw-glow, .iw-veil { position: absolute; inset: 0; pointer-events: none; z-index: 1; }
+.iw-glow { background: radial-gradient(120% 80% at 50% -5%, rgba(255,226,165,.85), rgba(255,208,140,.25) 45%, transparent 72%); mix-blend-mode: screen; transition: opacity 1s ease; }
+.iw-veil { background: linear-gradient(180deg, rgba(12,16,44,.5), rgba(5,7,22,.9)); transition: opacity 1.1s ease; }
+
 @media (max-width: 700px) {
   .iw-home { padding: 8px 8px 10px; }
   .iw-figure {

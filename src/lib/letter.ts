@@ -42,36 +42,51 @@ export async function getTodayLetter(userId: string): Promise<FutureLetter> {
     };
   }
 
-  // 10年後のステージ（大運）。性別があれば取れる
+  // 10年後のステージ（大運）。誕生日＋性別があれば取れる。ここが手紙の"質"を決める
   const birth = settings?.birth_date ?? null;
   const gender = settings?.birth_gender === "male" || settings?.birth_gender === "female" ? settings.birth_gender : null;
-  let stageLine = "";
+  let stageBlock = "（誕生日と性別が未設定なので、人生ステージは使わず、ただ10年後の自分として書く）";
   const life = computeLife(birth, gender, jstNow());
   if (life) {
-    const next = life.periods[life.currentIndex + 1] ?? life.periods[life.currentIndex];
-    if (next) stageLine = `\n私は今、きみとは違う人生のステージにいる（${next.ageStart}〜${next.ageEnd}歳ごろ：${next.meaning}）。だから見えている景色も、感じ方も、今のきみとは少し違う。`;
+    const cur = life.periods[life.currentIndex];
+    const next = life.periods[life.currentIndex + 1] ?? cur;
+    stageBlock = `# 人生のステージ（この手紙の"質"を決める最重要情報）
+今のきみは「${cur.label}」というステージにいる（${cur.meaning}）。
+10年後の私は、その先の「${next.label}」というステージを生きている（${next.meaning}）。
+だから私が感じている世界の"質"は、この「${next.label}」のステージならではのもの。
+その質感を、感情としてありありと伝えること。今のきみのステージとは、明らかに違う色にする。`;
   }
 
-  const prompt = `あなたは、${who} の「10年後の自分」。${who} が増やしたい世界「${ideal}」を、もう当たり前に生きている。${stageLine}
+  const prompt = `あなたは、${who} の「10年後の自分」。${who} が増やしたい世界「${ideal}」を、もう当たり前に生きている。
 その未来の私から、今日の ${who} へ手紙を書く。
+
+${stageBlock}
 
 # 手紙のルール（厳守）
 - 一人称「私」。10年後の私から、今日のきみへ。やわらかく、友達のような距離。タメ口寄り。
 - 【最重要】具体的な場面を描写しない。カフェ・仕事・場所・登場人物・出来事など"何をしているか"は一切書かない。
   代わりにこう伝える：「どんな毎日かは、まだ言えないんだ。ごめんね。だって、それを決めるのは“今日のきみ”だから。
   きみが今日それを願って決めないと、この世界の私は存在しないんだよ」
-- 伝えていいのは"感情"だけ。この世界が、どんな感情で満ちているか。それをありありと。
+- 伝えていいのは"感情"だけ。上のステージの"質"を反映した、この世界に満ちている感情を、ありありと。
 - 最後に、今日のきみへの願いをひとつ：「だから今日、その感情を先に感じてみて。それだけでいい」。
 - 4〜7行で、必ず最後まで言い切る（途中で切らない）。説教しない。前置き・署名・見出しは書かない。
-- 最後の行だけ、この世界の中心にある感情を"一語"で： 感情=◯◯`;
+- 本文の最後に、この世界の中心にある感情を"一語"だけ、必ずこの形式で書く： <感情>◯◯</感情>`;
 
   let raw = "";
   try { raw = String(await complete({ userId, prompt, maxTokens: 3000, temperature: 0.9 }) ?? "").trim(); } catch { /* fallback below */ }
 
-  // 感情=◯◯ を取り出して本文から除く
+  // 感情を取り出して本文から除く（複数の書き方に耐える）
   let emotion = "";
-  const m = raw.match(/感情\s*[=＝:：]\s*(.+)\s*$/m);
-  if (m) { emotion = m[1].trim().replace(/[。.\s]+$/, ""); raw = raw.replace(m[0], "").trim(); }
+  const clean = (s: string) => s.trim().replace(/^[「『]/, "").replace(/[」』。.\s]+$/, "").trim();
+  let mm = raw.match(/<\s*感情\s*>\s*([^<]+?)\s*<\s*\/\s*感情\s*>/);
+  if (mm) { emotion = clean(mm[1]); raw = raw.replace(mm[0], "").trim(); }
+  if (!emotion) { mm = raw.match(/感情\s*[=＝:：]\s*(.+)\s*$/m); if (mm) { emotion = clean(mm[1]); raw = raw.replace(mm[0], "").trim(); } }
+  if (!emotion) {
+    // 末尾の"短い一語"（句読点なし・8文字以内）を感情とみなして本文から外す
+    const lines = raw.split(/\n+/);
+    const last = (lines[lines.length - 1] ?? "").trim();
+    if (last && last.length <= 8 && !/[。！？、,.]/.test(last)) { emotion = clean(last); lines.pop(); raw = lines.join("\n").trim(); }
+  }
 
   if (raw.length < 8) {
     raw = `やあ、10年後のわたしだよ。\nここがどんな場所かは、まだ言えないんだ。ごめんね。だって、それを決めるのは今日のきみだから。\nきみが今日それを願わないと、この世界のわたしは生まれないんだよ。\nだから今日、ひとつだけ。この胸にある“満たされた感じ”を、先に感じてみて。それだけでいい。`;

@@ -1241,9 +1241,11 @@ body:has(.realverse-bg) { background: transparent; }
 /* ホームの音声バーは会話用のスタイルを流用（.vbar） */
 .iw-home .vbar { margin: 0 0 8px; }
 
-/* 気分1タップ（直感の入口） */
-.iw-home { position: relative; z-index: 3; }
+/* 気分1タップ（直感の入口）。※iw-home の position は base の absolute のまま（inset:0で内部スクロール） */
 .iw-mood { width: min(560px, 96%); margin: 2px auto 8px; text-align: center; }
+.iw-mood.is-primary { margin-top: 4px; }
+.iw-mood.is-primary .emeter { padding: 12px 14px; border-radius: 16px; background: rgba(20,16,28,.55); border: 1px solid rgba(238,214,155,.35); backdrop-filter: blur(6px); box-shadow: 0 0 26px rgba(232,193,90,.18); }
+.iw-more { width: min(560px, 96%); margin: 4px auto 0; padding: 11px; border-radius: 12px; font-size: .8rem; font-weight: 700; color: var(--singa-gold); background: rgba(20,16,28,.55); border: 1px dashed rgba(238,214,155,.4); backdrop-filter: blur(6px); }
 .iw-mood-q { font-size: .78rem; font-weight: 700; color: var(--singa-gold); margin-bottom: 6px; letter-spacing: .04em; }
 
 /* 気分タップで世界が反応：朝の光／夜の帳（マップだけ染めて、UIは読めるまま） */

@@ -633,17 +633,13 @@ function Home({
   onStats?: (s: { activeDays: number }) => void;
   sending: boolean;
 }) {
+  const [menuOpen, setMenuOpen] = useState(false);
+  // 最初の画面は「気分タップ1つ」に絞る。押したら世界が開く（残りが出てくる）。
+  const showMore = menuOpen || mood != null;
   return (
     <div className="iw-home">
-      {/* リンクからの便り：理想が向こうから会いに来る（未来の手紙／置き忘れの回収） */}
+      {/* リンクからの便り：理想が向こうから会いに来る（届くだけ・読むだけ） */}
       <LinkLetter guideName={guideName} />
-
-      {/* 主人公の物語を常設（モーダルに隠さない） */}
-      {heroStatement && (
-        <button className="iw-hero-banner" onClick={onHero} title="主人公を見る">
-          🦸 <span>{heroStatement}</span>
-        </button>
-      )}
 
       {/* 世界の中に立つキヨセリンク＋吹き出し（気分を押すと反応が変わる） */}
       <div className="iw-scene">
@@ -662,50 +658,62 @@ function Home({
         />
       </div>
 
-      {/* まず1タップ：いまの気分（押した瞬間に世界が反応する＝直感の入口） */}
-      <div className="iw-mood">
+      {/* ★ 唯一の入口：いまの気分を1タップ（押した瞬間に世界が反応する） */}
+      <div className="iw-mood is-primary">
         <EmotionMeter value={mood} onChange={onMood}
           title={mood == null ? "まず、いまの気分をタップ 👇" : "気分、変わったら押してね"} />
       </div>
 
-      {/* 話しかける（ここで即・打てる／話せる） */}
-      <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
-
-      {/* ゲームHUD：想像↔現実の綱引き＋今日のナゾ（役としての1手） */}
-      <InnerHud guideName={guideName} onStats={onStats} heroStatement={heroStatement} />
-
-      {/* または、行き先を選ぶ */}
-      <div className="iw-doors">
-        {DOORS.map((d) => {
-          const m = MODES[d.key];
-          return (
-            <button key={d.key} className={`iw-door ${d.key === "peak" ? "is-start" : ""}`} onClick={() => onPick(d.key)}>
-              {d.key === "peak" && <span className="tag">まずここから</span>}
-              <span className="emoji">{d.emoji}</span>
-              <span className="ja">{m.label}</span>
-              <span className="verb">{VERB[d.key]}</span>
+      {!showMore ? (
+        <button className="iw-more" onClick={() => setMenuOpen(true)}>▾ 今日のメニュー（ナゾ・ツール）を開く</button>
+      ) : (
+        <>
+          {/* 主人公の物語（役） */}
+          {heroStatement && (
+            <button className="iw-hero-banner" onClick={onHero} title="主人公を見る">
+              🦸 <span>{heroStatement}</span>
             </button>
-          );
-        })}
-        {DOORS_SUB.map((d) => {
-          const m = MODES[d.key];
-          return (
-            <button key={d.key} className="iw-door is-sub" onClick={() => onPick(d.key)}>
-              <span className="emoji">{d.emoji}</span>
-              <span className="ja">{m.label}</span>
-              <span className="verb">{VERB[d.key]}</span>
-            </button>
-          );
-        })}
-      </div>
+          )}
 
-      {/* 主人公（レベル）＋ふりかえり */}
-      <div className="iw-reflect-row">
-        <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
-        <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
-        <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
-        <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
-      </div>
+          {/* ゲームHUD：想像↔現実の綱引き＋今日のナゾ（役としての1手） */}
+          <InnerHud guideName={guideName} onStats={onStats} heroStatement={heroStatement} />
+
+          {/* 行き先を選ぶ */}
+          <div className="iw-doors">
+            {DOORS.map((d) => {
+              const m = MODES[d.key];
+              return (
+                <button key={d.key} className={`iw-door ${d.key === "peak" ? "is-start" : ""}`} onClick={() => onPick(d.key)}>
+                  {d.key === "peak" && <span className="tag">まずここから</span>}
+                  <span className="emoji">{d.emoji}</span>
+                  <span className="ja">{m.label}</span>
+                  <span className="verb">{VERB[d.key]}</span>
+                </button>
+              );
+            })}
+            {DOORS_SUB.map((d) => {
+              const m = MODES[d.key];
+              return (
+                <button key={d.key} className="iw-door is-sub" onClick={() => onPick(d.key)}>
+                  <span className="emoji">{d.emoji}</span>
+                  <span className="ja">{m.label}</span>
+                  <span className="verb">{VERB[d.key]}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 話しかける（テキストのみ） */}
+          <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
+
+          {/* ふりかえり */}
+          <div className="iw-reflect-row">
+            <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
+            <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
+            <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
+          </div>
+        </>
+      )}
     </div>
   );
 }

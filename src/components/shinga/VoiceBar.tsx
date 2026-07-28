@@ -215,18 +215,6 @@ export function VoiceBar({
           disabled={disabled || phase !== "idle"}
         />
 
-        {supported && (
-          <button
-            type="button"
-            className={`vbar-mic ${phase === "recording" ? "is-on" : ""}`}
-            onClick={toggleMic}
-            disabled={disabled || phase === "polishing"}
-            title={phase === "recording" ? "止めて文字にする" : "押して話す"}
-          >
-            {phase === "recording" ? "■" : phase === "polishing" ? "…" : "🎙"}
-          </button>
-        )}
-
         <button
           type="button"
           className="vbar-go"

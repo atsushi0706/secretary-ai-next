@@ -411,10 +411,13 @@ async function completeGeminiOne(
   const model = genAI.getGenerativeModel({
     model: modelName,
     systemInstruction: opts.system,
+    // thinking を無効化（思考トークンが maxOutputTokens を食い、本文が途中で切れるのを防ぐ）。
+    // 未対応モデルでは無視される。単発の補完はどれも thinking 不要。
     generationConfig: {
       temperature: opts.temperature ?? 0.3,
       maxOutputTokens: opts.maxTokens ?? 2048,
-    },
+      thinkingConfig: { thinkingBudget: 0 },
+    } as any,
   });
   const r = await model.generateContent({
     contents: [{ role: "user", parts: [{ text: opts.prompt }] }],

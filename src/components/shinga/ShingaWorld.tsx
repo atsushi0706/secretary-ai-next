@@ -344,6 +344,7 @@ export function ShingaWorld({
           onClose={() => setLetterOpen(false)}
           onGoIdeal={() => { setLetterOpen(false); setHeroOpen(true); }}
           onGoPeak={() => { setLetterOpen(false); void enter("peak"); }}
+          onGoSetup={() => { try { window.location.href = "/settings"; } catch { /* ignore */ } }}
         />
       ) : heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />

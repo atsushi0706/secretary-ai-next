@@ -14,23 +14,35 @@ import { getUserSettings } from "./supabase";
 import { computeLife } from "./sanmei";
 import { jstDateStr, jstNow } from "./google";
 
-export type FutureLetter = { date: string; body: string; emotion: string; hasIdeal: boolean };
+export type FutureLetter = { date: string; body: string; emotion: string; hasIdeal: boolean; needsSetup?: boolean };
 
 export async function getTodayLetter(userId: string): Promise<FutureLetter> {
   const date = jstDateStr();
   const supa = supabaseAdmin();
 
+  const settings: any = await getUserSettings(userId).catch(() => null);
+  const who = settings?.user_call_name?.trim() || "きみ";
+
+  // ── 初期設定ゲート：名前・生年月日・呼んでほしい名前 が揃うまでは手紙を出さず、設定へ誘導 ──
+  const hasName = !!settings?.birth_name?.trim();
+  const hasBirth = !!settings?.birth_date?.trim();
+  const hasCallName = !!settings?.user_call_name?.trim();
+  if (!hasName || !hasBirth || !hasCallName) {
+    return {
+      date, hasIdeal: false, needsSetup: true, emotion: "",
+      body: `手紙を届けたいんだけど、まだ準備が要るんだ。\nきみの「名前」「生年月日」「呼んでほしい名前」を教えてくれる？\nそれが揃ったら——きみが叶えた世界から、ちゃんと手紙が届くよ。`,
+    };
+  }
+
+  // 設定が揃ってから、今日ぶんのキャッシュを見る（途中で切れて保存されたものは作り直す）
   const { data } = await supa
     .from("link_letter").select("date, body, source").eq("user_id", userId).eq("date", date).maybeSingle();
-  // 途中で切れて保存されたキャッシュ（末尾が文の終わりでない）は作り直す
   const cachedBody = String((data as any)?.body ?? "");
   const looksComplete = /[。！？…」』）\)]\s*$/.test(cachedBody.trim());
   if (data && cachedBody.trim().length >= 20 && looksComplete) {
     return { date, body: cachedBody, emotion: (data as any).source ?? "", hasIdeal: true };
   }
 
-  const settings: any = await getUserSettings(userId).catch(() => null);
-  const who = settings?.user_call_name || "きみ";
   const hero = await getHero(userId).catch(() => null);
   const ideal = (hero?.desired_world?.trim() || hero?.hero_statement?.trim() || "");
 
@@ -38,7 +50,7 @@ export async function getTodayLetter(userId: string): Promise<FutureLetter> {
   if (!ideal) {
     return {
       date, hasIdeal: false, emotion: "",
-      body: `やあ、10年後のわたしだよ。\nでも今はまだ、きみの“増やしたい世界”を聞いてないから、わたしの姿もぼんやりしてるんだ。\nよかったら、まずどんな世界を生きたいか、教えて。そしたら——その世界からちゃんと手紙を書くね。`,
+      body: `きみの“増やしたい世界”を、まだ聞いてないんだ。\nそれを教えてくれたら——それが叶った世界から、ちゃんと手紙が届くよ。`,
     };
   }
 
@@ -57,20 +69,21 @@ export async function getTodayLetter(userId: string): Promise<FutureLetter> {
 その質感を、感情としてありありと伝えること。今のきみのステージとは、明らかに違う色にする。`;
   }
 
-  const prompt = `あなたは、${who} の「10年後の自分」。${who} が増やしたい世界「${ideal}」を、もう当たり前に生きている。
-その未来の私から、今日の ${who} へ手紙を書く。
+  const prompt = `これは、${who} が増やしたい世界「${ideal}」が"もう完全に叶っている"未来から、今日の ${who} へ届く手紙。
+差出人は、その叶った世界を生きている ${who} 自身（10年ほど先）。相手のことは「${who}」と呼ぶ。
 
 ${stageBlock}
 
 # 手紙のルール（厳守）
-- 一人称「私」。10年後の私から、今日のきみへ。やわらかく、友達のような距離。タメ口寄り。
-- 【最重要】具体的な場面を描写しない。カフェ・仕事・場所・登場人物・出来事など"何をしているか"は一切書かない。
-  代わりにこう伝える：「どんな毎日かは、まだ言えないんだ。ごめんね。だって、それを決めるのは“今日のきみ”だから。
-  きみが今日それを願って決めないと、この世界の私は存在しないんだよ」
-- 伝えていいのは"感情"だけ。上のステージの"質"を反映した、この世界に満ちている感情を、ありありと。
-- 最後に、今日のきみへの願いをひとつ：「だから今日、その感情を先に感じてみて。それだけでいい」。
+- 一人称は「私」。ただし「未来の私」「10年後の私」などの自称ラベルは書かない（署名もしない）。手紙の本文だけを書く。
+- 【前提】理想はもう叶っている。だから語り口は"願望"ではなく、叶った側からの"実感"。満ち足りた事実として。
+- 【最重要】具体的な場面は描写しない。カフェ・仕事・場所・登場人物・出来事など"何をしているか"は一切書かない。
+  代わりにこう伝える：「どんな毎日かは、まだ言えないんだ。ごめんね。だって、それを決めるのは“今日の${who}”だから。
+  ${who} が今日それを願って決めないと、この世界の私は存在しないんだよ」
+- 伝えていいのは"感情"だけ。上のステージの"質"を反映した、叶ったこの世界に満ちている感情を、ありありと。
+- 最後に、今日の ${who} への願いをひとつ：「だから今日、その感情を先に感じてみて。それだけでいい」。
 - 4〜7行で、必ず最後まで言い切る（途中で切らない）。説教しない。前置き・署名・見出しは書かない。
-- 本文の最後に、この世界の中心にある感情を"一語"だけ、必ずこの形式で書く： <感情>◯◯</感情>`;
+- 本文の最後に、この叶った世界の中心にある感情を"一語"だけ、必ずこの形式で書く： <感情>◯◯</感情>`;
 
   let raw = "";
   try { raw = String(await complete({ userId, prompt, maxTokens: 3000, temperature: 0.9 }) ?? "").trim(); } catch { /* fallback below */ }
@@ -89,7 +102,7 @@ ${stageBlock}
   }
 
   if (raw.length < 8) {
-    raw = `やあ、10年後のわたしだよ。\nここがどんな場所かは、まだ言えないんだ。ごめんね。だって、それを決めるのは今日のきみだから。\nきみが今日それを願わないと、この世界のわたしは生まれないんだよ。\nだから今日、ひとつだけ。この胸にある“満たされた感じ”を、先に感じてみて。それだけでいい。`;
+    raw = `やあ、${who}。\nここがどんな場所かは、まだ言えないんだ。ごめんね。だって、それを決めるのは今日の ${who} だから。\n${who} が今日それを願わないと、この叶った世界は生まれないんだよ。\nだから今日、ひとつだけ。この胸にある“満たされた感じ”を、先に感じてみて。それだけでいい。`;
     emotion = emotion || "満たされている";
   }
 

@@ -18,23 +18,30 @@ const HOLD = 5;    // 吐ききったら少し止める＝真空の状態を作�
 const INHALE = 4;  // 一気に、強く吸う
 const SETTLE = 15; // ゆっくり呼吸で、15秒かけてならす
 
-function buildSteps(): Step[] {
+// emotion があれば、吸うステップで「未来からの◯◯を吸う」＝インストールにする
+function buildSteps(emotion?: string): Step[] {
+  const inhaleInstr = emotion ? `一気に、強く吸う（未来からの「${emotion}」を）` : "一気に、強く吸う";
+  const inhaleSay = emotion ? `いっきに、みらいからの、${emotion}を、つよく、すってー` : "いっきに、つよく、すってー";
+  const introSay = emotion
+    ? `じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてね。未来からの「${emotion}」を、これから吸って身体に入れていくよ。`
+    : "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。";
+
   const steps: Step[] = [
-    { instr: "立って、体を軽くゆらそう", say: "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。", count: SETTLE, scale: 1 },
+    { instr: emotion ? `立って、体を軽くゆらそう（未来の「${emotion}」を入れる準備）` : "立って、体を軽くゆらそう", say: introSay, count: SETTLE, scale: 1 },
   ];
   for (let i = 0; i < 3; i++) {
     steps.push(
       { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, say: `${i + 1}かいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね`, count: EXHALE, scale: 0.35 },
       { instr: "吐ききったら、少し止める（真空を作る・5秒）", say: "そのまま、すこし止めてね。からっぽの真空をつくるよ", count: HOLD, scale: 0.28 },
-      { instr: "一気に、強く吸う", say: "つぎは、いっきに、つよく、すってー", count: INHALE, scale: 1.1 },
+      { instr: inhaleInstr, say: inhaleSay, count: INHALE, scale: 1.1 },
       { instr: "ゆっくり、呼吸を整える", say: "目をとじて、ゆっくり呼吸を整えてね", count: SETTLE, scale: 1 },
     );
   }
   steps.push(
     { instr: "最後にもう一度、口をすぼめて吐ききる", say: "さいごにもう一回。お口をすぼめて、ぜんぶ吐いてー", count: EXHALE, scale: 0.3 },
     { instr: "少し止める（真空を作る・5秒）", say: "そのまま、すこし止めて、真空をつくってね", count: HOLD, scale: 0.24 },
-    { instr: "一気に、強く吸う", say: "いっきに、つよく、すってー", count: INHALE, scale: 1.12 },
-    { instr: "ゆっくり、呼吸を整えて、目を開ける", say: "いいね。ゆっくり呼吸を整えて、目をあけてね。", count: SETTLE, scale: 1 },
+    { instr: emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : "一気に、強く吸う", say: inhaleSay, count: INHALE, scale: 1.12 },
+    { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: emotion ? `いいね。ゆっくり呼吸を整えて、その「${emotion}」を身体に馴染ませて。目をあけてね。` : "いいね。ゆっくり呼吸を整えて、目をあけてね。", count: SETTLE, scale: 1 },
   );
   return steps;
 }
@@ -63,11 +70,21 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
   const [scale, setScale] = useState(1);
   const stepsRef = useRef<Step[]>([]);
   const tickRef = useRef<any>(null);
+  const emotionRef = useRef<string>(""); // 未来からの手紙の「理想の感情」を吸う
+  const [emo, setEmo] = useState("");
 
   useEffect(() => () => { clearInterval(tickRef.current); try { window.speechSynthesis?.cancel(); } catch {} }, []);
 
+  // その日の手紙の感情を取り込む（吸ってインストールする対象）
+  useEffect(() => {
+    fetch("/api/link-letter").then((r) => r.json()).then((d) => {
+      const e = d?.letter?.emotion;
+      if (typeof e === "string" && e.trim()) { emotionRef.current = e.trim(); setEmo(e.trim()); }
+    }).catch(() => {});
+  }, []);
+
   function begin() {
-    stepsRef.current = buildSteps();
+    stepsRef.current = buildSteps(emotionRef.current || undefined);
     setStarted(true);
     goto(0);
   }
@@ -113,9 +130,12 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
       </div>
 
       {!started ? (
-        <div className="breath-row">
-          <button className="vbar-go breath-start" onClick={begin}>🌬 はじめる</button>
-          <button className="breath-skip" onClick={onDone}>スキップ</button>
+        <div className="breath-start-wrap">
+          {emo && <div className="breath-install">未来からの「<b>{emo}</b>」を、吸ってインストールするよ</div>}
+          <div className="breath-row">
+            <button className="vbar-go breath-start" onClick={begin}>🌬 はじめる</button>
+            <button className="breath-skip" onClick={onDone}>スキップ</button>
+          </div>
         </div>
       ) : (
         <div className="breath-row">

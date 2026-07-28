@@ -1164,32 +1164,43 @@ body:has(.realverse-bg) { background: transparent; }
 /* キヨセリンクが立つ場面 */
 .iw-scene { position: relative; flex: 0 0 auto; height: 190px; }
 
-/* 未来からの手紙（開いた最初に迎える） */
-.fletter { width: min(560px, 96%); margin: 0 auto; }
-.fletter-head {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  padding: 10px 14px; border-radius: 12px; text-align: left;
-  background: linear-gradient(160deg, rgba(74,60,40,.9), rgba(50,40,28,.9));
-  border: 1px solid rgba(232,208,150,.5); backdrop-filter: blur(6px);
-  box-shadow: 0 4px 18px rgba(0,0,0,.4);
+/* 未来からの手紙（全画面）。開いた最初は、これだけを見せる */
+.fletter-screen {
+  position: absolute; inset: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: center; padding: 20px 14px;
+  background: radial-gradient(120% 90% at 50% 20%, rgba(30,24,16,.72), rgba(8,6,4,.94));
+  overflow-y: auto;
 }
-.fletter-head .ttl { font-size: .82rem; font-weight: 700; color: #f4e7c8; }
-.fletter-head .chev { font-size: .64rem; color: rgba(244,231,200,.8); white-space: nowrap; }
-.fletter-body {
-  margin-top: 6px; padding: 16px 18px; border-radius: 12px;
-  background: linear-gradient(180deg, rgba(246,238,214,.97), rgba(238,226,196,.97));
-  border: 1px solid rgba(180,150,90,.5); box-shadow: 0 8px 26px rgba(0,0,0,.35);
+.fletter-paper {
+  width: min(520px, 96%); margin: auto; padding: 26px 24px 20px; border-radius: 16px;
+  background: linear-gradient(180deg, rgba(247,240,218,.98), rgba(238,226,196,.98));
+  border: 1px solid rgba(180,150,90,.55); box-shadow: 0 18px 50px rgba(0,0,0,.6);
+  animation: iw-pop .5s cubic-bezier(.2,.8,.3,1);
 }
-.fletter-body .txt { font-size: .92rem; line-height: 2.05; white-space: pre-wrap; color: #3a2f1a;
-  font-family: "Noto Serif JP","Yu Mincho",serif; }
-.fletter-emo { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(120,95,50,.4); text-align: center; }
+.fletter-from { font-size: .66rem; letter-spacing: .14em; color: #8a6d3a; margin-bottom: 12px; }
+.fletter-txt {
+  font-size: 1rem; line-height: 2.15; white-space: pre-wrap; color: #352c18;
+  font-family: "Noto Serif JP","Hiragino Mincho ProN","Yu Mincho",serif;
+}
+.fletter-emo { margin-top: 18px; padding-top: 14px; border-top: 1px dashed rgba(120,95,50,.4); text-align: center; }
 .fletter-emo .k { font-size: .6rem; letter-spacing: .16em; color: #8a6d3a; }
-.fletter-emo .v { font-size: 1.15rem; font-weight: 800; color: #4a3a1a; margin: 3px 0 10px; }
+.fletter-emo .v { font-size: 1.3rem; font-weight: 800; color: #4a3a1a; margin: 4px 0 12px; }
 .fletter-cta {
-  display: inline-block; padding: 9px 18px; border-radius: 999px; font-size: .78rem; font-weight: 700;
+  display: inline-block; padding: 11px 22px; border-radius: 999px; font-size: .82rem; font-weight: 700;
   color: #2a2010; background: linear-gradient(160deg,#eed69b,#c9a55e); border: none;
 }
-.fletter-body .sign { margin-top: 12px; font-size: .7rem; color: #8a6d3a; text-align: right; }
+.fletter-sign { margin-top: 16px; font-size: .72rem; color: #8a6d3a; text-align: right; }
+.fletter-close {
+  display: block; width: 100%; margin-top: 18px; padding: 12px; border-radius: 12px;
+  font-size: .84rem; font-weight: 700; color: #f4e7c8;
+  background: rgba(30,24,16,.85); border: 1px solid rgba(232,208,150,.4);
+}
+/* ホームの読み返しボタン（小さく） */
+.iw-letter-reopen {
+  align-self: center; margin-bottom: 2px; padding: 6px 14px; border-radius: 999px;
+  font-size: .7rem; color: var(--singa-gold);
+  background: rgba(20,16,11,.6); border: 1px solid rgba(232,189,114,.3); backdrop-filter: blur(6px);
+}
 .iw-figure {
   position: absolute;
   left: 50%; bottom: 0;

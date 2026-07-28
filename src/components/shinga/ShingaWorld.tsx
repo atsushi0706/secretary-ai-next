@@ -15,7 +15,7 @@ import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
 import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
-import { FutureLetter } from "./FutureLetter";
+import { FutureLetter, type Letter } from "./FutureLetter";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -83,6 +83,20 @@ export function ShingaWorld({
   const [tasksOpen, setTasksOpen] = useState(false);
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
+  const [letterOpen, setLetterOpen] = useState(false);         // 開いた最初は手紙だけ
+
+  // 手紙を読み込み、その日の初回だけ自動で全画面表示する
+  useEffect(() => {
+    fetch("/api/link-letter").then((r) => r.json()).then((d) => {
+      if (!d?.letter?.body) return;
+      setLetter(d.letter);
+      try {
+        const key = `iw-letter-opened-${d.letter.date}`;
+        if (!localStorage.getItem(key)) { setLetterOpen(true); localStorage.setItem(key, "1"); }
+      } catch { setLetterOpen(true); }
+    }).catch(() => {});
+  }, []);
   const [debug, setDebug] = useState(false);
   const [debugAvailable, setDebugAvailable] = useState(false); // ?debug=1 のときだけ（お客さんには出さない）
   const [debugTrace, setDebugTrace] = useState<any[]>([]);
@@ -324,7 +338,14 @@ export function ShingaWorld({
         </div>
       )}
 
-      {heroOpen ? (
+      {letterOpen && letter ? (
+        <FutureLetter
+          letter={letter}
+          onClose={() => setLetterOpen(false)}
+          onGoIdeal={() => { setLetterOpen(false); setHeroOpen(true); }}
+          onGoPeak={() => { setLetterOpen(false); void enter("peak"); }}
+        />
+      ) : heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
       ) : tasksOpen ? (
         <TaskListPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setTasksOpen(false)} />
@@ -342,6 +363,7 @@ export function ShingaWorld({
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onTasks={() => setTasksOpen(true)}
+          onLetter={letter ? () => setLetterOpen(true) : undefined}
           sending={sending}
         />
       ) : mode === "walk" ? (
@@ -517,7 +539,7 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
 ];
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -527,12 +549,15 @@ function Home({
   onDaily: () => void;
   onHero: () => void;
   onTasks: () => void;
+  onLetter?: () => void;
   sending: boolean;
 }) {
   return (
     <div className="iw-home">
-      {/* 未来からの手紙：開いた最初に、開いた状態で迎える */}
-      <FutureLetter guideName={guideName} onGoIdeal={onHero} onGoPeak={() => onPick("peak")} />
+      {/* 手紙を読み返す（小さく・じゃまにならない） */}
+      {onLetter && (
+        <button className="iw-letter-reopen" onClick={onLetter}>📜 未来からの手紙を読み返す</button>
+      )}
 
       {/* 世界の中に立つキヨセリンク＋吹き出し */}
       <div className="iw-scene">

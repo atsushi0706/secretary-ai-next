@@ -22,7 +22,12 @@ export async function getTodayLetter(userId: string): Promise<FutureLetter> {
 
   const { data } = await supa
     .from("link_letter").select("date, body, source").eq("user_id", userId).eq("date", date).maybeSingle();
-  if (data) return { date, body: (data as any).body ?? "", emotion: (data as any).source ?? "", hasIdeal: true };
+  // 途中で切れて保存されたキャッシュ（末尾が文の終わりでない）は作り直す
+  const cachedBody = String((data as any)?.body ?? "");
+  const looksComplete = /[。！？…」』）\)]\s*$/.test(cachedBody.trim());
+  if (data && cachedBody.trim().length >= 20 && looksComplete) {
+    return { date, body: cachedBody, emotion: (data as any).source ?? "", hasIdeal: true };
+  }
 
   const settings: any = await getUserSettings(userId).catch(() => null);
   const who = settings?.user_call_name || "きみ";
@@ -52,16 +57,16 @@ export async function getTodayLetter(userId: string): Promise<FutureLetter> {
 
 # 手紙のルール（厳守）
 - 一人称「私」。10年後の私から、今日のきみへ。やわらかく、友達のような距離。タメ口寄り。
-- 具体的なこと（何の仕事か・誰といるか等）は"言えない"。こう理由を添える：
-  「ごめんね、それはまだ言えないんだ。だって、それを決めるのは“今日のきみ”だから。
-   きみが今日それを願って決めないと、この世界の私は存在しないんだよ」
-- だから伝えられるのは"感じ"だけ。この世界がどんな感情で満ちているかを、ありありと。
+- 【最重要】具体的な場面を描写しない。カフェ・仕事・場所・登場人物・出来事など"何をしているか"は一切書かない。
+  代わりにこう伝える：「どんな毎日かは、まだ言えないんだ。ごめんね。だって、それを決めるのは“今日のきみ”だから。
+  きみが今日それを願って決めないと、この世界の私は存在しないんだよ」
+- 伝えていいのは"感情"だけ。この世界が、どんな感情で満ちているか。それをありありと。
 - 最後に、今日のきみへの願いをひとつ：「だから今日、その感情を先に感じてみて。それだけでいい」。
-- 5〜8行。説教しない。詩的すぎない。あくまで手紙。前置き・署名・見出しは書かない。
+- 4〜7行で、必ず最後まで言い切る（途中で切らない）。説教しない。前置き・署名・見出しは書かない。
 - 最後の行だけ、この世界の中心にある感情を"一語"で： 感情=◯◯`;
 
   let raw = "";
-  try { raw = String(await complete({ userId, prompt, maxTokens: 1200, temperature: 0.95 }) ?? "").trim(); } catch { /* fallback below */ }
+  try { raw = String(await complete({ userId, prompt, maxTokens: 3000, temperature: 0.9 }) ?? "").trim(); } catch { /* fallback below */ }
 
   // 感情=◯◯ を取り出して本文から除く
   let emotion = "";

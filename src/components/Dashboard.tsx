@@ -291,6 +291,9 @@ export function Dashboard({ userName }: { userName: string }) {
             <EveningBriefingCard briefing={data.eveningBriefing} />
           )}
 
+          {/* 今日のフォーカス（インナーワールドで決めた 今日の感情＋最優先の一歩） */}
+          <TodayFocusCard />
+
           {/* 今日のタスク進捗（リング表示・100%超え可） */}
           <DailyProgress progress={todayProgress} onRefresh={() => setReloadKey((k) => k + 1)} />
 
@@ -440,6 +443,80 @@ function LastLoadedBadge({ ts, stale }: { ts: number; stale: boolean }) {
       {elapsedMin > 0 && <span className="ml-1">（{elapsedMin}分前）</span>}
       {isStaleNow && <span className="ml-1">← 古いかも</span>}
     </div>
+  );
+}
+
+// 今日のフォーカス：インナーワールドのパラレルウォークで決めた「今日の感情」と「最優先の一歩」。
+// リアルバースの一番上にピン留めして、今日の狙いを見失わないようにする。ここでも編集できる。
+function TodayFocusCard() {
+  const [focus, setFocus] = useState<{ emotion: string; priority: string } | null>(null);
+  const [editing, setEditing] = useState(false);
+  const [emotion, setEmotion] = useState("");
+  const [priority, setPriority] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/daily-focus").then((r) => r.json()).then((d) => {
+      if (d.focus) { setFocus(d.focus); setEmotion(d.focus.emotion ?? ""); setPriority(d.focus.priority ?? ""); }
+    }).catch(() => {});
+  }, []);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const r = await fetch("/api/daily-focus", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emotion, priority }),
+      });
+      const d = await r.json();
+      if (d.focus) setFocus(d.focus);
+      setEditing(false);
+    } catch { /* 失敗しても表示は保つ */ }
+    finally { setSaving(false); }
+  }
+
+  const empty = !focus || (!focus.emotion && !focus.priority);
+
+  if (editing) {
+    return (
+      <section className="card border-l-4 border-amber-400">
+        <div className="font-bold text-sm mb-2">🎯 今日のフォーカス</div>
+        <label className="block text-xs text-gray-500 mb-1">今日、どんな感情でいる？</label>
+        <input value={emotion} onChange={(e) => setEmotion(e.target.value)} placeholder="例：安心・ワクワク"
+          className="w-full text-sm p-2 border rounded-lg mb-3" />
+        <label className="block text-xs text-gray-500 mb-1">今日の最優先の一歩</label>
+        <input value={priority} onChange={(e) => setPriority(e.target.value)} placeholder="例：気になってた人に一言だけ送る"
+          className="w-full text-sm p-2 border rounded-lg mb-3" />
+        <div className="flex gap-2">
+          <button onClick={save} disabled={saving} className="flex-1 text-sm bg-[var(--accent)] text-white font-bold py-2 rounded-lg disabled:opacity-60">{saving ? "保存中…" : "保存"}</button>
+          <button onClick={() => setEditing(false)} className="text-sm bg-gray-100 px-4 rounded-lg">やめる</button>
+        </div>
+      </section>
+    );
+  }
+
+  return (
+    <section className="card border-l-4 border-amber-400 flex items-start gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="font-bold text-sm mb-1.5">🎯 今日のフォーカス</div>
+        {empty ? (
+          <p className="text-xs text-gray-500 leading-relaxed">
+            まだ今日の狙いは決まってないみたい。<br />
+            インナーワールドのパラレルウォークで決めるか、右の ✎ から入れてね。
+          </p>
+        ) : (
+          <div className="space-y-1.5">
+            {focus!.emotion && (
+              <div className="text-sm"><span className="text-xs text-amber-600 font-bold mr-1.5">感情</span>{focus!.emotion}</div>
+            )}
+            {focus!.priority && (
+              <div className="text-sm"><span className="text-xs text-amber-600 font-bold mr-1.5">最優先</span>⭐ {focus!.priority}</div>
+            )}
+          </div>
+        )}
+      </div>
+      <button onClick={() => setEditing(true)} className="text-xs text-gray-400 hover:text-amber-600 shrink-0" title="編集">✎</button>
+    </section>
   );
 }
 

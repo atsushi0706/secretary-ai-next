@@ -17,11 +17,11 @@ export type HeroDomain = "inner" | "embodiment" | "relationship" | "delivery" | 
 export const DOMAINS: {
   key: HeroDomain; label: string; hint: string; kind: "state" | "reach";
 }[] = [
-  { key: "inner", label: "内側", hint: "望む世界と主人公像が、自分の中で明確か", kind: "state" },
-  { key: "embodiment", label: "体現", hint: "その生き方が、自分の習慣・選択に表れているか", kind: "state" },
-  { key: "relationship", label: "関係", hint: "身近な人との関わりに表れているか", kind: "state" },
-  { key: "delivery", label: "提供", hint: "必要な人に、価値として届けられているか（規模で測れる）", kind: "reach" },
-  { key: "socialization", label: "社会化", hint: "自分を超えて、広がっているか（規模で測れる）", kind: "reach" },
+  { key: "inner", label: "内側（心の中）", hint: "望む世界と“なりたい自分”が、自分の中でどれだけ明確か", kind: "state" },
+  { key: "embodiment", label: "体現（暮らし）", hint: "その生き方が、毎日の習慣・選択にどれだけ表れているか", kind: "state" },
+  { key: "relationship", label: "人間関係", hint: "身近な人との関わりに、その自分がどれだけ出ているか", kind: "state" },
+  { key: "delivery", label: "提供（届ける）", hint: "必要としている人に、価値をどれだけ届けられているか（規模で測れる）", kind: "reach" },
+  { key: "socialization", label: "社会化（広がり）", hint: "自分ひとりを超えて、世の中にどれだけ広がっているか（規模で測れる）", kind: "reach" },
 ];
 
 /** 各領域の段階。これが「どこに到達したら」の定義そのもの。value=その段階の値 */

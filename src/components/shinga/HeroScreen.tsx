@@ -14,24 +14,24 @@ type Hero = {
   levels: Levels | null; history: { at: string; levels: Levels }[] | null;
 };
 
-const DOMAINS: { key: Domain; label: string; kind: "state" | "reach"; steps: { label: string; value: number }[] }[] = [
-  { key: "inner", label: "内側", kind: "state", steps: [
+const DOMAINS: { key: Domain; label: string; sub: string; kind: "state" | "reach"; steps: { label: string; value: number }[] }[] = [
+  { key: "inner", label: "内側（心の中）", sub: "望む世界と“なりたい自分”が、自分の中でどれだけ明確か", kind: "state", steps: [
     { label: "まだ言葉にできない", value: 15 }, { label: "増やしたい世界を言葉にできる", value: 35 },
     { label: "なぜ望むのかも分かっている", value: 55 }, { label: "古い思い込みに気づけている", value: 72 },
     { label: "迷っても望む方向を思い出せる", value: 90 } ] },
-  { key: "embodiment", label: "体現", kind: "state", steps: [
+  { key: "embodiment", label: "体現（暮らし）", sub: "その生き方が、毎日の習慣や選択にどれだけ表れているか", kind: "state", steps: [
     { label: "まだ生活には出ていない", value: 15 }, { label: "自分に実践しようとしている", value: 35 },
     { label: "続いている小さな行動がある", value: 58 }, { label: "言うことと生活がだいたい一致", value: 78 },
     { label: "自分が望む世界の見本になっている", value: 92 } ] },
-  { key: "relationship", label: "関係", kind: "state", steps: [
+  { key: "relationship", label: "人間関係", sub: "身近な人との関わりに、その自分がどれだけ出ているか", kind: "state", steps: [
     { label: "まだ身近な人には出せていない", value: 15 }, { label: "身近な人にも出そうとしている", value: 38 },
     { label: "感謝・応援を言葉にできている", value: 60 }, { label: "流されず、自分の態度で表せる", value: 78 },
     { label: "相手から肯定的な反応がある", value: 92 } ] },
-  { key: "delivery", label: "提供", kind: "reach", steps: [
+  { key: "delivery", label: "提供（届ける）", sub: "必要としている人に、価値をどれだけ届けられているか", kind: "reach", steps: [
     { label: "まだ提供していない", value: 12 }, { label: "誰かに提供したことがある", value: 30 },
     { label: "場があれば提供できる", value: 45 }, { label: "自分で募集して提供できる", value: 62 },
     { label: "継続的に提供できている", value: 78 }, { label: "対価が出て、仕事になっている", value: 95 } ] },
-  { key: "socialization", label: "社会化", kind: "reach", steps: [
+  { key: "socialization", label: "社会化（広がり）", sub: "自分ひとりを超えて、世の中にどれだけ広がっているか", kind: "reach", steps: [
     { label: "まだ自分ひとりの範囲", value: 12 }, { label: "方法を言語化できている", value: 35 },
     { label: "他者に教えられる", value: 55 }, { label: "教材・サービスに体系化している", value: 72 },
     { label: "自分抜きでも価値が届く／広がっている", value: 92 } ] },
@@ -114,6 +114,7 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
             {DOMAINS.map((d) => (
               <div key={d.key} className="hero-pick-domain">
                 <div className="hd">{d.label}<span>{d.kind === "state" ? "（今の深さ）" : "（規模・到達）"}</span></div>
+                <div className="hd-sub">{d.sub}</div>
                 <div className="steps">
                   {d.steps.map((s) => (
                     <button key={s.value} className={levels[d.key] === s.value ? "is-on" : ""}
@@ -142,11 +143,14 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
                     const v = hero!.levels![d.key];
                     return (
                       <div key={d.key} className="hero-lv">
-                        <span className="lb">{d.label}</span>
+                        <div className="top">
+                          <span className="lb">{d.label}</span>
+                          <span className="n">{v == null ? "不明" : `Lv.${v}`}</span>
+                        </div>
+                        <div className="sub">{d.sub}</div>
                         {v == null
                           ? <span className="bar unk"><span style={{ width: "0%" }} /></span>
                           : <span className={`bar ${d.kind === "reach" ? "is-reach" : ""}`}><span style={{ width: `${v}%` }} /></span>}
-                        <span className="n">{v == null ? "不明" : `Lv.${v}`}</span>
                       </div>
                     );
                   })}

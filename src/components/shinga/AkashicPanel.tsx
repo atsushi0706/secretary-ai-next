@@ -16,6 +16,19 @@ type Life = { startAge: number; periods: LifePeriod[]; currentIndex: number; nea
  * 大きい周期から今日へズームしていく感覚。
  * そのあと、歩いた青写真＝クエストを現実（タスク）へ落とし込む。
  */
+/**
+ * 過去の10年を開いたときの「なぜ、この時期はこうだったのか」。
+ * ただ解放するだけでは意味がないので、その時期のテーマを"理由"として言葉にして渡す。
+ * 決めつけではなく「そういう流れの中にいた」という許しの向きで。
+ */
+function whyPast(p: LifePeriod): string {
+  return (
+    `ふりかえると、この10年は「${p.label}」がテーマの時期。\n${p.meaning}\n` +
+    `だからこの頃は、うまく進めたことも、しんどかったことも、この流れの中で起きていた。` +
+    `${p.ageStart}〜${p.ageEnd}歳のきみは、この時期の力学の中で、ちゃんとやってきたんだね。`
+  );
+}
+
 export function AkashicPanel() {
   const [cycles, setCycles] = useState<Cycle[] | null>(null);
   const [life, setLife] = useState<Life | null>(null);
@@ -26,6 +39,7 @@ export function AkashicPanel() {
   const [tab, setTab] = useState<"drop" | "reflect">("drop");
   const [view, setView] = useState<"life" | "now">("life");
   const [activeDays, setActiveDays] = useState(0);
+  const [master, setMaster] = useState(false);
 
   useEffect(() => {
     fetch("/api/cycles")
@@ -36,6 +50,7 @@ export function AkashicPanel() {
         setCycles(d.cycles ?? null);
         setLife(d.life ?? null);
         setActiveDays(d.activeDays ?? 0);
+        setMaster(!!d.master);
         if (d.life) setLifeOpen(d.life.currentIndex);
       })
       .catch(() => setHasBirth(false));
@@ -65,10 +80,10 @@ export function AkashicPanel() {
         life ? (
           <div className="akashic-life">
             {life.periods.map((p, i) => {
-              const dist = Math.abs(i - life.currentIndex);
-              const u = decadeUnlock(dist, activeDays);
+              const offset = i - life.currentIndex; // 過去=負 / 今=0 / 未来=正
+              const u = decadeUnlock(offset, activeDays, master);
               if (!u.unlocked) {
-                // まだ開いていない10年：内容は見せず、「あと◯日で解放」だけ明記する
+                // まだ開いていない未来の10年：内容は見せず、「あと◯日で解放」だけ明記する
                 return (
                   <div key={i} className="akashic-decade is-locked" aria-disabled>
                     <span className="age">{p.ageStart}〜{p.ageEnd}歳</span>
@@ -76,19 +91,28 @@ export function AkashicPanel() {
                   </div>
                 );
               }
+              const isPast = offset < 0;
               return (
                 <button
                   key={i}
-                  className={`akashic-decade ${p.isCurrent ? "is-now" : ""} ${lifeOpen === i ? "is-open" : ""}`}
+                  className={`akashic-decade ${p.isCurrent ? "is-now" : ""} ${isPast ? "is-past" : ""} ${lifeOpen === i ? "is-open" : ""}`}
                   onClick={() => setLifeOpen(lifeOpen === i ? null : i)}
                 >
                   <span className="age">{p.ageStart}〜{p.ageEnd}歳</span>
-                  <span className="lb">{p.label}{p.isCurrent && <em>いまここ</em>}</span>
-                  {lifeOpen === i && <span className="mn">{p.meaning}</span>}
+                  <span className="lb">
+                    {p.label}
+                    {p.isCurrent && <em>いまここ</em>}
+                    {isPast && <em className="past">ふりかえり</em>}
+                  </span>
+                  {lifeOpen === i && (
+                    <span className="mn">{isPast ? whyPast(p) : p.meaning}</span>
+                  )}
                 </button>
               );
             })}
-            <div className="akashic-hint">取り組んだ日：{activeDays}日。続けるほど、前後の10年が開いていくよ。</div>
+            <div className="akashic-hint">
+              {master ? "マスター表示：すべて開放中。" : `取り組んだ日：${activeDays}日。続けるほど、これからの10年が開いていくよ。`}
+            </div>
             {life.nearBoundary && <div className="akashic-hint">※誕生日が季節の変わり目付近。境目は前後することがあります。</div>}
           </div>
         ) : hasBirth ? (

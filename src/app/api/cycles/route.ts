@@ -9,6 +9,7 @@ import { getUserSettings, logError } from "@/lib/supabase";
 import { computeCycles } from "@/lib/star";
 import { computeLife } from "@/lib/sanmei";
 import { countActiveDays } from "@/lib/shinga";
+import { isMaster } from "@/lib/akashic";
 import { jstNow } from "@/lib/google";
 
 export async function GET() {
@@ -27,7 +28,8 @@ export async function GET() {
     const cycles = computeCycles(birth, now);
     const life = computeLife(birth, gender, now); // 性別が無ければ null
     const activeDays = await countActiveDays(userId).catch(() => 0); // 段階解放の判定に使う
-    return NextResponse.json({ hasBirth: true, hasGender: !!gender, cycles, life, activeDays });
+    const master = isMaster((session?.user as any)?.email);           // マスターは全開放
+    return NextResponse.json({ hasBirth: true, hasGender: !!gender, cycles, life, activeDays, master });
   } catch (e: any) {
     await logError(userId, "/api/cycles", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

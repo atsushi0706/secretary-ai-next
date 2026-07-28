@@ -118,6 +118,8 @@ export function ShingaWorld({
   const finalRef = useRef(false);    // 生成終了フラグ
   // テンプレで出した開始の一言。最初の返事のときだけAIへ渡して文脈をつなぐ（DBにも積む）
   const pendingOpenerRef = useRef<{ mode: ModeKey; line: string } | null>(null);
+  // 気分メーターは1セッション1回だけ（一度答えたら二度と出さない）
+  const emotionDoneRef = useRef(false);
 
   const here = PLACES[place];
   const isDefaultFace = avatarUrl === "/kiyose.png";
@@ -170,6 +172,7 @@ export function ShingaWorld({
     setPlace(MODES[m].place);
     setView("talk");
     setChoices(null);
+    emotionDoneRef.current = false; // 新しいセッション＝気分メーターは一度だけ許可
     if (!resume) setMessages([]);
     // パラレルウォークは会話ではなく専用画面（ChatGPT連携）。AI挨拶は呼ばない
     if (m === "walk") return;
@@ -245,8 +248,8 @@ export function ShingaWorld({
         } else if (name === "choices") {
           setChoices(data.choices as Choice[]);
         } else if (name === "emotion") {
-          setEmoPick(null);
-          setWidget("emotion");
+          // 一度でも気分を答えていたら、二度と出さない（被り防止）
+          if (!emotionDoneRef.current) { setEmoPick(null); setWidget("emotion"); }
         } else if (name === "breath") {
           setWidget("breath");
         } else if (name === "move") {
@@ -279,6 +282,7 @@ export function ShingaWorld({
 
   // 感情メーターで選んだ → 記録して、AIに気分を伝える
   function pickEmotion(n: number) {
+    emotionDoneRef.current = true; // 以後この気分メーターは出さない
     setEmoPick(n);
     // 状態記録（1日2回まで。失敗しても会話は進める）
     fetch("/api/emotions", {

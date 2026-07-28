@@ -505,6 +505,14 @@ function greetLine(): string {
   return `${time} ここは『インナーワールド』——きみの内側の世界だよ。\n今日はまず、ピークステートから。ぜったい、そこで“整える”のが先だよ😊`;
 }
 
+// カタカナ名だけだと「押す前に何が起きるか」の仮説が立たない → 動詞を添える（玉樹式・直感のデザイン）
+const VERB: Record<string, string> = {
+  peak: "いまを整える",
+  walk: "歩きながら未来を決める",
+  akashic: "流れを読む",
+  breakthrough: "壁をこわす",
+  travel: "「どうなる？」で上げる",
+};
 const DOORS: { key: ModeKey; emoji: string }[] = [
   { key: "peak", emoji: "✨" },
   { key: "walk", emoji: "🚶" },
@@ -562,6 +570,7 @@ function Home({
               {d.key === "peak" && <span className="tag">まずここから</span>}
               <span className="emoji">{d.emoji}</span>
               <span className="ja">{m.label}</span>
+              <span className="verb">{VERB[d.key]}</span>
             </button>
           );
         })}
@@ -571,6 +580,7 @@ function Home({
             <button key={d.key} className="iw-door is-sub" onClick={() => onPick(d.key)}>
               <span className="emoji">{d.emoji}</span>
               <span className="ja">{m.label}</span>
+              <span className="verb">{VERB[d.key]}</span>
             </button>
           );
         })}

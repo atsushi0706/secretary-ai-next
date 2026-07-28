@@ -22,7 +22,7 @@ export async function GET() {
 
     const [emotions, messages, walks] = await Promise.all([
       listEmotions(userId, 60).catch(() => []),
-      loadShingaMessages(userId, 40).catch(() => []),
+      loadShingaMessages(userId, 40, today).catch(() => []),   // ← 今日ぶんだけ読む（過去の日を混ぜない）
       listWalkLogs(userId, 5).catch(() => []),
     ]);
 
@@ -30,7 +30,8 @@ export async function GET() {
     const start = todayEmo[0] ?? null;
     const now = todayEmo[todayEmo.length - 1] ?? null;
 
-    const todayMsgs = messages.filter((m) => m.role === "user"); // 直近の会話（大まかに今日ぶん）
+    // 会話も「今日の日付」で厳密に絞る（時間軸を跨がせない）
+    const todayMsgs = messages.filter((m) => m.role === "user" && m.date === today);
     const walksToday = walks.filter((w) => w.date === today);
 
     const hasData = todayEmo.length + todayMsgs.length + walksToday.length > 0;

@@ -2,6 +2,10 @@ import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
 import { upsertUserSettings } from "@/lib/supabase";
 
+// 実際に使うのは Calendar と Tasks だけ（google.ts の呼び出しはこの2つのみ）。
+// Gmail / Drive（制限付きスコープ）は未使用 → 外す。これで一般公開の審査が
+// CASA セキュリティ監査なしのセンシティブ審査だけで済む。
+// ※将来 Gmail 要約等を実装するなら、そのときに戻す（CASA が必要になる点に注意）。
 const SCOPES = [
   "openid",
   "email",
@@ -9,8 +13,6 @@ const SCOPES = [
   // calendar 書き込みも入れる（清瀬リンクが予定を勝手に入れられるように）
   "https://www.googleapis.com/auth/calendar",
   "https://www.googleapis.com/auth/tasks",
-  "https://www.googleapis.com/auth/drive.readonly",
-  "https://www.googleapis.com/auth/gmail.readonly",
 ].join(" ");
 
 export const { handlers, signIn, signOut, auth } = NextAuth({

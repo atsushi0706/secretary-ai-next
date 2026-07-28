@@ -45,8 +45,6 @@ export default function PrivacyPage() {
         <ul className="list-disc list-inside space-y-1 mt-2">
           <li><strong>Google Calendar</strong>: 今日の予定の表示・登録</li>
           <li><strong>Google Tasks</strong>: タスクの作成・更新・削除</li>
-          <li><strong>Google Drive</strong>（読み取り専用）: 任意の参照</li>
-          <li><strong>Gmail</strong>（読み取り専用）: 任意の要約</li>
         </ul>
         <p className="mt-3">取得した情報は AI 秘書の応答生成にのみ使用し、第三者には提供しません。会話履歴は Supabase に保存され、ユーザー本人のみがアクセスできます。</p>
 

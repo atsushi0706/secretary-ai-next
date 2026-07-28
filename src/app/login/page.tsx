@@ -11,7 +11,7 @@ export default async function LoginPage() {
         <h1 className="text-2xl font-bold mb-2">秘書AI 清瀬リンク</h1>
         <p className="text-sm text-gray-500 mb-6">
           Googleアカウントでログインしてください。
-          <br />カレンダー / タスク / Gmail / Drive に接続します。
+          <br />Googleカレンダー / ToDo リスト（タスク）に接続します。
         </p>
         <form action={async () => { "use server"; await signIn("google", { redirectTo: "/" }); }}>
           <button

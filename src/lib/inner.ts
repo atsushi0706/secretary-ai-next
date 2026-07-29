@@ -58,11 +58,12 @@ const LEVEL_MAX = 100;
 export async function computeLevel(userId: string): Promise<LevelStatus> {
   const supa = supabaseAdmin();
   const today = jstDateStr();
-  const [emo, walks, hq, letters] = await Promise.all([
+  const [emo, walks, hq, letters, cards] = await Promise.all([
     supa.from("emotion_logs").select("date").eq("user_id", userId),
     supa.from("walk_logs").select("date").eq("user_id", userId),
     supa.from("higher_quest").select("date, items").eq("user_id", userId),
     supa.from("link_letter").select("date, read").eq("user_id", userId).eq("read", true),
+    supa.from("quest_cards").select("date, done").eq("user_id", userId).eq("done", true).then((r) => r, () => ({ data: [] as any[] })),
   ]);
 
   const daySet = (rows: { date?: string | null }[] | null | undefined) => {
@@ -73,6 +74,7 @@ export async function computeLevel(userId: string): Promise<LevelStatus> {
   const emoDays = daySet(emo.data as any);
   const walkDays = daySet(walks.data as any);
   const letterDays = daySet(letters.data as any);
+  const cardDays = daySet((cards as any)?.data as any);
   const questDays = new Set<string>();
   for (const r of (hq.data ?? []) as { date: string; items: QuestItem[] }[]) {
     const items = Array.isArray(r.items) ? r.items : [];
@@ -84,6 +86,7 @@ export async function computeLevel(userId: string): Promise<LevelStatus> {
     { key: "letter", label: "未来からの手紙をひらく", per: 1, set: letterDays },
     { key: "walk", label: "パラレルウォークをする", per: 3, set: walkDays },
     { key: "quest", label: "理想を今日に1個おろす", per: 4, set: questDays },
+    { key: "card", label: "未来からのクエストに立ち向かう", per: 5, set: cardDays },
   ];
 
   let total = 0;

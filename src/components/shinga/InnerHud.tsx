@@ -125,7 +125,7 @@ function LevelBar({ level }: { level: Level }) {
             <span className="lv-num">{level.level}<span className="lv-max"> / {level.max}</span></span>
           </>
         )}
-        <span className="lv-toggle">{open ? "▲ とじる" : "▼ 何をすると上がる？"}</span>
+        <span className="lv-toggle">{open ? "▲ 閉じる" : "▼ 上げ方"}</span>
       </button>
       <div className="lv-track"><span className="lv-fill" style={{ width: `${pct}%` }} /></div>
       {done && <div className="lv-maxmsg">レベル100到達。「人生の冒険者」の称号を授かった🏆</div>}

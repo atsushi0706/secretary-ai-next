@@ -15,6 +15,7 @@ import { HeroScreen } from "./HeroScreen";
 import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
+import { QuestCard, type Card } from "./QuestCard";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -84,6 +85,8 @@ export function ShingaWorld({
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
+  const [card, setCard] = useState<Card | null>(null);         // 未来からのクエストカード（3日連続で届く）
+  const [showCard, setShowCard] = useState(false);
   // 起動フロー：① 気分 → ② パフォーマンス → ③ 手紙 → ④ 世界。1日1回・続きから再開。
   const [phase, setPhase] = useState<"mood" | "perf" | "letter" | "done">("done");
   const moodRef = useRef<number | null>(null);
@@ -120,6 +123,13 @@ export function ShingaWorld({
     if (perfV == null) { setPhase("perf"); return; }                 // パフォーマンスチェックから
     if (!letterSeen) { setPhase("letter"); loadLetter(Number(moodV), Number(perfV)); return; } // 手紙から
     setPhase("done");                                                // 全部済 → 世界
+  }, []);
+
+  // 未来からのクエストカード（3日連続で使うと届く）。ホームで「届いてる」演出を出すため先読み。
+  useEffect(() => {
+    fetch("/api/quest-card").then((r) => r.json()).then((d) => {
+      if (d?.card) setCard(d.card);
+    }).catch(() => {});
   }, []);
 
   // ① 気分 → ② パフォーマンスへ（保存はパフォーマンスまで答えてから1レコードにまとめる）
@@ -442,6 +452,13 @@ export function ShingaWorld({
           onGoPeak={() => { enterWorldFromLetter(); void enter("peak"); }}
           onGoSetup={() => { try { window.location.href = "/settings"; } catch { /* ignore */ } }}
         />
+      ) : showCard && card ? (
+        /* 未来からのクエストカード */
+        <QuestCard
+          card={card}
+          onClose={() => setShowCard(false)}
+          onDone={() => { setCard((c) => (c ? { ...c, done: true } : c)); setShowCard(false); }}
+        />
       ) : heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
       ) : tasksOpen ? (
@@ -461,6 +478,7 @@ export function ShingaWorld({
           onHero={() => setHeroOpen(true)}
           onTasks={() => setTasksOpen(true)}
           onLetter={letter ? () => setPhase("letter") : undefined}
+          onCard={card && !card.done ? () => setShowCard(true) : undefined}
           sending={sending}
         />
       ) : (
@@ -687,7 +705,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -698,10 +716,20 @@ function Home({
   onHero: () => void;
   onTasks: () => void;
   onLetter?: () => void;
+  onCard?: () => void;
   sending: boolean;
 }) {
   return (
     <div className="iw-home">
+      {/* 未来からのクエストが届いた（3日連続で使うと届く・目立たせる） */}
+      {onCard && (
+        <button className="iw-card-arrived" onClick={onCard}>
+          <span className="ico">🎴</span>
+          <span className="tx"><b>未来からのクエストが届いてる</b><small>タップして受け取る</small></span>
+          <span className="arr">→</span>
+        </button>
+      )}
+
       {/* 手紙を読み返す（小さく・じゃまにならない） */}
       {onLetter && (
         <button className="iw-letter-reopen" onClick={onLetter}>📜 未来からの手紙を読み返す</button>

@@ -27,8 +27,13 @@ export default function AdminPage() {
     try {
       const r = await fetch("/api/admin/overview");
       if (r.status === 403) { setStatus("forbidden"); return; }
-      const d = await r.json();
-      if (!r.ok) { setErrMsg(d.error || `HTTP ${r.status}`); setStatus("error"); return; }
+      const text = await r.text();
+      let d: any = null;
+      try { d = text ? JSON.parse(text) : null; } catch { /* 非JSON応答（タイムアウト等） */ }
+      if (!r.ok || !d) {
+        setErrMsg(d?.error || (r.status >= 500 ? `サーバーが混み合っています（${r.status}）。少し待って「更新」を押してみて。` : `HTTP ${r.status}`));
+        setStatus("error"); return;
+      }
       setData(d); setStatus("ok");
     } catch (e: any) {
       setErrMsg(String(e?.message ?? e)); setStatus("error");

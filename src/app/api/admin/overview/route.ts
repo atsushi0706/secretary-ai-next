@@ -4,6 +4,8 @@ import { auth } from "@/auth";
 import { isAdmin, getAdminOverview } from "@/lib/admin";
 import { logError } from "@/lib/supabase";
 
+export const maxDuration = 30; // Google 補完に余裕を持たせる（既定10sだと足りないことがある）
+
 export async function GET() {
   const session = await auth();
   const userId = (session?.user as any)?.id;

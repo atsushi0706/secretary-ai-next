@@ -125,24 +125,32 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   });
 
   // メール未取得だが Google 連携済みのユーザーは、保存済みトークンで Google から
-  // メール・名前を取りに行き、DBに保存（次回以降は即表示。誰が誰か分かるように）。
+  // メール・名前を取りに行き、DBに保存（次回以降は即表示）。
+  // ※Googleが遅い/トークン失効でも画面を落とさないよう、全体を時間制限＋完全ガードにする。
   const settingsById = new Map<string, any>((settings ?? []).map((s: any) => [s.user_id, s]));
-  await Promise.all(users.map(async (u) => {
-    if (u.email) return;
-    const token = settingsById.get(u.userId)?.google_refresh_token;
-    if (!token) return;
-    const id = await fetchGoogleIdentityByToken(token);
-    if (id.email || id.name) {
-      u.email = id.email ?? u.email;
-      if (id.name && (!u.callName && !u.birthName || u.name.endsWith("…"))) u.name = id.name;
+  const needFill = users.filter((u) => !u.email && settingsById.get(u.userId)?.google_refresh_token).slice(0, 20);
+  if (needFill.length) {
+    const withTimeout = <T,>(p: Promise<T>, ms: number, fb: T): Promise<T> =>
+      Promise.race([p, new Promise<T>((res) => setTimeout(() => res(fb), ms))]);
+    const backfill = Promise.all(needFill.map(async (u) => {
       try {
-        await upsertUserSettings(u.userId, {
-          ...(id.email ? { email: id.email } : {}),
-          ...(id.name ? { display_name: id.name } : {}),
-        });
-      } catch { /* 列が無い等は無視 */ }
-    }
-  }));
+        const token = settingsById.get(u.userId)?.google_refresh_token;
+        const id = await withTimeout(fetchGoogleIdentityByToken(token), 3500, { email: null, name: null });
+        if (id.email || id.name) {
+          u.email = id.email ?? u.email;
+          if (id.name && ((!u.callName && !u.birthName) || u.name.endsWith("…"))) u.name = id.name;
+          try {
+            await upsertUserSettings(u.userId, {
+              ...(id.email ? { email: id.email } : {}),
+              ...(id.name ? { display_name: id.name } : {}),
+            });
+          } catch { /* 列が無い等は無視 */ }
+        }
+      } catch { /* このユーザーの補完失敗は無視 */ }
+    }));
+    // 全体でも上限を設ける（Googleが全滅でも画面は返す）
+    try { await withTimeout(backfill, 7000, undefined as any); } catch { /* ignore */ }
+  }
 
   // 最終アクティビティが新しい順
   users.sort((a, b) => (b.lastActive ?? "").localeCompare(a.lastActive ?? ""));

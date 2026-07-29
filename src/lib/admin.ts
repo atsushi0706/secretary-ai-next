@@ -2,7 +2,8 @@
  * 管理者ダッシュボード用のロジック（service_role で全ユーザー横断）。
  * 管理者判定は ADMIN_USER_IDS（カンマ区切りの Google sub）。
  */
-import { supabaseAdmin } from "./supabase";
+import { supabaseAdmin, upsertUserSettings } from "./supabase";
+import { fetchGoogleIdentityByToken } from "./google";
 
 export function isAdmin(userId: string | undefined | null): boolean {
   if (!userId) return false;
@@ -122,6 +123,26 @@ export async function getAdminOverview(): Promise<AdminOverview> {
       },
     };
   });
+
+  // メール未取得だが Google 連携済みのユーザーは、保存済みトークンで Google から
+  // メール・名前を取りに行き、DBに保存（次回以降は即表示。誰が誰か分かるように）。
+  const settingsById = new Map<string, any>((settings ?? []).map((s: any) => [s.user_id, s]));
+  await Promise.all(users.map(async (u) => {
+    if (u.email) return;
+    const token = settingsById.get(u.userId)?.google_refresh_token;
+    if (!token) return;
+    const id = await fetchGoogleIdentityByToken(token);
+    if (id.email || id.name) {
+      u.email = id.email ?? u.email;
+      if (id.name && (!u.callName && !u.birthName || u.name.endsWith("…"))) u.name = id.name;
+      try {
+        await upsertUserSettings(u.userId, {
+          ...(id.email ? { email: id.email } : {}),
+          ...(id.name ? { display_name: id.name } : {}),
+        });
+      } catch { /* 列が無い等は無視 */ }
+    }
+  }));
 
   // 最終アクティビティが新しい順
   users.sort((a, b) => (b.lastActive ?? "").localeCompare(a.lastActive ?? ""));

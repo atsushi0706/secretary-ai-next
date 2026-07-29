@@ -44,6 +44,21 @@ async function getOAuthClient(userId: string) {
   return client;
 }
 
+/** refresh_token から Google のメール・表示名を取得（管理画面の「誰が」補完用）。失敗しても null。 */
+export async function fetchGoogleIdentityByToken(
+  refreshToken: string,
+): Promise<{ email: string | null; name: string | null }> {
+  try {
+    const client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
+    client.setCredentials({ refresh_token: refreshToken });
+    const oauth2 = google.oauth2({ version: "v2", auth: client });
+    const r = await oauth2.userinfo.get();
+    return { email: r.data.email ?? null, name: r.data.name ?? null };
+  } catch {
+    return { email: null, name: null };
+  }
+}
+
 export async function getCalendarEvents(
   userId: string, daysAhead = 1,
 ): Promise<Array<{

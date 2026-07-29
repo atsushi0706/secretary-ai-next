@@ -20,6 +20,7 @@ export type AdminUser = {
   hasGoogle: boolean;
   hasGemini: boolean;
   hasAnthropic: boolean;
+  authExpired: boolean;  // Google連携が切れている（メールを取りに行けない・本人の再ログイン待ち）
   ntfy: boolean;
   push: boolean;
   createdAt: string | null;   // 登録日（user_settings.created_at か updated_at）
@@ -109,6 +110,7 @@ export async function getAdminOverview(): Promise<AdminOverview> {
       hasGoogle: !!s.google_refresh_token,
       hasGemini: !!s.gemini_api_key,
       hasAnthropic: !!s.anthropic_api_key,
+      authExpired: false,
       ntfy: !!pick(s.ntfy_topic),
       push: pushRows.has(id),
       createdAt: pick(s.created_at) ?? pick(s.updated_at),
@@ -135,7 +137,11 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     const backfill = Promise.all(needFill.map(async (u) => {
       try {
         const token = settingsById.get(u.userId)?.google_refresh_token;
-        const id = await withTimeout(fetchGoogleIdentityByToken(token), 3500, { email: null, name: null });
+        const id = await withTimeout(
+          fetchGoogleIdentityByToken(token),
+          3500,
+          { email: null, name: null, status: "error" as const },
+        );
         if (id.email || id.name) {
           u.email = id.email ?? u.email;
           if (id.name && ((!u.callName && !u.birthName) || u.name.endsWith("…"))) u.name = id.name;
@@ -145,6 +151,8 @@ export async function getAdminOverview(): Promise<AdminOverview> {
               ...(id.name ? { display_name: id.name } : {}),
             });
           } catch { /* 列が無い等は無視 */ }
+        } else if (id.status === "expired") {
+          u.authExpired = true; // 連携切れ＝本人の再ログインが必要
         }
       } catch { /* このユーザーの補完失敗は無視 */ }
     }));

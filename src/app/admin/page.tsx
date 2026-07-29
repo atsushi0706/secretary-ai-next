@@ -5,7 +5,7 @@ import Link from "next/link";
 
 type AdminUser = {
   userId: string; name: string; email: string | null; callName: string | null; birthName: string | null;
-  hasGoogle: boolean; hasGemini: boolean; hasAnthropic: boolean; ntfy: boolean; push: boolean;
+  hasGoogle: boolean; hasGemini: boolean; hasAnthropic: boolean; authExpired: boolean; ntfy: boolean; push: boolean;
   createdAt: string | null; lastActive: string | null;
   counts: { shinga: number; walks: number; emotions: number; quests: number; talks: number; notifs: number };
 };
@@ -110,11 +110,13 @@ export default function AdminPage() {
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <div className="font-bold text-sm truncate">{u.name}</div>
-                <div className="text-xs text-gray-500 truncate">{u.email ?? "（メール未取得）"}</div>
+                <div className="text-xs text-gray-500 truncate">
+                  {u.email ?? (u.authExpired ? "（連携切れ・本人の再ログインで表示）" : "（メール未取得）")}
+                </div>
                 <div className="text-[10px] text-gray-400 font-mono truncate">{u.userId}</div>
               </div>
               <div className="flex flex-wrap gap-1 justify-end shrink-0">
-                {u.hasGoogle && <span className="badge bg-blue-100 text-blue-700">G</span>}
+                {u.hasGoogle && <span className={`badge ${u.authExpired ? "bg-gray-200 text-gray-500" : "bg-blue-100 text-blue-700"}`}>{u.authExpired ? "G✕連携切れ" : "G"}</span>}
                 {u.hasGemini && <span className="badge bg-amber-100 text-amber-700">Gemini</span>}
                 {u.hasAnthropic && <span className="badge bg-orange-100 text-orange-700">Claude</span>}
                 {u.push && <span className="badge bg-green-100 text-green-700">🔔Push</span>}

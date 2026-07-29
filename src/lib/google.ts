@@ -44,18 +44,23 @@ async function getOAuthClient(userId: string) {
   return client;
 }
 
-/** refresh_token から Google のメール・表示名を取得（管理画面の「誰が」補完用）。失敗しても null。 */
+/** refresh_token から Google のメール・表示名を取得（管理画面の「誰が」補完用）。
+ * status: ok=取得成功 / expired=連携切れ(要再ログイン) / error=その他失敗 */
 export async function fetchGoogleIdentityByToken(
   refreshToken: string,
-): Promise<{ email: string | null; name: string | null }> {
+): Promise<{ email: string | null; name: string | null; status: "ok" | "expired" | "error" }> {
   try {
     const client = new google.auth.OAuth2(process.env.GOOGLE_CLIENT_ID, process.env.GOOGLE_CLIENT_SECRET);
     client.setCredentials({ refresh_token: refreshToken });
     const oauth2 = google.oauth2({ version: "v2", auth: client });
     const r = await oauth2.userinfo.get();
-    return { email: r.data.email ?? null, name: r.data.name ?? null };
-  } catch {
-    return { email: null, name: null };
+    return { email: r.data.email ?? null, name: r.data.name ?? null, status: "ok" };
+  } catch (e: any) {
+    // invalid_grant / 401 / 403 は「連携切れ（トークン失効・取り消し）」＝本人の再ログインが必要
+    const msg = String(e?.message ?? e).toLowerCase();
+    const code = e?.response?.status ?? e?.code;
+    const expired = msg.includes("invalid_grant") || msg.includes("invalid credentials") || code === 400 || code === 401 || code === 403;
+    return { email: null, name: null, status: expired ? "expired" : "error" };
   }
 }
 

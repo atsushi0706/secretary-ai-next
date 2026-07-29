@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getClaude, CLAUDE_MODEL, SECRETARY_NAME } from "@/lib/claude";
 import { sendNtfy } from "@/lib/ntfy";
+import { sendPushToUser, pushConfigured } from "@/lib/push";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
 
 type Slot = "morning" | "midday" | "afternoon" | "evening";
@@ -54,31 +55,45 @@ export async function GET(req: Request) {
   const supa = supabaseAdmin();
   const { data: users, error } = await supa
     .from("user_settings")
-    .select("user_id, ntfy_topic, anthropic_api_key, google_refresh_token")
-    .not("ntfy_topic", "is", null);
+    .select("user_id, ntfy_topic, anthropic_api_key, google_refresh_token");
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // プッシュ購読者の user_id 集合（ntfy 未設定でもプッシュには送る）
+  const pushUsers = new Set<string>();
+  if (pushConfigured()) {
+    const { data: subs } = await supa.from("push_subscriptions").select("user_id");
+    for (const s of (subs ?? []) as { user_id: string }[]) if (s.user_id) pushUsers.add(s.user_id);
+  }
+
   const results: any[] = [];
   for (const u of users ?? []) {
-    if (!u.ntfy_topic) continue;
+    const wantsNtfy = !!u.ntfy_topic;
+    const wantsPush = pushUsers.has(u.user_id);
+    if (!wantsNtfy && !wantsPush) continue;
     try {
       const message = await generateMessage(u.user_id, slot, !!u.google_refresh_token);
-      const r = await sendNtfy(u.ntfy_topic, message, {
-        title: `${SECRETARY_NAME}より`,
-        tags: ["sparkles"],
-      });
-      // ログ
-      await supa.from("notifications").insert({
-        user_id: u.user_id,
-        channel: "ntfy",
-        type: `checkin:${slot}`,
-        body: message,
-        success: r.ok,
-        error: r.error ?? null,
-      });
-      results.push({ user_id: u.user_id, ok: r.ok, status: r.status });
+
+      if (wantsNtfy) {
+        const r = await sendNtfy(u.ntfy_topic!, message, { title: `${SECRETARY_NAME}より`, tags: ["sparkles"] });
+        await supa.from("notifications").insert({
+          user_id: u.user_id, channel: "ntfy", type: `checkin:${slot}`, body: message, success: r.ok, error: r.error ?? null,
+        });
+      }
+
+      if (wantsPush) {
+        let pushOk = false, pushErr: string | null = null;
+        try {
+          const pr = await sendPushToUser(u.user_id, { title: `${SECRETARY_NAME}より`, body: message, url: "/", tag: `checkin:${slot}` });
+          pushOk = pr.sent > 0;
+        } catch (e: any) { pushErr = String(e?.message ?? e); }
+        await supa.from("notifications").insert({
+          user_id: u.user_id, channel: "webpush", type: `checkin:${slot}`, body: message, success: pushOk, error: pushErr,
+        });
+      }
+
+      results.push({ user_id: u.user_id, ntfy: wantsNtfy, push: wantsPush });
     } catch (e: any) {
       results.push({ user_id: u.user_id, ok: false, error: String(e?.message ?? e) });
     }

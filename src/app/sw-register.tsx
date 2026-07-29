@@ -24,6 +24,9 @@ export function SWRegister() {
       try {
         const regs = await navigator.serviceWorker.getRegistrations();
         for (const r of regs) {
+          // プッシュ通知用の SW (push-sw.js) は残す。昔の問題SW(sw.js等)だけ退場させる。
+          const url = r.active?.scriptURL || r.waiting?.scriptURL || r.installing?.scriptURL || "";
+          if (url.endsWith("/push-sw.js")) continue;
           hadSw = true;
           try { await r.unregister(); } catch { /* ignore */ }
         }
@@ -31,8 +34,10 @@ export function SWRegister() {
 
       try {
         if ("caches" in window) {
+          // 自前のキャッシュ(音声TTS)は消さない。昔の _next キャッシュだけ掃除。
+          const KEEP = new Set(["iw-tts-v1"]);
           const keys = await caches.keys();
-          await Promise.all(keys.map((k) => caches.delete(k)));
+          await Promise.all(keys.filter((k) => !KEEP.has(k)).map((k) => caches.delete(k)));
         }
       } catch { /* ignore */ }
 

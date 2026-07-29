@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { PushToggle } from "@/components/PushToggle";
 
 export default function SettingsPage() {
   const [geminiKey, setGeminiKey] = useState("");
@@ -535,7 +536,16 @@ export default function SettingsPage() {
           <span className="text-purple-500 group-open:rotate-180 transition text-sm">▼</span>
         </summary>
         <div className="mt-4 space-y-3">
-          <h3 className="font-bold text-sm text-purple-700">📱 スマホ通知（任意）</h3>
+          <h3 className="font-bold text-sm text-purple-700">🔔 プッシュ通知（おすすめ）</h3>
+          <p className="text-xs text-gray-600 leading-relaxed">
+            アプリを閉じていても、朝夜の声かけやリマインドがスマホ／PCに直接届きます。
+            ボタンひとつでON（アプリのインストールは不要。iPhoneのみホーム画面追加が必要）。
+          </p>
+          <PushToggle />
+
+          <hr className="my-4 border-purple-100" />
+
+          <h3 className="font-bold text-sm text-purple-700">📱 スマホ通知・ntfy（上級者向け・任意）</h3>
           <p className="text-xs text-gray-600 leading-relaxed">
             設定すると、朝/夜の声かけ・タイマー終了などがスマホにプッシュで届きます。
             ntfy.sh という無料サービスを使います。

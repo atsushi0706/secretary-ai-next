@@ -51,6 +51,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             console.error("Failed to persist refresh token:", e);
           }
         }
+        // 管理画面で「誰が」を出すため、メール・表示名を保存（列が無くても本体を壊さないよう別枠）。
+        try {
+          const email = (profile.email as string) || "";
+          const name = (profile.name as string) || "";
+          if (email || name) {
+            await upsertUserSettings(userId, {
+              ...(email ? { email } : {}),
+              ...(name ? { display_name: name } : {}),
+            });
+          }
+        } catch { /* email/display_name 列が未追加でも無視 */ }
       }
       return token;
     },

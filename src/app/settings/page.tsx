@@ -65,6 +65,12 @@ export default function SettingsPage() {
   const [uploadError, setUploadError] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
 
+  // 「未来の私」写真
+  const [futureSelfUrl, setFutureSelfUrl] = useState("");
+  const [fsUploading, setFsUploading] = useState(false);
+  const [fsError, setFsError] = useState("");
+  const fsFileRef = useRef<HTMLInputElement>(null);
+
   const [saved, setSaved] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -98,6 +104,9 @@ export default function SettingsPage() {
       }
       setLoading(false);
     });
+    fetch("/api/future-self").then((r) => r.json()).then((d) => {
+      if (typeof d?.url === "string" && d.url) setFutureSelfUrl(d.url);
+    }).catch(() => {});
   }, []);
 
   function updateShift(day: DayKey, patch: Partial<Shift>) {
@@ -173,6 +182,39 @@ export default function SettingsPage() {
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";
+    }
+  }
+
+  async function uploadFutureSelf() {
+    const file = fsFileRef.current?.files?.[0];
+    if (!file) return;
+    setFsUploading(true);
+    setFsError("");
+    try {
+      const fd = new FormData();
+      fd.append("file", file);
+      const r = await fetch("/api/future-self", { method: "POST", body: fd });
+      const data = await r.json();
+      if (data.error) setFsError(data.error);
+      else if (data.url) setFutureSelfUrl(data.url);
+    } catch (e: any) {
+      setFsError(String(e?.message ?? e));
+    } finally {
+      setFsUploading(false);
+      if (fsFileRef.current) fsFileRef.current.value = "";
+    }
+  }
+
+  async function removeFutureSelf() {
+    setFsUploading(true);
+    setFsError("");
+    try {
+      await fetch("/api/future-self", { method: "DELETE" });
+      setFutureSelfUrl("");
+    } catch (e: any) {
+      setFsError(String(e?.message ?? e));
+    } finally {
+      setFsUploading(false);
     }
   }
 
@@ -305,6 +347,68 @@ export default function SettingsPage() {
             人生の10年ごとの流れ（アカシックレコーダー）を読むのに使います。
           </p>
         </div>
+      </div>
+
+      {/* ── 未来の私の写真 ── */}
+      <div className="card mt-6 space-y-3">
+        <h2 className="font-bold text-base text-purple-700">🔮 未来の私の写真（任意）</h2>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          「理想が叶った未来の自分」の写真を登録すると、
+          <strong className="text-purple-700">未来からの手紙に、その姿がそっと添えられます</strong>。
+          臨場感が上がり、「本当に自分が受け取っている」感覚になります。なくても大丈夫です。
+        </p>
+
+        <div className="flex items-center gap-3 mb-1">
+          {futureSelfUrl && (
+            <Image
+              src={futureSelfUrl}
+              alt="未来の私"
+              width={72}
+              height={72}
+              className="rounded-full border-2 border-purple-200 object-cover"
+              style={{ objectFit: "cover", width: 72, height: 72 }}
+              unoptimized
+            />
+          )}
+          <div className="flex-1">
+            <input
+              ref={fsFileRef}
+              type="file"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              onChange={uploadFutureSelf}
+              disabled={fsUploading}
+              className="text-xs"
+            />
+            {fsUploading && <div className="text-xs text-purple-600 mt-1">アップロード中…</div>}
+            {fsError && <div className="text-xs text-red-500 mt-1">{fsError}</div>}
+            {futureSelfUrl && !fsUploading && (
+              <button type="button" onClick={removeFutureSelf} className="text-xs text-red-500 underline mt-1">
+                写真を消す
+              </button>
+            )}
+          </div>
+        </div>
+        <p className="text-xs text-gray-500">6MBまで・PNG/JPEG/WEBP/GIF。</p>
+
+        <details className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs leading-relaxed">
+          <summary className="cursor-pointer font-bold text-purple-700">🤖 ChatGPTで「未来の私」の写真を作る方法</summary>
+          <ol className="list-decimal list-inside space-y-1.5 text-gray-700 mt-2">
+            <li>ChatGPT（画像生成が使えるプラン）を開く</li>
+            <li>今の自分の顔写真を1枚アップロードする</li>
+            <li>
+              こう頼む（コピペOK）：<br />
+              <code className="block bg-white px-2 py-1.5 rounded mt-1 leading-relaxed">
+                この写真の人物が、理想を全部叶えて充実しきった10年後の姿を描いて。
+                自信と余裕にあふれ、穏やかに微笑んでいる。表情は明るく、光が当たっている。
+                顔立ちは本人のまま、自然でリアルに。
+              </code>
+            </li>
+            <li>気に入った1枚を保存して、上の枠からアップロード</li>
+          </ol>
+          <div className="mt-2 text-gray-500">
+            ※ 顔がはっきり写った、明るい表情のものがおすすめ。理想の服装・場所を足してもOK。
+          </div>
+        </details>
       </div>
 
       {/* ── 固定シフト（週次） ── */}

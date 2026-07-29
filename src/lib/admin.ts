@@ -137,9 +137,10 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     const backfill = Promise.all(needFill.map(async (u) => {
       try {
         const token = settingsById.get(u.userId)?.google_refresh_token;
+        // Vercelのコールドスタート＋トークン更新＋userinfoで数秒かかることがあるので、余裕を持たせる
         const id = await withTimeout(
           fetchGoogleIdentityByToken(token),
-          3500,
+          12000,
           { email: null, name: null, status: "error" as const },
         );
         if (id.email || id.name) {
@@ -156,8 +157,8 @@ export async function getAdminOverview(): Promise<AdminOverview> {
         }
       } catch { /* このユーザーの補完失敗は無視 */ }
     }));
-    // 全体でも上限を設ける（Googleが全滅でも画面は返す）
-    try { await withTimeout(backfill, 7000, undefined as any); } catch { /* ignore */ }
+    // 全体でも上限を設ける（Googleが全滅でも画面は返す）。maxDuration=30 の範囲内。
+    try { await withTimeout(backfill, 25000, undefined as any); } catch { /* ignore */ }
   }
 
   // 最終アクティビティが新しい順

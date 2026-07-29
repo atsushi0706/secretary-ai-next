@@ -21,6 +21,19 @@ export default function AdminPage() {
   const [status, setStatus] = useState<"loading" | "unauth" | "forbidden" | "error" | "ok">("loading");
   const [errMsg, setErrMsg] = useState("");
   const [busy, setBusy] = useState<string>("");
+  const [reports, setReports] = useState<Record<string, { loading?: boolean; text?: string; err?: string }>>({});
+
+  async function genReport(u: AdminUser) {
+    setReports((p) => ({ ...p, [u.userId]: { loading: true } }));
+    try {
+      const r = await fetch(`/api/admin/report?userId=${encodeURIComponent(u.userId)}&days=7`);
+      const d = await r.json();
+      if (!r.ok) { setReports((p) => ({ ...p, [u.userId]: { err: d.error || `HTTP ${r.status}` } })); return; }
+      setReports((p) => ({ ...p, [u.userId]: { text: d.report } }));
+    } catch (e: any) {
+      setReports((p) => ({ ...p, [u.userId]: { err: String(e?.message ?? e) } }));
+    }
+  }
 
   async function load() {
     setStatus("loading");
@@ -150,6 +163,11 @@ export default function AdminPage() {
               <span>登録: {fmtDate(u.createdAt)} ／ 最終: {fmtDate(u.lastActive)}</span>
               <div className="flex gap-2">
                 <button
+                  disabled={!!reports[u.userId]?.loading}
+                  onClick={() => genReport(u)}
+                  className="text-green-700 underline disabled:opacity-40"
+                >{reports[u.userId]?.loading ? "作成中…" : "週次レポート"}</button>
+                <button
                   disabled={busy !== ""}
                   onClick={() => act("disable-notify", u)}
                   className="text-purple-700 underline disabled:opacity-40"
@@ -161,6 +179,15 @@ export default function AdminPage() {
                 >削除</button>
               </div>
             </div>
+
+            {reports[u.userId] && !reports[u.userId].loading && (
+              <div className="mt-3 bg-green-50 border border-green-200 rounded-lg p-3">
+                {reports[u.userId].err
+                  ? <div className="text-xs text-red-600">レポート失敗: {reports[u.userId].err}</div>
+                  : <div className="text-xs text-gray-700 whitespace-pre-wrap leading-relaxed">{reports[u.userId].text}</div>}
+                <div className="text-[10px] text-gray-400 mt-2">※ 直近7日の実データから生成（推測なし）</div>
+              </div>
+            )}
           </div>
         ))}
         {users.length === 0 && <p className="text-sm text-gray-500">まだユーザーがいません。</p>}

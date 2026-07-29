@@ -122,20 +122,25 @@ export function ShingaWorld({
     setPhase("done");                                                // 全部済 → 世界
   }, []);
 
-  // ① 気分 → ② パフォーマンスへ
+  // ① 気分 → ② パフォーマンスへ（保存はパフォーマンスまで答えてから1レコードにまとめる）
   function onIntroMood(n: number) {
     moodRef.current = n;
     setFace(n <= 4 ? "smile" : n <= 7 ? "neutral" : "anxious");
     try { localStorage.setItem(`iw-mood-${todayStrLocal()}`, String(n)); } catch { /* ignore */ }
-    fetch("/api/emotions", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ level: n }),
-    }).catch(() => {});
     setPhase("perf");
   }
   // ② パフォーマンス → ③ その状態を踏まえた手紙へ
+  //   ここで「気分(level)＋動けそう度(energy)」を1レコードに保存＝週次レポートの土台（推測でなく実測）
   function onIntroPerf(n: number) {
     try { localStorage.setItem(`iw-perf-${todayStrLocal()}`, String(n)); } catch { /* ignore */ }
-    void loadLetter(moodRef.current, n);
+    const mood = moodRef.current;
+    if (typeof mood === "number") {
+      fetch("/api/emotions", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ level: mood, energy: n }),
+      }).catch(() => {});
+    }
+    void loadLetter(mood, n);
     setPhase("letter");
   }
   // ③ 手紙を読み終えて世界へ

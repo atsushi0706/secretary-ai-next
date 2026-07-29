@@ -83,44 +83,57 @@ export function ShingaWorld({
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
-  // 起動フロー：① 今の状態(気分) → ② その状態を踏まえた手紙 → ③ 世界。続きから再開する。
-  const [phase, setPhase] = useState<"mood" | "letter" | "done">("done");
+  // 起動フロー：① 気分 → ② パフォーマンス → ③ 手紙 → ④ 世界。1日1回・続きから再開。
+  const [phase, setPhase] = useState<"mood" | "perf" | "letter" | "done">("done");
+  const moodRef = useRef<number | null>(null);
 
   function todayStrLocal(): string {
     const t = new Date();
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   }
-  async function loadLetter(mood?: number | null) {
+  async function loadLetter(mood?: number | null, perf?: number | null) {
     try {
-      const q = mood != null ? `?mood=${mood}` : "";
-      const d = await (await fetch(`/api/link-letter${q}`)).json();
+      const p = new URLSearchParams();
+      if (mood != null) p.set("mood", String(mood));
+      if (perf != null) p.set("perf", String(perf));
+      const qs = p.toString();
+      const d = await (await fetch(`/api/link-letter${qs ? `?${qs}` : ""}`)).json();
       if (d?.letter?.body) setLetter(d.letter);
     } catch { /* 手紙が取れなくても進める */ }
   }
 
   useEffect(() => {
     const today = todayStrLocal();
-    let moodDone = false, letterSeen = false;
+    let moodV: string | null = null, perfV: string | null = null, letterSeen = false;
     try {
-      moodDone = !!localStorage.getItem(`iw-mood-${today}`);
+      moodV = localStorage.getItem(`iw-mood-${today}`);
+      perfV = localStorage.getItem(`iw-perf-${today}`);
       letterSeen = !!localStorage.getItem(`iw-letterseen-${today}`);
     } catch { /* ignore */ }
-    if (!moodDone) { setPhase("mood"); return; }        // まだ気分チェックしてない → 最初から
-    if (!letterSeen) { setPhase("letter"); loadLetter(); return; } // 気分は済・手紙未読 → 手紙から再開
-    setPhase("done");                                   // 両方済 → 世界
+    if (moodV != null) moodRef.current = Number(moodV);
+    if (moodV == null) { setPhase("mood"); return; }                 // 気分チェックから
+    if (perfV == null) { setPhase("perf"); return; }                 // パフォーマンスチェックから
+    if (!letterSeen) { setPhase("letter"); loadLetter(Number(moodV), Number(perfV)); return; } // 手紙から
+    setPhase("done");                                                // 全部済 → 世界
   }, []);
 
-  // ① 気分をチェックしたら保存し、その状態を踏まえた手紙へ
+  // ① 気分 → ② パフォーマンスへ
   function onIntroMood(n: number) {
+    moodRef.current = n;
     setFace(n <= 4 ? "smile" : n <= 7 ? "neutral" : "anxious");
     try { localStorage.setItem(`iw-mood-${todayStrLocal()}`, String(n)); } catch { /* ignore */ }
     fetch("/api/emotions", {
       method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ level: n }),
     }).catch(() => {});
-    void loadLetter(n);
+    setPhase("perf");
+  }
+  // ② パフォーマンス → ③ その状態を踏まえた手紙へ
+  function onIntroPerf(n: number) {
+    try { localStorage.setItem(`iw-perf-${todayStrLocal()}`, String(n)); } catch { /* ignore */ }
+    void loadLetter(moodRef.current, n);
     setPhase("letter");
   }
-  // ② 手紙を読み終えて世界へ
+  // ③ 手紙を読み終えて世界へ
   function enterWorldFromLetter() {
     try { localStorage.setItem(`iw-letterseen-${todayStrLocal()}`, "1"); } catch { /* ignore */ }
     setPhase("done");
@@ -385,8 +398,11 @@ export function ShingaWorld({
       )}
 
       {view === "home" && phase === "mood" ? (
-        /* ① まず、今の状態を10段階でチェック（これだけ。ごちゃっとさせない） */
+        /* ① 今の気分（穏やか↔しんどい） */
         <MoodCheck guideName={guideName} avatarUrl={faceSrc} onPick={onIntroMood} />
+      ) : view === "home" && phase === "perf" ? (
+        /* ② 今日のパフォーマンス（動けなさ↔動けそう） */
+        <PerformanceCheck guideName={guideName} avatarUrl={faceSrc} onPick={onIntroPerf} />
       ) : view === "home" && phase === "letter" && letter ? (
         /* ② 今の状態を踏まえた、未来の自分からの手紙 */
         <FutureLetter
@@ -594,6 +610,38 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "breakthrough", emoji: "🗝" },
   { key: "travel", emoji: "🚀" },
 ];
+
+// パフォーマンス（今日どれくらい動けそうか）の色：低=青グレー → 高=ゴールド
+function perfColor(n: number): string {
+  const t = Math.max(0, Math.min(1, (n - 1) / 9));
+  const a = [96, 110, 140], b = [232, 193, 90];
+  const l = (i: number) => Math.round(a[i] + (b[i] - a[i]) * t);
+  return `rgb(${l(0)},${l(1)},${l(2)})`;
+}
+
+// ② 今日のパフォーマンス（動けそう度）を10段階でチェック。気分とは別軸。
+function PerformanceCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatarUrl: string; onPick: (n: number) => void }) {
+  return (
+    <div className="iw-moodscreen">
+      <Image className="iw-ms-figure" src={avatarUrl} alt={guideName} width={220} height={330} priority unoptimized={avatarUrl.startsWith("http")} />
+      <div className="iw-ms-bubble"><span className="who">{guideName}</span><p>じゃあ、今日はどれくらい"動けそう"？ しんどくても、前に進めそうならそれでいいよ。</p></div>
+      <div className="iw-ms-meter">
+        <div className="emeter">
+          <div className="emeter-head"><span className="emeter-title">今日のパフォーマンス</span></div>
+          <div className="emeter-bar">
+            {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+              <button key={n} className="emeter-seg" style={{ background: perfColor(n) }}
+                onClick={() => onPick(n)} aria-label={`${n}`}>
+                <span className="num">{n}</span>
+              </button>
+            ))}
+          </div>
+          <div className="emeter-ends"><span>動けない</span><span>ふつう</span><span>バリバリ動ける</span></div>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // 起動して最初：今の状態を10段階でチェックするだけの画面（中央寄せ・最小）
 function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatarUrl: string; onPick: (n: number) => void }) {

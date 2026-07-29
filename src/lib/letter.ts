@@ -51,7 +51,7 @@ function innateFromName(birthName: string, who: string): string {
 
 export type FutureLetter = { date: string; body: string; emotion: string; hasIdeal: boolean; needsSetup?: boolean };
 
-export async function getTodayLetter(userId: string, mood?: number): Promise<FutureLetter> {
+export async function getTodayLetter(userId: string, mood?: number, perf?: number): Promise<FutureLetter> {
   const date = jstDateStr();
   const supa = supabaseAdmin();
 
@@ -143,7 +143,8 @@ ${quests.length ? `- やってみたいこと：${quests.slice(0, 4).map((q: any
   const moodBlock = (typeof mood === "number" && mood >= 1 && mood <= 10)
     ? `# 今の ${who} の状態（今日チェックした気分）
 10段階で ${mood}（1=とても穏やか〜10=とてもしんどい）。この"今の状態"に、手紙の入り口だけそっと寄り添う（決めつけない）。
-${mood >= 7 ? "しんどめだから、まず静かに受けとめる一言から入る。無理に上げようとしない。" : "落ち着いてるので、その穏やかさに乗せて届ける。"}`
+${mood >= 7 ? "しんどめだから、まず静かに受けとめる一言から入る。無理に上げようとしない。" : "落ち着いてるので、その穏やかさに乗せて届ける。"}${typeof perf === "number" && perf >= 1 && perf <= 10 ? `
+また今日のパフォーマンス（動けそう度）は10段階で ${perf}（1=動けない〜10=バリバリ動ける）。${perf <= 4 ? "動きにくい日なので、頑張らせず「存在してるだけでいい」の方向で。" : "動けそうな日なので、その勢いにそっと火を添える。"}` : ""}`
     : "";
 
   const prompt = `これは「未来からの手紙」。差出人は ${who} 自身だが、ただの10年後ではない。

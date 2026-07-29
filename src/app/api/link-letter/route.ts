@@ -10,9 +10,9 @@ export async function GET(req: Request) {
   const userId = (session?.user as any)?.id;
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   try {
-    const moodRaw = new URL(req.url).searchParams.get("mood");
-    const mood = moodRaw != null && moodRaw !== "" ? Number(moodRaw) : undefined;
-    return NextResponse.json({ letter: await getTodayLetter(userId, Number.isFinite(mood) ? mood : undefined) });
+    const sp = new URL(req.url).searchParams;
+    const numOr = (v: string | null) => (v != null && v !== "" && Number.isFinite(Number(v)) ? Number(v) : undefined);
+    return NextResponse.json({ letter: await getTodayLetter(userId, numOr(sp.get("mood")), numOr(sp.get("perf"))) });
   } catch (e: any) {
     if (isMissingTable(e)) return NextResponse.json({ error: MIGRATION_HINT, needsMigration: true }, { status: 503 });
     await logError(userId, "/api/link-letter", e);

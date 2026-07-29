@@ -47,16 +47,17 @@ export function InnerHud({ guideName }: { guideName: string }) {
       {/* 空想↔現実のバランス（中央＝フロー） */}
       <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} />
 
-      {/* 今日のナゾ */}
+      {/* ハイヤークエスト＝理想を、今日に1個おろす（＝現実化。これが空想と現実の真ん中に自分を保つ力） */}
       <div className={`ihud-quest ${solvedToday ? "is-solved" : ""}`}>
         <div className="q-head">
-          <span className="q-title">🗺 今日のナゾ</span>
+          <span className="q-title">🔨 ハイヤークエスト</span>
           {solvedToday
-            ? <span className="q-badge done">解けた！ 100%</span>
-            : quest.items.length > 0
-              ? <span className="q-badge">1つ解けば今日クリア</span>
-              : <span className="q-badge">{guideName}「理想を1つ、今日に置いてみよ」</span>}
+            ? <span className="q-badge done">今日、理想を現実におろせた ✓</span>
+            : <span className="q-badge">理想を、今日に1個おろす</span>}
         </div>
+        {!solvedToday && quest.items.length === 0 && (
+          <p className="q-lead">パラレルウォークで話した理想の中から、どんなに小さくても1個、今日のアクションに。それが「現実化」。</p>
+        )}
 
         {quest.items.length > 0 && (
           <ul className="q-list">
@@ -89,7 +90,7 @@ export function InnerHud({ guideName }: { guideName: string }) {
             </div>
           ) : (
             <button className="q-open" onClick={() => setAdding(true)}>
-              ＋ 今日の理想の一手を置く{quest.items.length > 0 ? "（あと" + (3 - quest.items.length) + "個）" : ""}
+              ＋ 今日おろす理想を書く{quest.items.length > 0 ? "（あと" + (3 - quest.items.length) + "個）" : ""}
             </button>
           )
         )}

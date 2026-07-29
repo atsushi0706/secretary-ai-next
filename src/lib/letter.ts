@@ -51,7 +51,7 @@ function innateFromName(birthName: string, who: string): string {
 
 export type FutureLetter = { date: string; body: string; emotion: string; hasIdeal: boolean; needsSetup?: boolean };
 
-export async function getTodayLetter(userId: string): Promise<FutureLetter> {
+export async function getTodayLetter(userId: string, mood?: number): Promise<FutureLetter> {
   const date = jstDateStr();
   const supa = supabaseAdmin();
 
@@ -139,6 +139,13 @@ ${quests.length ? `- やってみたいこと：${quests.slice(0, 4).map((q: any
   const dayNum = Number(date.slice(5, 7)) * 31 + Number(date.slice(8, 10));
   const angle = ANGLES[dayNum % ANGLES.length];
 
+  // 今日チェックした気分（起動時の10段階）。今の状態に寄り添う入り口にする
+  const moodBlock = (typeof mood === "number" && mood >= 1 && mood <= 10)
+    ? `# 今の ${who} の状態（今日チェックした気分）
+10段階で ${mood}（1=とても穏やか〜10=とてもしんどい）。この"今の状態"に、手紙の入り口だけそっと寄り添う（決めつけない）。
+${mood >= 7 ? "しんどめだから、まず静かに受けとめる一言から入る。無理に上げようとしない。" : "落ち着いてるので、その穏やかさに乗せて届ける。"}`
+    : "";
+
   const prompt = `これは「未来からの手紙」。差出人は ${who} 自身だが、ただの10年後ではない。
 差出人像：${who} が"持って生まれた星の性質"のまま、幼少期からまっすぐ生きてこられた場合に、
 今から10年ほど先にたどり着いている「本来の姿」。空想の他人ではなく、${who} の芯が最も自然に花ひらいた姿。
@@ -149,6 +156,8 @@ ${starBlock}
 ${nameBlock}
 
 ${stageBlock}
+
+${moodBlock}
 
 ${recentBlock}
 

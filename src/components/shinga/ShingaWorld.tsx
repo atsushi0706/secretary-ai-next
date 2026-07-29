@@ -83,19 +83,48 @@ export function ShingaWorld({
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
-  const [letterOpen, setLetterOpen] = useState(false);         // 開いた最初は手紙だけ
+  // 起動フロー：① 今の状態(気分) → ② その状態を踏まえた手紙 → ③ 世界。続きから再開する。
+  const [phase, setPhase] = useState<"mood" | "letter" | "done">("done");
 
-  // 手紙を読み込み、その日の初回だけ自動で全画面表示する
+  function todayStrLocal(): string {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  }
+  async function loadLetter(mood?: number | null) {
+    try {
+      const q = mood != null ? `?mood=${mood}` : "";
+      const d = await (await fetch(`/api/link-letter${q}`)).json();
+      if (d?.letter?.body) setLetter(d.letter);
+    } catch { /* 手紙が取れなくても進める */ }
+  }
+
   useEffect(() => {
-    fetch("/api/link-letter").then((r) => r.json()).then((d) => {
-      if (!d?.letter?.body) return;
-      setLetter(d.letter);
-      try {
-        const key = `iw-letter-opened-${d.letter.date}`;
-        if (!localStorage.getItem(key)) { setLetterOpen(true); localStorage.setItem(key, "1"); }
-      } catch { setLetterOpen(true); }
-    }).catch(() => {});
+    const today = todayStrLocal();
+    let moodDone = false, letterSeen = false;
+    try {
+      moodDone = !!localStorage.getItem(`iw-mood-${today}`);
+      letterSeen = !!localStorage.getItem(`iw-letterseen-${today}`);
+    } catch { /* ignore */ }
+    if (!moodDone) { setPhase("mood"); return; }        // まだ気分チェックしてない → 最初から
+    if (!letterSeen) { setPhase("letter"); loadLetter(); return; } // 気分は済・手紙未読 → 手紙から再開
+    setPhase("done");                                   // 両方済 → 世界
   }, []);
+
+  // ① 気分をチェックしたら保存し、その状態を踏まえた手紙へ
+  function onIntroMood(n: number) {
+    setFace(n <= 4 ? "smile" : n <= 7 ? "neutral" : "anxious");
+    try { localStorage.setItem(`iw-mood-${todayStrLocal()}`, String(n)); } catch { /* ignore */ }
+    fetch("/api/emotions", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ level: n }),
+    }).catch(() => {});
+    void loadLetter(n);
+    setPhase("letter");
+  }
+  // ② 手紙を読み終えて世界へ
+  function enterWorldFromLetter() {
+    try { localStorage.setItem(`iw-letterseen-${todayStrLocal()}`, "1"); } catch { /* ignore */ }
+    setPhase("done");
+  }
   const [debug, setDebug] = useState(false);
   const [debugAvailable, setDebugAvailable] = useState(false); // ?debug=1 のときだけ（お客さんには出さない）
   const [debugTrace, setDebugTrace] = useState<any[]>([]);
@@ -355,12 +384,16 @@ export function ShingaWorld({
         </div>
       )}
 
-      {letterOpen && letter ? (
+      {view === "home" && phase === "mood" ? (
+        /* ① まず、今の状態を10段階でチェック（これだけ。ごちゃっとさせない） */
+        <MoodCheck guideName={guideName} avatarUrl={faceSrc} onPick={onIntroMood} />
+      ) : view === "home" && phase === "letter" && letter ? (
+        /* ② 今の状態を踏まえた、未来の自分からの手紙 */
         <FutureLetter
           letter={letter}
-          onClose={() => setLetterOpen(false)}
-          onGoIdeal={() => { setLetterOpen(false); setHeroOpen(true); }}
-          onGoPeak={() => { setLetterOpen(false); void enter("peak"); }}
+          onClose={enterWorldFromLetter}
+          onGoIdeal={() => { enterWorldFromLetter(); setHeroOpen(true); }}
+          onGoPeak={() => { enterWorldFromLetter(); void enter("peak"); }}
           onGoSetup={() => { try { window.location.href = "/settings"; } catch { /* ignore */ } }}
         />
       ) : heroOpen ? (
@@ -381,7 +414,7 @@ export function ShingaWorld({
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onTasks={() => setTasksOpen(true)}
-          onLetter={letter ? () => setLetterOpen(true) : undefined}
+          onLetter={letter ? () => setPhase("letter") : undefined}
           sending={sending}
         />
       ) : (
@@ -562,6 +595,19 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "travel", emoji: "🚀" },
 ];
 
+// 起動して最初：今の状態を10段階でチェックするだけの画面（中央寄せ・最小）
+function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatarUrl: string; onPick: (n: number) => void }) {
+  return (
+    <div className="iw-moodscreen">
+      <Image className="iw-ms-figure" src={avatarUrl} alt={guideName} width={220} height={330} priority unoptimized={avatarUrl.startsWith("http")} />
+      <div className="iw-ms-bubble"><span className="who">{guideName}</span><p>まず、いまの状態を教えて。近いところをタップしてね。</p></div>
+      <div className="iw-ms-meter">
+        <EmotionMeter value={null} onChange={onPick} title="いま、どんな状態？" />
+      </div>
+    </div>
+  );
+}
+
 function Home({
   guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, sending,
 }: {
@@ -583,27 +629,24 @@ function Home({
         <button className="iw-letter-reopen" onClick={onLetter}>📜 未来からの手紙を読み返す</button>
       )}
 
-      {/* 世界の中に立つキヨセリンク＋吹き出し */}
-      <div className="iw-scene">
-        <div className="iw-bubble">
-          <span className="who">{guideName}</span>
-          <p>{greetLine()}</p>
-        </div>
+      {/* 世界の中に立つキヨセリンク＋吹き出し（すべて中央寄せ） */}
+      <div className="iw-scene is-centered">
         <Image
           className="iw-figure"
           src={avatarUrl}
           alt={guideName}
-          width={420}
-          height={640}
+          width={280}
+          height={420}
           priority
           unoptimized={avatarUrl.startsWith("http")}
         />
+        <div className="iw-bubble is-centered">
+          <span className="who">{guideName}</span>
+          <p>{greetLine()}</p>
+        </div>
       </div>
 
-      {/* 話しかける（ここで即・打てる／話せる） */}
-      <VoiceBar onSend={onTalk} disabled={sending} placeholder={`${guideName}に話しかける…`} />
-
-      {/* ゲームHUD：🔮イメージ力／🔨現実化力＋今日のナゾ */}
+      {/* ゲームHUD：空想↔現実のバランス＋ハイヤークエスト */}
       <InnerHud guideName={guideName} />
 
       {/* または、行き先を選ぶ */}

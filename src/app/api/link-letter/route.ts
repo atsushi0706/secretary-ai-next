@@ -5,12 +5,14 @@ import { getTodayLetter } from "@/lib/letter";
 import { isMissingTable, MIGRATION_HINT } from "@/lib/shinga";
 import { logError } from "@/lib/supabase";
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   try {
-    return NextResponse.json({ letter: await getTodayLetter(userId) });
+    const moodRaw = new URL(req.url).searchParams.get("mood");
+    const mood = moodRaw != null && moodRaw !== "" ? Number(moodRaw) : undefined;
+    return NextResponse.json({ letter: await getTodayLetter(userId, Number.isFinite(mood) ? mood : undefined) });
   } catch (e: any) {
     if (isMissingTable(e)) return NextResponse.json({ error: MIGRATION_HINT, needsMigration: true }, { status: 503 });
     await logError(userId, "/api/link-letter", e);

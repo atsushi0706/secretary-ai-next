@@ -2142,20 +2142,21 @@ body:has(.realverse-bg) { background: transparent; }
 
 /* ── インナーワールドのゲームHUD（🔮イメージ力／🔨現実化力＋今日のナゾ） ── */
 .ihud { width: min(560px, 96%); margin: 10px auto 0; display: flex; flex-direction: column; gap: 10px; }
-.ihud-gauges { display: flex; gap: 10px; }
-.gauge { flex: 1; padding: 8px 12px; border-radius: 12px; background: rgba(20,16,28,.6); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
-.gauge .g-top { display: flex; align-items: center; gap: 6px; font-size: .72rem; margin-bottom: 5px; }
-.gauge .g-ico { font-size: .9rem; }
-.gauge .g-name { font-weight: 700; color: var(--singa-ink); }
-.gauge .g-val { margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 700; }
-.gauge .g-bar { height: 8px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
-.gauge .g-bar span { display: block; height: 100%; border-radius: 999px; transition: width .8s cubic-bezier(.2,.9,.2,1); }
-.gauge.image .g-bar span { background: linear-gradient(90deg,#7b8ff0,#b39cf0); }
-.gauge.image .g-val { color: #b7a6f5; }
-.gauge.real .g-bar span { background: linear-gradient(90deg,#e0a94a,#eed69b); }
-.gauge.real .g-val { color: #eed69b; }
-.gauge.pop { animation: gaugePop .6s ease; }
-@keyframes gaugePop { 0% { transform: scale(1); } 40% { transform: scale(1.05); box-shadow: 0 0 22px rgba(238,214,155,.5); } 100% { transform: scale(1); } }
+
+/* 空想↔現実のバランス（中央＝フロー） */
+.balance { padding: 10px 14px; border-radius: 12px; background: rgba(20,16,28,.6); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
+.balance .b-track { display: flex; align-items: center; gap: 8px; }
+.balance .b-side { font-size: .72rem; font-weight: 700; white-space: nowrap; }
+.balance .b-side.left { color: #b7a6f5; }
+.balance .b-side.right { color: #eed69b; }
+.balance .b-rail { position: relative; flex: 1; height: 10px; border-radius: 999px;
+  background: linear-gradient(90deg, rgba(123,143,240,.45), rgba(120,220,150,.5) 50%, rgba(224,169,74,.45)); }
+.balance .b-center { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: rgba(255,255,255,.5); transform: translateX(-50%); }
+.balance .b-needle { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 999px; background: #fff;
+  box-shadow: 0 0 10px 2px rgba(255,255,255,.6); transform: translate(-50%, -50%); transition: left .8s cubic-bezier(.2,.9,.2,1); }
+.balance.flow .b-needle { box-shadow: 0 0 14px 3px rgba(120,220,150,.85); }
+.balance .b-msg { margin-top: 8px; font-size: .74rem; line-height: 1.6; color: var(--singa-ink); }
+.balance.flow .b-msg { color: #a6e6b0; }
 
 .ihud-quest { padding: 12px 14px; border-radius: 14px; background: rgba(20,16,28,.62); border: 1px solid rgba(238,214,155,.28); backdrop-filter: blur(6px); }
 .ihud-quest.is-solved { border-color: rgba(143,208,122,.5); background: rgba(30,40,28,.55); }

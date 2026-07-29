@@ -13,7 +13,8 @@
 import { supabaseAdmin } from "./supabase";
 import { jstDateStr } from "./google";
 
-export type Grounding = { image: number; real: number };
+// image/real は「直近7日でそれをやった日数」。%ではなく、空想↔現実のバランス（フロー）を見るための生の値。
+export type Grounding = { imageDays: number; realDays: number };
 export type QuestItem = { text: string; done: boolean };
 export type TodayQuest = { date: string; items: QuestItem[]; percent: number };
 
@@ -43,10 +44,7 @@ export async function computeGrounding(userId: string): Promise<Grounding> {
     if (items.some((it) => it?.done)) realDays.add(r.date);
   }
 
-  return {
-    image: Math.min(100, Math.round((imgDays.size / 7) * 100)),
-    real: Math.min(100, Math.round((realDays.size / 7) * 100)),
-  };
+  return { imageDays: imgDays.size, realDays: realDays.size };
 }
 
 function percentOf(items: QuestItem[]): number {

@@ -3,47 +3,31 @@
 import { useEffect, useRef, useState } from "react";
 
 /**
- * インナーワールドのゲームHUD（レイトン風の「ステータス＋今日のナゾ」）。
- * - 🔮イメージ力 / 🔨現実化力 の2ゲージ。
- * - 今日のナゾ（最大3・1つ解けば今日100%）。解いた瞬間、ゲージがフワッと伸びる＝歓喜のフィードバック。
+ * インナーワールドのゲームHUD。
+ * - 空想↔現実の"バランス"メーター（%ではない。中央＝フロー＝空想を現実に落とし込めている状態が最適）。
+ * - 今日のナゾ（最大3・1つ解けば今日クリア）。
  */
-type Grounding = { image: number; real: number };
+type Grounding = { imageDays: number; realDays: number };
 type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
 
 export function InnerHud({ guideName }: { guideName: string }) {
-  const [g, setG] = useState<Grounding>({ image: 0, real: 0 });
+  const [g, setG] = useState<Grounding>({ imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [ready, setReady] = useState(false);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
-  const [burst, setBurst] = useState<null | "image" | "real">(null);
-  const prevReal = useRef(0);
-  const prevImage = useRef(0);
 
   function apply(d: { grounding?: Grounding; quest?: Quest }) {
-    if (d.grounding) {
-      // 上がった方を一瞬光らせる（歓喜）
-      if (d.grounding.real > prevReal.current) setBurst("real");
-      else if (d.grounding.image > prevImage.current) setBurst("image");
-      prevReal.current = d.grounding.real;
-      prevImage.current = d.grounding.image;
-      setG(d.grounding);
-    }
+    if (d.grounding) setG(d.grounding);
     if (d.quest) setQuest(d.quest);
   }
 
   useEffect(() => {
     fetch("/api/inner-hud").then((r) => r.json()).then((d) => {
-      if (!d.error) { prevReal.current = d.grounding?.real ?? 0; prevImage.current = d.grounding?.image ?? 0; apply(d); }
+      if (!d.error) apply(d);
     }).catch(() => {}).finally(() => setReady(true));
   }, []);
-
-  useEffect(() => {
-    if (!burst) return;
-    const id = setTimeout(() => setBurst(null), 1400);
-    return () => clearTimeout(id);
-  }, [burst]);
 
   async function post(body: any) {
     const r = await fetch("/api/inner-hud", {
@@ -60,11 +44,8 @@ export function InnerHud({ guideName }: { guideName: string }) {
 
   return (
     <div className="ihud">
-      {/* ステータス2ゲージ */}
-      <div className="ihud-gauges">
-        <Gauge icon="🔮" name="イメージ力" value={g.image} tone="image" pop={burst === "image"} />
-        <Gauge icon="🔨" name="現実化力" value={g.real} tone="real" pop={burst === "real"} />
-      </div>
+      {/* 空想↔現実のバランス（中央＝フロー） */}
+      <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} />
 
       {/* 今日のナゾ */}
       <div className={`ihud-quest ${solvedToday ? "is-solved" : ""}`}>
@@ -117,11 +98,31 @@ export function InnerHud({ guideName }: { guideName: string }) {
   );
 }
 
-function Gauge({ icon, name, value, tone, pop }: { icon: string; name: string; value: number; tone: "image" | "real"; pop: boolean }) {
+/**
+ * 空想↔現実のバランス。%ではなく"どっちに寄ってるか"。中央＝フロー（空想を現実に落とし込めている＝最適）。
+ * 現実に寄りすぎ＝やることに追われて未来が見えてない。空想に寄りすぎ＝上に浮いて地に足がついてない。
+ */
+function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: number }) {
+  const total = imageDays + realDays;
+  const diff = realDays - imageDays; // 正＝現実寄り / 負＝空想寄り
+  const pos = total === 0 ? 50 : Math.max(10, Math.min(90, 50 + (diff / total) * 42));
+  const state = total === 0 ? "neutral" : Math.abs(diff) <= 1 ? "flow" : diff > 0 ? "real" : "image";
+  const msg =
+    state === "neutral" ? "まだ静か。まず一歩、動いてみよ。"
+    : state === "flow" ? "いいバランス。空想を、ちゃんと現実に落とし込めてるね（フロー）😌"
+    : state === "real" ? "ちょっと現実に追われ気味かも。一回、上を向いて空想しよ🔮"
+    : "ちょっと上に浮いてるかな。ひとつだけ、現実に落としてみよ🔨";
   return (
-    <div className={`gauge ${tone} ${pop ? "pop" : ""}`}>
-      <div className="g-top"><span className="g-ico">{icon}</span><span className="g-name">{name}</span><span className="g-val">{value}%</span></div>
-      <div className="g-bar"><span style={{ width: `${value}%` }} /></div>
+    <div className={`balance ${state}`}>
+      <div className="b-track">
+        <span className="b-side left">🔮 空想</span>
+        <span className="b-rail">
+          <span className="b-center" />
+          <span className="b-needle" style={{ left: `${pos}%` }} />
+        </span>
+        <span className="b-side right">現実 🔨</span>
+      </div>
+      <div className="b-msg">{msg}</div>
     </div>
   );
 }

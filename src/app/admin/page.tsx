@@ -18,7 +18,7 @@ function fmtDate(s: string | null): string {
 
 export default function AdminPage() {
   const [data, setData] = useState<Overview | null>(null);
-  const [status, setStatus] = useState<"loading" | "forbidden" | "error" | "ok">("loading");
+  const [status, setStatus] = useState<"loading" | "unauth" | "forbidden" | "error" | "ok">("loading");
   const [errMsg, setErrMsg] = useState("");
   const [busy, setBusy] = useState<string>("");
 
@@ -26,6 +26,7 @@ export default function AdminPage() {
     setStatus("loading");
     try {
       const r = await fetch("/api/admin/overview");
+      if (r.status === 401) { setStatus("unauth"); return; }
       if (r.status === 403) { setStatus("forbidden"); return; }
       const text = await r.text();
       let d: any = null;
@@ -64,6 +65,15 @@ export default function AdminPage() {
   }
 
   if (status === "loading") return <main className="p-6 text-sm">読み込み中…</main>;
+  if (status === "unauth") {
+    return (
+      <main className="p-6 max-w-xl mx-auto">
+        <h1 className="text-xl font-bold mb-2">ログインが必要です</h1>
+        <p className="text-sm text-gray-600 mb-4">管理画面を見るには、Googleでログインしてください。</p>
+        <Link href="/login" className="inline-block bg-[var(--accent)] text-white font-bold text-sm py-2 px-5 rounded-lg">ログインへ →</Link>
+      </main>
+    );
+  }
   if (status === "forbidden") {
     return (
       <main className="p-6 max-w-xl mx-auto">

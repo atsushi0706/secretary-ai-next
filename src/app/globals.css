@@ -2179,6 +2179,28 @@ body:has(.realverse-bg) { background: transparent; }
 /* ── インナーワールドのゲームHUD（🔮イメージ力／🔨現実化力＋今日のナゾ） ── */
 .ihud { width: min(560px, 96%); margin: 10px auto 0; display: flex; flex-direction: column; gap: 10px; }
 
+/* レベル（旅の進捗・累積で 0→100） */
+.ihud-level { padding: 11px 14px; border-radius: 13px; background: rgba(14,11,20,.86); border: 1px solid rgba(143,208,122,.32); backdrop-filter: blur(8px); }
+.ihud-level.is-max { border-color: rgba(238,214,155,.6); background: rgba(30,24,14,.86); }
+.ihud-level .lv-head { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left; }
+.ihud-level .lv-label { font-weight: 700; font-size: .84rem; }
+.ihud-level .lv-num { font-weight: 800; font-size: .92rem; color: #a6e6b0; }
+.ihud-level.is-max .lv-num { color: #eed69b; }
+.ihud-level .lv-max { font-weight: 600; font-size: .72rem; color: var(--singa-ink-soft); }
+.ihud-level .lv-toggle { margin-left: auto; font-size: .66rem; color: var(--singa-ink-soft); white-space: nowrap; }
+.ihud-level .lv-track { margin-top: 8px; height: 9px; border-radius: 999px; background: rgba(255,255,255,.08); overflow: hidden; }
+.ihud-level .lv-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg,#5aa04a,#8fd07a); transition: width .8s cubic-bezier(.2,.9,.2,1); }
+.ihud-level.is-max .lv-fill { background: linear-gradient(90deg,#c9a55e,#eed69b); }
+.ihud-level .lv-maxmsg { margin-top: 8px; font-size: .74rem; line-height: 1.6; color: #eed69b; }
+.ihud-level .lv-actions { list-style: none; margin: 10px 0 0; display: flex; flex-direction: column; gap: 6px; }
+.ihud-level .lv-actions li { display: flex; align-items: center; gap: 8px; font-size: .76rem; padding: 7px 9px; border-radius: 9px; background: rgba(255,255,255,.07); }
+.ihud-level .lv-actions li.got { background: rgba(143,208,122,.2); }
+.ihud-level .a-label { flex: 1; }
+.ihud-level .a-per { font-weight: 700; color: #a6e6b0; font-size: .72rem; white-space: nowrap; }
+.ihud-level .a-state { font-size: .64rem; color: var(--singa-ink-soft); white-space: nowrap; }
+.ihud-level .lv-actions li.got .a-state { color: #a6e6b0; }
+.ihud-level .lv-note { background: none !important; color: var(--singa-ink-soft); font-size: .66rem; padding: 2px 0 0 !important; }
+
 /* 空想↔現実のバランス（中央＝フロー） */
 .balance { padding: 10px 14px; border-radius: 12px; background: rgba(20,16,28,.6); border: 1px solid rgba(255,255,255,.1); backdrop-filter: blur(6px); }
 .balance .b-track { display: flex; align-items: center; gap: 8px; }

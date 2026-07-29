@@ -10,17 +10,21 @@ import { useEffect, useRef, useState } from "react";
 type Grounding = { imageDays: number; realDays: number };
 type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
+type LevelAction = { key: string; label: string; per: number; days: number; earnedToday: boolean };
+type Level = { level: number; max: number; actions: LevelAction[] };
 
 export function InnerHud({ guideName }: { guideName: string }) {
   const [g, setG] = useState<Grounding>({ imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
+  const [level, setLevel] = useState<Level | null>(null);
   const [ready, setReady] = useState(false);
   const [adding, setAdding] = useState(false);
   const [text, setText] = useState("");
 
-  function apply(d: { grounding?: Grounding; quest?: Quest }) {
+  function apply(d: { grounding?: Grounding; quest?: Quest; level?: Level }) {
     if (d.grounding) setG(d.grounding);
     if (d.quest) setQuest(d.quest);
+    if (d.level) setLevel(d.level);
   }
 
   useEffect(() => {
@@ -44,6 +48,9 @@ export function InnerHud({ guideName }: { guideName: string }) {
 
   return (
     <div className="ihud">
+      {/* レベル（旅の進捗・累積で 0→100） */}
+      {level && <LevelBar level={level} />}
+
       {/* 空想↔現実のバランス（中央＝フロー） */}
       <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} />
 
@@ -95,6 +102,39 @@ export function InnerHud({ guideName }: { guideName: string }) {
           )
         )}
       </div>
+    </div>
+  );
+}
+
+/**
+ * レベル（旅の進捗）。累積で 0→100。何をすると上がるかを常に明示する。
+ * 下がらない。100＝ひと区切り（到達）。
+ */
+function LevelBar({ level }: { level: Level }) {
+  const [open, setOpen] = useState(false);
+  const pct = Math.max(0, Math.min(100, (level.level / (level.max || 100)) * 100));
+  const done = level.level >= level.max;
+  return (
+    <div className={`ihud-level ${done ? "is-max" : ""}`}>
+      <button className="lv-head" onClick={() => setOpen((v) => !v)}>
+        <span className="lv-label">{done ? "🌟 レベル" : "🌱 レベル"}</span>
+        <span className="lv-num">{level.level}<span className="lv-max"> / {level.max}</span></span>
+        <span className="lv-toggle">{open ? "▲ とじる" : "▼ 何をすると上がる？"}</span>
+      </button>
+      <div className="lv-track"><span className="lv-fill" style={{ width: `${pct}%` }} /></div>
+      {done && <div className="lv-maxmsg">ここまでよく来たね。ひと区切り、到達だよ🌟</div>}
+      {open && (
+        <ul className="lv-actions">
+          {level.actions.map((a) => (
+            <li key={a.key} className={a.earnedToday ? "got" : ""}>
+              <span className="a-label">{a.label}</span>
+              <span className="a-per">＋{a.per}／日</span>
+              <span className="a-state">{a.earnedToday ? "今日は反映ずみ ✓" : "今日やると上がる"}</span>
+            </li>
+          ))}
+          <li className="lv-note">※ 同じことは1日1回ぶんカウント。毎日ちょっとずつ、100へ。</li>
+        </ul>
+      )}
     </div>
   );
 }

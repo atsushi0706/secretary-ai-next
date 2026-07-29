@@ -91,6 +91,10 @@ export function ShingaWorld({
     const t = new Date();
     return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
   }
+  // 今日、もう状態チェック（気分）を済ませたか。済んでいれば感情の再チェックはしない。
+  function checkedTodayLocal(): boolean {
+    try { return !!localStorage.getItem(`iw-mood-${todayStrLocal()}`); } catch { return false; }
+  }
   async function loadLetter(mood?: number | null, perf?: number | null) {
     try {
       const p = new URLSearchParams();
@@ -222,6 +226,14 @@ export function ShingaWorld({
     // 頭を使うのは、ユーザーが最初の返事をした"あと"から。
     const op = MODE_OPENERS[m];
     if (op) {
+      // ピークステート（呼吸）は何度やってもOK。今日もう状態チェック済みなら、
+      // 感情の再チェックはせず、そのまま呼吸から整える（＝各ステップの画像が出るところ）。
+      if (m === "peak" && checkedTodayLocal()) {
+        setMessages([{ role: "assistant", content: "オッケー、状態はさっき教えてもらったね😊 じゃあ呼吸から整えていこう。ピークステートは何回やってもいいからね。" }]);
+        setFace("smile");
+        setWidget("breath");
+        return;
+      }
       setMessages([{ role: "assistant", content: op.line }]);
       setFace("smile");
       pendingOpenerRef.current = { mode: m, line: op.line };

@@ -47,6 +47,54 @@ export async function computeGrounding(userId: string): Promise<Grounding> {
   return { imageDays: imgDays.size, realDays: realDays.size };
 }
 
+// ── レベル（旅の進捗・累積で 0→100）──────────────────────────
+// 「その行動をやった別々の日数 × ポイント」を全期間で合算し、100 で頭打ち。
+// やればやるほど貯まる。下がらない。100＝ひと区切り（到達）。
+export type LevelAction = { key: string; label: string; per: number; days: number; earnedToday: boolean };
+export type LevelStatus = { level: number; max: number; actions: LevelAction[] };
+
+const LEVEL_MAX = 100;
+
+export async function computeLevel(userId: string): Promise<LevelStatus> {
+  const supa = supabaseAdmin();
+  const today = jstDateStr();
+  const [emo, walks, hq, letters] = await Promise.all([
+    supa.from("emotion_logs").select("date").eq("user_id", userId),
+    supa.from("walk_logs").select("date").eq("user_id", userId),
+    supa.from("higher_quest").select("date, items").eq("user_id", userId),
+    supa.from("link_letter").select("date, read").eq("user_id", userId).eq("read", true),
+  ]);
+
+  const daySet = (rows: { date?: string | null }[] | null | undefined) => {
+    const s = new Set<string>();
+    for (const r of rows ?? []) if (r?.date) s.add(r.date as string);
+    return s;
+  };
+  const emoDays = daySet(emo.data as any);
+  const walkDays = daySet(walks.data as any);
+  const letterDays = daySet(letters.data as any);
+  const questDays = new Set<string>();
+  for (const r of (hq.data ?? []) as { date: string; items: QuestItem[] }[]) {
+    const items = Array.isArray(r.items) ? r.items : [];
+    if (items.some((it) => it?.done)) questDays.add(r.date);
+  }
+
+  const defs: { key: string; label: string; per: number; set: Set<string> }[] = [
+    { key: "emotion", label: "きもちをチェックする", per: 1, set: emoDays },
+    { key: "letter", label: "未来からの手紙をひらく", per: 1, set: letterDays },
+    { key: "walk", label: "パラレルウォークをする", per: 3, set: walkDays },
+    { key: "quest", label: "理想を今日に1個おろす", per: 4, set: questDays },
+  ];
+
+  let total = 0;
+  const actions: LevelAction[] = defs.map((d) => {
+    total += d.per * d.set.size;
+    return { key: d.key, label: d.label, per: d.per, days: d.set.size, earnedToday: d.set.has(today) };
+  });
+
+  return { level: Math.min(LEVEL_MAX, total), max: LEVEL_MAX, actions };
+}
+
 function percentOf(items: QuestItem[]): number {
   return items.some((it) => it.done) ? 100 : 0; // 1個こなせば今日は100%
 }

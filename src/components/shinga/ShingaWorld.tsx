@@ -543,6 +543,9 @@ function DebugPanel({ trace, onClear }: { trace: any[]; onClear: () => void }) {
 // ── ホーム：キヨセリンクが世界の中で出迎えて、行き先へ案内する ──
 // 「ただのシステム」ではなく、入り込める世界にするため、最初に必ず相棒が話す。
 
+// 1日の振り返りは、この時刻以降だけ出す（朝に振り返っても意味がないので）
+const REFLECT_FROM_HOUR = 18;
+
 function greetLine(): string {
   const h = new Date().getHours();
   const time = h < 5 ? "こんな時間まで起きてたの？" : h < 11 ? "おはよ😊" : h < 18 ? "よっ、来たね😊" : "おつかれ😊";
@@ -630,7 +633,10 @@ function Home({
       <div className="iw-reflect-row">
         <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
         <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
-        <button className="iw-report" onClick={onDaily}>🌙 1日の振り返り</button>
+        {/* 1日の振り返りは夕方以降だけ出す（朝に振り返っても意味がない） */}
+        {new Date().getHours() >= REFLECT_FROM_HOUR
+          ? <button className="iw-report is-night" onClick={onDaily}>🌙 1日の振り返り</button>
+          : <button className="iw-report is-locked" disabled title={`夜（${REFLECT_FROM_HOUR}時以降）にひらくよ`}>🌙 夜にひらく</button>}
         <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
       </div>
     </div>

@@ -4,8 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { TodayProgress } from "@/lib/todayProgress";
 
-type TimeKey = "quick" | "mid" | "long";
-type Win3 = "today" | "this_week" | "this_month";
+type TimeKey = "quick" | "mid" | "long" | "halfday" | "fullday" | "multiday";
+type Win3 = "today" | "this_week" | "this_month" | "next_month";
 
 type Task = {
   id: string;
@@ -22,46 +22,78 @@ type Task = {
   source?: { type: string | null; questId: string | null; conversationId: number | null } | null;
 };
 
+const WIN_ORDER: Win3[] = ["today", "this_week", "this_month", "next_month"];
+
 const WIN_LABEL: Record<Win3, string> = {
-  today: "🔥 今日終わらす",
+  today: "🔥 今日",
   this_week: "📅 今週",
   this_month: "🗓 今月",
+  next_month: "🌙 来月以降",
 };
 
 const WIN_COLOR: Record<Win3, string> = {
   today: "#e2574c",
   this_week: "#e0a82e",
   this_month: "#3a78c2",
+  next_month: "#7a5cc2",
 };
 
 const WIN_BG: Record<Win3, string> = {
   today: "linear-gradient(135deg, #fdecec 0%, #fff7f5 100%)",
   this_week: "linear-gradient(135deg, #fdf4e0 0%, #fffaeb 100%)",
   this_month: "linear-gradient(135deg, #e9f0fa 0%, #f4f8fd 100%)",
+  next_month: "linear-gradient(135deg, #efeafa 0%, #f7f4fd 100%)",
 };
 
 const TIME_LABEL: Record<string, string> = {
-  quick: "⚡すぐ",
+  quick: "⚡すぐ(〜30分)",
   mid: "📅30分〜1時間",
-  long: "🗓1〜3時間",
+  long: "🕒1〜3時間",
+  halfday: "🗓半日(3〜5h)",
+  fullday: "🗓1日",
+  multiday: "📆数日",
   today: "📅30分〜1時間",
-  days: "🗓1〜3時間",
+  days: "🕒1〜3時間",
 };
 
+// 所要時間の選択肢（細かめ・この順で出す）
+const TIME_OPTIONS: TimeKey[] = ["quick", "mid", "long", "halfday", "fullday", "multiday"];
+
 const TIME_WEIGHT_MIN: Record<string, number> = {
-  quick: 15, mid: 45, long: 120, today: 45, days: 120,
+  quick: 15, mid: 45, long: 120, halfday: 240, fullday: 480, multiday: 960, today: 45, days: 120,
 };
 
 function normalizeTime(t: string | undefined): TimeKey {
-  if (t === "quick") return "quick";
   if (t === "mid" || t === "today") return "mid";
-  if (t === "long" || t === "days") return "long";
+  if (t === "days") return "long";
+  if (t && (["quick", "mid", "long", "halfday", "fullday", "multiday"] as string[]).includes(t)) return t as TimeKey;
   return "mid";
 }
 
-function todayDateStr(): string {
-  const d = new Date();
+function fmt(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function todayDateStr(): string { return fmt(new Date()); }
+function weekEndStr(): string {
+  const d = new Date(); d.setHours(0, 0, 0, 0);
+  const add = (7 - d.getDay()) % 7; // 今週日曜まで
+  d.setDate(d.getDate() + add);
+  return fmt(d);
+}
+function monthEndStr(): string {
+  const d = new Date();
+  return fmt(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+}
+
+// due の日付から、今日/今週/今月/来月以降 に振り分ける（due なしはサーバの window を尊重）
+function classifyWindow(t: Task): Win3 {
+  const due = t.due;
+  if (!due) return WIN_ORDER.includes(t.window) ? t.window : "this_week";
+  const today = todayDateStr();
+  if (due <= today) return "today";
+  if (due <= weekEndStr()) return "this_week";
+  if (due <= monthEndStr()) return "this_month";
+  return "next_month";
 }
 
 function seenKey(date: string, winKey: Win3): string {
@@ -132,11 +164,8 @@ export function TaskMatrix({
   onRefresh: () => void;
   todayProgress?: TodayProgress;
 }) {
-  const groups: Record<Win3, Task[]> = { today: [], this_week: [], this_month: [] };
-  for (const t of tasks) {
-    const w = (t.window ?? "this_week") as Win3;
-    (groups[w] ?? groups.this_week).push(t);
-  }
+  const groups: Record<Win3, Task[]> = { today: [], this_week: [], this_month: [], next_month: [] };
+  for (const t of tasks) groups[classifyWindow(t)].push(t);
   // 各枠内: priority 高い順、同点なら due 近い順
   for (const k of Object.keys(groups) as Win3[]) {
     groups[k].sort((a, b) => {
@@ -148,9 +177,10 @@ export function TaskMatrix({
     });
   }
 
+  // 今日/今週 ／ 今月/来月以降 の2列×2段（4枠）
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-      {(["today", "this_week", "this_month"] as Win3[]).map((wk) => (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+      {WIN_ORDER.map((wk) => (
         <CategoryCard
           key={wk}
           winKey={wk}
@@ -223,14 +253,10 @@ function CategoryCard({
   function defaultDue(): string {
     const d = new Date(); d.setHours(0, 0, 0, 0);
     if (winKey === "today") return todayDateStr();
-    if (winKey === "this_week") {
-      const dow = d.getDay();
-      const add = (7 - dow) % 7; // 日曜まで
-      const t = new Date(d); t.setDate(d.getDate() + add);
-      return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
-    }
-    const t = new Date(d.getFullYear(), d.getMonth() + 1, 0); // 今月末
-    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+    if (winKey === "this_week") return weekEndStr();
+    if (winKey === "this_month") return monthEndStr();
+    // 来月以降＝来月の1日
+    return fmt(new Date(d.getFullYear(), d.getMonth() + 1, 1));
   }
 
   async function addNew() {
@@ -270,18 +296,12 @@ function CategoryCard({
 
   async function moveTo(t: Task, target: Win3) {
     // window の移動は due 日付の変更で行う
-    let newDue: string;
-    if (target === "today") newDue = todayDateStr();
-    else if (target === "this_week") {
-      const d = new Date(); d.setHours(0, 0, 0, 0);
-      const dow = d.getDay();
-      const add = (7 - dow) % 7;
-      d.setDate(d.getDate() + add);
-      newDue = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    } else {
-      const d = new Date(); const t2 = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-      newDue = `${t2.getFullYear()}-${String(t2.getMonth() + 1).padStart(2, "0")}-${String(t2.getDate()).padStart(2, "0")}`;
-    }
+    const d = new Date();
+    const newDue =
+      target === "today" ? todayDateStr()
+      : target === "this_week" ? weekEndStr()
+      : target === "this_month" ? monthEndStr()
+      : fmt(new Date(d.getFullYear(), d.getMonth() + 1, 1)); // 来月以降＝来月1日
     // 既存タスクの due を更新するAPIがないので、delete + add で簡易対応
     // → タスクID変わるが、UX的にはOK
     // ※クエスト由来のタスクは、作り直しても出自を引き継がせる
@@ -387,9 +407,9 @@ function CategoryCard({
               onChange={(e) => setNewTime(e.target.value as TimeKey)}
               className="p-1 border rounded"
             >
-              <option value="quick">⚡すぐ</option>
-              <option value="mid">📅30分〜1時間</option>
-              <option value="long">🗓1〜3時間</option>
+              {TIME_OPTIONS.map((tk) => (
+                <option key={tk} value={tk}>{TIME_LABEL[tk]}</option>
+              ))}
             </select>
             <label className="flex items-center gap-1 cursor-pointer">
               <input type="checkbox" checked={newUrgent} onChange={(e) => setNewUrgent(e.target.checked)} />
@@ -509,7 +529,7 @@ function TaskRow({
           <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
           <div className="absolute right-0 top-full mt-1 z-20 bg-white border border-purple-200 rounded-lg shadow-lg p-2 w-60 text-xs">
             <div className="font-bold text-purple-700 mb-1">いつ着手</div>
-            {(["today", "this_week", "this_month"] as Win3[]).map((wk) => (
+            {WIN_ORDER.map((wk) => (
               <button
                 key={wk}
                 onClick={() => { onMove(task, wk); setMenuOpen(false); }}
@@ -533,7 +553,7 @@ function TaskRow({
               重要: {isImportant ? "高 → 低" : "低 → 高"}
             </button>
             <div className="font-bold text-purple-700 mt-2 mb-1 pt-2 border-t">所要時間</div>
-            {(["quick", "mid", "long"] as const).map((tk) => (
+            {TIME_OPTIONS.map((tk) => (
               <button
                 key={tk}
                 onClick={() => { onChangeTime(task, tk); setMenuOpen(false); }}

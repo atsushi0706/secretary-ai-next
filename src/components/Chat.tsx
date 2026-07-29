@@ -453,14 +453,6 @@ export function Chat({
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
         </label>
-        <button
-          onClick={toggleRecording}
-          className={`p-2 rounded-lg transition ${recording ? "bg-red-100 text-red-600 animate-pulse" : "hover:bg-purple-50"}`}
-          title={recording ? "録音停止" : "音声入力 (Chrome のみ)"}
-          type="button"
-        >
-          {recording ? "🔴" : "🎤"}
-        </button>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}

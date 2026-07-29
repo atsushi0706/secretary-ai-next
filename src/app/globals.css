@@ -2139,6 +2139,9 @@ body:has(.realverse-bg) { background: transparent; }
 .tl-tasks .t { font-size: .84rem; color: var(--singa-ink); }
 .tl-sync { font-size: .68rem; color: var(--singa-ink-soft); margin-top: 10px; line-height: 1.6; }
 .iw-report.is-tasks { border-color: rgba(238,214,155,.3); }
+.iw-report.is-night { border-color: rgba(150,170,240,.5); background: linear-gradient(160deg, rgba(80,90,160,.3), rgba(20,16,28,.7)); }
+.iw-report.is-locked { opacity: .5; cursor: default; border-style: dashed; }
+.iw-report.is-locked:hover { background: rgba(20,16,11,.7); }
 
 /* ── インナーワールドのゲームHUD（🔮イメージ力／🔨現実化力＋今日のナゾ） ── */
 .ihud { width: min(560px, 96%); margin: 10px auto 0; display: flex; flex-direction: column; gap: 10px; }

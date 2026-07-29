@@ -20,6 +20,11 @@ function sseEvent(name: string, data: any): Uint8Array {
   return new TextEncoder().encode(payload);
 }
 
+// 重複判定用にタイトルを正規化（空白・記号・カッコを落として比較。言い換えの重複を防ぐ）
+function normTitle(s: string): string {
+  return String(s ?? "").toLowerCase().replace(/[\s　「」『』（）()【】〔〕、,.。･・\-—_/｜|]/g, "").trim();
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
@@ -62,12 +67,18 @@ export async function POST(req: Request) {
             const userLines = allMsgs.filter((m) => m.role === "user")
               .map((m) => `- ${m.content.slice(0, 400)}`).join("\n") || `- ${text}`;
 
-            const exPrompt = `あなたは秘書。${targetLabel}(${targetDay})に着手すべきタスクを抽出。
+            const exPrompt = `あなたは秘書。会話から、新しく追加すべきタスクを抽出する。今日は ${today}。
 
 【絶対ルール】
 - 会話で本人が新規に追加したいと言ったものだけ
 - 既存タスクの再掲禁止（意味が近いものも禁止）
 - 該当なしなら []
+
+【期日(due)の決め方 — 最重要】
+- 本人が「◯月◯日」「◯日まで」「来週火曜」「今週中」など期日を言ったら、それを必ず due(YYYY-MM-DD)にする。
+  例: 今日が ${today} で「8月16日に」→ due は今年以降で最も近い "YYYY-08-16"。年をまたぐなら翌年。
+- 期日を言っていないものだけ due を "${targetDay}"（＝${targetLabel}）にする。
+- 【禁止】期日を notes に書くな。「8月16日にやる」等は書かず、必ず due に入れる。notes は出所メモだけ。
 
 【既存タスク（再掲禁止）】
 ${existingTitles.map((t) => "- " + t).join("\n") || "(なし)"}
@@ -76,8 +87,8 @@ ${existingTitles.map((t) => "- " + t).join("\n") || "(なし)"}
 ${userLines}
 
 JSONのみ:
-[{"title":"30字","notes":"出所","category":"work|personal","urgency":"high|low","importance":"high|low","time":"quick|mid|long","due":"${targetDay}|"}]
-※ time の意味: quick=すぐ終わる(〜30分) / mid=30分〜1時間 / long=1〜3時間`;
+[{"title":"30字","notes":"出所メモ(日付は書かない)","category":"work|personal","urgency":"high|low","importance":"high|low","time":"quick|mid|long|halfday|fullday|multiday","due":"YYYY-MM-DD"}]
+※ time: quick=〜30分 / mid=30分〜1時間 / long=1〜3時間 / halfday=半日(3〜5h) / fullday=1日 / multiday=数日`;
 
             const raw = await complete({
               userId,
@@ -86,10 +97,12 @@ JSONのみ:
               temperature: 0.3,
             });
             const cands = extractJson<any[]>(raw) ?? [];
-            const existingLower = new Set(existingTitles.map((t) => t.toLowerCase().trim()));
+            const existingSet = new Set(existingTitles.map(normTitle));
             for (const c of cands) {
               const title = String(c.title ?? "").trim();
-              if (!title || existingLower.has(title.toLowerCase())) continue;
+              const key = normTitle(title);
+              if (!title || existingSet.has(key)) continue;
+              existingSet.add(key); // 同一リクエスト内の重複も防ぐ
               try {
                 const created = await addTask(userId, title, {
                   notes: c.notes ?? "",
@@ -100,7 +113,7 @@ JSONのみ:
                     category: ["work", "personal"].includes(c.category) ? c.category : "work",
                     urgency: ["high", "low"].includes(c.urgency) ? c.urgency : "low",
                     importance: ["high", "low"].includes(c.importance) ? c.importance : "high",
-                    time_label: ["quick", "mid", "long"].includes(c.time) ? c.time : "mid",
+                    time_label: ["quick", "mid", "long", "halfday", "fullday", "multiday"].includes(c.time) ? c.time : "mid",
                     reason: "自動追加",
                   });
                   addedTitles.push(title);
@@ -163,7 +176,7 @@ JSONのみ:
         }
         // 既存タスクには time_label / urgency / importance も含めて、AI が再質問しないように
         const timeLabelMap: Record<string, string> = {
-          quick: "すぐ", mid: "30分〜1時間", long: "1〜3時間", today: "30分〜1時間", days: "1〜3時間",
+          quick: "すぐ", mid: "30分〜1時間", long: "1〜3時間", halfday: "半日", fullday: "1日", multiday: "数日", today: "30分〜1時間", days: "1〜3時間",
         };
         const taskLines = tasks.map((t: any) => {
           const lb = manualLabels[t.id];
@@ -233,14 +246,15 @@ JSONのみ:
           try {
             // 既存タスク一覧（再追加避け）
             const existingTasks = await getTasks(userId);
-            const existingLower = new Set(
-              existingTasks.map((t: any) => String(t.title || "").toLowerCase().trim()),
-            );
+            const existingSet = new Set(existingTasks.map((t: any) => normTitle(t.title)));
+            // このリクエストで既に追加したものも重複させない
+            for (const t of addedTitles) existingSet.add(normTitle(t));
             const cands = extractJson<any[]>(tagMatch[1]) ?? [];
             for (const c of Array.isArray(cands) ? cands : []) {
               const title = String(c.title ?? "").trim();
-              if (!title) continue;
-              if (existingLower.has(title.toLowerCase())) continue;
+              const key = normTitle(title);
+              if (!title || existingSet.has(key)) continue;
+              existingSet.add(key);
               try {
                 const created = await addTask(userId, title, {
                   notes: c.notes ?? "",
@@ -251,7 +265,7 @@ JSONのみ:
                     category: ["work", "personal"].includes(c.category) ? c.category : "work",
                     urgency: ["high", "low"].includes(c.urgency) ? c.urgency : "low",
                     importance: ["high", "low"].includes(c.importance) ? c.importance : "high",
-                    time_label: ["quick", "mid", "long"].includes(c.time) ? c.time : "mid",
+                    time_label: ["quick", "mid", "long", "halfday", "fullday", "multiday"].includes(c.time) ? c.time : "mid",
                     reason: "AI判定で追加",
                   });
                   addedTitles.push(title);

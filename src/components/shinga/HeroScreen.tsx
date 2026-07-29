@@ -141,16 +141,18 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
                 <div className="hero-levels">
                   {DOMAINS.map((d) => {
                     const v = hero!.levels![d.key];
+                    const idx = v == null ? -1 : d.steps.findIndex((s) => s.value === v);
+                    const stageLabel = idx >= 0 ? d.steps[idx].label : "まだ分からない";
                     return (
                       <div key={d.key} className="hero-lv">
                         <div className="top">
                           <span className="lb">{d.label}</span>
-                          <span className="n">{v == null ? "不明" : `Lv.${v}`}</span>
+                          <span className="stagechip">{idx >= 0 ? `${idx + 1}/${d.steps.length}` : "—"}</span>
                         </div>
-                        <div className="sub">{d.sub}</div>
+                        <div className={`state ${v == null ? "is-unk" : ""}`}>{stageLabel}</div>
                         {v == null
                           ? <span className="bar unk"><span style={{ width: "0%" }} /></span>
-                          : <span className={`bar ${d.kind === "reach" ? "is-reach" : ""}`}><span style={{ width: `${v}%` }} /></span>}
+                          : <span className={`bar ${d.kind === "reach" ? "is-reach" : ""}`}><span style={{ width: `${((idx + 1) / d.steps.length) * 100}%` }} /></span>}
                       </div>
                     );
                   })}

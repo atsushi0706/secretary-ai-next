@@ -117,12 +117,18 @@ function LevelBar({ level }: { level: Level }) {
   return (
     <div className={`ihud-level ${done ? "is-max" : ""}`}>
       <button className="lv-head" onClick={() => setOpen((v) => !v)}>
-        <span className="lv-label">{done ? "🌟 レベル" : "🌱 レベル"}</span>
-        <span className="lv-num">{level.level}<span className="lv-max"> / {level.max}</span></span>
+        {done ? (
+          <span className="lv-label lv-title">🏆 人生の冒険者</span>
+        ) : (
+          <>
+            <span className="lv-label">🌱 インナーワールドレベル</span>
+            <span className="lv-num">{level.level}<span className="lv-max"> / {level.max}</span></span>
+          </>
+        )}
         <span className="lv-toggle">{open ? "▲ とじる" : "▼ 何をすると上がる？"}</span>
       </button>
       <div className="lv-track"><span className="lv-fill" style={{ width: `${pct}%` }} /></div>
-      {done && <div className="lv-maxmsg">ここまでよく来たね。ひと区切り、到達だよ🌟</div>}
+      {done && <div className="lv-maxmsg">レベル100到達。「人生の冒険者」の称号を授かった🏆</div>}
       {open && (
         <ul className="lv-actions">
           {level.actions.map((a) => (

@@ -22,7 +22,7 @@ type Message = { role: "user" | "assistant"; content: string };
 
 // タグが本文に混じっても画面に出さない（最初のタグ開始で切る）
 function stripTags(t: string): string {
-  const i = t.search(/<(face|move|choices|quest_to_add|hero_delta)\b/);
+  const i = t.search(/<(face|move|choices|quest_to_add|hero_delta|wall)\b/);
   return (i >= 0 ? t.slice(0, i) : t).trimEnd();
 }
 
@@ -70,6 +70,7 @@ export function ShingaWorld({
   const [messages, setMessages] = useState<Message[]>([]);
   const [choices, setChoices] = useState<Choice[] | null>(null);
   const [widget, setWidget] = useState<"emotion" | "breath" | null>(null);
+  const [wallStage, setWallStage] = useState(1); // ウォールブレイク：扉の開き具合(1=閉〜5=全開)
   const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
   const [sending, setSending] = useState(false);
@@ -180,6 +181,12 @@ export function ShingaWorld({
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages, typing, choices]);
 
+  // ウォールブレイクに入ったら、扉の5段階を先読みしておく（開くとき一瞬のチラつき防止）
+  useEffect(() => {
+    if (mode !== "breakthrough") return;
+    for (let i = 1; i <= 5; i++) { const im = new window.Image(); im.src = `/wall-${i}.png`; }
+  }, [mode]);
+
   // タイプ演出のループ
   useEffect(() => {
     if (!typing) return;
@@ -220,6 +227,7 @@ export function ShingaWorld({
     setChoices(null);
     emotionDoneRef.current = false; // 新しいセッション＝気分メーター・呼吸は一度だけ許可
     breathDoneRef.current = false;
+    if (m === "breakthrough" && !resume) setWallStage(1); // 扉は固く閉じた状態から始める
     if (!resume) setMessages([]);
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
@@ -306,6 +314,10 @@ export function ShingaWorld({
         } else if (name === "breath") {
           // 一度呼吸を終えていたら、二度と出さない（被り防止）
           if (!breathDoneRef.current) setWidget("breath");
+        } else if (name === "wall") {
+          // ウォールブレイク：壁が解けた度合いに応じて扉が開く（1〜5）
+          const s = Number(data?.stage);
+          if (Number.isFinite(s)) setWallStage(Math.max(1, Math.min(5, s)));
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
@@ -385,9 +397,10 @@ export function ShingaWorld({
               view === "home" || reportOpen
                 ? "/singa-map.jpg"
                 : mode === "breakthrough"
-                  ? "/zone-breakthrough.jpg" // 専用の門の絵
+                  ? `/wall-${wallStage}.png` // 壁が解けるほど扉が開く（1=閉〜5=全開）
                   : here.image
             })`,
+            transition: "background-image .6s ease-in-out",
           }}
         />
       </div>

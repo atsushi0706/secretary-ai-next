@@ -152,6 +152,12 @@ export async function POST(req: Request) {
         const wantEmotion = /<emotion\s*\/?>/.test(full);
         const wantBreath = /<breath\s*\/?>/.test(full);
 
+        // ウォールブレイク：壁（無理）が解けていく度合いを扉の開き具合で見せる。
+        // 1=固く閉じた扉 … 5=全開（谷が見える）。回数ではなく、AIが今の状態を判定して出す。
+        let wallStage: number | null = null;
+        const wallMatch = full.match(/<wall>\s*([1-5])\s*<\/wall>/);
+        if (wallMatch) wallStage = Number(wallMatch[1]);
+
         // 選択肢ボタン
         let choices: Array<{ label: string; mode?: string }> | null = null;
         const choMatch = full.match(/<choices>([\s\S]*?)<\/choices>/);
@@ -217,15 +223,17 @@ export async function POST(req: Request) {
           .replace(/<hero_delta>[\s\S]*?<\/hero_delta>/g, "")
           .replace(/<emotion\s*\/?>/g, "")
           .replace(/<breath\s*\/?>/g, "")
+          .replace(/<wall>[\s\S]*?<\/wall>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath) {
+        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });
         if (wantEmotion) send("emotion", {});
         if (wantBreath) send("breath", {});
+        if (wallStage) send("wall", { stage: wallStage });
         if (choices) send("choices", { choices });
         if (moveTo) send("move", { place: moveTo });
         if (addedQuests.length > 0) send("quests", { quests: addedQuests });

@@ -18,7 +18,8 @@ export type DictPhase = "idle" | "recording" | "transcribing";
 
 function pickMime(): string {
   if (typeof MediaRecorder === "undefined") return "";
-  for (const m of ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"]) {
+  // mp4(AAC)を最優先（GeminiもOpenAIも公式対応）。無ければwebm/opus
+  for (const m of ["audio/mp4", "audio/webm;codecs=opus", "audio/webm", "audio/ogg;codecs=opus"]) {
     try { if (MediaRecorder.isTypeSupported(m)) return m; } catch { /* ignore */ }
   }
   return "";

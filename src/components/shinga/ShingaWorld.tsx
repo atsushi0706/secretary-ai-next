@@ -89,7 +89,8 @@ export function ShingaWorld({
   const [showCard, setShowCard] = useState(false);
   const [letterDramatic, setLetterDramatic] = useState(true);  // 初回は派手に降臨・読み返しは静かに
   // 起動フロー：① 気分 → ② パフォーマンス → ③ 手紙 → ④ 世界。1日1回・続きから再開。
-  const [phase, setPhase] = useState<"mood" | "perf" | "letter" | "done">("done");
+  // boot = 判定中（サーバに今日チェック済みか確認してから出す＝端末をまたいで二重チェックしない）
+  const [phase, setPhase] = useState<"boot" | "mood" | "perf" | "letter" | "done">("boot");
   const moodRef = useRef<number | null>(null);
 
   function todayStrLocal(): string {
@@ -120,10 +121,30 @@ export function ShingaWorld({
       letterSeen = !!localStorage.getItem(`iw-letterseen-${today}`);
     } catch { /* ignore */ }
     if (moodV != null) moodRef.current = Number(moodV);
-    if (moodV == null) { setPhase("mood"); return; }                 // 気分チェックから
-    if (perfV == null) { setPhase("perf"); return; }                 // パフォーマンスチェックから
-    if (!letterSeen) { setPhase("letter"); loadLetter(Number(moodV), Number(perfV)); return; } // 手紙から
-    setPhase("done");                                                // 全部済 → 世界
+
+    // この端末で全部済んでいれば即・世界へ（速い・サーバ確認不要）
+    if (moodV != null && perfV != null && letterSeen) { setPhase("done"); return; }
+
+    // それ以外は「別の端末で今日もうチェックしたか」をサーバに確認してから決める
+    // （チェックは1日1回。スマホで済ませたらPCでは出さない）
+    (async () => {
+      try {
+        const d = await fetch("/api/emotions").then((r) => r.json());
+        if (d && typeof d.todayCount === "number" && d.todayCount > 0) {
+          try {
+            localStorage.setItem(`iw-mood-${today}`, moodV ?? "3");
+            localStorage.setItem(`iw-perf-${today}`, perfV ?? "6");
+            localStorage.setItem(`iw-letterseen-${today}`, "1");
+          } catch { /* ignore */ }
+          setPhase("done");
+          return;
+        }
+      } catch { /* サーバに聞けなければ、この端末のローカル判定で進める */ }
+      if (moodV == null) { setPhase("mood"); return; }
+      if (perfV == null) { setPhase("perf"); return; }
+      if (!letterSeen) { setPhase("letter"); void loadLetter(Number(moodV), Number(perfV)); return; }
+      setPhase("done");
+    })();
   }, []);
 
   // 未来からのクエストカード（3日連続で使うと届く）。ホームで「届いてる」演出を出すため先読み。
@@ -438,7 +459,10 @@ export function ShingaWorld({
         </div>
       )}
 
-      {view === "home" && phase === "mood" ? (
+      {view === "home" && phase === "boot" ? (
+        /* 判定中：世界の背景だけ見せて、チェックを出すか確認する（一瞬） */
+        <div className="iw-boot-screen" />
+      ) : view === "home" && phase === "mood" ? (
         /* ① 今の気分（穏やか↔しんどい） */
         <MoodCheck guideName={guideName} avatarUrl={faceSrc} onPick={onIntroMood} />
       ) : view === "home" && phase === "perf" ? (

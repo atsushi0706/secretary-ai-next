@@ -2183,6 +2183,9 @@ body:has(.realverse-bg) { background: transparent; }
 .iw-report.is-locked { opacity: .5; cursor: default; border-style: dashed; }
 .iw-report.is-locked:hover { background: rgba(20,16,11,.7); }
 
+/* 起動判定中：世界の背景だけ（チェックを出すか確認する一瞬・チラつき防止） */
+.iw-boot-screen { position: absolute; inset: 0; }
+
 /* ── 未来からのクエストが届いた（ホームの目立つ通知） ── */
 .iw-card-arrived {
   width: min(560px, 96%); margin: 8px auto 0; display: flex; align-items: center; gap: 12px;

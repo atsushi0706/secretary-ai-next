@@ -88,6 +88,13 @@ export function ShingaWorld({
   const [card, setCard] = useState<Card | null>(null);         // 未来からのクエストカード（3日連続で届く）
   const [showCard, setShowCard] = useState(false);
   const [letterDramatic, setLetterDramatic] = useState(true);  // 初回は派手に降臨・読み返しは静かに
+  // ゾーン突入演出（扉タップ→背景がフュンとズームイン→タイトル→会話へ。タップでスキップ）
+  const [entering, setEntering] = useState<ModeKey | null>(null);
+  const enterFxTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function skipZoneIntro() {
+    if (enterFxTimer.current) clearTimeout(enterFxTimer.current);
+    setEntering(null);
+  }
   // 起動フロー：① 気分 → ② パフォーマンス → ③ 手紙 → ④ 世界。1日1回・続きから再開。
   // boot = 判定中（サーバに今日チェック済みか確認してから出す＝端末をまたいで二重チェックしない）
   const [phase, setPhase] = useState<"boot" | "mood" | "perf" | "letter" | "done">("boot");
@@ -262,6 +269,12 @@ export function ShingaWorld({
     setPlace(MODES[m].place);
     setView("talk");
     setChoices(null);
+    // 新規で入るときだけ、ゲーム開始風のゾーン突入演出（続き再開では出さない）
+    if (!resume) {
+      setEntering(m);
+      if (enterFxTimer.current) clearTimeout(enterFxTimer.current);
+      enterFxTimer.current = setTimeout(() => setEntering(null), 2600);
+    }
     emotionDoneRef.current = false; // 新しいセッション＝気分メーター・呼吸は一度だけ許可
     breathDoneRef.current = false;
     if (m === "breakthrough" && !resume) setWallStage(1); // 扉は固く閉じた状態から始める
@@ -593,6 +606,23 @@ export function ShingaWorld({
             </button>
           )}
         </>
+      )}
+
+      {/* ゾーン突入演出：背景がフュンとズームイン→タイトル（ゲームのチャプター開始風・タップでスキップ） */}
+      {entering && (
+        <div className="zone-intro" onClick={skipZoneIntro} role="button" aria-label="スキップ">
+          <div
+            className="zi-bg"
+            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : PLACES[MODES[entering].place].image})` }}
+          />
+          <div className="zi-veil" />
+          <div className="zi-title">
+            <span className="zi-en">{MODES[entering].en}</span>
+            <span className="zi-ja">{MODES[entering].label}</span>
+            <span className="zi-line" />
+          </div>
+          <span className="zi-skip">タップでスキップ</span>
+        </div>
       )}
 
       {/* 可視化トグル：URLに ?debug=1 を付けたときだけ（お客さんには出ない・開発用） */}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { ArrivalFx } from "./ArrivalFx";
 
 /**
  * 未来からの手紙（全画面）。アプリを開いた最初は、これだけを見せる。
@@ -11,13 +12,14 @@ import { useEffect, useState } from "react";
 export type Letter = { date: string; body: string; emotion: string; hasIdeal: boolean; needsSetup?: boolean };
 
 export function FutureLetter({
-  letter, onClose, onGoIdeal, onGoPeak, onGoSetup,
+  letter, onClose, onGoIdeal, onGoPeak, onGoSetup, dramatic = true,
 }: {
   letter: Letter;
   onClose: () => void;
   onGoIdeal?: () => void;
   onGoPeak?: () => void;
   onGoSetup?: () => void;
+  dramatic?: boolean;
 }) {
   const [photo, setPhoto] = useState<string | null>(null);
   useEffect(() => {
@@ -28,7 +30,8 @@ export function FutureLetter({
 
   return (
     <div className="fletter-screen">
-      <div className="fletter-paper">
+      {dramatic && <ArrivalFx tone="gold" />}
+      <div className={`fletter-paper ${dramatic ? "arrive-in shimmer-sweep" : ""}`}>
         {photo && (
           <img className="fletter-photo" src={photo} alt="未来の私" onError={() => setPhoto(null)} />
         )}

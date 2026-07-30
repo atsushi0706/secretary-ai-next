@@ -87,6 +87,7 @@ export function ShingaWorld({
   const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
   const [card, setCard] = useState<Card | null>(null);         // 未来からのクエストカード（3日連続で届く）
   const [showCard, setShowCard] = useState(false);
+  const [letterDramatic, setLetterDramatic] = useState(true);  // 初回は派手に降臨・読み返しは静かに
   // 起動フロー：① 気分 → ② パフォーマンス → ③ 手紙 → ④ 世界。1日1回・続きから再開。
   const [phase, setPhase] = useState<"mood" | "perf" | "letter" | "done">("done");
   const moodRef = useRef<number | null>(null);
@@ -451,6 +452,7 @@ export function ShingaWorld({
           onGoIdeal={() => { enterWorldFromLetter(); setHeroOpen(true); }}
           onGoPeak={() => { enterWorldFromLetter(); void enter("peak"); }}
           onGoSetup={() => { try { window.location.href = "/settings"; } catch { /* ignore */ } }}
+          dramatic={letterDramatic}
         />
       ) : showCard && card ? (
         /* 未来からのクエストカード */
@@ -477,7 +479,7 @@ export function ShingaWorld({
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onTasks={() => setTasksOpen(true)}
-          onLetter={letter ? () => setPhase("letter") : undefined}
+          onLetter={letter ? () => { setLetterDramatic(false); setPhase("letter"); } : undefined}
           onCard={card && !card.done ? () => setShowCard(true) : undefined}
           sending={sending}
         />

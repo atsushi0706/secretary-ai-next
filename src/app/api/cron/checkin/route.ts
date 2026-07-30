@@ -11,6 +11,7 @@ import { supabaseAdmin } from "@/lib/supabase";
 import { getClaude, CLAUDE_MODEL, SECRETARY_NAME } from "@/lib/claude";
 import { sendNtfy } from "@/lib/ntfy";
 import { sendPushToUser, pushConfigured } from "@/lib/push";
+import { getTodayCard } from "@/lib/questCard";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
 
 type Slot = "morning" | "midday" | "afternoon" | "evening";
@@ -93,7 +94,24 @@ export async function GET(req: Request) {
         });
       }
 
-      results.push({ user_id: u.user_id, ntfy: wantsNtfy, push: wantsPush });
+      // 午前：未来からのクエストカードを1枚用意して、プッシュで知らせる（毎日）
+      let card = false;
+      if (slot === "morning" && wantsPush) {
+        try {
+          await getTodayCard(u.user_id); // 今日の1枚を確定
+          const pr = await sendPushToUser(u.user_id, {
+            title: "🎴 未来からのクエスト",
+            body: "今日きみが乗り越えることが、1枚届いた。開いて受け取ろう。",
+            url: "/shinga", tag: "quest-card",
+          });
+          card = pr.sent > 0;
+          await supa.from("notifications").insert({
+            user_id: u.user_id, channel: "webpush", type: "quest-card", body: "未来からのクエストが届いた", success: card, error: null,
+          });
+        } catch { /* カード配信の失敗は他をブロックしない */ }
+      }
+
+      results.push({ user_id: u.user_id, ntfy: wantsNtfy, push: wantsPush, card });
     } catch (e: any) {
       results.push({ user_id: u.user_id, ok: false, error: String(e?.message ?? e) });
     }

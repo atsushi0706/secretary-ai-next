@@ -5,10 +5,9 @@
  */
 import { supabaseAdmin } from "./supabase";
 import { getClaude, CLAUDE_MODEL } from "./claude";
-import { jstDateStr, jstNow } from "./google";
+import { jstDateStr } from "./google";
 
 export const SYMBOL_COUNT = 16;
-const STREAK_NEEDED = 3;
 
 export type QuestCard = {
   date: string;
@@ -26,33 +25,6 @@ function seededSymbol(userId: string, date: string): number {
   return (h % SYMBOL_COUNT) + 1;
 }
 
-function jstYesterdayStr(n: number): string {
-  return jstDateStr(new Date(jstNow().getTime() - n * 86400000));
-}
-
-/** 今日を含む「連続で使った日数」。emotion/walk/インナー/秘書チャットのある日を1日として数える。 */
-export async function consecutiveStreak(userId: string): Promise<number> {
-  const supa = supabaseAdmin();
-  const since = jstDateStr(new Date(jstNow().getTime() - 40 * 86400000));
-  const [emo, walks, shinga, talks] = await Promise.all([
-    supa.from("emotion_logs").select("date").eq("user_id", userId).gte("date", since),
-    supa.from("walk_logs").select("date").eq("user_id", userId).gte("date", since),
-    supa.from("shinga_conversations").select("date").eq("user_id", userId).eq("role", "user").gte("date", since),
-    supa.from("conversations").select("date").eq("user_id", userId).eq("role", "user").gte("date", since),
-  ]);
-  const days = new Set<string>();
-  for (const rows of [emo.data, walks.data, shinga.data, talks.data]) {
-    for (const r of (rows ?? []) as { date: string }[]) if (r.date) days.add(r.date);
-  }
-  // 今日から遡って連続している日数を数える
-  let streak = 0;
-  for (let i = 0; i < 40; i++) {
-    if (days.has(jstYesterdayStr(i))) streak++;
-    else break;
-  }
-  return streak;
-}
-
 async function readCard(userId: string, date: string): Promise<QuestCard | null> {
   const supa = supabaseAdmin();
   const { data } = await supa.from("quest_cards").select("*").eq("user_id", userId).eq("date", date).maybeSingle();
@@ -60,16 +32,11 @@ async function readCard(userId: string, date: string): Promise<QuestCard | null>
   return { date: data.date, symbol: data.symbol, interpretation: data.interpretation ?? "", challenge: data.challenge ?? "", done: !!data.done };
 }
 
-/** 今日のカードを返す。無くて、条件（3日連続）を満たしていれば新規に1枚引く。 */
-export async function getTodayCard(userId: string): Promise<{ card: QuestCard | null; streak: number; needed: number }> {
+/** 今日のカードを返す（毎日1枚。無ければ新規に1枚引く）。 */
+export async function getTodayCard(userId: string): Promise<{ card: QuestCard }> {
   const date = jstDateStr();
   const existing = await readCard(userId, date);
-  if (existing) {
-    const streak = await consecutiveStreak(userId);
-    return { card: existing, streak, needed: STREAK_NEEDED };
-  }
-  const streak = await consecutiveStreak(userId);
-  if (streak < STREAK_NEEDED) return { card: null, streak, needed: STREAK_NEEDED };
+  if (existing) return { card: existing };
 
   const symbol = seededSymbol(userId, date);
   const supa = supabaseAdmin();
@@ -77,7 +44,7 @@ export async function getTodayCard(userId: string): Promise<{ card: QuestCard | 
     .upsert({ user_id: userId, date, symbol, interpretation: "", challenge: "", done: false }, { onConflict: "user_id,date" })
     .select("*").single();
   if (error) throw error;
-  return { card: { date, symbol: data.symbol, interpretation: "", challenge: "", done: false }, streak, needed: STREAK_NEEDED };
+  return { card: { date, symbol: data.symbol, interpretation: "", challenge: "", done: false } };
 }
 
 /** 本人の解釈を受けて、AI(清瀬リンク)が"今日乗り越えること"に深める。 */

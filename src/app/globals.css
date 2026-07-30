@@ -2197,6 +2197,51 @@ body:has(.realverse-bg) { background: transparent; }
 .iw-card-arrived .tx small { font-size: .68rem; opacity: .75; }
 .iw-card-arrived .arr { font-weight: 800; }
 
+/* ── 「降臨」演出（光の爆発＋スパーク＋リング） ── */
+.arrival-fx { position: absolute; inset: 0; z-index: 40; pointer-events: none; overflow: hidden;
+  display: flex; align-items: center; justify-content: center; }
+.arrival-fx.tone-gold { --fx: 238,214,155; --fx2: 255,238,188; }
+.arrival-fx.tone-violet { --fx: 176,150,255; --fx2: 230,220,255; }
+/* 画面全体を一瞬だけ白く飛ばすフラッシュ＋色付きの爆発 */
+.afx-burst { position: absolute; width: 90vmax; height: 90vmax; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.95) 0%, rgba(var(--fx2),.9) 14%, rgba(var(--fx),.5) 34%, rgba(var(--fx),0) 62%);
+  transform: scale(0); opacity: 0; mix-blend-mode: screen;
+  animation: afx-burst 1.0s cubic-bezier(.12,.75,.25,1) forwards; }
+@keyframes afx-burst { 0% { transform: scale(.05); opacity: 0; } 12% { opacity: 1; } 45% { opacity: .85; } 100% { transform: scale(1.5); opacity: 0; } }
+.afx-ring { position: absolute; width: 60px; height: 60px; border-radius: 50%;
+  border: 3px solid rgba(var(--fx2),.95); transform: scale(0); opacity: 0; mix-blend-mode: screen;
+  animation: afx-ring 1.1s cubic-bezier(.1,.6,.2,1) forwards; }
+.afx-ring2 { animation-delay: .16s; border-color: rgba(var(--fx),.8); }
+@keyframes afx-ring { 0% { transform: scale(0); opacity: 0; } 15% { opacity: 1; } 100% { transform: scale(14); opacity: 0; } }
+.afx-sparks { position: absolute; width: 0; height: 0; }
+.afx-spark { position: absolute; width: var(--sz); height: var(--sz); left: 0; top: 0; margin: calc(var(--sz) / -2);
+  border-radius: 50%; background: #fff; box-shadow: 0 0 12px 3px rgba(var(--fx),1);
+  opacity: 0; transform: rotate(var(--ang)) translateY(0);
+  animation: afx-spark 1.25s cubic-bezier(.15,.7,.3,1) var(--delay) forwards; }
+@keyframes afx-spark {
+  0% { opacity: 0; transform: rotate(var(--ang)) translateY(0) scale(.3); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: rotate(var(--ang)) translateY(calc(var(--dist) * -1)) scale(1.1); }
+}
+/* シマー（光の帯が斜めに走る）。カード/手紙の上を一度なでる */
+.shimmer-sweep { position: relative; overflow: hidden; }
+.shimmer-sweep::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 5;
+  background: linear-gradient(115deg, transparent 30%, rgba(255,255,255,.5) 47%, rgba(255,255,255,.8) 50%, transparent 66%);
+  transform: translateX(-120%); animation: shimmer 1.1s ease-out .35s 1; }
+@keyframes shimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+/* 降臨エントランス（scale＋わずかに回転しながら光って着地） */
+@keyframes arrive-in {
+  0% { transform: scale(.6) translateY(24px); opacity: 0; filter: brightness(2.2); }
+  55% { opacity: 1; }
+  70% { transform: scale(1.04) translateY(0); filter: brightness(1.35); }
+  100% { transform: scale(1) translateY(0); filter: brightness(1); }
+}
+.arrive-in { animation: arrive-in .95s cubic-bezier(.15,.75,.25,1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .afx-burst, .afx-ring, .afx-spark, .shimmer-sweep::after, .arrive-in { animation: none !important; }
+  .arrival-fx { display: none; }
+}
+
 /* ── 未来からのクエストカード（全画面） ── */
 .qcard-screen {
   position: absolute; inset: 0; z-index: 30; display: flex; align-items: center; justify-content: center;

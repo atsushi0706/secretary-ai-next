@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { ArrivalFx } from "./ArrivalFx";
 
 /**
  * 未来からのクエストカード。
@@ -42,9 +43,13 @@ export function QuestCard({ card, onClose, onDone }: { card: Card; onClose: () =
     finally { setBusy(false); }
   }
 
+  // 課題が出る前＝「届いた瞬間」だけ派手に降臨させる
+  const arriving = !challenge;
+
   return (
     <div className="qcard-screen">
-      <div className="qcard">
+      {arriving && <ArrivalFx tone="violet" />}
+      <div className={`qcard ${arriving ? "arrive-in shimmer-sweep" : ""}`}>
         <div className="qcard-from">🎴 未来から、クエストが届いた</div>
 
         <div className="qcard-sym">

@@ -53,7 +53,19 @@ export function InnerHud({ guideName }: { guideName: string }) {
       <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} />
 
       {/* ハイヤークエスト＝未来から降りてきたクエストと同じもの。
-          まだ何も決まっていない日は、ホームには出さない（クエストカードから降りてくるので、そこで決まる）。 */}
+          まだ決まっていない日も「どこにあるか」が分かるよう、場所だけは常に見せる。 */}
+      {quest.items.length === 0 && (
+        <div className="ihud-quest is-empty">
+          <div className="q-head">
+            <span className="q-title">🔨 ハイヤークエスト</span>
+            <span className="q-badge">今日はまだ届いてない</span>
+          </div>
+          <p className="q-lead">
+            毎朝、<b>未来からクエストが届く</b>よ。それを受け取ると、ここに「今日の一手」が入る。
+            やって<b>✓</b>を付けると<b>現実化</b>＝メーターの針が右（ゾーン）へ動く。
+          </p>
+        </div>
+      )}
       {quest.items.length > 0 && (
       <div className={`ihud-quest ${solvedToday ? "is-solved" : ""}`}>
         <div className="q-head">
@@ -185,9 +197,13 @@ function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: nu
           <b>🔮 空想を足す</b>：パラレルウォークで理想を思いっきり描く<span className="arr">→ 針が左へ</span>
         </div>
         <div className={`b-fix-row ${needReal ? "is-hot" : ""}`}>
-          <b>🔨 現実に落とす</b>：ハイヤークエストを1個やって<b>✓（できた）</b>を付ける<span className="arr">→ 針が右へ</span>
+          <b>🔨 現実に落とす</b>：ホームの<b>ハイヤークエスト</b>を1個やって<b>✓（できた）</b>を付ける<span className="arr">→ 針が右へ</span>
         </div>
-        <div className="b-fix-note">＝ 空想したら、その日のうちに小さく1個やって✓。これを続けると、ゾーンに居つづけられる。</div>
+        <div className="b-fix-note">
+          ＝ 空想したら、その日のうちに小さく1個やって✓。これを続けると、ゾーンに居つづけられる。<br />
+          <b>やりすぎて右（現実）に寄った時</b>は、✓を減らすんじゃなく<b>パラレルウォークで空想を足す</b>。
+          こなすだけの毎日にならないように、理想を見る時間を戻すのが正解だよ。
+        </div>
       </div>
     </div>
   );

@@ -2524,3 +2524,7 @@ body:has(.realverse-bg) { background: transparent; }
 .qcard-challenge .qc-adopted{margin-top:10px;padding-top:9px;border-top:1px dashed rgba(238,214,155,.32);
   font-size:.72rem;line-height:1.6;color:var(--singa-ink-soft)}
 .qcard-challenge .qc-adopted b{color:#eed69b}
+
+/* ハイヤークエスト：まだ届いてない日の案内（場所を見失わせない） */
+.ihud-quest.is-empty{opacity:.9;border-style:dashed}
+.ihud-quest.is-empty .q-lead b{color:#eed69b}

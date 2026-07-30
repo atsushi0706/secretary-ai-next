@@ -136,7 +136,11 @@ export async function POST(req: Request) {
     const s: any = await getUserSettings(userId).catch(() => null);
     const geminiKey = s?.gemini_api_key && String(s.gemini_api_key).trim() ? String(s.gemini_api_key).trim() : null;
     const openaiKey = process.env.OPENAI_API_KEY || null;
-    if (!geminiKey && !openaiKey) return json({ error: "AIキーが未設定です。設定画面で Gemini API キーを登録してね。" }, 503);
+    // 最後の砦：運営（淳くん）のキー。ユーザーのキーが枯れても音声入力を止めない
+    const ownerKey = process.env.GEMINI_API_KEY || null;
+    if (!geminiKey && !openaiKey && !ownerKey) {
+      return json({ error: "AIキーが未設定です。設定画面で Gemini API キーを登録してね。" }, 503);
+    }
 
     const buf = Buffer.from(await file.arrayBuffer());
     // Gemini は "audio/webm;codecs=opus" のようなパラメータ付きMIMEを受け付けないので、素の型に正規化する
@@ -169,6 +173,15 @@ export async function POST(req: Request) {
       const raw = await sttOpenAI(openaiKey, file, file.name || "speech.webm");
       if (raw) return json({ text: raw, raw, engine: "openai", edited: false });
       log.push("openai: 失敗");
+    }
+
+    // 【最後の砦】運営のキーで通す。ここまで来たらユーザーを止めない方を優先する
+    if (ownerKey && ownerKey !== geminiKey) {
+      const g = await sttGemini(ownerKey, buf.toString("base64"), mime, log);
+      if (g) {
+        const finalText = isFaithful(g.raw, g.polished) ? g.polished : g.raw;
+        return json({ text: finalText, raw: g.raw, engine: "gemini-owner", edited: finalText !== g.raw });
+      }
     }
 
     // 何が起きたかを、ユーザーに分かる言葉で返す

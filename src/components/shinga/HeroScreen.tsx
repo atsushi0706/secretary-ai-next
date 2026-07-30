@@ -15,26 +15,37 @@ type Hero = {
 };
 
 const DOMAINS: { key: Domain; label: string; sub: string; kind: "state" | "reach"; steps: { label: string; value: number }[] }[] = [
-  { key: "inner", label: "内側（心の中）", sub: "望む世界と“なりたい自分”が、自分の中でどれだけ明確か", kind: "state", steps: [
-    { label: "まだ言葉にできない", value: 15 }, { label: "増やしたい世界を言葉にできる", value: 35 },
-    { label: "なぜ望むのかも分かっている", value: 55 }, { label: "古い思い込みに気づけている", value: 72 },
-    { label: "迷っても望む方向を思い出せる", value: 90 } ] },
-  { key: "embodiment", label: "体現（暮らし）", sub: "その生き方が、毎日の習慣や選択にどれだけ表れているか", kind: "state", steps: [
-    { label: "まだ生活には出ていない", value: 15 }, { label: "自分に実践しようとしている", value: 35 },
-    { label: "続いている小さな行動がある", value: 58 }, { label: "言うことと生活がだいたい一致", value: 78 },
-    { label: "自分が望む世界の見本になっている", value: 92 } ] },
-  { key: "relationship", label: "人間関係", sub: "身近な人との関わりに、その自分がどれだけ出ているか", kind: "state", steps: [
-    { label: "まだ身近な人には出せていない", value: 15 }, { label: "身近な人にも出そうとしている", value: 38 },
-    { label: "感謝・応援を言葉にできている", value: 60 }, { label: "流されず、自分の態度で表せる", value: 78 },
-    { label: "相手から肯定的な反応がある", value: 92 } ] },
-  { key: "delivery", label: "提供（届ける）", sub: "必要としている人に、価値をどれだけ届けられているか", kind: "reach", steps: [
-    { label: "まだ提供していない", value: 12 }, { label: "誰かに提供したことがある", value: 30 },
-    { label: "場があれば提供できる", value: 45 }, { label: "自分で募集して提供できる", value: 62 },
-    { label: "継続的に提供できている", value: 78 }, { label: "対価が出て、仕事になっている", value: 95 } ] },
-  { key: "socialization", label: "社会化（広がり）", sub: "自分ひとりを超えて、世の中にどれだけ広がっているか", kind: "reach", steps: [
-    { label: "まだ自分ひとりの範囲", value: 12 }, { label: "方法を言語化できている", value: 35 },
-    { label: "他者に教えられる", value: 55 }, { label: "教材・サービスに体系化している", value: 72 },
-    { label: "自分抜きでも価値が届く／広がっている", value: 92 } ] },
+  { key: "inner", label: "① 心の中", sub: "その理想の自分でいるとき、心の中はどうなってる？", kind: "state", steps: [
+    { label: "まだ実感がない（他人事に感じる）", value: 15 },
+    { label: "たまに、そうなれた気がする瞬間がある", value: 35 },
+    { label: "落ち着いているときは、その自分でいられる", value: 55 },
+    { label: "揺れても、その自分に戻ってこられる", value: 75 },
+    { label: "もうそれが普通の自分になっている", value: 92 } ] },
+  { key: "embodiment", label: "② 毎日の行動", sub: "その自分なら選ぶ行動を、どれだけ選べてる？", kind: "state", steps: [
+    { label: "まだ行動は変わっていない", value: 15 },
+    { label: "たまに、その自分らしい選択ができる", value: 35 },
+    { label: "続いている小さな習慣がある", value: 58 },
+    { label: "日常の選択が、だいたいその自分と一致", value: 78 },
+    { label: "迷ったときも、その自分として選べる", value: 92 } ] },
+  { key: "relationship", label: "③ 人との関わり", sub: "身近な人の前でも、その自分でいられてる？", kind: "state", steps: [
+    { label: "身近な人の前では出せない", value: 15 },
+    { label: "少しずつ出そうとしている", value: 38 },
+    { label: "言いたいことを言葉にできている", value: 60 },
+    { label: "流されず、その自分の態度でいられる", value: 78 },
+    { label: "相手にも、その自分として受け取られている", value: 92 } ] },
+  { key: "delivery", label: "④ 誰かに届ける", sub: "その自分として、誰かに何かを渡せてる？", kind: "reach", steps: [
+    { label: "まだ誰にも渡していない", value: 12 },
+    { label: "身近な誰かに渡したことがある", value: 30 },
+    { label: "求められれば渡せる", value: 45 },
+    { label: "自分から声をかけて渡している", value: 62 },
+    { label: "続けて渡せている", value: 78 },
+    { label: "対価が生まれ、仕事になっている", value: 95 } ] },
+  { key: "socialization", label: "⑤ 世の中への広がり", sub: "自分ひとりを超えて、どこまで広がってる？", kind: "reach", steps: [
+    { label: "まだ自分ひとりの範囲", value: 12 },
+    { label: "やり方を言葉にできている", value: 35 },
+    { label: "他の人に教えられる", value: 55 },
+    { label: "誰かが受け取って、その人も動き出している", value: 72 },
+    { label: "自分がいなくても広がっていく", value: 92 } ] },
 ];
 
 export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string; avatarUrl: string; onBack: () => void }) {
@@ -110,7 +121,11 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
           </div>
         ) : picking ? (
           <div className="hero-pick">
-            <p className="hero-pick-lead">今のきみは、どのへん？ 正直なところを選んでね。<br /><span>分からないものは「まだ分からない」でOK。</span></p>
+            <p className="hero-pick-lead">
+              <b>「{hero?.hero_statement || "その主人公"}」</b>——この自分を、いまの自分だとしたら。<br />
+              内側から外側へ、5つの層で正直なところを選んでね。<br />
+              <span>心の中 → 毎日の行動 → 人との関わり → 誰かに届ける → 世の中への広がり。分からないものは「まだ分からない」でOK。</span>
+            </p>
             {DOMAINS.map((d) => (
               <div key={d.key} className="hero-pick-domain">
                 <div className="hd">{d.label}<span>{d.kind === "state" ? "（今の深さ）" : "（規模・到達）"}</span></div>

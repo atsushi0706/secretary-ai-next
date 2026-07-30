@@ -27,9 +27,12 @@ export async function GET() {
     const now = jstNow();
     const cycles = computeCycles(birth, now);
     const life = computeLife(birth, gender, now); // 性別が無ければ null
-    const activeDays = await countActiveDays(userId).catch(() => 0); // 段階解放の判定に使う
+    const activeDays = await countActiveDays(userId).catch(() => 0);
+    // 未来の10年の段階解放は「使い始めからの経過時間」で判定（次=1ヶ月/その先=3ヶ月）
+    const startedMs = s?.created_at ? new Date(s.created_at).getTime() : now.getTime();
+    const elapsedDays = Math.max(0, Math.floor((now.getTime() - startedMs) / 86400000));
     const master = isMaster((session?.user as any)?.email);           // マスターは全開放
-    return NextResponse.json({ hasBirth: true, hasGender: !!gender, cycles, life, activeDays, master });
+    return NextResponse.json({ hasBirth: true, hasGender: !!gender, cycles, life, activeDays, elapsedDays, master });
   } catch (e: any) {
     await logError(userId, "/api/cycles", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

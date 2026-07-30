@@ -63,17 +63,25 @@ export function InnerHud({ guideName }: { guideName: string }) {
             : <span className="q-badge">理想を、今日に1個おろす</span>}
         </div>
         {!solvedToday && quest.items.length === 0 && (
-          <p className="q-lead">パラレルウォークで話した理想の中から、どんなに小さくても1個、今日のアクションに。それが「現実化」。</p>
+          <p className="q-lead">パラレルウォークで話した理想の中から、どんなに小さくても1個、今日のアクションに。<b>やれたら✓を付ける＝「現実化」</b>。</p>
+        )}
+
+        {quest.items.length > 0 && !solvedToday && (
+          <p className="q-check-hint">👉 できたら左の <b>○</b> をタップ。それが<b>「現実化」</b>＝上のメーターの針が<b>右（中央のゾーン）</b>へ動くよ。</p>
+        )}
+        {solvedToday && (
+          <p className="q-check-hint done">✓ 今日、現実におろせた。メーターが中央（ゾーン）に近づいたよ😌</p>
         )}
 
         {quest.items.length > 0 && (
           <ul className="q-list">
             {quest.items.map((it, i) => (
               <li key={i} className={it.done ? "done" : ""}>
-                <button className="q-chk" onClick={() => post({ action: "done", index: i, done: !it.done })}>
+                <button className={`q-chk ${it.done ? "is-done" : ""}`} onClick={() => post({ action: "done", index: i, done: !it.done })} title={it.done ? "できた（現実化ずみ）" : "できたらタップ＝現実化"}>
                   {it.done ? "✓" : "○"}
                 </button>
                 <span className="q-text">{it.text}</span>
+                {!it.done && <button className="q-doneb" onClick={() => post({ action: "done", index: i, done: true })}>できた</button>}
                 <button className="q-del" onClick={() => post({ action: "remove", index: i })} title="消す">×</button>
               </li>
             ))}
@@ -200,9 +208,9 @@ function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: nu
           <b>🔮 空想を足す</b>：パラレルウォークで理想を思いっきり描く<span className="arr">→ 針が左へ</span>
         </div>
         <div className={`b-fix-row ${needReal ? "is-hot" : ""}`}>
-          <b>🔨 現実に落とす</b>：ハイヤークエストで理想を今日に1個おろす<span className="arr">→ 針が右へ</span>
+          <b>🔨 現実に落とす</b>：ハイヤークエストを1個やって<b>✓（できた）</b>を付ける<span className="arr">→ 針が右へ</span>
         </div>
-        <div className="b-fix-note">＝ 空想したら、その日のうちに小さく1個おろす。これを続けると、ゾーンに居つづけられる。</div>
+        <div className="b-fix-note">＝ 空想したら、その日のうちに小さく1個やって✓。これを続けると、ゾーンに居つづけられる。</div>
       </div>
     </div>
   );

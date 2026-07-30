@@ -1193,6 +1193,11 @@ body:has(.realverse-bg) { background: transparent; }
 
 /* ハイヤークエストの説明文 */
 .ihud-quest .q-lead { font-size: .72rem; line-height: 1.6; color: var(--singa-ink-soft); margin: 2px 0 8px; }
+.ihud-quest .q-lead b { color: var(--singa-gold); }
+.ihud-quest .q-check-hint { font-size: .7rem; line-height: 1.6; color: var(--singa-ink-soft); margin: 2px 0 8px; padding: 7px 9px; border-radius: 9px; background: rgba(255,255,255,.05); }
+.ihud-quest .q-check-hint b { color: #a6e6b0; }
+.ihud-quest .q-check-hint.done { background: rgba(143,208,122,.16); color: #a6e6b0; }
+.ihud-quest .q-doneb { flex-shrink: 0; font-size: .68rem; font-weight: 700; color: #221b10; background: linear-gradient(160deg,#8fd07a,#5aa04a); border-radius: 8px; padding: 4px 10px; }
 
 /* 未来からの手紙（全画面）。開いた最初は、これだけを見せる */
 .fletter-screen {

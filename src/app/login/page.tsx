@@ -24,6 +24,13 @@ export default async function LoginPage() {
         <p className="text-xs text-gray-400 mt-6">
           ログイン後、Gemini APIキーの設定画面に進みます。
         </p>
+        <p className="text-xs text-gray-400 mt-3">
+          続行すると{" "}
+          <a href="/terms" className="underline text-[var(--accent)]">利用規約</a>
+          {" "}と{" "}
+          <a href="/privacy" className="underline text-[var(--accent)]">プライバシーポリシー</a>
+          {" "}に同意したものとみなされます。
+        </p>
       </div>
     </main>
   );

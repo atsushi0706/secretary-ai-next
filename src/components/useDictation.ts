@@ -137,7 +137,11 @@ export function useDictation() {
       if (context) fd.append("context", context);
       const r = await fetch("/api/stt", { method: "POST", body: fd });
       const d = await r.json();
-      if (!r.ok) { setError(d?.error || "文字化に失敗しました"); return null; }
+      if (!r.ok) {
+        // 原因が分かるよう、サーバーが返した詳細も添える
+        setError(d?.detail ? `${d.error}（${String(d.detail).slice(0, 90)}）` : (d?.error || "文字化に失敗しました"));
+        return null;
+      }
       return String(d.text ?? "").trim() || null;
     } catch (e: any) {
       setError("通信に失敗しました。もう一度試してね。");

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { useDictation } from "@/components/useDictation";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -149,6 +150,16 @@ export function Chat({
   const [thinking, setThinking] = useState(false);
   const [recording, setRecording] = useState(false);
   const [recError, setRecError] = useState("");
+  // Typeless級の音声入力（小声OK・無音で切れない・整った文章で入る）
+  const dict = useDictation();
+  async function toggleDict() {
+    if (dict.phase === "recording") {
+      const t = await dict.stop("秘書AIへの指示・タスク・相談");
+      if (t) setInput((v) => (v ? v + " " : "") + t);
+    } else if (dict.phase === "idle") {
+      await dict.start();
+    }
+  }
   const scroller = useRef<HTMLDivElement>(null);
   const greetedRef = useRef(false);
   const recogRef = useRef<any>(null);
@@ -440,9 +451,16 @@ export function Chat({
           <button onClick={() => setFile(null)} className="ml-auto text-gray-500">×</button>
         </div>
       )}
-      {recError && (
+      {(recError || dict.error) && (
         <div className="bg-red-50 border border-red-200 rounded-lg mx-2 px-3 py-2 text-xs text-red-700">
-          {recError}
+          {recError || dict.error}
+        </div>
+      )}
+      {dict.phase === "recording" && (
+        <div className="mx-2 px-3 py-1.5 rounded-lg bg-red-50 border border-red-200 text-xs text-red-600 flex items-center gap-2">
+          <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+          録音中 {Math.floor(dict.seconds / 60)}:{String(dict.seconds % 60).padStart(2, "0")} — 小声でもOK
+          <span className="flex-1 h-1.5 rounded bg-red-100 overflow-hidden"><span className="block h-full bg-red-400 transition-all" style={{ width: `${Math.round(dict.level * 100)}%` }} /></span>
         </div>
       )}
       <div className="stage-input">
@@ -461,10 +479,28 @@ export function Chat({
               e.preventDefault(); send();
             }
           }}
-          placeholder={isMorning ? "話しかける…（タスク追加、入れといて、相談）" : "明日のことを話そう…"}
+          placeholder={dict.phase === "recording"
+            ? `聞いています… 小声でもOK（🎤で確定）`
+            : isMorning ? "話しかける…（タスク追加、入れといて、相談）" : "明日のことを話そう…"}
           rows={1}
           className="flex-1 resize-none p-2 border rounded-lg text-sm min-h-[40px] max-h-32 bg-white/80"
         />
+        {dict.supported && (
+          <button
+            onClick={() => void toggleDict()}
+            disabled={sending || dict.phase === "transcribing"}
+            className={`px-3 py-2 rounded-lg font-bold text-sm border transition-colors ${
+              dict.phase === "recording"
+                ? "bg-red-500 text-white border-red-500 animate-pulse"
+                : dict.phase === "transcribing"
+                  ? "bg-purple-100 text-purple-500 border-purple-200"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-purple-50"
+            }`}
+            title={dict.phase === "recording" ? "タップで確定" : "音声入力（Typeless級）"}
+          >
+            {dict.phase === "recording" ? "■" : dict.phase === "transcribing" ? "…" : "🎤"}
+          </button>
+        )}
         <button
           onClick={send} disabled={sending}
           className="bg-[var(--accent)] text-white px-4 py-2 rounded-lg font-bold text-sm disabled:opacity-50"

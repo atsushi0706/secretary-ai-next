@@ -1825,6 +1825,15 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .vbar-go:disabled { opacity: .35; }
 .vbar-mic:disabled { opacity: .5; }
+.vbar-mic.is-busy { animation: vbar-busy 1s linear infinite; }
+@keyframes vbar-busy { 0%,100% { opacity: .5; } 50% { opacity: 1; } }
+/* 録音中の入力レベル（小声でも拾えてるかの可視化） */
+.vbar-level {
+  display: inline-block; width: 72px; height: 6px; margin-left: 8px; vertical-align: middle;
+  border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden;
+}
+.vbar-level span { display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg,#8fd07a,#eed69b); transition: width .12s linear; }
 /* パラレルウォーク（明るい画面）用 */
 .singa-stage.is-bright .vbar-input { background: rgba(255,255,255,.9); border-color: rgba(120,170,210,.4); }
 .singa-stage.is-bright .vbar-text { color: #23324a !important; }

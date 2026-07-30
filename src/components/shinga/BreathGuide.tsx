@@ -10,7 +10,7 @@ import { useEffect, useRef, useState } from "react";
  * - カウントが終わったら「次へ」を押して進む＝体感覚に馴染ませる。
  */
 
-type Step = { instr: string; say: string; count: number; scale: number; img?: string };
+type Step = { instr: string; say: string; count: number; scale: number; img?: string; voice?: string };
 
 // 呼吸ステップの図（public に置く）。無ければオーブ表示にフォールバック。
 const IMG_EXHALE = "/breath-step1.png"; // ふーっと全部吐ききる
@@ -33,21 +33,21 @@ function buildSteps(emotion?: string): Step[] {
     : "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。";
 
   const steps: Step[] = [
-    { instr: emotion ? `立って、体を軽くゆらそう（未来の「${emotion}」を入れる準備）` : "立って、体を軽くゆらそう", say: introSay, count: SETTLE, scale: 1 },
+    { instr: emotion ? `立って、体を軽くゆらそう（未来の「${emotion}」を入れる準備）` : "立って、体を軽くゆらそう", say: introSay, count: SETTLE, scale: 1, voice: "intro" },
   ];
   for (let i = 0; i < 3; i++) {
     steps.push(
-      { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, say: `${i + 1}かいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね`, count: EXHALE, scale: 0.35, img: IMG_EXHALE },
-      { instr: "吐ききったら、少し止める（真空を作る・3秒）", say: "そのまま、すこし止めてね。からっぽの真空をつくるよ", count: HOLD, scale: 0.28, img: IMG_HOLD },
-      { instr: inhaleInstr, say: inhaleSay, count: INHALE, scale: 1.1, img: IMG_INHALE },
-      { instr: "ゆっくり、呼吸を整える", say: "目をとじて、ゆっくり呼吸を整えてね", count: SETTLE, scale: 1, img: IMG_SETTLE },
+      { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, say: `${i + 1}かいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね`, count: EXHALE, scale: 0.35, img: IMG_EXHALE, voice: `ex${i + 1}` },
+      { instr: "吐ききったら、少し止める（真空を作る・3秒）", say: "そのまま、すこし止めてね。からっぽの真空をつくるよ", count: HOLD, scale: 0.28, img: IMG_HOLD, voice: "hold" },
+      { instr: inhaleInstr, say: inhaleSay, count: INHALE, scale: 1.1, img: IMG_INHALE, voice: "inhale" },
+      { instr: "ゆっくり、呼吸を整える", say: "目をとじて、ゆっくり呼吸を整えてね", count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "settle" },
     );
   }
   steps.push(
-    { instr: "最後にもう一度、口をすぼめて吐ききる", say: "さいごにもう一回。お口をすぼめて、ぜんぶ吐いてー", count: EXHALE, scale: 0.3, img: IMG_EXHALE },
-    { instr: "少し止める（真空を作る・3秒）", say: "そのまま、すこし止めて、真空をつくってね", count: HOLD, scale: 0.24, img: IMG_HOLD },
-    { instr: emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : "一気に、強く吸う", say: inhaleSay, count: INHALE, scale: 1.12, img: IMG_INHALE },
-    { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: emotion ? `いいね。ゆっくり呼吸を整えて、その「${emotion}」を身体に馴染ませて。目をあけてね。` : "いいね。ゆっくり呼吸を整えて、目をあけてね。", count: SETTLE, scale: 1, img: IMG_SETTLE },
+    { instr: "最後にもう一度、口をすぼめて吐ききる", say: "さいごにもう一回。お口をすぼめて、ぜんぶ吐いてー", count: EXHALE, scale: 0.3, img: IMG_EXHALE, voice: "lastex" },
+    { instr: "少し止める（真空を作る・3秒）", say: "そのまま、すこし止めて、真空をつくってね", count: HOLD, scale: 0.24, img: IMG_HOLD, voice: "lasthold" },
+    { instr: emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : "一気に、強く吸う", say: inhaleSay, count: INHALE, scale: 1.12, img: IMG_INHALE, voice: "inhale" },
+    { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: emotion ? `いいね。ゆっくり呼吸を整えて、その「${emotion}」を身体に馴染ませて。目をあけてね。` : "いいね。ゆっくり呼吸を整えて、目をあけてね。", count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "lastsettle" },
   );
   return steps;
 }
@@ -75,6 +75,20 @@ function stopVoice() {
   currentAudio = null;
   try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
 }
+/** 同梱の音声ファイル（Edge TTS生成）を最優先で再生。無ければAPI→ブラウザ読み上げの順に退避 */
+async function speakStep(step: { say: string; voice?: string }) {
+  if (step.voice) {
+    stopVoice();
+    try {
+      const a = new Audio(`/voice/breath-${step.voice}.mp3`);
+      currentAudio = a;
+      await a.play();
+      return;
+    } catch { /* ファイルが無い/再生失敗 → 動的TTSへ */ }
+  }
+  await speak(step.say);
+}
+
 async function speak(text: string) {
   const t = text.trim();
   if (!t) return;
@@ -142,7 +156,7 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
     setIdx(i);
     setScale(s.scale);
     setRemain(s.count);
-    speak(s.say);
+    void speakStep(s);
     tickRef.current = setInterval(() => {
       setRemain((r) => {
         if (r <= 1) { clearInterval(tickRef.current); return 0; }

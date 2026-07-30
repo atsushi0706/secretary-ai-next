@@ -58,15 +58,28 @@ export async function interpretCard(userId: string, interpretation: string): Pro
 相手が"未来からのクエストカード"（抽象的なシンボルの絵）を引いて、その絵から今日について、こう受け取った：
 「${text || "（まだうまく言葉にできていない）"}」
 
-これを、今日その人が"乗り越える一手"に落とし込んで渡して。ルール：
-- 説教・分析はしない。まず受け取って、そこから「じゃあ今日はこれ、やってみよ」という具体的な小さな挑戦を1つだけ。
+これを、理想の自分・つくりたい世界への「今日の先取り」に落とし込んで渡して。
+次の順で考えて（本文にこの問い自体は書かない）：
+  1. この人の理想に、今日ひとつ先取りするとしたら何か
+  2. それをするために必要な、たった一つの行動は何か
+
+ルール：
+- 説教・分析はしない。まず受け取って、そこから今日の小さな一手を1つだけ。
 - 未来の自分から届いた挑戦、というトーン。重すぎず、でも逃げ場を残しすぎない。
 - 3〜4行。最後の1行は「今日これに立ち向かう？」と背中を押す一言で締める。
-- 占い用語は出さない。相手の言葉に乗っかる。`;
+- 占い用語は出さない。相手の言葉に乗っかる。
+- 本文の最後に、その"たった一つの行動"を、そのままやることリストに置ける短い一文で、必ずこの形式で：
+  <行動>◯◯する</行動>（20字程度・動詞で終わる・説明を混ぜない）`;
 
   const client = getClaude();
   const r = await client.messages.create({ model: CLAUDE_MODEL, max_tokens: 500, temperature: 0.85, messages: [{ role: "user", content: prompt }] });
-  const challenge = r.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim();
+  let challenge = r.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim();
+
+  // 「たった一つの行動」を取り出して、そのままハイヤークエストにする（＝この2つは同じもの）
+  const m = challenge.match(/<行動>\s*([^<]{1,60}?)\s*<\/行動>/);
+  const action = m ? m[1].trim() : "";
+  challenge = challenge.replace(/<行動>[\s\S]*?<\/行動>/g, "").trim();
+  if (action) await adoptAsHigherQuest(userId, action).catch(() => {});
 
   const supa = supabaseAdmin();
   await supa.from("quest_cards").update({ interpretation: text, challenge }).eq("user_id", userId).eq("date", date);
@@ -77,4 +90,17 @@ export async function interpretCard(userId: string, interpretation: string): Pro
 export async function completeCard(userId: string): Promise<void> {
   const supa = supabaseAdmin();
   await supa.from("quest_cards").update({ done: true }).eq("user_id", userId).eq("date", jstDateStr());
+}
+
+/**
+ * 未来から降りてきたクエストで決めた「今日の一手」を、そのままハイヤークエストにする。
+ * ＝この2つは同じもの。別々に決めさせない。
+ */
+export async function adoptAsHigherQuest(userId: string, action: string): Promise<void> {
+  const t = action.trim().slice(0, 120);
+  if (!t) return;
+  const { addQuestItem, getTodayQuest } = await import("./inner");
+  const cur = await getTodayQuest(userId).catch(() => null);
+  if (cur?.items?.some((it) => it.text.trim() === t)) return; // 二重登録しない
+  await addQuestItem(userId, t);   // リアルバース(Googleタスク)にも自動で入る
 }

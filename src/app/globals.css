@@ -2519,3 +2519,8 @@ body:has(.realverse-bg) { background: transparent; }
 .hero-toast .ht-row b { margin-left: 3px; }
 .hero-toast .ht-row.up b { color: #8fd07a; }
 .hero-toast .ht-row.down b { color: #e6b25a; }
+
+/* クエストカード → ハイヤークエストに入ったことの明示 */
+.qcard-challenge .qc-adopted{margin-top:10px;padding-top:9px;border-top:1px dashed rgba(238,214,155,.32);
+  font-size:.72rem;line-height:1.6;color:var(--singa-ink-soft)}
+.qcard-challenge .qc-adopted b{color:#eed69b}

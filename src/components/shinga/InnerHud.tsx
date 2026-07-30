@@ -18,8 +18,6 @@ export function InnerHud({ guideName }: { guideName: string }) {
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [level, setLevel] = useState<Level | null>(null);
   const [ready, setReady] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [text, setText] = useState("");
 
   function apply(d: { grounding?: Grounding; quest?: Quest; level?: Level }) {
     if (d.grounding) setG(d.grounding);
@@ -54,17 +52,16 @@ export function InnerHud({ guideName }: { guideName: string }) {
       {/* 空想↔現実のバランス（中央＝フロー） */}
       <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} />
 
-      {/* ハイヤークエスト＝理想を、今日に1個おろす（＝現実化。これが空想と現実の真ん中に自分を保つ力） */}
+      {/* ハイヤークエスト＝未来から降りてきたクエストと同じもの。
+          まだ何も決まっていない日は、ホームには出さない（クエストカードから降りてくるので、そこで決まる）。 */}
+      {quest.items.length > 0 && (
       <div className={`ihud-quest ${solvedToday ? "is-solved" : ""}`}>
         <div className="q-head">
           <span className="q-title">🔨 ハイヤークエスト</span>
           {solvedToday
             ? <span className="q-badge done">今日、理想を現実におろせた ✓</span>
-            : <span className="q-badge">理想を、今日に1個おろす</span>}
+            : <span className="q-badge">未来から降りてきた、今日の一手</span>}
         </div>
-        {!solvedToday && quest.items.length === 0 && (
-          <p className="q-lead">パラレルウォークで話した理想の中から、どんなに小さくても1個、今日のアクションに。<b>やれたら✓を付ける＝「現実化」</b>。</p>
-        )}
 
         {quest.items.length > 0 && !solvedToday && (
           <p className="q-check-hint">👉 できたら左の <b>○</b> をタップ。それが<b>「現実化」</b>＝上のメーターの針が<b>右（中央のゾーン）</b>へ動くよ。</p>
@@ -88,28 +85,8 @@ export function InnerHud({ guideName }: { guideName: string }) {
           </ul>
         )}
 
-        {quest.items.length < 3 && (
-          adding ? (
-            <div className="q-add">
-              <input
-                value={text} autoFocus
-                onChange={(e) => setText(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.nativeEvent.isComposing && text.trim()) {
-                    post({ action: "add", text }); setText(""); setAdding(false);
-                  }
-                }}
-                placeholder="例：鏡の前で背筋を伸ばして深呼吸する"
-              />
-              <button onClick={() => { if (text.trim()) { post({ action: "add", text }); setText(""); } setAdding(false); }}>置く</button>
-            </div>
-          ) : (
-            <button className="q-open" onClick={() => setAdding(true)}>
-              ＋ 今日おろす理想を書く{quest.items.length > 0 ? "（あと" + (3 - quest.items.length) + "個）" : ""}
-            </button>
-          )
-        )}
       </div>
+      )}
     </div>
   );
 }

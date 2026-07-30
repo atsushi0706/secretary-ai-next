@@ -76,6 +76,7 @@ export function QuestCard({ card, onClose, onDone }: { card: Card; onClose: () =
             <div className="qcard-challenge">
               <div className="k">未来からのクエスト</div>
               <p>{challenge}</p>
+              <div className="qc-adopted">🔨 これが今日の<b>ハイヤークエスト</b>になったよ（リアルバースのタスクにも入ってる）</div>
             </div>
             {err && <div className="qcard-err">{err}</div>}
             <button className="qcard-btn is-go" disabled={busy} onClick={face}>

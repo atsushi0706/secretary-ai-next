@@ -705,10 +705,33 @@ function DebugPanel({ trace, onClear }: { trace: any[]; onClear: () => void }) {
 // 1日の振り返りは、この時刻以降だけ出す（朝に振り返っても意味がないので）
 const REFLECT_FROM_HOUR = 18;
 
+/**
+ * ホームの挨拶。時間帯（深夜/朝/昼/夜）× その場で選ぶ言い回しで、毎回ちがう一言になる。
+ * 定型文にしないため、開くたびにランダムで組み合わせる。
+ */
+const GREET_TIME: Record<"night" | "morning" | "day" | "evening", string[]> = {
+  night: ["こんな時間まで起きてたの？", "夜更かしだね😌", "静かな時間だ。よく来たね", "眠れない夜？ ここにいていいよ"],
+  morning: ["おはよ😊", "おはよう。いい時間に来たね", "朝だ。ここから始めよっか", "おはよ。今日はまだ、まっさらだよ"],
+  day: ["よっ、来たね😊", "お、ちょうどいい時間", "今日の途中、寄ってくれたんだ", "やっほ。ひと息つこ😊"],
+  evening: ["おつかれ😊", "今日もよくやったね", "おつかれさま。もう夜だね", "一日の終わり。ここで降ろしていこ"],
+};
+const GREET_LEAD: string[] = [
+  "ここは『インナーワールド』——きみの内側の世界だよ。",
+  "ここは、きみの内側だけでできてる世界。",
+  "ようこそ。ここでは、外の事情はいったん置いていい。",
+  "きみの内側の地図の上に、いま立ってるよ。",
+];
+const GREET_PUSH: string[] = [
+  "今日はまず、ピークステートから。そこで“整える”のが先だよ😊",
+  "まずは呼吸で整えよっか。そこからの方が、ぜんぶ早いから。",
+  "先に整えよう。ピークステート、行っておいで😊",
+  "何をするにも、まず状態から。整えるとこから始めよ。",
+];
+function pick<T>(arr: T[]): T { return arr[Math.floor(Math.random() * arr.length)]; }
 function greetLine(): string {
   const h = new Date().getHours();
-  const time = h < 5 ? "こんな時間まで起きてたの？" : h < 11 ? "おはよ😊" : h < 18 ? "よっ、来たね😊" : "おつかれ😊";
-  return `${time} ここは『インナーワールド』——きみの内側の世界だよ。\n今日はまず、ピークステートから。ぜったい、そこで“整える”のが先だよ😊`;
+  const slot = h < 5 ? "night" : h < 11 ? "morning" : h < 18 ? "day" : "evening";
+  return `${pick(GREET_TIME[slot])} ${pick(GREET_LEAD)}\n${pick(GREET_PUSH)}`;
 }
 
 const DOORS: { key: ModeKey; emoji: string }[] = [

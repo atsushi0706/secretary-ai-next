@@ -1023,8 +1023,9 @@ body:has(.realverse-bg) { background: transparent; }
   box-shadow: 0 4px 16px rgba(90,140,190,.25);
 }
 .singa-stage.is-bright .singa-line.is-me p {
-  background: linear-gradient(135deg, #7ec0ee, #5aa0d8);
-  color: #fff; border-color: transparent;
+  background: #fff;
+  color: #1c2733; border: 1.5px solid rgba(90,160,216,.55);
+  box-shadow: 0 4px 16px rgba(90,140,190,.25);
 }
 .singa-stage.is-bright .vbar {
   background: rgba(255,255,255,.86);
@@ -1553,8 +1554,9 @@ body:has(.realverse-bg) { background: transparent; }
   box-shadow: 0 4px 16px rgba(90,140,190,.25);
 }
 .singa-stage.is-bright .singa-line.is-me p {
-  background: linear-gradient(135deg, #7ec0ee, #5aa0d8);
-  color: #fff; border-color: transparent;
+  background: #fff;
+  color: #1c2733; border: 1.5px solid rgba(90,160,216,.55);
+  box-shadow: 0 4px 16px rgba(90,140,190,.25);
 }
 .singa-stage.is-bright .vbar {
   background: rgba(255,255,255,.86);

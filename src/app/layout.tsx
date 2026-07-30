@@ -6,8 +6,8 @@ import { TimerBadge } from "@/components/TimerBadge";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 export const metadata: Metadata = {
-  title: "秘書AI 清瀬リンク",
-  description: "朝夜に話しかける秘書AI＋タスクボード",
+  title: "SINGA WORLD",
+  description: "内側で掴んだものを、現実に落としていく。インナーワールド × リアルバース",
   manifest: "/manifest.json",
   icons: {
     icon: "/icon-192.png",
@@ -16,7 +16,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "清瀬リンク",
+    title: "SINGA WORLD",
   },
 };
 

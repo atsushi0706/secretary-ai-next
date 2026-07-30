@@ -8,7 +8,8 @@ export default async function LoginPage() {
   return (
     <main className="min-h-screen flex items-center justify-center p-6">
       <div className="card max-w-md w-full text-center">
-        <h1 className="text-2xl font-bold mb-2">秘書AI 清瀬リンク</h1>
+        <h1 className="text-2xl font-bold mb-1" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".04em" }}>SINGA WORLD</h1>
+        <p className="text-xs text-gray-400 mb-3" style={{ letterSpacing: ".22em" }}>インナーワールド × リアルバース</p>
         <p className="text-sm text-gray-500 mb-6">
           Googleアカウントでログインしてください。
           <br />Googleカレンダー / ToDo リスト（タスク）に接続します。

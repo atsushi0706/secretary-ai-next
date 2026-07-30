@@ -1,7 +1,7 @@
 {
-  "name": "秘書AI 清瀬リンク",
-  "short_name": "清瀬リンク",
-  "description": "朝夜に話しかける秘書AI＋タスクボード",
+  "name": "SINGA WORLD",
+  "short_name": "SINGA WORLD",
+  "description": "内側で掴んだものを、現実に落としていく。インナーワールド × リアルバース",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#f5f3fb",

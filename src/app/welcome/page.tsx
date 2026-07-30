@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata = {
-  title: "Focus Secretary - 集中したい人のためのAI秘書",
+  title: "SINGA WORLD - 内側で掴んだものを、現実に落としていく",
   description: "Googleログインだけで、AI秘書が今日を一緒に組み立てる。タスク管理・集中モード・カレンダー連動・自動ポモドーロ。",
 };
 
@@ -13,7 +13,7 @@ export default function WelcomePage() {
       <header className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Image src="/kiyose.png" alt="" width={32} height={32} className="rounded-full border border-purple-200" />
-          <span className="font-bold text-lg text-purple-700">Focus Secretary</span>
+          <span className="font-bold text-lg text-purple-700" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".03em" }}>SINGA WORLD</span>
         </div>
         <Link
           href="/login"
@@ -29,6 +29,7 @@ export default function WelcomePage() {
           Googleログインだけで始められる
         </div>
         <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
+          <span className="block text-2xl sm:text-3xl mb-2" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".04em" }}>SINGA WORLD</span>
           今日の時間割を、<br />
           <span className="text-[var(--accent)]">AI秘書</span>が一緒に組み立てる
         </h1>
@@ -135,7 +136,7 @@ export default function WelcomePage() {
 
       {/* フッター */}
       <footer className="border-t border-purple-100 py-8 text-center text-xs text-gray-500">
-        © Focus Secretary — Powered by Claude & Gemini
+        © SINGA WORLD — Powered by Claude &amp; Gemini
         <div className="mt-2">
           <Link href="/login" className="text-purple-700 hover:underline">ログイン</Link>
         </div>

@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata = {
-  title: "プライバシーポリシー — Focus Secretary",
-  description: "Focus Secretary（Chrome 拡張機能 + 秘書AI Web アプリ）のプライバシーポリシー",
+  title: "プライバシーポリシー — SINGA WORLD",
+  description: "SINGA WORLD（Chrome 拡張機能 + 秘書AI Web アプリ）のプライバシーポリシー",
 };
 
 export default function PrivacyPage() {
@@ -12,7 +12,7 @@ export default function PrivacyPage() {
       <header className="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between">
         <Link href="/welcome" className="flex items-center gap-2">
           <Image src="/kiyose.png" alt="" width={32} height={32} className="rounded-full border border-purple-200" />
-          <span className="font-bold text-lg text-purple-700">Focus Secretary</span>
+          <span className="font-bold text-lg text-purple-700" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".03em" }}>SINGA WORLD</span>
         </Link>
         <Link href="/welcome" className="text-sm text-purple-700 underline">← トップに戻る</Link>
       </header>
@@ -23,7 +23,7 @@ export default function PrivacyPage() {
 
         <section className="bg-white/70 border border-purple-100 rounded-2xl p-6 mb-6 leading-relaxed">
           <p>
-            Focus Secretary（Chrome 拡張機能および <code>secretary-ai-next.vercel.app</code> の秘書AIアプリ。以下「本サービス」）は、
+            SINGA WORLD（Chrome 拡張機能および <code>secretary-ai-next.vercel.app</code> の秘書AIアプリ。以下「本サービス」）は、
             ユーザーのプライバシーを最大限尊重します。本ページでは取り扱うデータと、その範囲・送信先を明記します。
           </p>
         </section>

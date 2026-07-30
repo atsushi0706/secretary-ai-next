@@ -2329,14 +2329,41 @@ body:has(.realverse-bg) { background: transparent; }
 .balance .b-side { font-size: .72rem; font-weight: 700; white-space: nowrap; }
 .balance .b-side.left { color: #b7a6f5; }
 .balance .b-side.right { color: #eed69b; }
-.balance .b-rail { position: relative; flex: 1; height: 10px; border-radius: 999px;
+.balance .b-head { margin-bottom: 8px; }
+.balance .b-status { font-size: .82rem; font-weight: 800; }
+.balance.zone .b-status, .balance.flow .b-status { color: #a6e6b0; }
+.balance.real .b-status { color: #eecf8f; }
+.balance.image .b-status { color: #b7a6f5; }
+
+.balance .b-rail { position: relative; flex: 1; height: 14px; border-radius: 999px; overflow: visible;
   background: linear-gradient(90deg, rgba(123,143,240,.45), rgba(120,220,150,.5) 50%, rgba(224,169,74,.45)); }
-.balance .b-center { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; background: rgba(255,255,255,.5); transform: translateX(-50%); }
+/* フロー帯（中央のやや広い緑の領域）＋ゾーン（ど真ん中の丸） */
+.balance .b-flow { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 44%; height: 22px; border-radius: 999px; background: rgba(120,220,150,.18); border: 1px solid rgba(120,220,150,.4); }
+.balance .b-zone { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+  width: 26px; height: 26px; border-radius: 50%; background: rgba(120,220,150,.28);
+  border: 2px solid rgba(140,235,165,.9); box-shadow: 0 0 12px rgba(120,220,150,.6); }
 .balance .b-needle { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 999px; background: #fff;
-  box-shadow: 0 0 10px 2px rgba(255,255,255,.6); transform: translate(-50%, -50%); transition: left .8s cubic-bezier(.2,.9,.2,1); }
-.balance.flow .b-needle { box-shadow: 0 0 14px 3px rgba(120,220,150,.85); }
-.balance .b-msg { margin-top: 8px; font-size: .74rem; line-height: 1.6; color: var(--singa-ink); }
-.balance.flow .b-msg { color: #a6e6b0; }
+  box-shadow: 0 0 10px 2px rgba(255,255,255,.7); transform: translate(-50%, -50%); transition: left .8s cubic-bezier(.2,.9,.2,1); z-index: 2; }
+.balance.zone .b-needle, .balance.flow .b-needle { box-shadow: 0 0 16px 4px rgba(120,220,150,.95); }
+
+.balance .b-legend { display: flex; align-items: center; gap: 6px; justify-content: center; margin-top: 8px;
+  font-size: .62rem; color: var(--singa-ink-soft); }
+.balance .b-legend .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-left: 8px; }
+.balance .b-legend .dot.zone { background: rgba(140,235,165,.95); box-shadow: 0 0 6px rgba(120,220,150,.7); }
+.balance .b-legend .dot.flow { background: rgba(120,220,150,.35); border: 1px solid rgba(120,220,150,.6); }
+
+.balance .b-why { margin-top: 8px; font-size: .74rem; line-height: 1.6; color: var(--singa-ink); }
+.balance.zone .b-why, .balance.flow .b-why { color: #a6e6b0; }
+
+.balance .b-fix { margin-top: 10px; padding: 10px 11px; border-radius: 11px; background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1); }
+.balance .b-fix-title { font-size: .72rem; font-weight: 700; color: var(--singa-gold); margin-bottom: 7px; }
+.balance .b-fix-row { font-size: .72rem; line-height: 1.7; color: var(--singa-ink-soft); padding: 5px 8px; border-radius: 8px; }
+.balance .b-fix-row b { color: var(--singa-ink); font-weight: 700; }
+.balance .b-fix-row .arr { color: var(--singa-ink-soft); font-size: .64rem; margin-left: 4px; white-space: nowrap; }
+.balance .b-fix-row.is-hot { background: rgba(238,214,155,.16); border: 1px solid rgba(238,214,155,.4); }
+.balance .b-fix-row.is-hot b { color: #eed69b; }
+.balance .b-fix-note { margin-top: 7px; font-size: .66rem; line-height: 1.6; color: var(--singa-ink-soft); }
 
 .ihud-quest { padding: 12px 14px; border-radius: 14px; background: rgba(20,16,28,.62); border: 1px solid rgba(238,214,155,.28); backdrop-filter: blur(6px); }
 .ihud-quest.is-solved { border-color: rgba(143,208,122,.5); background: rgba(30,40,28,.55); }

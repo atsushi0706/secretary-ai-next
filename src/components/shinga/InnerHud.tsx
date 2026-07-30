@@ -152,24 +152,58 @@ function LevelBar({ level }: { level: Level }) {
 function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: number }) {
   const total = imageDays + realDays;
   const diff = realDays - imageDays; // 正＝現実寄り / 負＝空想寄り
-  const pos = total === 0 ? 50 : Math.max(10, Math.min(90, 50 + (diff / total) * 42));
-  const state = total === 0 ? "neutral" : Math.abs(diff) <= 1 ? "flow" : diff > 0 ? "real" : "image";
-  const msg =
-    state === "neutral" ? "まだ静か。まず一歩、動いてみよ。"
-    : state === "flow" ? "いいバランス。空想を、ちゃんと現実に落とし込めてるね（フロー）😌"
-    : state === "real" ? "ちょっと現実に追われ気味かも。一回、上を向いて空想しよ🔮"
-    : "ちょっと上に浮いてるかな。ひとつだけ、現実に落としてみよ🔨";
+  const pos = total === 0 ? 50 : Math.max(8, Math.min(92, 50 + (diff / total) * 42));
+  const off = Math.abs(pos - 50); // 中央からのズレ
+  const state = total === 0 ? "neutral" : off <= 9 ? "zone" : off <= 22 ? "flow" : diff > 0 ? "real" : "image";
+
+  const status =
+    state === "neutral" ? "まだ静か"
+    : state === "zone" ? "🟢 いま“ゾーン”にいます"
+    : state === "flow" ? "🟢 いま“フロー”にいます"
+    : state === "real" ? "🔨 現実に寄りすぎ（追われ気味）"
+    : "🔮 空想に寄りすぎ（地に足がついてない）";
+
+  const why =
+    state === "zone" ? "ど真ん中＝最高の状態。空想したことが、ちゃんと今日に落ちてる。"
+    : state === "flow" ? "ゾーンのすぐ外。いい流れ。この中にいるのがベスト。"
+    : state === "real" ? "やることに追われて、理想（上）を見れてない状態。"
+    : state === "image" ? "理想は描けてるけど、まだ現実に落とせてない状態。"
+    : "空想（理想を描く）と現実（今日に落とす）が釣り合うと、ど真ん中の“ゾーン”に入るよ。";
+
+  // 真ん中に戻す具体策（今どっちに寄ってるかで、効く方を強調）
+  const needImage = state === "real";   // 現実過多 → 空想を足す
+  const needReal = state === "image";   // 空想過多 → 現実に落とす
+
   return (
     <div className={`balance ${state}`}>
+      <div className="b-head">
+        <span className="b-status">{status}</span>
+      </div>
+
       <div className="b-track">
         <span className="b-side left">🔮 空想</span>
         <span className="b-rail">
-          <span className="b-center" />
+          <span className="b-flow" />
+          <span className="b-zone" />
           <span className="b-needle" style={{ left: `${pos}%` }} />
         </span>
         <span className="b-side right">現実 🔨</span>
       </div>
-      <div className="b-msg">{msg}</div>
+      <div className="b-legend"><span className="dot zone" />中央＝ゾーン<span className="dot flow" />その外側＝フロー</div>
+
+      <div className="b-why">{why}</div>
+
+      {/* 真ん中に戻す調整方法（効く方を強調） */}
+      <div className="b-fix">
+        <div className="b-fix-title">🎯 ど真ん中（ゾーン）に整えるには</div>
+        <div className={`b-fix-row ${needImage ? "is-hot" : ""}`}>
+          <b>🔮 空想を足す</b>：パラレルウォークで理想を思いっきり描く<span className="arr">→ 針が左へ</span>
+        </div>
+        <div className={`b-fix-row ${needReal ? "is-hot" : ""}`}>
+          <b>🔨 現実に落とす</b>：ハイヤークエストで理想を今日に1個おろす<span className="arr">→ 針が右へ</span>
+        </div>
+        <div className="b-fix-note">＝ 空想したら、その日のうちに小さく1個おろす。これを続けると、ゾーンに居つづけられる。</div>
+      </div>
     </div>
   );
 }

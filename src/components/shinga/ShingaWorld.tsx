@@ -269,6 +269,8 @@ export function ShingaWorld({
     setPlace(MODES[m].place);
     setView("talk");
     setChoices(null);
+    setWidget(null);          // 前のゾーンの呼吸ガイド・感情メーターを持ち込まない
+    setEmoPick(null);
     // 新規で入るときだけ、ゲーム開始風のゾーン突入演出（続き再開では出さない）
     if (!resume) {
       setEntering(m);
@@ -308,6 +310,7 @@ export function ShingaWorld({
     setPlace("peak");
     setView("talk");
     setChoices(null);
+    setWidget(null); setEmoPick(null);   // パネル・メーターの持ち込み防止
     setMessages([{ role: "assistant", content: greetLine() }]);
     await talk(text, false, null, "peak");
   }
@@ -419,7 +422,7 @@ export function ShingaWorld({
         body: JSON.stringify({ summary: transcript.slice(0, 2000) }),
       }).catch(() => {});
     }
-    setView("home"); setChoices(null); setMode(null);
+    setView("home"); setChoices(null); setMode(null); setWidget(null); setEmoPick(null);
   }
 
   // 呼吸トレーニングが終わった → AIに知らせる
@@ -522,7 +525,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { setView("home"); setChoices(null); }}>
+          <button className="singa-back" onClick={() => { setView("home"); setChoices(null); setWidget(null); setEmoPick(null); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 

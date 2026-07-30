@@ -808,10 +808,10 @@ function Home({
       <div className="iw-reflect-row">
         <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
         <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
-        {/* 1日の振り返りは夕方以降だけ出す（朝に振り返っても意味がない） */}
+        {/* 1日の振り返りは夜だけ。夜になったらプッシュ通知で「開いたよ」と知らせる（それまでは鍵） */}
         {new Date().getHours() >= REFLECT_FROM_HOUR
           ? <button className="iw-report is-night" onClick={onDaily}>🌙 1日の振り返り</button>
-          : <button className="iw-report is-locked" disabled title={`夜（${REFLECT_FROM_HOUR}時以降）にひらくよ`}>🌙 夜にひらく</button>}
+          : <button className="iw-report is-locked" disabled title={`夜（${REFLECT_FROM_HOUR}時）に通知でお知らせして開くよ`}>🔒 夜に通知で開く</button>}
         <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
       </div>
     </div>

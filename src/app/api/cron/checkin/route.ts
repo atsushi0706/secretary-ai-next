@@ -111,7 +111,23 @@ export async function GET(req: Request) {
         } catch { /* カード配信の失敗は他をブロックしない */ }
       }
 
-      results.push({ user_id: u.user_id, ntfy: wantsNtfy, push: wantsPush, card });
+      // 夜：1日の振り返りが「開いた」ことをプッシュで知らせる（それまでは鍵）
+      let night = false;
+      if (slot === "evening" && wantsPush) {
+        try {
+          const pr = await sendPushToUser(u.user_id, {
+            title: "🌙 1日の振り返りが開いたよ",
+            body: "今日はどんな日だった？ 3分だけ、一緒に振り返ろう。",
+            url: "/shinga", tag: "reflect-open",
+          });
+          night = pr.sent > 0;
+          await supa.from("notifications").insert({
+            user_id: u.user_id, channel: "webpush", type: "reflect-open", body: "1日の振り返りが開いた", success: night, error: null,
+          });
+        } catch { /* 失敗しても他をブロックしない */ }
+      }
+
+      results.push({ user_id: u.user_id, ntfy: wantsNtfy, push: wantsPush, card, night });
     } catch (e: any) {
       results.push({ user_id: u.user_id, ok: false, error: String(e?.message ?? e) });
     }

@@ -156,6 +156,14 @@ export async function deleteTask(userId: string, tasklistId: string, taskId: str
   });
 }
 
+/** 完了を取り消して未完了に戻す（クエストのチェックを外したとき用）。 */
+export async function reopenTask(userId: string, tasklistId: string, taskId: string) {
+  const auth = await getOAuthClient(userId);
+  await google.tasks({ version: "v1", auth }).tasks.patch({
+    tasklist: tasklistId, task: taskId, requestBody: { status: "needsAction", completed: null },
+  });
+}
+
 /**
  * カレンダー予定を ID 指定で削除。
  * primary 以外のカレンダーから登録されたものも消せるよう calendarId 指定対応。

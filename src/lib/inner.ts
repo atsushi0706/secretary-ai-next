@@ -11,11 +11,12 @@
  * 今日のナゾ（＝ハイヤークエスト）：理想の状態から今日に落とす小さな一手。最大3個、1個こなせば今日は100%。
  */
 import { supabaseAdmin } from "./supabase";
-import { jstDateStr } from "./google";
+import { jstDateStr, addTask, completeTask, deleteTask, reopenTask, getTasks } from "./google";
 
 // image/real は「直近7日でそれをやった日数」。%ではなく、空想↔現実のバランス（フロー）を見るための生の値。
 export type Grounding = { imageDays: number; realDays: number };
-export type QuestItem = { text: string; done: boolean };
+// taskId/tasklistId ＝ リアルバース(Googleタスク)との連動リンク。どちらでチェック/削除しても両方に反映するため。
+export type QuestItem = { text: string; done: boolean; taskId?: string; tasklistId?: string };
 export type TodayQuest = { date: string; items: QuestItem[]; percent: number };
 
 const MAX_ITEMS = 3;
@@ -126,19 +127,75 @@ export async function addQuestItem(userId: string, text: string): Promise<TodayQ
   const t = text.trim();
   const { date, items } = await getTodayQuest(userId);
   if (!t || items.length >= MAX_ITEMS) return { date, items, percent: percentOf(items) };
-  const next = [...items, { text: t, done: false }];
+  // リアルバース(Googleタスク)にも同じものを入れて、その日のうちにリアルのタスクにする
+  let link: { taskId?: string; tasklistId?: string } = {};
+  try {
+    const task: any = await addTask(userId, t, { notes: "🔨 インナーワールドのハイヤークエスト（今日おろす理想）", due: `${date}T00:00:00.000Z` });
+    if (task?.id) link = { taskId: task.id, tasklistId: "@default" };
+  } catch { /* Google未接続でもクエストは機能する（連動なしで進む） */ }
+  const next = [...items, { text: t, done: false, ...link }];
   return saveItems(userId, date, next);
 }
 
 export async function toggleQuestItem(userId: string, index: number, done: boolean): Promise<TodayQuest> {
   const { date, items } = await getTodayQuest(userId);
   if (index < 0 || index >= items.length) return { date, items, percent: percentOf(items) };
-  const next = items.map((it, i) => (i === index ? { ...it, done } : it));
+  const it = items[index];
+  // リアルバース側も連動（チェック→完了 / 外す→未完了に戻す）
+  if (it?.taskId) {
+    try {
+      if (done) await completeTask(userId, it.tasklistId || "@default", it.taskId);
+      else await reopenTask(userId, it.tasklistId || "@default", it.taskId);
+    } catch { /* 連動失敗してもインナー側は進める */ }
+  }
+  const next = items.map((x, i) => (i === index ? { ...x, done } : x));
   return saveItems(userId, date, next);
 }
 
 export async function removeQuestItem(userId: string, index: number): Promise<TodayQuest> {
   const { date, items } = await getTodayQuest(userId);
+  const it = items[index];
+  // リアルバース側のタスクも一緒に消す（どちらか消したら両方消える）
+  if (it?.taskId) {
+    try { await deleteTask(userId, it.tasklistId || "@default", it.taskId); } catch { /* ignore */ }
+  }
   const next = items.filter((_, i) => i !== index);
   return saveItems(userId, date, next);
+}
+
+/**
+ * リアルバース(Googleタスク)→ インナーの向きを合わせる。
+ * リアルバースでチェック(完了)された → クエストも done に。
+ * リアルバースで削除された → クエストからも消す。
+ * HUD読み込み時に1回だけ呼ぶ（Googleが取れなければ何もしない）。
+ */
+export async function reconcileQuestWithTasks(userId: string): Promise<void> {
+  const supa = supabaseAdmin();
+  const date = jstDateStr();
+  const { data } = await supa.from("higher_quest").select("items").eq("user_id", userId).eq("date", date).maybeSingle();
+  const items: QuestItem[] = Array.isArray(data?.items) ? (data!.items as QuestItem[]) : [];
+  const linked = items.filter((it) => it.taskId);
+  if (linked.length === 0) return; // 連動対象なし
+
+  let tasks: any[] = [];
+  try { tasks = await getTasks(userId, true); } catch { return; } // 完了含めて取得。取れなければ何もしない
+  const byId = new Map<string, any>();
+  for (const t of tasks) if (t?.id) byId.set(t.id, t);
+
+  let changed = false;
+  const next: QuestItem[] = [];
+  for (const it of items) {
+    if (!it.taskId) { next.push(it); continue; }
+    const t = byId.get(it.taskId);
+    if (!t) { changed = true; continue; }              // リアルバースで削除 → クエストからも消す
+    const doneInReal = t.status === "completed";
+    if (doneInReal !== it.done) { changed = true; next.push({ ...it, done: doneInReal }); }
+    else next.push(it);
+  }
+  if (changed) {
+    await supa.from("higher_quest").upsert(
+      { user_id: userId, date, items: next, updated_at: new Date().toISOString() },
+      { onConflict: "user_id,date" },
+    );
+  }
 }

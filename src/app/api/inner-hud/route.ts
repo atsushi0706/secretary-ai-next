@@ -6,7 +6,7 @@
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { computeGrounding, computeLevel, getTodayQuest, addQuestItem, toggleQuestItem, removeQuestItem } from "@/lib/inner";
+import { computeGrounding, computeLevel, getTodayQuest, addQuestItem, toggleQuestItem, removeQuestItem, reconcileQuestWithTasks } from "@/lib/inner";
 import { isMissingTable, MIGRATION_HINT } from "@/lib/shinga";
 import { logError } from "@/lib/supabase";
 
@@ -20,6 +20,8 @@ export async function GET() {
   const userId = (session?.user as any)?.id;
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   try {
+    // 先にリアルバース(Googleタスク)→インナーの連動を合わせてから、状態を読む
+    await reconcileQuestWithTasks(userId).catch(() => {});
     const [grounding, quest, level] = await Promise.all([computeGrounding(userId), getTodayQuest(userId), computeLevel(userId)]);
     return NextResponse.json({ grounding, quest, level });
   } catch (e: any) {

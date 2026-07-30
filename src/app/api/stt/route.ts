@@ -18,8 +18,14 @@ import { getUserSettings } from "@/lib/supabase";
 export const maxDuration = 60;
 
 // 音声を理解できる Gemini モデル（新→安定の順で試す。ai.ts の連鎖と同方針）
-// 音声入力は「確実に通る」ことが最優先。実績のある安定モデルを先に試す（新しい方は後ろで保険）
-const GEMINI_MODELS = ["gemini-2.5-flash", "gemini-2.5-flash-lite", "gemini-3.1-flash-lite", "gemini-3.5-flash"];
+// 新しい世代を優先（1.5系と2.0系は提供終了済み）。落ちたら順に古い方へ退避する。
+const GEMINI_MODELS = [
+  "gemini-3.5-flash",        // 本命
+  "gemini-3.6-flash",        // 最新（使えれば）
+  "gemini-3.5-flash-lite",   // 枠に優しい
+  "gemini-3.1-flash-lite",
+  "gemini-2.5-flash",        // 最後の保険（まだ稼働中）
+];
 // 予備の OpenAI ASR（キーがある場合のみ）
 const OPENAI_ASR = ["gpt-transcribe", "gpt-4o-mini-transcribe", "whisper-1"];
 
@@ -74,8 +80,9 @@ async function sttGemini(
         const body = await r.text().catch(() => "");
         const msg = (body.match(/"message"\s*:\s*"([^"]{0,160})"/)?.[1] ?? body.slice(0, 120)).trim();
         log.push(`${model}: ${r.status} ${msg}`);
-        if (r.status === 429) return null; // ユーザーの無料枠切れ → 予備へ
-        continue; // モデル未対応・混雑 → 次のモデル
+        // 429 は「1分あたり(RPM)」と「1日あたり(RPD)」の2種類。どちらも即諦めず次のモデルへ回す
+        // （カウンタはモデルごとに別なので、替えれば通ることが多い）
+        continue;
       }
       const d = await r.json();
       const text = String(d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? "").join("") ?? "");
@@ -137,7 +144,16 @@ export async function POST(req: Request) {
     const log: string[] = [];
     // 【標準】ユーザーのGeminiキー：文字起こし＋整形を1回で（運営コストゼロ）
     if (geminiKey) {
-      const g = await sttGemini(geminiKey, buf.toString("base64"), mime, log);
+      const b64 = buf.toString("base64");
+      let g = await sttGemini(geminiKey, b64, mime, log);
+      // 全モデルが 1分あたりの上限(RPM)で弾かれた場合だけ、少し待って一度だけ再挑戦する。
+      // RPM は短時間で回復するので、これで「連発したときのエラー」がほぼ消える。
+      const isDailyLimit = /per day|daily limit|RPD|GenerateRequestsPerDay/i.test(log.join(" "));
+      if (!g && !isDailyLimit && log.length > 0 && log.every((l) => /429/.test(l))) {
+        log.push("→ 1分あたりの上限。8秒待って再挑戦");
+        await new Promise((r) => setTimeout(r, 8000));
+        g = await sttGemini(geminiKey, b64, mime, log);
+      }
       if (g) {
         const finalText = isFaithful(g.raw, g.polished) ? g.polished : g.raw;
         return json({ text: finalText, raw: g.raw, engine: "gemini", edited: finalText !== g.raw });
@@ -153,7 +169,11 @@ export async function POST(req: Request) {
     // 何が起きたかを、ユーザーに分かる言葉で返す
     const all = log.join(" / ");
     let msg = "文字化に失敗しました。少し待ってもう一度試してね。";
-    if (/429|quota|rate/i.test(all)) msg = "今日のAI利用枠がいっぱいみたい。しばらく待つか、明日また試してね。";
+    if (/per day|daily limit|RPD|GenerateRequestsPerDay/i.test(all)) {
+      msg = "今日のAI利用回数を使い切ったみたい。日付が変わるとまた使えるよ。";
+    } else if (/429|quota|rate/i.test(all)) {
+      msg = "少し使いすぎて、AIが一息ついてる。30秒ほど待ってからもう一度話しかけてね。";
+    }
     else if (/API key not valid|401|403|PERMISSION/i.test(all)) msg = "Gemini APIキーが無効かも。設定画面で入れ直してみて。";
     else if (/not found|不明|404|not supported|INVALID_ARGUMENT|400/i.test(all)) msg = "この音声形式に対応できなかった。もう一度短く話してみて。";
     return json({ error: msg, detail: all.slice(0, 300) }, 502);

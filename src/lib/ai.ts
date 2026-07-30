@@ -19,18 +19,19 @@ import { getUserSettings } from "./supabase";
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
 // Gemini モデルの優先順位。前から順に試して、503/overloaded/404 なら次へフォールバック。
-// すべて公式 GA + 無料枠ありで実在することを確認済み (2026-06 時点)。
+// 2026-07 時点の公式情報で確認：1.5系と2.0系は提供終了（shut down）済み。2.5系はまだ稼働中。
 //
-//  - gemini-3.5-flash:     GA・最賢、ただしリリース直後で 503 頻発 (2026-05-19 公開)
-//  - gemini-3.1-flash-lite: GA・新Lite版。混雑少なめ
-//  - gemini-2.5-flash-lite: GA・旧Lite版。最も安定
-//  - gemini-2.5-flash:      GA・旧版。RPD 250 と低めなので最終救命のみ
+//  - gemini-3.5-flash / 3.6-flash: 新しい世代。まずここを使う
+//  - *-flash-lite:                 軽量版。混雑・枠に強いので中盤の逃げ道
+//  - gemini-2.5-flash(-lite):      最後の保険（まだ生きてはいる）
 //
 // 環境変数 GEMINI_MODEL を指定するとそれが先頭になる。
 const GEMINI_FALLBACK_CHAIN: string[] = (() => {
   const userPick = process.env.GEMINI_MODEL?.trim();
   const defaults = [
     "gemini-3.5-flash",
+    "gemini-3.6-flash",        // 最新（2026-07 時点で追加。使えなければ次へ落ちる）
+    "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
@@ -106,8 +107,8 @@ export function formatRateLimitForUser(
   // 24秒前後の短い待ち時間 → 1分あたりの上限(RPM) を踏んだ可能性が高い
   // 数時間以上の長い待ち時間 → 1日あたりの上限(RPD) を踏んだ可能性が高い
   const likelyCause = sec <= 70
-    ? "1分あたりの上限 (Gemini 3.5 Flash は 1分 15回まで) を一時的に踏みました。立て続けに連発した直後によく出ます。"
-    : "1日あたりの上限 (Gemini 3.5 Flash は 1日 1,500回まで) を踏んだ可能性があります。明日リセットされます。";
+    ? "1分あたりの上限を一時的に踏みました。立て続けに連発した直後によく出ます。"
+    : "1日あたりの上限を踏んだ可能性があります（無料枠の回数はモデルごとに異なり、AI Studio の Rate limits で確認できます）。翌日リセットされます。";
 
   return [
     `ごめんね、ちょっと立て込んでて頭がパンクしそう…${wait}くらい休ませてもらえるかな🙏`,

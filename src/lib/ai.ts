@@ -19,22 +19,23 @@ import { getUserSettings } from "./supabase";
 
 const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
 // Gemini モデルの優先順位。前から順に試して、503/overloaded/404 なら次へフォールバック。
-// 2026-07 時点の公式情報で確認：1.5系と2.0系は提供終了（shut down）済み。2.5系はまだ稼働中。
-//
-//  - gemini-3.5-flash / 3.6-flash: 新しい世代。まずここを使う
-//  - *-flash-lite:                 軽量版。混雑・枠に強いので中盤の逃げ道
-//  - gemini-2.5-flash(-lite):      最後の保険（まだ生きてはいる）
+// 2026-07 調査：1.5系と2.0系は提供終了（shut down）済み。2.5系はまだ稼働中。
+// 並び順は「賢さ」ではなく「無料枠で実際に通るか」で決める：
+//  - gemini-3.6-flash:  最新の安定版。まずここ
+//  - *-flash-lite:      高スループット向けで枠が緩い。実際に通る報告が多い
+//  - gemini-2.5-flash:  無料枠で動き続けている実績あり
+//  - gemini-3.5-flash:  最も賢いが無料枠がほぼ枯れており(20 RPD報告)1回目から429になるため最後に回す
 //
 // 環境変数 GEMINI_MODEL を指定するとそれが先頭になる。
 const GEMINI_FALLBACK_CHAIN: string[] = (() => {
   const userPick = process.env.GEMINI_MODEL?.trim();
   const defaults = [
-    "gemini-3.5-flash",
-    "gemini-3.6-flash",        // 最新（2026-07 時点で追加。使えなければ次へ落ちる）
+    "gemini-3.6-flash",        // 最新の安定版
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemini-2.5-flash-lite",
     "gemini-2.5-flash",
+    "gemini-3.5-flash",        // 無料枠が枯れがち(20 RPD報告)なので最後に回す
   ];
   if (userPick) return [userPick, ...defaults.filter((m) => m !== userPick)];
   return defaults;

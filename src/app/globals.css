@@ -2186,6 +2186,25 @@ body:has(.realverse-bg) { background: transparent; }
 /* 起動判定中：世界の背景だけ（チェックを出すか確認する一瞬・チラつき防止） */
 .iw-boot-screen { position: absolute; inset: 0; }
 
+/* PWAインストール案内バナー（下から・全ページ共通） */
+.pwa-banner {
+  position: fixed; left: 50%; bottom: max(12px, env(safe-area-inset-bottom)); transform: translateX(-50%);
+  z-index: 9999; width: min(440px, calc(100% - 20px)); display: flex; align-items: center; gap: 11px;
+  padding: 10px 12px; border-radius: 16px; background: rgba(24,20,36,.96); color: #fff;
+  border: 1px solid rgba(238,214,155,.4); box-shadow: 0 12px 40px rgba(0,0,0,.5); backdrop-filter: blur(8px);
+  animation: pwa-up .4s cubic-bezier(.2,.8,.3,1);
+}
+@keyframes pwa-up { from { transform: translate(-50%, 20px); opacity: 0; } to { transform: translate(-50%, 0); opacity: 1; } }
+.pwa-banner .pwa-ico { width: 40px; height: 40px; border-radius: 10px; flex-shrink: 0; }
+.pwa-banner .pwa-tx { flex: 1; display: flex; flex-direction: column; line-height: 1.35; min-width: 0; }
+.pwa-banner .pwa-tx b { font-size: .86rem; }
+.pwa-banner .pwa-tx small { font-size: .68rem; color: rgba(255,255,255,.75); }
+.pwa-banner .pwa-share { filter: grayscale(0); }
+.pwa-banner .pwa-add { flex-shrink: 0; padding: 8px 16px; border-radius: 10px; font-weight: 800; font-size: .82rem;
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e); }
+.pwa-banner .pwa-x { flex-shrink: 0; width: 26px; height: 26px; border-radius: 999px; color: rgba(255,255,255,.6);
+  font-size: 1rem; background: rgba(255,255,255,.08); }
+
 /* ── 未来からのクエストが届いた（ホームの目立つ通知） ── */
 .iw-card-arrived {
   width: min(560px, 96%); margin: 8px auto 0; display: flex; align-items: center; gap: 12px;

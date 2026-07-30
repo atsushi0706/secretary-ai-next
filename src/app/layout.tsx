@@ -3,11 +3,16 @@ import "./globals.css";
 import { SWRegister } from "./sw-register";
 import { TimerProvider } from "@/components/TimerContext";
 import { TimerBadge } from "@/components/TimerBadge";
+import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 export const metadata: Metadata = {
   title: "秘書AI 清瀬リンク",
   description: "朝夜に話しかける秘書AI＋タスクボード",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon-192.png",
+    apple: "/icon-192.png", // ホーム画面に追加したときのアイコン（iOS）
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
@@ -33,6 +38,7 @@ export default function RootLayout({
         <TimerProvider>
           {children}
           <TimerBadge />
+          <PwaInstallBanner />
         </TimerProvider>
       </body>
     </html>

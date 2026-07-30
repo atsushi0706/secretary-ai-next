@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { feelGuide } from "@/lib/feelGuide";
 
 /**
  * 波動を高める呼吸トレーニング（誘導音声＋カウントダウン＋自分のペースで進む）。
@@ -194,7 +195,21 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
             <img className="breath-overview" src="/breath-overview.png" alt="呼吸の流れ"
               onError={() => setImgFailed((p) => ({ ...p, "/breath-overview.png": true }))} />
           )}
-          {emo && <div className="breath-install">未来からの「<b>{emo}</b>」を、吸ってインストールするよ</div>}
+          {emo && (
+            <div className="breath-install">
+              未来からの「<b>{emo}</b>」を、吸ってインストールするよ
+              {(() => {
+                const g = feelGuide(emo);
+                return g ? (
+                  <span className="bi-feel">
+                    <span className="k">どんな感覚？</span>
+                    <span className="v">{g.body}</span>
+                    <span className="im">{g.image}</span>
+                  </span>
+                ) : null;
+              })()}
+            </div>
+          )}
           <div className="breath-row">
             <button className="vbar-go breath-start" onClick={begin}>🌬 はじめる</button>
             <button className="breath-skip" onClick={onDone}>スキップ</button>

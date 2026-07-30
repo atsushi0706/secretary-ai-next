@@ -130,23 +130,23 @@ function LevelBar({ level }: { level: Level }) {
         ) : (
           <>
             <span className="lv-label">🌱 インナーワールドレベル</span>
-            <span className="lv-num">{level.level}<span className="lv-max"> / {level.max}</span></span>
+            <span className="lv-num">{level.level}<span className="lv-max">%</span></span>
           </>
         )}
         <span className="lv-toggle">{open ? "▲ 閉じる" : "▼ 上げ方"}</span>
       </button>
       <div className="lv-track"><span className="lv-fill" style={{ width: `${pct}%` }} /></div>
-      {done && <div className="lv-maxmsg">レベル100到達。「人生の冒険者」の称号を授かった🏆</div>}
+      {done && <div className="lv-maxmsg">100%到達。「人生の冒険者」の称号を授かった🏆</div>}
       {open && (
         <ul className="lv-actions">
           {level.actions.map((a) => (
             <li key={a.key} className={a.earnedToday ? "got" : ""}>
               <span className="a-label">{a.label}</span>
-              <span className="a-per">＋{a.per}／日</span>
+              <span className="a-per">＋{a.per}%</span>
               <span className="a-state">{a.earnedToday ? "今日は反映ずみ ✓" : "今日やると上がる"}</span>
             </li>
           ))}
-          <li className="lv-note">※ 同じことは1日1回ぶんカウント。毎日ちょっとずつ、100へ。</li>
+          <li className="lv-note">※ 50%スタート。やった日はぐんと上がり、何もしない日は −2%とゆるやかに下がる。続けていれば100%を保てるよ。</li>
         </ul>
       )}
     </div>

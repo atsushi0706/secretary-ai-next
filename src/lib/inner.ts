@@ -48,9 +48,14 @@ export async function computeGrounding(userId: string): Promise<Grounding> {
   return { imageDays: imgDays.size, realDays: realDays.size };
 }
 
-// ── レベル（旅の進捗・累積で 0→100）──────────────────────────
-// 「その行動をやった別々の日数 × ポイント」を全期間で合算し、100 で頭打ち。
-// やればやるほど貯まる。下がらない。100＝ひと区切り（到達）。
+// ── レベル（%制・50%スタート）──────────────────────────
+// やれば上がる／やらなければ少しずつ下がる。続けていれば100%を保てる。
+// ・初期値 50%
+// ・その日ワークをやったら、内容に応じて加算（ぐんぐん上がる）
+// ・何もしなかった日は -2%（下がり方はゆるやか）
+// ・0〜100 でクランプ
+const LEVEL_START = 50;   // 初期値
+const LEVEL_DECAY = 2;    // 何もしなかった日の減少（ゆるやか）
 export type LevelAction = { key: string; label: string; per: number; days: number; earnedToday: boolean };
 export type LevelStatus = { level: number; max: number; actions: LevelAction[] };
 
@@ -83,20 +88,32 @@ export async function computeLevel(userId: string): Promise<LevelStatus> {
   }
 
   const defs: { key: string; label: string; per: number; set: Set<string> }[] = [
-    { key: "emotion", label: "きもちをチェックする", per: 1, set: emoDays },
-    { key: "letter", label: "未来からの手紙をひらく", per: 1, set: letterDays },
-    { key: "walk", label: "パラレルウォークをする", per: 3, set: walkDays },
-    { key: "quest", label: "理想を今日に1個おろす", per: 4, set: questDays },
-    { key: "card", label: "未来からのクエストに立ち向かう", per: 5, set: cardDays },
+    { key: "emotion", label: "きもちをチェックする", per: 2, set: emoDays },
+    { key: "letter", label: "未来からの手紙をひらく", per: 2, set: letterDays },
+    { key: "walk", label: "パラレルウォークをする", per: 6, set: walkDays },
+    { key: "quest", label: "理想を今日に1個おろす", per: 8, set: questDays },
+    { key: "card", label: "未来からのクエストに立ち向かう", per: 10, set: cardDays },
   ];
 
-  let total = 0;
-  const actions: LevelAction[] = defs.map((d) => {
-    total += d.per * d.set.size;
-    return { key: d.key, label: d.label, per: d.per, days: d.set.size, earnedToday: d.set.has(today) };
-  });
+  // 最初にワークをした日から今日まで、1日ずつ「やった分だけ上げ／やらない日は少し下げ」を積む
+  const allDays = [...emoDays, ...walkDays, ...letterDays, ...cardDays, ...questDays].sort();
+  const startDay = allDays[0] ?? today;
+  let level = LEVEL_START;
+  const start = new Date(startDay + "T00:00:00+09:00").getTime();
+  const end = new Date(today + "T00:00:00+09:00").getTime();
+  for (let t = start; t <= end; t += 86400000) {
+    const d = jstDateStr(new Date(t));
+    let gain = 0;
+    for (const def of defs) if (def.set.has(d)) gain += def.per;
+    level += gain > 0 ? gain : -LEVEL_DECAY;         // やった日は加算／やらない日はゆるやかに減衰
+    level = Math.max(0, Math.min(LEVEL_MAX, level));  // 0〜100 に収める
+  }
 
-  return { level: Math.min(LEVEL_MAX, total), max: LEVEL_MAX, actions };
+  const actions: LevelAction[] = defs.map((d) => ({
+    key: d.key, label: d.label, per: d.per, days: d.set.size, earnedToday: d.set.has(today),
+  }));
+
+  return { level: Math.round(level), max: LEVEL_MAX, actions };
 }
 
 function percentOf(items: QuestItem[]): number {

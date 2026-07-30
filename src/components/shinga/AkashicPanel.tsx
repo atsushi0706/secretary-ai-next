@@ -35,7 +35,7 @@ export function AkashicPanel() {
   const [hasGender, setHasGender] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
   const [lifeOpen, setLifeOpen] = useState<number | null>(null);
-  const [view, setView] = useState<"life" | "now">("life");
+  const [view, setView] = useState<"life" | "now" | "deep">("life");
   const [activeDays, setActiveDays] = useState(0);
   const [elapsedDays, setElapsedDays] = useState(0);
   const [master, setMaster] = useState(false);
@@ -72,8 +72,11 @@ export function AkashicPanel() {
         <div className="akashic-tabs" style={{ marginTop: 0 }}>
           <button className={view === "life" ? "is-on" : ""} onClick={() => setView("life")}>人生の流れ</button>
           <button className={view === "now" ? "is-on" : ""} onClick={() => setView("now")}>今の流れ</button>
+          <button className={view === "deep" ? "is-on" : ""} onClick={() => setView("deep")}>深層記録</button>
         </div>
       )}
+
+      {view === "deep" && <DeepReads />}
 
       {/* 人生の10年周期（大運） */}
       {view === "life" && (
@@ -147,6 +150,59 @@ export function AkashicPanel() {
           <div className="akashic-hint">大きい流れから今日へ。タップで詳しく。</div>
         </div>
       )}
+    </div>
+  );
+}
+
+/** 深層記録：レベル(%)が上がるほど、自分についての記録が開いていく */
+type DeepCh = { key: string; title: string; need: number; hint: string; unlocked: boolean; body: string };
+function DeepReads() {
+  const [level, setLevel] = useState(0);
+  const [hasBirth, setHasBirth] = useState(true);
+  const [chs, setChs] = useState<DeepCh[]>([]);
+  const [busy, setBusy] = useState<string>("");
+  const [err, setErr] = useState("");
+
+  useEffect(() => {
+    fetch("/api/deep-read").then((r) => r.json()).then((d) => {
+      if (d.error) { setErr(d.error); return; }
+      setLevel(d.level ?? 0); setHasBirth(!!d.hasBirth); setChs(d.chapters ?? []);
+    }).catch((e) => setErr(String(e?.message ?? e)));
+  }, []);
+
+  async function openCh(key: string) {
+    setBusy(key); setErr("");
+    try {
+      const r = await fetch("/api/deep-read", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ key }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setErr(d.error || `HTTP ${r.status}`); return; }
+      setChs((prev) => prev.map((c) => (c.key === key ? { ...c, body: d.body } : c)));
+    } catch (e: any) { setErr(String(e?.message ?? e)); }
+    finally { setBusy(""); }
+  }
+
+  return (
+    <div className="deepreads">
+      <div className="dr-lv">いまのレベル <b>{level}%</b> — 続けるほど、記録が開いていく</div>
+      {!hasBirth && <div className="dr-err">設定で生年月日を入れると、記録が読めるようになるよ</div>}
+      {err && <div className="dr-err">{err}</div>}
+      {chs.map((c) => (
+        <div key={c.key} className={`dr-ch ${c.unlocked ? "is-open" : "is-locked"}`}>
+          <div className="dr-head">
+            <span className="dr-title">{c.unlocked ? "📖" : "🔒"} {c.title}</span>
+            <span className="dr-need">{c.unlocked ? "解放ずみ" : `${c.need}%で開く`}</span>
+          </div>
+          <div className="dr-hint">{c.hint}</div>
+          {c.unlocked && !c.body && (
+            <button className="dr-btn" disabled={busy === c.key || !hasBirth} onClick={() => openCh(c.key)}>
+              {busy === c.key ? "記録を読み解いてる…" : "この記録をひらく →"}
+            </button>
+          )}
+          {c.body && <p className="dr-body">{c.body}</p>}
+        </div>
+      ))}
     </div>
   );
 }

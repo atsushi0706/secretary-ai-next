@@ -484,6 +484,9 @@ export function ShingaWorld({
       ) : view === "home" && phase === "perf" ? (
         /* ② 今日のパフォーマンス（動けなさ↔動けそう） */
         <PerformanceCheck guideName={guideName} avatarUrl={faceSrc} onPick={onIntroPerf} />
+      ) : view === "home" && phase === "letter" && !letter ? (
+        /* 手紙が届くまでの待ち時間（朝いち）：未来から手紙が飛んでくる演出 */
+        <LetterIncoming />
       ) : view === "home" && phase === "letter" && letter ? (
         /* ② 今の状態を踏まえた、未来の自分からの手紙 */
         <FutureLetter
@@ -751,6 +754,39 @@ function PerformanceCheck({ guideName, avatarUrl, onPick }: { guideName: string;
 }
 
 // 起動して最初：今の状態を10段階でチェックするだけの画面（中央寄せ・最小）
+/**
+ * 未来からの手紙が届くまでの演出（朝いちの待ち時間）。
+ * 手紙が遠い光の中から、こちらへ飛んでくる。生成が終わると自動で本文に切り替わる。
+ */
+const LETTER_WAIT_LINES = [
+  "未来の空に、手紙をとりにいってる…",
+  "叶ったあの世界から、便箋をひらいてる…",
+  "きみに届く言葉を、選んでる…",
+  "もうすぐ、届くよ",
+];
+function LetterIncoming() {
+  const [i, setI] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setI((v) => (v + 1) % LETTER_WAIT_LINES.length), 2600);
+    return () => clearInterval(id);
+  }, []);
+  return (
+    <div className="lincoming">
+      <div className="li-sky">
+        {Array.from({ length: 12 }, (_, k) => (
+          <span key={k} className="li-star" style={{ ["--d" as any]: `${k * 0.42}s`, left: `${6 + k * 8}%` }} />
+        ))}
+      </div>
+      <div className="li-envelope">
+        <span className="li-trail" />
+        <span className="li-paper">✉️</span>
+      </div>
+      <p className="li-text" key={i}>{LETTER_WAIT_LINES[i]}</p>
+      <span className="li-dots"><span /><span /><span /></span>
+    </div>
+  );
+}
+
 function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatarUrl: string; onPick: (n: number) => void }) {
   return (
     <div className="iw-moodscreen">

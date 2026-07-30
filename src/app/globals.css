@@ -2235,6 +2235,65 @@ body:has(.realverse-bg) { background: transparent; }
 .iw-card-arrived .tx small { font-size: .68rem; opacity: .75; }
 .iw-card-arrived .arr { font-weight: 800; }
 
+/* アカシック：深層記録（レベルで解放） */
+.deepreads{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.deepreads .dr-lv{font-size:.7rem;color:var(--singa-ink-soft);line-height:1.6}
+.deepreads .dr-lv b{color:#a6e6b0;font-size:.86rem}
+.deepreads .dr-err{font-size:.72rem;color:#e6867a;line-height:1.6}
+.deepreads .dr-ch{padding:10px 11px;border-radius:11px;border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.04)}
+.deepreads .dr-ch.is-open{border-color:rgba(238,214,155,.4);background:rgba(238,214,155,.09)}
+.deepreads .dr-ch.is-locked{opacity:.62}
+.deepreads .dr-head{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.deepreads .dr-title{font-size:.82rem;font-weight:800;color:var(--singa-ink)}
+.deepreads .dr-ch.is-open .dr-title{color:#eed69b}
+.deepreads .dr-need{font-size:.62rem;color:var(--singa-ink-soft);white-space:nowrap}
+.deepreads .dr-hint{margin-top:4px;font-size:.7rem;color:var(--singa-ink-soft);line-height:1.6}
+.deepreads .dr-btn{width:100%;margin-top:8px;padding:8px;border-radius:9px;font-size:.76rem;font-weight:700;
+  color:#221b10;background:linear-gradient(160deg,#eed69b,#c9a55e)}
+.deepreads .dr-btn:disabled{opacity:.6}
+.deepreads .dr-body{margin-top:8px;font-size:.8rem;line-height:1.9;color:var(--singa-ink);white-space:pre-wrap}
+
+/* 感情の体感ガイド（手紙／呼吸ガイド） */
+.fletter-feel{margin-top:10px;padding:10px 12px;border-radius:10px;background:rgba(120,95,50,.09);border:1px solid rgba(120,95,50,.22);text-align:left}
+.fletter-feel .ff-body{font-size:.82rem;font-weight:700;color:#4a3a1c;line-height:1.6}
+.fletter-feel .ff-img{margin-top:4px;font-size:.74rem;color:#6b5730;line-height:1.65}
+.breath-install .bi-feel{display:block;margin-top:8px;padding-top:8px;border-top:1px solid rgba(255,255,255,.14);text-align:left}
+.breath-install .bi-feel .k{display:block;font-size:.62rem;letter-spacing:.1em;color:var(--singa-gold);margin-bottom:3px}
+.breath-install .bi-feel .v{display:block;font-size:.8rem;font-weight:700;color:var(--singa-ink);line-height:1.6}
+.breath-install .bi-feel .im{display:block;margin-top:3px;font-size:.72rem;color:var(--singa-ink-soft);line-height:1.65}
+
+/* ── 未来からの手紙が届くまでの演出（朝いち） ── */
+.lincoming{position:absolute;inset:0;z-index:28;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;
+  background:radial-gradient(120% 90% at 50% 18%,rgba(34,26,58,.92),rgba(6,5,12,.97));overflow:hidden}
+.lincoming .li-sky{position:absolute;inset:0;pointer-events:none}
+.lincoming .li-star{position:absolute;bottom:-10px;width:3px;height:3px;border-radius:50%;background:#eed69b;opacity:0;
+  box-shadow:0 0 8px 2px rgba(238,214,155,.9);animation:li-rise 4.5s linear infinite;animation-delay:var(--d)}
+@keyframes li-rise{0%{transform:translateY(0) scale(.5);opacity:0}18%{opacity:1}100%{transform:translateY(-70vh) scale(1);opacity:0}}
+/* 手紙が奥から飛んでくる（ふわっと上下しながら近づく） */
+.lincoming .li-envelope{position:relative;display:flex;align-items:center;justify-content:center;
+  animation:li-fly 3.4s cubic-bezier(.25,.7,.3,1) infinite}
+@keyframes li-fly{
+  0%{transform:translate(-120px,50px) scale(.32) rotate(-16deg);opacity:0;filter:blur(4px)}
+  22%{opacity:1;filter:blur(0)}
+  62%{transform:translate(6px,-10px) scale(1.05) rotate(3deg)}
+  100%{transform:translate(90px,-46px) scale(.5) rotate(10deg);opacity:0;filter:blur(3px)}
+}
+.lincoming .li-paper{font-size:62px;filter:drop-shadow(0 0 22px rgba(238,214,155,.85))}
+.lincoming .li-trail{position:absolute;right:60%;top:52%;width:120px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,transparent,rgba(238,214,155,.8));filter:blur(1px)}
+.lincoming .li-text{font-size:.92rem;color:var(--singa-ink);text-align:center;padding:0 24px;line-height:1.7;
+  animation:li-fade .6s ease}
+@keyframes li-fade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.lincoming .li-dots{display:flex;gap:6px}
+.lincoming .li-dots span{width:7px;height:7px;border-radius:50%;background:rgba(238,214,155,.85);animation:li-dot 1.2s ease-in-out infinite}
+.lincoming .li-dots span:nth-child(2){animation-delay:.2s}
+.lincoming .li-dots span:nth-child(3){animation-delay:.4s}
+@keyframes li-dot{0%,100%{opacity:.3;transform:translateY(0)}50%{opacity:1;transform:translateY(-5px)}}
+@media (prefers-reduced-motion: reduce){
+  .lincoming .li-envelope,.lincoming .li-star{animation:none}
+  .lincoming .li-envelope{opacity:1;transform:none}
+}
+
 /* ── ゾーン突入演出（ゲームのチャプター開始風・タップでスキップ） ── */
 .zone-intro {
   position: absolute; inset: 0; z-index: 60; overflow: hidden; cursor: pointer;

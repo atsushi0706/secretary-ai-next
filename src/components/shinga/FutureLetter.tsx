@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrivalFx } from "./ArrivalFx";
+import { feelGuide } from "@/lib/feelGuide";
 
 /**
  * 未来からの手紙（全画面）。アプリを開いた最初は、これだけを見せる。
@@ -46,6 +47,15 @@ export function FutureLetter({
           <div className="fletter-emo">
             <div className="k">この叶った世界の感情</div>
             <div className="v">「{letter.emotion}」</div>
+            {(() => {
+              const g = feelGuide(letter.emotion);
+              return g ? (
+                <div className="fletter-feel">
+                  <div className="ff-body">{g.body}</div>
+                  <div className="ff-img">{g.image}</div>
+                </div>
+              ) : null;
+            })()}
             <button className="fletter-cta" onClick={() => { onGoPeak?.(); onClose(); }}>
               ピークステートで、この感情を吸う →
             </button>

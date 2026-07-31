@@ -56,14 +56,22 @@ export function FutureLetter({
                 </div>
               ) : null;
             })()}
-            <button className="fletter-cta" onClick={() => { onGoPeak?.(); onClose(); }}>
-              ピークステートで、この感情を吸う →
+            {/* ピークステートが何なのかを、ここで必ず渡す（知らないまま押させない） */}
+            <div className="fletter-peekdef">
+              <b>ピークステート</b>とは——<br />
+              <em>あなたの理想が叶っている状態に、先になること。</em><br />
+              叶ってから感じるんじゃなくて、<b>先に感じる</b>。そこから現実が動きだす。
+            </div>
+            <button className="fletter-cta is-main" onClick={() => { onGoPeak?.(); onClose(); }}>
+              <span className="c-lead">▶ ここから始める</span>
+              <span className="c-main">ピークステートで、この感情を吸う</span>
+              <span className="c-sub">いまの気分を整えて、この感情に先になる（5分）</span>
             </button>
           </div>
         ) : null}
 
         <div className="fletter-sign">— きみが叶える、その世界から</div>
-        <button className="fletter-close" onClick={onClose}>世界へ入る →</button>
+        <button className="fletter-close" onClick={onClose}>あとで（地図から自分で選ぶ）</button>
       </div>
     </div>
   );

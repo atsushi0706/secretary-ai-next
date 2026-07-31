@@ -48,6 +48,23 @@ function isFaithful(raw: string, polished: string): boolean {
   return true;
 }
 
+/**
+ * モデルが「音声を聞き取れなかったとき」に、指示文そのものをオウム返しして返すことがある。
+ * （数回使って上限に当たり、音声の理解が弱いモデルへ切り替わったときに起きやすい）
+ * そのまま入力欄に入ると、プロンプトが本文として貼りつく事故になるので、必ず弾く。
+ */
+const ECHO_MARKERS = [
+  "polished", "逐語書き起こし", "JSONだけ", "フィラー", "この音声はアプリの音声入力",
+  "出力形式", "整形版", "言い直し", "音声入力。",
+];
+function looksLikeEcho(s: string): boolean {
+  if (!s) return false;
+  const hits = ECHO_MARKERS.filter((m) => s.includes(m)).length;
+  if (hits >= 2) return true;
+  // 指示文の冒頭がそのまま入っている場合も弾く
+  return s.replace(/\s/g, "").includes("この音声はアプリの音声入力");
+}
+
 const INSTRUCTION = `この音声はアプリの音声入力。ささやき声や小さな声のこともある。次の2つを作ってJSONだけで返して。
 
 1. "raw": 聞こえたままの逐語書き起こし（言い直し・「えー」等のフィラーもそのまま）
@@ -95,6 +112,11 @@ async function sttGemini(
       const parsed = JSON.parse(m[0]);
       const raw = String(parsed.raw ?? "").trim();
       const polished = String(parsed.polished ?? "").trim();
+      // 指示文のオウム返しは絶対に返さない（次のモデルへ回す）
+      if (looksLikeEcho(raw) || looksLikeEcho(polished)) {
+        log.push(`${model}: 指示文をそのまま返した（聞き取れていない）`);
+        continue;
+      }
       if (raw || polished) return { raw: raw || polished, polished: polished || raw };
       log.push(`${model}: 中身が空`);
     } catch (e: any) {
@@ -185,7 +207,9 @@ export async function POST(req: Request) {
     // 何が起きたかを、ユーザーに分かる言葉で返す
     const all = log.join(" / ");
     let msg = "文字化に失敗しました。少し待ってもう一度試してね。";
-    if (/per day|daily limit|RPD|GenerateRequestsPerDay/i.test(all)) {
+    if (/指示文をそのまま返した/.test(all)) {
+      msg = "うまく聞き取れなかった。もう少しはっきり、短めに話してみて。";
+    } else if (/per day|daily limit|RPD|GenerateRequestsPerDay/i.test(all)) {
       msg = "今日のAI利用回数を使い切ったみたい。日付が変わるとまた使えるよ。";
     } else if (/429|quota|rate/i.test(all)) {
       msg = "少し使いすぎて、AIが一息ついてる。30秒ほど待ってからもう一度話しかけてね。";

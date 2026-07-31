@@ -1235,12 +1235,38 @@ body:has(.realverse-bg) { background: transparent; }
   display: inline-block; padding: 11px 22px; border-radius: 999px; font-size: .82rem; font-weight: 700;
   color: #2a2010; background: linear-gradient(160deg,#eed69b,#c9a55e); border: none;
 }
-.fletter-sign { margin-top: 16px; font-size: .72rem; color: #8a6d3a; text-align: right; }
-.fletter-close {
-  display: block; width: 100%; margin-top: 18px; padding: 12px; border-radius: 12px;
-  font-size: .84rem; font-weight: 700; color: #f4e7c8;
-  background: rgba(30,24,16,.85); border: 1px solid rgba(232,208,150,.4);
+/* ピークステートとは何かの説明（押す前に必ず読ませる） */
+.fletter-peekdef {
+  margin: 14px 0 12px; padding: 11px 13px; border-radius: 12px;
+  font-size: .76rem; line-height: 1.85; color: #6b5630;
+  background: rgba(201,165,94,.12); border: 1px solid rgba(201,165,94,.32);
 }
+.fletter-peekdef b { color: #8a6a2c; font-weight: 700; }
+.fletter-peekdef em { font-style: normal; font-weight: 700; color: #4a3a1c; font-size: .86rem; }
+
+/* こっちが主役。大きく・光らせて、迷わず押せるように */
+.fletter-cta.is-main {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  width: 100%; padding: 14px 18px; border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(201,165,94,.45);
+  animation: fl-breathe 2.6s ease-in-out infinite;
+}
+@keyframes fl-breathe {
+  0%,100% { box-shadow: 0 10px 30px rgba(201,165,94,.4); transform: none; }
+  50% { box-shadow: 0 14px 40px rgba(201,165,94,.65); transform: translateY(-2px); }
+}
+.fletter-cta.is-main .c-lead { font-size: .64rem; letter-spacing: .14em; opacity: .8; }
+.fletter-cta.is-main .c-main { font-size: .95rem; font-weight: 700; }
+.fletter-cta.is-main .c-sub { font-size: .66rem; font-weight: 400; opacity: .82; }
+
+.fletter-sign { margin-top: 16px; font-size: .72rem; color: #8a6d3a; text-align: right; }
+/* 「あとで」は脇役。小さく、控えめに */
+.fletter-close {
+  display: block; margin: 14px auto 0; padding: 8px 16px; border-radius: 999px;
+  font-size: .72rem; font-weight: 400; color: #8a6d3a;
+  background: transparent; border: 1px solid rgba(138,109,58,.32);
+}
+.fletter-close:hover { background: rgba(138,109,58,.1); color: #5a4520; }
 /* ホームの読み返しボタン（小さく） */
 .iw-letter-reopen {
   align-self: center; margin-bottom: 2px; padding: 6px 14px; border-radius: 999px;

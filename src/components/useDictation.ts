@@ -25,6 +25,17 @@ function pickMime(): string {
   return "";
 }
 
+/**
+ * 書き起こしのはずが、AIへの指示文がそのまま返ってくることがある
+ * （音声を聞き取れなかったモデルがプロンプトをオウム返しする）。
+ * それを入力欄に入れてしまわないための判定。サーバ側でも同じ検査をしている。
+ */
+const PROMPT_MARKERS = ["polished", "逐語書き起こし", "JSONだけ", "フィラー", "この音声はアプリの音声入力", "出力形式", "整形版"];
+function looksLikePrompt(s: string): boolean {
+  if (!s) return false;
+  return PROMPT_MARKERS.filter((m) => s.includes(m)).length >= 2;
+}
+
 export function useDictation() {
   const [phase, setPhase] = useState<DictPhase>("idle");
   const [seconds, setSeconds] = useState(0);
@@ -142,7 +153,13 @@ export function useDictation() {
         setError(d?.detail ? `${d.error}（${String(d.detail).slice(0, 90)}）` : (d?.error || "文字化に失敗しました"));
         return null;
       }
-      return String(d.text ?? "").trim() || null;
+      const text = String(d.text ?? "").trim();
+      // 最後の砦：万一AIへの指示文がそのまま返ってきても、入力欄には絶対に入れない
+      if (looksLikePrompt(text)) {
+        setError("うまく聞き取れなかった。もう一度、少しはっきり話してみて。");
+        return null;
+      }
+      return text || null;
     } catch (e: any) {
       setError("通信に失敗しました。もう一度試してね。");
       return null;

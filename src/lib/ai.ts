@@ -432,8 +432,20 @@ export async function complete(opts: {
   prompt: string;
   maxTokens?: number;
   temperature?: number;
+  /**
+   * 使いたいエンジンの指名。指名できないとき（キーが無い等）は通常の選び方に戻る。
+   * 例：音声の整形は Claude(Haiku) が指示を守るので "claude" を指名する。
+   */
+  prefer?: AIEngine;
 }): Promise<string> {
-  const { engine, geminiKey } = await pickEngine(opts.userId);
+  const picked = await pickEngine(opts.userId).catch((e) => {
+    // Claude 指名で ANTHROPIC_API_KEY があるなら、Gemini キーが無くても進める
+    if (opts.prefer === "claude" && process.env.ANTHROPIC_API_KEY) return { engine: "claude" as AIEngine };
+    throw e;
+  });
+  let { engine } = picked;
+  const { geminiKey } = picked as { geminiKey?: string };
+  if (opts.prefer === "claude" && process.env.ANTHROPIC_API_KEY) engine = "claude";
 
   if (engine === "gemini") {
     let lastErr: unknown = null;

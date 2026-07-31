@@ -1,19 +1,26 @@
 /**
  * 音声→整った文章（Typeless級の音声入力エンジン）。
  *
- * 費用設計（BYO-key）:
- *   1. 【標準】ユーザー自身の Gemini キーで、文字起こし＋整形を1回の呼び出しで行う
- *      → 運営（淳くん）のAPI費用はゼロ。各ユーザーの無料枠内で動く
- *   2. 【予備】OPENAI_API_KEY があれば、Gemini失敗時だけ高精度ASRに退避（任意）
+ * 工程を2つに分けている（ここが事故防止の要）:
+ *   ① 聞く（音声→逐語）   … Gemini。音声を扱えるのがこちらだけのため
+ *   ② 整える（逐語→本文） … Claude(Haiku)。src/lib/polish.ts
+ * 以前は①②を1回のJSONでGeminiにやらせていたが、指示が複雑なぶん、
+ * 聞き取れなかったモデルが「指示文そのもの」を返し、入力欄に貼りつく事故が起きた。
  *
- * 品質設計（Typeless調査レポート準拠）:
- *   - 逐語（言い直し・フィラー込み）をまず取り、LLM整形で最終意図だけ残す
- *   - 数字・否定・固有名詞は保護。忠実性チェックに落ちたら逐語へフォールバック
- *   - 小声対応はクライアント側（全区間録音＋AGC＋NSオフ）とプロンプトのささやきヒントで行う
+ * 費用設計（BYO-key）:
+ *   - 聞く工程はユーザー自身の Gemini キー（無料枠内）
+ *   - 整える工程は Haiku。キーが無ければ通常のエンジンに自動で戻る
+ *   - OPENAI_API_KEY があれば、Gemini失敗時だけ高精度ASRに退避（任意）
+ *
+ * 品質設計:
+ *   - 逐語（言い直し・フィラー込み）をまず取り、整形で最終意図だけ残す
+ *   - 数字・盛り・箇条書き化・指示文エコーを検査し、落ちたら逐語へ戻す
+ *   - 小声対応はクライアント側（全区間録音＋AGC＋NSオフ）で行う
  *   - 音声は保存しない（メモリ上で処理して破棄）
  */
 import { auth } from "@/auth";
 import { getUserSettings } from "@/lib/supabase";
+import { polishSpeech, looksLikePromptEcho } from "@/lib/polish";
 
 export const maxDuration = 60;
 
@@ -36,51 +43,19 @@ function json(o: any, status = 200) {
   return new Response(JSON.stringify(o), { status, headers: { "Content-Type": "application/json" } });
 }
 
-function digitsOf(s: string): string[] {
-  return (s.match(/\d+/g) ?? []).map((d) => d.replace(/^0+(?=\d)/, ""));
-}
-/** LLM整形が「忠実」か。壊れていれば逐語へ戻す */
-function isFaithful(raw: string, polished: string): boolean {
-  if (!polished.trim()) return false;
-  if (polished.length < raw.length * 0.35 && raw.length > 40) return false;
-  const rawD = new Set(digitsOf(raw));
-  for (const d of digitsOf(polished)) if (!rawD.has(d)) return false;
-  return true;
-}
-
-/**
- * モデルが「音声を聞き取れなかったとき」に、指示文そのものをオウム返しして返すことがある。
- * （数回使って上限に当たり、音声の理解が弱いモデルへ切り替わったときに起きやすい）
- * そのまま入力欄に入ると、プロンプトが本文として貼りつく事故になるので、必ず弾く。
- */
-const ECHO_MARKERS = [
-  "polished", "逐語書き起こし", "JSONだけ", "フィラー", "この音声はアプリの音声入力",
-  "出力形式", "整形版", "言い直し", "音声入力。",
-];
-function looksLikeEcho(s: string): boolean {
-  if (!s) return false;
-  const hits = ECHO_MARKERS.filter((m) => s.includes(m)).length;
-  if (hits >= 2) return true;
-  // 指示文の冒頭がそのまま入っている場合も弾く
-  return s.replace(/\s/g, "").includes("この音声はアプリの音声入力");
-}
-
-const INSTRUCTION = `この音声はアプリの音声入力。ささやき声や小さな声のこともある。次の2つを作ってJSONだけで返して。
-
-1. "raw": 聞こえたままの逐語書き起こし（言い直し・「えー」等のフィラーもそのまま）
-2. "polished": 入力欄にそのまま入れられる整形版。ルール:
-   - 新しい事実・挨拶・締めの文を加えない。要約しない。
-   - 単独フィラー（えー/あの/なんか等）だけ除去。意味のある語は残す。
-   - 言い直し（例:「金曜、あ、土曜に」）は最後の意図だけ残す。
-   - 数字・日付・金額・URL・固有名詞・否定表現（〜ない/なし/禁止/不要/以外）は一字も変えない。
-   - 句読点と改行を軽く整える。文体は元のまま。
-
-出力形式: {"raw":"...","polished":"..."}`;
+// Gemini にやってもらうのは「聞こえたまま書き起こす」ことだけ。
+// 以前は整形まで1回のJSONでやらせていたが、指示が複雑なぶん、
+// 聞き取れなかったモデルが指示文をそのまま返してくる事故が起きた。
+// 工程を分け、整えるのは Claude(Haiku) に任せる（src/lib/polish.ts）。
+const INSTRUCTION = `この音声を、聞こえたまま日本語で書き起こして。
+- ささやき声や小さな声のこともある。拾えるだけ拾う。
+- 言い直しや「えー」などもそのまま書く。
+- 書き起こした文だけを返す。前置き・説明・記号は付けない。`;
 
 async function sttGemini(
   key: string, b64: string, mime: string,
   log: string[] = [],   // 失敗理由を持ち帰る（リクエストごと。ユーザー間で共有しない）
-): Promise<{ raw: string; polished: string } | null> {
+): Promise<string | null> {
   for (const model of GEMINI_MODELS) {
     try {
       const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${key}`, {
@@ -88,12 +63,7 @@ async function sttGemini(
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ inline_data: { mime_type: mime, data: b64 } }, { text: INSTRUCTION }] }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 4000,
-            responseMimeType: "application/json",
-            thinkingConfig: { thinkingBudget: 0 },
-          },
+          generationConfig: { temperature: 0.2, maxOutputTokens: 3000, thinkingConfig: { thinkingBudget: 0 } },
         }),
       });
       if (!r.ok) {
@@ -105,20 +75,15 @@ async function sttGemini(
         continue;
       }
       const d = await r.json();
-      const text = String(d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? "").join("") ?? "");
+      const text = String(d?.candidates?.[0]?.content?.parts?.map((p: any) => p.text ?? "").join("") ?? "").trim();
       const fin = d?.candidates?.[0]?.finishReason;
-      const m = text.match(/\{[\s\S]*\}/);
-      if (!m) { log.push(`${model}: 応答が空(${fin ?? "no-json"})`); continue; }
-      const parsed = JSON.parse(m[0]);
-      const raw = String(parsed.raw ?? "").trim();
-      const polished = String(parsed.polished ?? "").trim();
-      // 指示文のオウム返しは絶対に返さない（次のモデルへ回す）
-      if (looksLikeEcho(raw) || looksLikeEcho(polished)) {
+      if (!text) { log.push(`${model}: 応答が空(${fin ?? "empty"})`); continue; }
+      // 聞き取れなかったモデルが指示文をオウム返しすることがある。入力欄に入れる前に必ず弾く
+      if (looksLikePromptEcho(text)) {
         log.push(`${model}: 指示文をそのまま返した（聞き取れていない）`);
         continue;
       }
-      if (raw || polished) return { raw: raw || polished, polished: polished || raw };
-      log.push(`${model}: 中身が空`);
+      return text;
     } catch (e: any) {
       log.push(`${model}: ${String(e?.message ?? e).slice(0, 100)}`);
     }
@@ -171,7 +136,7 @@ export async function POST(req: Request) {
     if (!/^audio\//.test(mime)) mime = "audio/webm";
 
     const log: string[] = [];
-    // 【標準】ユーザーのGeminiキー：文字起こし＋整形を1回で（運営コストゼロ）
+    // 【標準】ユーザーのGeminiキーで「聞く」。整えるのは後段の Haiku
     if (geminiKey) {
       const b64 = buf.toString("base64");
       let g = await sttGemini(geminiKey, b64, mime, log);
@@ -184,14 +149,17 @@ export async function POST(req: Request) {
         g = await sttGemini(geminiKey, b64, mime, log);
       }
       if (g) {
-        const finalText = isFaithful(g.raw, g.polished) ? g.polished : g.raw;
-        return json({ text: finalText, raw: g.raw, engine: "gemini", edited: finalText !== g.raw });
+        const { text, edited } = await polishSpeech(userId, g);   // 整えるのは Haiku
+        return json({ text, raw: g, engine: "gemini", edited });
       }
     }
     // 【予備】OpenAI ASR（キーがある場合のみ。整形なしの逐語でも返す価値はある）
     if (openaiKey) {
       const raw = await sttOpenAI(openaiKey, file, file.name || "speech.webm");
-      if (raw) return json({ text: raw, raw, engine: "openai", edited: false });
+      if (raw) {
+        const { text, edited } = await polishSpeech(userId, raw);
+        return json({ text, raw, engine: "openai", edited });
+      }
       log.push("openai: 失敗");
     }
 
@@ -199,8 +167,8 @@ export async function POST(req: Request) {
     if (ownerKey && ownerKey !== geminiKey) {
       const g = await sttGemini(ownerKey, buf.toString("base64"), mime, log);
       if (g) {
-        const finalText = isFaithful(g.raw, g.polished) ? g.polished : g.raw;
-        return json({ text: finalText, raw: g.raw, engine: "gemini-owner", edited: finalText !== g.raw });
+        const { text, edited } = await polishSpeech(userId, g);
+        return json({ text, raw: g, engine: "gemini-owner", edited });
       }
     }
 

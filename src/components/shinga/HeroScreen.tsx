@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { AwakenChart } from "./AwakenChart";
 
 /**
  * 主人公レベル画面（本人が現在地を選ぶ）。
@@ -173,6 +174,7 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
                   })}
                 </div>
                 {hero?.history && hero.history.length >= 2 && <HeroChange history={hero.history} />}
+                <AwakenChart />
                 <button className="hero-btn is-go" onClick={() => setPicking(true)}>今の現在地を選びなおす</button>
                 <p className="hero-note">選んだ値が基礎。これから会話（パラレルウォーク等）の中でも動いていくよ。</p>
               </>

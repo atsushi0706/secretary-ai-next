@@ -91,7 +91,7 @@ export function InnerHud({ guideName }: { guideName: string }) {
                 </button>
                 <span className="q-text">{it.text}</span>
                 {!it.done && <button className="q-doneb" onClick={() => post({ action: "done", index: i, done: true })}>できた</button>}
-                <button className="q-del" onClick={() => post({ action: "remove", index: i })} title="消す">×</button>
+                {/* 未来から届いたクエストは、やってもやらなくても消さずに残す（記録として） */}
               </li>
             ))}
           </ul>
@@ -201,8 +201,9 @@ function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: nu
         </div>
         <div className="b-fix-note">
           ＝ 空想したら、その日のうちに小さく1個やって✓。これを続けると、ゾーンに居つづけられる。<br />
-          <b>やりすぎて右（現実）に寄った時</b>は、✓を減らすんじゃなく<b>パラレルウォークで空想を足す</b>。
-          こなすだけの毎日にならないように、理想を見る時間を戻すのが正解だよ。
+          <b>針が右（現実）に寄るのは</b>、パラレルウォークをしない日が続いて<b>✓だけを重ねたとき</b>。
+          そのときは✓を減らすんじゃなく<b>パラレルウォークで空想を足す</b>。
+          こなすだけの毎日にならないよう、理想を見る時間を戻すのが正解だよ。
         </div>
       </div>
     </div>

@@ -2528,3 +2528,37 @@ body:has(.realverse-bg) { background: transparent; }
 /* ハイヤークエスト：まだ届いてない日の案内（場所を見失わせない） */
 .ihud-quest.is-empty{opacity:.9;border-style:dashed}
 .ihud-quest.is-empty .q-lead b{color:#eed69b}
+
+/* ── 覚醒能力（六角形）＋スキルカード ── */
+.awaken{margin-top:16px;padding-top:14px;border-top:1px solid rgba(255,255,255,.1)}
+.awaken .aw-title{font-size:.86rem;font-weight:800;color:var(--singa-gold);display:flex;align-items:center;gap:8px}
+.awaken .aw-count{font-size:.66rem;color:var(--singa-ink-soft);font-weight:600}
+.awaken .aw-lead{font-size:.72rem;color:var(--singa-ink-soft);line-height:1.6;margin:4px 0 8px}
+.awaken .aw-chart{width:100%;max-width:280px;display:block;margin:4px auto 8px}
+.awaken .aw-grid{fill:none;stroke:rgba(255,255,255,.12);stroke-width:1}
+.awaken .aw-spoke{stroke:rgba(255,255,255,.1);stroke-width:1}
+.awaken .aw-value{fill:rgba(140,235,165,.28);stroke:#8fd07a;stroke-width:2;filter:drop-shadow(0 0 8px rgba(140,235,165,.5))}
+.awaken .aw-label{font-size:9px;fill:var(--singa-ink);font-weight:700}
+.awaken .aw-label.is-locked{fill:rgba(255,255,255,.35)}
+.awaken .aw-list{display:flex;flex-direction:column;gap:5px;margin-top:6px}
+.awaken .aw-item{display:flex;align-items:center;gap:8px;flex-wrap:wrap;text-align:left;padding:7px 9px;border-radius:9px;
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08)}
+.awaken .aw-item.is-open{border-color:rgba(140,235,165,.45);background:rgba(140,235,165,.1)}
+.awaken .aw-item.is-locked{opacity:.55}
+.awaken .aw-item .n{flex:1;font-size:.78rem;font-weight:700;color:var(--singa-ink)}
+.awaken .aw-item .v{font-size:.86rem;font-weight:900;color:#a6e6b0;font-variant-numeric:tabular-nums}
+.awaken .aw-item .d{flex-basis:100%;font-size:.7rem;line-height:1.65;color:var(--singa-ink-soft);margin-top:4px}
+.awaken .aw-item .d em{display:block;margin-top:3px;font-style:normal;color:var(--singa-gold);font-size:.68rem}
+.awaken .aw-cards{margin-top:14px}
+.awaken .aw-cardlist{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.awaken .aw-card{padding:10px 11px;border-radius:11px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05)}
+.awaken .aw-card.r-gold{border-color:rgba(238,214,155,.6);background:linear-gradient(160deg,rgba(238,214,155,.16),rgba(201,165,94,.08))}
+.awaken .aw-card.r-silver{border-color:rgba(210,215,225,.5);background:rgba(210,215,225,.09)}
+.awaken .aw-card.r-bronze{border-color:rgba(198,142,90,.5);background:rgba(198,142,90,.09)}
+.awaken .aw-card .c-top{display:flex;align-items:center;gap:7px}
+.awaken .aw-card .c-rar{font-size:.62rem;font-weight:900;padding:2px 7px;border-radius:999px;color:#221b10;background:linear-gradient(160deg,#eed69b,#c9a55e)}
+.awaken .aw-card.r-silver .c-rar{background:linear-gradient(160deg,#e8ecf2,#b8c0cc)}
+.awaken .aw-card.r-bronze .c-rar{background:linear-gradient(160deg,#e0a878,#b3763f)}
+.awaken .aw-card .c-title{font-size:.84rem;font-weight:800;color:var(--singa-ink)}
+.awaken .aw-card .c-body{margin-top:5px;font-size:.74rem;line-height:1.7;color:var(--singa-ink)}
+.awaken .aw-card .c-src{margin-top:5px;font-size:.62rem;color:var(--singa-ink-soft)}

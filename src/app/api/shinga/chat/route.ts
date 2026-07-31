@@ -234,6 +234,39 @@ export async function POST(req: Request) {
         if (wantEmotion) send("emotion", {});
         if (wantBreath) send("breath", {});
         if (wallStage) send("wall", { stage: wallStage });
+
+        // 壁が全開＝ブロックが壊れた瞬間。そこで生まれた力を「スキルカード」として授ける
+        if (wallStage === 5) {
+          try {
+            const { grantSkillCard } = await import("@/lib/awaken");
+            const { complete } = await import("@/lib/ai");
+            const talked = [...history.map((h) => h.content), clean].join("\n").slice(-1800);
+            const raw = await complete({
+              userId,
+              prompt: `下は「どうせ無理」という思い込みを越えた対話。ここで壊れたブロックと、その裏返しで手に入った力を、カード1枚にして。
+JSONだけで返す：{"title":"力の名前(8〜14字・かっこよく)","body":"どんな力か(40〜60字・その人の言葉に基づいて)","broke":"壊れたブロック(15字以内)"}
+
+# 対話
+${talked}`,
+              maxTokens: 400, temperature: 0.9,
+            });
+            const m = String(raw ?? "").match(/\{[\s\S]*\}/);
+            if (m) {
+              const c = JSON.parse(m[0]);
+              const title = String(c.title ?? "").trim();
+              if (title) {
+                await grantSkillCard(userId, {
+                  key: `wall-${today}-${title.slice(0, 8)}`,
+                  title,
+                  body: String(c.body ?? "").trim(),
+                  rarity: "gold",   // 壁を壊すのは最上位の出来事
+                  source: `ウォールブレイク（${String(c.broke ?? "").trim()}を破壊）`,
+                });
+                send("skill", { title, body: String(c.body ?? "").trim(), rarity: "gold" });
+              }
+            }
+          } catch { /* カードが出せなくても会話は続ける */ }
+        }
         if (choices) send("choices", { choices });
         if (moveTo) send("move", { place: moveTo });
         if (addedQuests.length > 0) send("quests", { quests: addedQuests });

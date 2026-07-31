@@ -58,11 +58,10 @@ export function InnerHud({ guideName }: { guideName: string }) {
         <div className="ihud-quest is-empty">
           <div className="q-head">
             <span className="q-title">🔨 ハイヤークエスト</span>
-            <span className="q-badge">今日はまだ届いてない</span>
+            <span className="q-badge">受け取り待ち</span>
           </div>
           <p className="q-lead">
-            毎朝、<b>未来からクエストが届く</b>よ。それを受け取ると、ここに「今日の一手」が入る。
-            やって<b>✓</b>を付けると<b>現実化</b>＝メーターの針が右（ゾーン）へ動く。
+            上の<b>「🎴 未来からのクエストが届いてる」</b>を開いて受け取ると、ここに「今日の一手」が入るよ。
           </p>
         </div>
       )}
@@ -147,6 +146,7 @@ function LevelBar({ level }: { level: Level }) {
  * 現実に寄りすぎ＝やることに追われて未来が見えてない。空想に寄りすぎ＝上に浮いて地に足がついてない。
  */
 function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: number }) {
+  const [open, setOpen] = useState(false); // 説明はふだん畳んでおく（うるさくしない）
   const total = imageDays + realDays;
   const diff = realDays - imageDays; // 正＝現実寄り / 負＝空想寄り
   const pos = total === 0 ? 50 : Math.max(8, Math.min(92, 50 + (diff / total) * 42));
@@ -173,9 +173,10 @@ function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: nu
 
   return (
     <div className={`balance ${state}`}>
-      <div className="b-head">
+      <button className="b-head" onClick={() => setOpen((v) => !v)}>
         <span className="b-status">{status}</span>
-      </div>
+        <span className="b-toggle">{open ? "▲ 閉じる" : "▼ くわしく"}</span>
+      </button>
 
       <div className="b-track">
         <span className="b-side left">🔮 空想</span>
@@ -188,6 +189,8 @@ function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: nu
       </div>
       <div className="b-legend"><span className="dot zone" />中央＝ゾーン<span className="dot flow" />その外側＝フロー</div>
 
+      {!open ? null : (
+      <>
       <div className="b-why">{why}</div>
 
       {/* 真ん中に戻す調整方法（効く方を強調） */}
@@ -206,6 +209,8 @@ function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: nu
           こなすだけの毎日にならないよう、理想を見る時間を戻すのが正解だよ。
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

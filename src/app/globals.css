@@ -2597,3 +2597,7 @@ body:has(.realverse-bg) { background: transparent; }
 .rv-rest{display:block;width:100%;padding:11px;border-radius:11px;font-size:.86rem;font-weight:800;text-align:center;
   color:#fff;background:linear-gradient(160deg,#7c6bd8,#5b4bb8);box-shadow:0 6px 18px rgba(91,75,184,.3)}
 .rv-skip{width:100%;margin-top:7px;font-size:.72rem;color:#8b83a8}
+
+/* バランスメーター：説明の開閉トグル */
+.balance .b-head{display:flex;align-items:center;gap:8px;width:100%;text-align:left}
+.balance .b-toggle{margin-left:auto;font-size:.64rem;color:var(--singa-ink-soft);white-space:nowrap}

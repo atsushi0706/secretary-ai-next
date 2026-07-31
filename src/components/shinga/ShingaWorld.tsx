@@ -154,10 +154,12 @@ export function ShingaWorld({
     })();
   }, []);
 
-  // 未来からのクエストカード（3日連続で使うと届く）。ホームで「届いてる」演出を出すため先読み。
+  // 未来からのクエストカード（毎日1枚）。開いた時点でその日の分が用意されるので、
+  // 朝の通知を受け取れていなくても、アプリを開けば必ず届く。
   useEffect(() => {
     fetch("/api/quest-card").then((r) => r.json()).then((d) => {
       if (d?.card) setCard(d.card);
+      else if (d?.needsMigration) console.warn("[quest-card] テーブル未作成のためカードを配れません");
     }).catch(() => {});
   }, []);
 

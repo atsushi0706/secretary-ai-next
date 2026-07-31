@@ -2601,3 +2601,11 @@ body:has(.realverse-bg) { background: transparent; }
 /* バランスメーター：説明の開閉トグル */
 .balance .b-head{display:flex;align-items:center;gap:8px;width:100%;text-align:left}
 .balance .b-toggle{margin-left:auto;font-size:.64rem;color:var(--singa-ink-soft);white-space:nowrap}
+
+/* 対話から読み取った偏り（癖と、戻す一言） */
+.balance .b-read{margin-top:9px;padding:9px 11px;border-radius:10px;
+  background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12)}
+.balance.image .b-read{border-color:rgba(183,166,245,.4);background:rgba(183,166,245,.1)}
+.balance.real .b-read{border-color:rgba(238,207,143,.4);background:rgba(238,207,143,.1)}
+.balance .br-pattern{font-size:.68rem;font-weight:700;color:var(--singa-ink-soft);line-height:1.5}
+.balance .br-msg{margin-top:5px;font-size:.78rem;line-height:1.75;color:var(--singa-ink)}

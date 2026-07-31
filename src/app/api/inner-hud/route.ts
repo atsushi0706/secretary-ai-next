@@ -7,6 +7,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { computeGrounding, computeLevel, getTodayQuest, addQuestItem, toggleQuestItem, removeQuestItem, reconcileQuestWithTasks } from "@/lib/inner";
+import { readLean } from "@/lib/lean";
 import { isMissingTable, MIGRATION_HINT } from "@/lib/shinga";
 import { logError } from "@/lib/supabase";
 
@@ -22,8 +23,13 @@ export async function GET() {
   try {
     // 先にリアルバース(Googleタスク)→インナーの連動を合わせてから、状態を読む
     await reconcileQuestWithTasks(userId).catch(() => {});
-    const [grounding, quest, level] = await Promise.all([computeGrounding(userId), getTodayQuest(userId), computeLevel(userId)]);
-    return NextResponse.json({ grounding, quest, level });
+    const [grounding, quest, level, lean] = await Promise.all([
+      computeGrounding(userId),
+      getTodayQuest(userId),
+      computeLevel(userId),
+      readLean(userId).catch(() => null),   // 対話の中身から偏りを読む（材料が薄ければ null）
+    ]);
+    return NextResponse.json({ grounding, quest, level, lean });
   } catch (e: any) {
     if (!isMissingTable(e)) await logError(userId, "/api/inner-hud", e);
     return fail(e);

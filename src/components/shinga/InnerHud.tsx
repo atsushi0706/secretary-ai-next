@@ -12,17 +12,21 @@ type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
 type LevelAction = { key: string; label: string; per: number; days: number; earnedToday: boolean };
 type Level = { level: number; max: number; actions: LevelAction[] };
+// 対話の中身から読み取った偏り（回数では見えない"状態"）
+type Lean = { lean: "image" | "real" | "zone"; strength: number; pattern: string; message: string };
 
 export function InnerHud({ guideName }: { guideName: string }) {
   const [g, setG] = useState<Grounding>({ imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [level, setLevel] = useState<Level | null>(null);
+  const [lean, setLean] = useState<Lean | null>(null);
   const [ready, setReady] = useState(false);
 
-  function apply(d: { grounding?: Grounding; quest?: Quest; level?: Level }) {
+  function apply(d: { grounding?: Grounding; quest?: Quest; level?: Level; lean?: Lean | null }) {
     if (d.grounding) setG(d.grounding);
     if (d.quest) setQuest(d.quest);
     if (d.level) setLevel(d.level);
+    if (d.lean !== undefined) setLean(d.lean ?? null);
   }
 
   useEffect(() => {
@@ -50,7 +54,7 @@ export function InnerHud({ guideName }: { guideName: string }) {
       {level && <LevelBar level={level} />}
 
       {/* 空想↔現実のバランス（中央＝フロー） */}
-      <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} />
+      <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} lean={lean} />
 
       {/* ハイヤークエスト＝未来から降りてきたクエストと同じもの。
           まだ決まっていない日も「どこにあるか」が分かるよう、場所だけは常に見せる。 */}
@@ -145,13 +149,26 @@ function LevelBar({ level }: { level: Level }) {
  * 空想↔現実のバランス。%ではなく"どっちに寄ってるか"。中央＝フロー（空想を現実に落とし込めている＝最適）。
  * 現実に寄りすぎ＝やることに追われて未来が見えてない。空想に寄りすぎ＝上に浮いて地に足がついてない。
  */
-function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: number }) {
+function BalanceMeter({ imageDays, realDays, lean }: { imageDays: number; realDays: number; lean?: Lean | null }) {
   const [open, setOpen] = useState(false); // 説明はふだん畳んでおく（うるさくしない）
   const total = imageDays + realDays;
   const diff = realDays - imageDays; // 正＝現実寄り / 負＝空想寄り
-  const pos = total === 0 ? 50 : Math.max(8, Math.min(92, 50 + (diff / total) * 42));
+  const byCount = total === 0 ? 50 : Math.max(8, Math.min(92, 50 + (diff / total) * 42));
+  // 対話から読み取った偏りを重ねる（回数では見えない"状態"の方を強めに効かせる）
+  const byTalk = lean
+    ? lean.lean === "real" ? 50 + (lean.strength / 100) * 42
+      : lean.lean === "image" ? 50 - (lean.strength / 100) * 42
+      : 50
+    : null;
+  // 対話がはっきり偏りを示しているときは、回数と食い違っても対話を信じる。
+  // （例：✓は毎日あるのに、話しているのは不安ばかり ＝ 実際は空想寄り。
+  //   ここで平均すると打ち消し合って「整っている」に見えてしまう）
+  const talkStrong = !!lean && lean.lean !== "zone" && lean.strength >= 50;
+  const pos = byTalk == null ? byCount
+    : talkStrong ? Math.max(8, Math.min(92, byTalk))
+    : Math.max(8, Math.min(92, byCount * 0.4 + byTalk * 0.6));
   const off = Math.abs(pos - 50); // 中央からのズレ
-  const state = total === 0 ? "neutral" : off <= 9 ? "zone" : off <= 22 ? "flow" : diff > 0 ? "real" : "image";
+  const state = (total === 0 && !lean) ? "neutral" : off <= 9 ? "zone" : off <= 22 ? "flow" : pos > 50 ? "real" : "image";
 
   const status =
     state === "neutral" ? "まだ静か"
@@ -188,6 +205,14 @@ function BalanceMeter({ imageDays, realDays }: { imageDays: number; realDays: nu
         <span className="b-side right">現実 🔨</span>
       </div>
       <div className="b-legend"><span className="dot zone" />中央＝ゾーン<span className="dot flow" />その外側＝フロー</div>
+
+      {/* 対話から見つけた癖と、真ん中へ戻す一言（回数では見えない状態） */}
+      {lean && lean.lean !== "zone" && lean.message && (
+        <div className="b-read">
+          <div className="br-pattern">👀 {lean.pattern}</div>
+          <div className="br-msg">{lean.message}</div>
+        </div>
+      )}
 
       {!open ? null : (
       <>

@@ -28,11 +28,15 @@ export default function WelcomePage() {
         <div className="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full mb-4">
           Googleログインだけで始められる
         </div>
-        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
-          <span className="block text-2xl sm:text-3xl mb-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".04em" }}>Singa World</span>
+        {/* アプリ名は h1 で独立させる（説明文と連結すると、確認時に名前が識別されない） */}
+        <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 mb-3"
+            style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".04em" }}>
+          Singa World
+        </h1>
+        <p className="text-xl sm:text-2xl font-bold text-gray-800 leading-snug mb-4">
           AIとの対話で1日の予定とタスクを整理する<br className="hidden sm:block" />
           <span className="text-[var(--accent)]">パーソナル秘書アプリ</span>
-        </h1>
+        </p>
         <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8">
           <strong>Singa World は、AI秘書との会話で「やること」を整理し、Google カレンダーと Google ToDo リストに
           自動で振り分けるWebアプリです。</strong><br className="hidden sm:block" />
@@ -138,7 +142,15 @@ export default function WelcomePage() {
       {/* フッター */}
       <footer className="border-t border-purple-100 py-8 text-center text-xs text-gray-500">
         © Singa World — Powered by Claude &amp; Gemini
-        <div className="mt-2">
+        {/* Google OAuth の確認要件：ホームページからプライバシーポリシー／利用規約へのリンクが必要
+            （同意画面に設定したURLと完全に一致させる） */}
+        <div className="mt-3 flex items-center justify-center gap-4">
+          <a href="https://singaworld.rinq-systeme.jp/privacy" className="text-purple-700 hover:underline">
+            プライバシーポリシー
+          </a>
+          <a href="https://singaworld.rinq-systeme.jp/terms" className="text-purple-700 hover:underline">
+            利用規約
+          </a>
           <Link href="/login" className="text-purple-700 hover:underline">ログイン</Link>
         </div>
       </footer>

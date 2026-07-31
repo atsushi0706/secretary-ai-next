@@ -16,6 +16,8 @@ import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
+import { PartsGate, PartsProgress, GuardianReveal, type GuardianEvent } from "./PartsTemple";
+import type { PartColor, PartsStep } from "@/lib/parts";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -72,6 +74,13 @@ export function ShingaWorld({
   const [choices, setChoices] = useState<Choice[] | null>(null);
   const [widget, setWidget] = useState<"emotion" | "breath" | null>(null);
   const [wallStage, setWallStage] = useState(1); // ウォールブレイク：扉の開き具合(1=閉〜5=全開)
+  // 内なる子の神殿：入口(gate)で守り手を選ぶ → ワーク中は色と段階を持つ
+  const [partsGate, setPartsGate] = useState(false);
+  const [partColor, setPartColor] = useState<PartColor | null>(null);
+  // 選んだ直後にすぐ talk() へ渡す必要があるので、state と同時に ref にも入れる
+  const partColorRef = useRef<PartColor | null>(null);
+  const [partsStep, setPartsStep] = useState<PartsStep>(1);
+  const [guardianEv, setGuardianEv] = useState<GuardianEvent | null>(null);
   const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
   const [sending, setSending] = useState(false);
@@ -288,6 +297,19 @@ export function ShingaWorld({
   }, []);
 
   async function enter(m: ModeKey, resume = false) {
+    // 内なる子の神殿は、いきなり会話に入らない。まず守り手を選ぶ盤面を出す。
+    if (m === "parts" && !resume) {
+      setMode("parts");
+      setPlace(MODES.parts.place);
+      setView("talk");
+      setChoices(null); setWidget(null); setEmoPick(null);
+      setMessages([]);
+      partColorRef.current = null;
+      setPartColor(null);
+      setPartsStep(1);
+      setPartsGate(true);
+      return;
+    }
     setMode(m);
     setPlace(MODES[m].place);
     setView("talk");
@@ -367,7 +389,11 @@ export function ShingaWorld({
       const r = await fetch("/api/shinga/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: body, place: p, mode: m ?? undefined, greet, opener, debug: debugAvailable && debug }),
+        body: JSON.stringify({
+          text: body, place: p, mode: m ?? undefined, greet, opener,
+          partColor: m === "parts" ? partColorRef.current ?? undefined : undefined,
+          debug: debugAvailable && debug,
+        }),
       });
       if (!r.ok) {
         const err = await r.json().catch(() => ({}));
@@ -394,6 +420,17 @@ export function ShingaWorld({
           // ウォールブレイク：壁が解けた度合いに応じて扉が開く（1〜5）
           const s = Number(data?.stage);
           if (Number.isFinite(s)) setWallStage(Math.max(1, Math.min(5, s)));
+        } else if (name === "parts_step") {
+          // 内なる子の神殿：段階が進むと、前に出る姿が守り手→内なる子へ変わる
+          const s = Number(data?.step);
+          if (Number.isFinite(s)) setPartsStep(Math.max(1, Math.min(6, s)) as PartsStep);
+        } else if (name === "guardian") {
+          // 守り手が解き放たれた。進化演出を出す（色が未確定だったならここで確定）
+          const ev = data as GuardianEvent;
+          partColorRef.current = ev.color;
+          setPartColor(ev.color);
+          setPartsStep(6);
+          setGuardianEv(ev);
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
@@ -481,6 +518,9 @@ export function ShingaWorld({
         />
       </div>
 
+      {/* 守り手が解き放たれた瞬間：ガーディアンへの進化演出 */}
+      {guardianEv && <GuardianReveal ev={guardianEv} onClose={() => setGuardianEv(null)} />}
+
       {/* 会話で主人公レベルが動いたときの、そっと出るお知らせ */}
       {heroToast && (
         <div className="hero-toast" onClick={() => { setHeroToast(null); setHeroOpen(true); }}>
@@ -552,7 +592,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { setView("home"); setChoices(null); setWidget(null); setEmoPick(null); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 
@@ -560,6 +600,20 @@ export function ShingaWorld({
             <span className="en">{mode ? MODES[mode].en : here.en}</span>
             <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
           </div>
+
+          {/* 内なる子の神殿：まず守り手を選ぶ盤面（選んだらワークの会話が始まる） */}
+          {mode === "parts" && partsGate && (
+            <PartsGate onStart={(c) => {
+              partColorRef.current = c;
+              setPartColor(c);
+              setPartsStep(1);
+              setPartsGate(false);
+              void enter("parts", true);
+            }} />
+          )}
+
+          {/* ワーク中の進行帯：いま誰が前に出ているかが姿で分かる */}
+          {mode === "parts" && !partsGate && <PartsProgress color={partColor} step={partsStep} />}
 
           {/* 会話（メッセージごとにキヨセリンクの顔アイコンを出す） */}
           <div ref={scrollRef} className="singa-talk">
@@ -764,6 +818,7 @@ const DOORS: { key: ModeKey; emoji: string }[] = [
   { key: "akashic", emoji: "📖" },
 ];
 const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
+  { key: "parts", emoji: "🜂" },
   { key: "breakthrough", emoji: "🗝" },
   { key: "travel", emoji: "🚀" },
 ];

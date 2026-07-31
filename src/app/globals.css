@@ -494,11 +494,17 @@ body:has(.realverse-bg) { background: transparent; }
   white-space: pre-wrap;
   padding: 11px 16px;
   border-radius: 4px 16px 16px 16px;
-  background: rgba(28, 23, 16, .8);
+  /* 背景の絵に負けないよう、しっかり暗く敷く（読みやすさ優先） */
+  background: rgba(18, 15, 11, .9);
   border: 1px solid rgba(224, 189, 114, .22);
-  backdrop-filter: blur(8px);
-  box-shadow: 0 6px 22px rgba(0,0,0,.4);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 22px rgba(0,0,0,.5);
+  /* 案内役のセリフは読むもの。タップやスクロールで青く選択されると読めなくなるので選択させない */
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
 }
+/* 自分の発言はコピーしたいことがあるので、そちらは選択できるままにする */
+.singa-line.is-me p { -webkit-user-select: text; user-select: text; }
 .singa-line.is-me { align-self: flex-end; max-width: min(680px, 90%); }
 .singa-line.is-me .singa-line-body { text-align: right; }
 .singa-line.is-me p {
@@ -2627,3 +2633,265 @@ body:has(.realverse-bg) { background: transparent; }
 /* 挨拶の吹き出しが最終行で切れないように（PCで見切れていた） */
 .iw-bubble{overflow:visible}
 .iw-bubble p{white-space:pre-wrap;overflow-wrap:anywhere;padding-bottom:2px}
+
+/* ══════════════════════════════════════════════════════════
+   内なる子の神殿（パーツ心理学ワーク）
+   守り手 → 内なる子 → ガーディアン、の3段構造を絵で見せる
+   ══════════════════════════════════════════════════════════ */
+
+/* キャラ画像。未配置なら色の紋章にフォールバックする */
+.pt-art {
+  display: block; object-fit: contain; border-radius: 14px;
+  filter: drop-shadow(0 6px 18px rgba(0,0,0,.55));
+  transition: filter .4s ease, transform .4s ease;
+}
+.pt-art.is-glow { filter: drop-shadow(0 0 16px var(--pc)) drop-shadow(0 6px 18px rgba(0,0,0,.5)); }
+.pt-art.is-emblem {
+  display: grid; place-items: center; position: relative; overflow: hidden;
+  background:
+    radial-gradient(circle at 50% 30%, color-mix(in srgb, var(--pc) 60%, transparent), transparent 62%),
+    linear-gradient(165deg, rgba(38,30,48,.96), rgba(12,9,16,.98));
+  border: 1px solid color-mix(in srgb, var(--pc) 60%, transparent);
+  box-shadow: inset 0 0 34px color-mix(in srgb, var(--pc) 28%, transparent);
+}
+.pt-art.is-emblem::after {
+  content: ""; position: absolute; inset: 12%;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--pc) 40%, transparent);
+}
+.pt-kanji {
+  font-family: Georgia, "Yu Mincho", "游明朝", serif;
+  font-size: 2.1rem; font-weight: 700; color: #fff;
+  text-shadow: 0 0 14px var(--pc), 0 2px 6px rgba(0,0,0,.8);
+}
+
+/* ── 入口：4体の守り手から選ぶ ── */
+.pt-gate {
+  position: relative; z-index: 3;
+  max-width: 860px; margin: 0 auto; padding: 18px 16px 22px;
+  overflow-y: auto; max-height: calc(100dvh - 150px);
+  /* 背景の絵が濃いので、神殿全体に暗幕を敷いて文字を読ませる */
+  background: linear-gradient(180deg, rgba(10,8,14,.9) 0%, rgba(10,8,14,.82) 55%, rgba(10,8,14,.9) 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(238,214,155,.16);
+  backdrop-filter: blur(3px);
+}
+.pt-gate-head h2 {
+  font-family: Georgia, "Yu Mincho", "游明朝", serif;
+  font-size: 1.3rem; letter-spacing: .1em; text-align: center;
+  color: var(--singa-gold); margin-bottom: 8px;
+  text-shadow: 0 2px 12px rgba(0,0,0,.9);
+}
+.pt-lead {
+  font-size: .78rem; line-height: 1.85; text-align: center;
+  color: var(--singa-ink-soft); margin-bottom: 16px;
+  text-shadow: 0 1px 8px rgba(0,0,0,.9);
+}
+.pt-lead b { color: var(--singa-gold); }
+
+.pt-ring { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+@media (max-width: 620px) { .pt-ring { grid-template-columns: repeat(2, 1fr); } }
+.pt-slot {
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+  padding: 12px 8px 11px; border-radius: 16px;
+  background: rgba(16,13,20,.66);
+  border: 1px solid color-mix(in srgb, var(--pc) 38%, transparent);
+  backdrop-filter: blur(8px);
+  transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+}
+.pt-slot:hover, .pt-slot.is-peek {
+  transform: translateY(-3px);
+  background: rgba(26,20,32,.85);
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--pc) 30%, transparent);
+}
+.pt-slot.is-peek { border-color: var(--pc); }
+.pt-slot-name { font-size: .84rem; font-weight: 700; color: var(--singa-ink); }
+.pt-slot-title { font-size: .6rem; color: var(--singa-ink-soft); text-align: center; line-height: 1.4; }
+.pt-slot-badge {
+  margin-top: 2px; font-size: .58rem; padding: 2px 8px; border-radius: 999px;
+  background: linear-gradient(160deg, #eed69b, #c9a55e); color: #221b10; font-weight: 700;
+}
+.pt-slot.is-released { border-color: color-mix(in srgb, var(--pc) 70%, #eed69b); }
+
+/* ── 選んだ守り手の詳細 ── */
+.pt-peek {
+  margin-top: 14px; padding: 15px 16px; border-radius: 18px;
+  background: rgba(14,11,18,.86);
+  border: 1px solid color-mix(in srgb, var(--pc) 48%, transparent);
+  box-shadow: 0 14px 44px rgba(0,0,0,.5);
+  animation: pk-in .28s ease both;
+}
+@keyframes pk-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+.pk-main { display: flex; gap: 15px; align-items: flex-start; }
+@media (max-width: 560px) { .pk-main { flex-direction: column; align-items: center; text-align: center; } }
+.pk-body { flex: 1; min-width: 0; }
+.pk-name { font-size: 1.1rem; font-weight: 700; color: var(--singa-ink); }
+.pk-title { font-size: .68rem; letter-spacing: .1em; color: var(--pc); filter: brightness(1.5); margin-bottom: 7px; }
+.pk-desc { font-size: .8rem; line-height: 1.8; color: var(--singa-ink-soft); margin-bottom: 8px; }
+.pk-acts { list-style: none; display: flex; flex-wrap: wrap; gap: 5px; }
+@media (max-width: 560px) { .pk-acts { justify-content: center; } }
+.pk-acts li {
+  font-size: .68rem; padding: 3px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--pc) 20%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc) 42%, transparent);
+  color: var(--singa-ink);
+}
+.pk-cue {
+  margin-top: 12px; padding: 8px 11px; border-radius: 10px;
+  font-size: .72rem; line-height: 1.7; color: var(--singa-ink-soft);
+  background: rgba(255,255,255,.05);
+}
+.pk-behind {
+  margin-top: 12px; padding: 11px 12px; border-radius: 13px;
+  background: linear-gradient(160deg, rgba(255,255,255,.07), rgba(255,255,255,.02));
+  border: 1px dashed color-mix(in srgb, var(--pc) 45%, transparent);
+}
+.pk-behind-label { font-size: .66rem; color: var(--singa-gold); letter-spacing: .06em; }
+.pk-behind-row { display: flex; align-items: center; gap: 12px; margin-top: 8px; }
+.pk-child-title { font-size: .82rem; font-weight: 700; color: var(--singa-ink); }
+.pk-child-acts { font-size: .68rem; color: var(--singa-ink-soft); line-height: 1.6; margin-top: 2px; }
+.pk-msg {
+  margin-top: 12px; text-align: center; font-size: .84rem; line-height: 1.8;
+  color: var(--singa-gold); font-family: Georgia, "Yu Mincho", serif;
+}
+.pk-go {
+  width: 100%; margin-top: 13px; padding: 12px; border-radius: 13px;
+  font-weight: 700; font-size: .88rem; color: #1a1208;
+  background: linear-gradient(160deg, #f0dca8, #c9a55e);
+  box-shadow: 0 8px 24px rgba(201,165,94,.34);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.pk-go:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(201,165,94,.45); }
+.pk-go.is-again { background: rgba(255,255,255,.1); color: var(--singa-ink); box-shadow: none; }
+
+.pt-gate-foot { margin-top: 14px; text-align: center; }
+.pt-hint { font-size: .74rem; color: var(--singa-ink-soft); margin-bottom: 9px; text-shadow: 0 1px 8px rgba(0,0,0,.9); }
+.pt-unknown {
+  padding: 10px 18px; border-radius: 12px; font-size: .78rem;
+  color: var(--singa-gold); background: rgba(255,255,255,.06);
+  border: 1px dashed rgba(238,214,155,.4);
+}
+.pt-unknown:hover { background: rgba(255,255,255,.12); }
+
+/* ── 図鑑（四守の環） ── */
+.pt-ledger {
+  display: flex; align-items: center; justify-content: center; gap: 11px;
+  margin-top: 18px; padding: 9px 14px; border-radius: 999px;
+  background: rgba(16,13,20,.7); border: 1px solid rgba(238,214,155,.24);
+  width: fit-content; margin-inline: auto;
+}
+.pt-ledger.is-complete { border-color: rgba(238,214,155,.8); box-shadow: 0 0 26px rgba(238,214,155,.35); }
+.pl-title { font-size: .74rem; color: var(--singa-gold); letter-spacing: .08em; }
+.pl-dots { display: flex; gap: 6px; }
+.pl-dot {
+  width: 11px; height: 11px; border-radius: 999px;
+  background: rgba(255,255,255,.14); border: 1px solid rgba(255,255,255,.2);
+  transition: background .3s ease, box-shadow .3s ease;
+}
+.pl-dot.on { background: var(--pc); border-color: var(--pc); box-shadow: 0 0 10px var(--pc); }
+.pl-count { font-size: .72rem; color: var(--singa-ink-soft); }
+.pt-complete {
+  margin-top: 10px; text-align: center; font-size: .8rem; color: var(--singa-gold);
+  font-family: Georgia, "Yu Mincho", serif; text-shadow: 0 1px 10px rgba(0,0,0,.9);
+}
+
+/* ── ワーク中の進行帯 ── */
+.pt-prog {
+  position: relative; z-index: 3;
+  display: flex; align-items: center; gap: 12px;
+  max-width: 760px; margin: 0 auto 8px; padding: 9px 14px;
+  border-radius: 14px;
+  background: rgba(14,11,18,.8);
+  border: 1px solid color-mix(in srgb, var(--pc, #888) 42%, transparent);
+  backdrop-filter: blur(8px);
+}
+.pt-prog.is-searching { justify-content: center; --pc: #8a7fb0; }
+.pt-prog .pt-art { flex-shrink: 0; }
+.pp-body { flex: 1; min-width: 0; }
+.pp-who { font-size: .82rem; font-weight: 700; color: var(--singa-ink); display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.pp-sub { font-size: .62rem; font-weight: 400; color: var(--pc); filter: brightness(1.6); }
+.pp-track { display: flex; gap: 3px; margin: 6px 0 4px; }
+.pp-seg {
+  flex: 1; height: 4px; border-radius: 999px;
+  background: rgba(255,255,255,.13); transition: background .5s ease, box-shadow .5s ease;
+}
+.pp-seg.on { background: var(--pc); }
+.pp-seg.now { box-shadow: 0 0 10px var(--pc); animation: pp-pulse 1.6s ease-in-out infinite; }
+@keyframes pp-pulse { 0%,100% { opacity: 1; } 50% { opacity: .5; } }
+.pp-step { font-size: .66rem; color: var(--singa-ink-soft); letter-spacing: .05em; }
+
+/* ── 解放の瞬間：守り手 → ガーディアン ── */
+.gr-overlay {
+  position: fixed; inset: 0; z-index: 90;
+  display: grid; place-items: center; padding: 18px;
+  background: radial-gradient(circle at 50% 45%, rgba(0,0,0,.72), rgba(0,0,0,.93));
+  backdrop-filter: blur(7px);
+  animation: gr-fade .35s ease both;
+}
+@keyframes gr-fade { from { opacity: 0; } to { opacity: 1; } }
+.gr-card {
+  width: min(460px, 100%); max-height: calc(100dvh - 36px); overflow-y: auto;
+  padding: 22px 22px 20px; border-radius: 22px; text-align: center;
+  background: linear-gradient(170deg, rgba(30,24,38,.96), rgba(14,11,18,.98));
+  border: 1px solid color-mix(in srgb, var(--pc) 55%, transparent);
+  box-shadow: 0 26px 80px rgba(0,0,0,.7), 0 0 60px color-mix(in srgb, var(--pc) 26%, transparent);
+}
+.gr-stage { position: relative; height: 200px; display: grid; place-items: center; }
+.gr-stage > span { position: absolute; inset: 0; display: grid; place-items: center; }
+.gr-old, .gr-new { transition: opacity .8s ease, transform .8s ease, filter .8s ease; }
+.gr-card.ph-0 .gr-old { opacity: 1; transform: scale(1); }
+.gr-card.ph-0 .gr-new { opacity: 0; transform: scale(.82); }
+.gr-card.ph-1 .gr-old { opacity: 0; transform: scale(1.25); filter: blur(14px) brightness(2.4); }
+.gr-card.ph-1 .gr-new { opacity: .25; transform: scale(.95); filter: brightness(2.2); }
+.gr-card.ph-2 .gr-old { opacity: 0; transform: scale(1.4); }
+.gr-card.ph-2 .gr-new { opacity: 1; transform: scale(1); }
+.gr-burst {
+  border-radius: 999px; opacity: 0;
+  background: radial-gradient(circle, #fff 0%, var(--pc) 30%, transparent 66%);
+}
+.gr-card.ph-1 .gr-burst { animation: gr-burst 1.15s ease-out both; }
+@keyframes gr-burst {
+  0% { opacity: 0; transform: scale(.25); }
+  35% { opacity: .95; transform: scale(1.05); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+.gr-mid {
+  margin-top: 12px; font-size: .84rem; letter-spacing: .16em;
+  color: var(--singa-gold); font-family: Georgia, "Yu Mincho", serif;
+  animation: pp-pulse 1.8s ease-in-out infinite;
+}
+.gr-body { animation: pk-in .45s ease both; }
+.gr-kicker { font-size: .66rem; letter-spacing: .22em; color: var(--singa-gold); margin-bottom: 4px; }
+.gr-name {
+  font-size: 1.5rem; font-weight: 700; color: #fff;
+  font-family: Georgia, "Yu Mincho", "游明朝", serif;
+  text-shadow: 0 0 22px color-mix(in srgb, var(--pc) 75%, transparent);
+}
+.gr-title { font-size: .74rem; letter-spacing: .1em; color: var(--pc); filter: brightness(1.6); margin-bottom: 8px; }
+.gr-from { font-size: .66rem; color: var(--singa-ink-soft); margin-bottom: 10px; }
+.gr-msg {
+  font-size: .88rem; line-height: 1.9; color: var(--singa-gold);
+  font-family: Georgia, "Yu Mincho", serif; margin-bottom: 11px;
+}
+.gr-acts { list-style: none; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; margin-bottom: 12px; }
+.gr-acts li {
+  font-size: .68rem; padding: 3px 9px; border-radius: 999px;
+  background: color-mix(in srgb, var(--pc) 22%, transparent);
+  border: 1px solid color-mix(in srgb, var(--pc) 45%, transparent);
+  color: var(--singa-ink);
+}
+.gr-gain {
+  font-size: .72rem; color: #eed69b; padding: 7px 10px; border-radius: 10px;
+  background: rgba(238,214,155,.13); border: 1px solid rgba(238,214,155,.3); margin-bottom: 9px;
+}
+.gr-ring { font-size: .72rem; color: var(--singa-ink-soft); letter-spacing: .08em; }
+.gr-complete {
+  margin-top: 8px; font-size: .86rem; color: #eed69b; font-weight: 700;
+  text-shadow: 0 0 18px rgba(238,214,155,.6);
+}
+.gr-close {
+  width: 100%; margin-top: 14px; padding: 12px; border-radius: 13px;
+  font-weight: 700; font-size: .88rem; color: #1a1208;
+  background: linear-gradient(160deg, #f0dca8, #c9a55e);
+  box-shadow: 0 8px 24px rgba(201,165,94,.34);
+}

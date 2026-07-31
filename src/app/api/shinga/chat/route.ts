@@ -20,6 +20,8 @@ import {
   saveShingaMessage, loadShingaMessages, createQuest, isMissingTable, MIGRATION_HINT,
 } from "@/lib/shinga";
 import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type HeroDomain } from "@/lib/hero";
+import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@/lib/parts";
+import { releaseGuardian } from "@/lib/parts-db";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
@@ -43,6 +45,8 @@ export async function POST(req: Request) {
   const greet = !!body.greet;   // 開いた直後の最初のひとこと
   const opener = typeof body.opener === "string" ? body.opener.trim() : ""; // テンプレで出した開始の一言
   const debug = !!body.debug;   // 可視化用：何を読み込みAIに渡したかを返す
+  // 内なる子の神殿：いま扱っている守り手の色（画面で選ばれたもの）
+  const partColor: PartColor | null = isPartColor(body.partColor) ? body.partColor : null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -98,8 +102,18 @@ export async function POST(req: Request) {
           }));
         }
 
+        // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
+        const systemFull = mode !== "parts" ? system : [
+          system,
+          partColor
+            ? partPrompt(partColor)
+            : ["# まだ守り手が決まっていない", "相手の話から、どの守り手が前に出ているかを一緒に見立てる。決めつけず、確かめる。", cuesForPrompt()].join("\n"),
+        ].join("\n\n");
+
         if (greet) {
-          const openLine = mode
+          const openLine = mode === "parts" && partColor
+            ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。まず「もしセッションの途中で涙が出てきたら、そっと教えてくださいね」と伝えてから、【1】の最初の問いを1つだけ投げかけて）`
+            : mode
             ? `（「${MODES[mode].label}」の時間を、いま新しく始める。過去の別の話は持ち出さない。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`
             : (history.length === 0
               ? "（はじめてこの世界に来た。まだ何も話していない。短く迎えて、今日はどこへ行きたいかを聞いて）"
@@ -116,7 +130,7 @@ export async function POST(req: Request) {
             today, mode: mode ?? null, place, greet,
             loadedFromDb: debugHistory,               // DBから読んだ履歴（日付つき）
             sentToAI: history,                         // 実際にAIへ渡したメッセージ列
-            systemPrompt: system,                      // システムプロンプト全文
+            systemPrompt: systemFull,                  // システムプロンプト全文
             settingsBirth: { date: settings?.birth_date ?? null, name: settings?.birth_name ?? null, gender: settings?.birth_gender ?? null },
           });
         }
@@ -124,7 +138,7 @@ export async function POST(req: Request) {
         let full = "";
         for await (const ev of streamChat({
           userId,
-          system,
+          system: systemFull,
           messages: history,
           maxTokens: 1600,
           temperature: 0.85,
@@ -157,6 +171,15 @@ export async function POST(req: Request) {
         let wallStage: number | null = null;
         const wallMatch = full.match(/<wall>\s*([1-5])\s*<\/wall>/);
         if (wallMatch) wallStage = Number(wallMatch[1]);
+
+        // 内なる子の神殿：ワークの段階（1=守り手に出会う … 6=解き放つ）と、解放されたガーディアン
+        let partsStep: number | null = null;
+        const stepMatch = full.match(/<parts_step>\s*([1-6])\s*<\/parts_step>/);
+        if (stepMatch) partsStep = Number(stepMatch[1]);
+        const guardMatch = full.match(/<guardian>\s*(red|blue|green|yellow)\s*<\/guardian>/i);
+        const releasedColor = guardMatch && isPartColor(guardMatch[1].toLowerCase())
+          ? (guardMatch[1].toLowerCase() as "red" | "blue" | "green" | "yellow")
+          : null;
 
         // 選択肢ボタン
         let choices: Array<{ label: string; mode?: string }> | null = null;
@@ -224,16 +247,47 @@ export async function POST(req: Request) {
           .replace(/<emotion\s*\/?>/g, "")
           .replace(/<breath\s*\/?>/g, "")
           .replace(/<wall>[\s\S]*?<\/wall>/g, "")
+          .replace(/<parts_step>[\s\S]*?<\/parts_step>/g, "")
+          .replace(/<guardian>[\s\S]*?<\/guardian>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch) {
+        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });
         if (wantEmotion) send("emotion", {});
         if (wantBreath) send("breath", {});
         if (wallStage) send("wall", { stage: wallStage });
+        if (partsStep) send("parts_step", { step: partsStep });
+
+        // ガーディアン解放：守り手が役割を降り、才能として開いた瞬間
+        if (releasedColor) {
+          try {
+            const trio = PARTS[releasedColor];
+            // 「本当はどうしたい？」の答えを、その人の言葉のまま記録に残す
+            const said = history.filter((h) => h.role === "user").slice(-4).map((h) => h.content).join(" / ").slice(0, 300);
+            const { first, total } = await releaseGuardian(userId, releasedColor, said);
+            send("guardian", {
+              color: releasedColor, first, total,
+              name: trio.guardian.name, title: trio.guardian.title,
+              from: `${trio.defense.name}（${trio.defense.title}）`,
+              message: trio.guardian.message,
+              complete: total >= 4,
+            });
+            // 解放そのものを1枚のカードに（初回だけ。2回目以降は演出のみ）
+            if (first) {
+              const { grantSkillCard } = await import("@/lib/awaken");
+              await grantSkillCard(userId, {
+                key: `guardian-${releasedColor}`,
+                title: `${trio.guardian.name}（${trio.guardian.title}）`,
+                body: `${trio.defense.name}が役割を降りて、${trio.guardian.acts.slice(0, 3).join("・")}力になった。${trio.guardian.message}`,
+                rarity: "gold",
+                source: `内なる子の神殿（${trio.kanji}）`,
+              });
+            }
+          } catch { /* 解放が記録できなくても、体験は止めない */ }
+        }
 
         // 壁が全開＝ブロックが壊れた瞬間。そこで生まれた力を「スキルカード」として授ける
         if (wallStage === 5) {

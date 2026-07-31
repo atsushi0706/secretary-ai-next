@@ -8,7 +8,6 @@ import { PushToggle } from "@/components/PushToggle";
 export default function SettingsPage() {
   const [geminiKey, setGeminiKey] = useState("");
   const [hasGeminiKey, setHasGeminiKey] = useState(false);
-  const [ntfyTopic, setNtfyTopic] = useState("");
 
   // カスタマイズ系
   const [secretaryName, setSecretaryName] = useState("");
@@ -79,7 +78,6 @@ export default function SettingsPage() {
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((s) => {
       setHasGeminiKey(!!s.gemini_api_key_set);
-      setNtfyTopic(s.ntfy_topic ?? "");
       setSecretaryName(s.secretary_name ?? "");
       setSecretaryAvatarUrl(s.secretary_avatar_url ?? "");
       setUserCallName(s.user_call_name ?? "");
@@ -134,7 +132,6 @@ export default function SettingsPage() {
 
   async function save() {
     const body: any = {
-      ntfy_topic: ntfyTopic,
       secretary_name: secretaryName,
       user_call_name: userCallName,
       birth_date: birthDate,
@@ -543,42 +540,9 @@ export default function SettingsPage() {
           </p>
           <PushToggle />
 
-          <hr className="my-4 border-purple-100" />
-
-          <h3 className="font-bold text-sm text-purple-700">📱 スマホ通知・ntfy（上級者向け・任意）</h3>
-          <p className="text-xs text-gray-600 leading-relaxed">
-            設定すると、朝/夜の声かけ・タイマー終了などがスマホにプッシュで届きます。
-            ntfy.sh という無料サービスを使います。
+          <p className="text-xs text-gray-500 leading-relaxed">
+            通知は1日3回（朝6:30 / 昼12:00 / 夜20:00）。別のアプリを入れる必要はありません。
           </p>
-
-          <details className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs leading-relaxed">
-            <summary className="cursor-pointer font-bold text-purple-700">📝 セットアップ手順を見る</summary>
-            <ol className="list-decimal list-inside space-y-1.5 text-gray-700 mt-2">
-              <li>
-                スマホで <strong>「ntfy」アプリ</strong>をインストール
-                （<a href="https://apps.apple.com/jp/app/ntfy/id1625396347" target="_blank" rel="noreferrer" className="underline">iOS</a>
-                ／<a href="https://play.google.com/store/apps/details?id=io.heckel.ntfy" target="_blank" rel="noreferrer" className="underline">Android</a>）
-              </li>
-              <li>他人と被らない「トピック名」を考える（例: <code className="bg-white px-1 rounded">kiyose_yourname_1234</code>）</li>
-              <li>ntfy アプリで「＋」→ トピック名を入力 → Subscribe</li>
-              <li>下の枠にも同じトピック名を入れて「保存」</li>
-              <li>テスト送信: <code className="bg-white px-1 rounded">https://ntfy.sh/トピック名</code> をブラウザで開く</li>
-            </ol>
-            <div className="mt-2 text-red-600">
-              ⚠ トピック名は他人に推測されると通知が漏洩。長くランダムに。
-            </div>
-          </details>
-
-          <div>
-            <label className="block font-bold text-xs mb-1 text-gray-700">ntfy トピック名</label>
-            <input
-              type="text"
-              value={ntfyTopic}
-              onChange={(e) => setNtfyTopic(e.target.value)}
-              placeholder="例: kiyose_yourname_1234ab"
-              className="w-full p-2 border rounded-lg text-sm font-mono"
-            />
-          </div>
         </div>
       </details>
 

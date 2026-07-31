@@ -3,13 +3,12 @@
  * GET /api/cron/checkin?slot=morning|midday|afternoon|evening
  * Authorization: Bearer <CRON_SECRET>
  *
- * 全ユーザーの user_settings.ntfy_topic を見て、登録があれば push を送る。
+ * プッシュ通知を購読している全ユーザーへ、その時間帯の声かけを送る（別アプリは不要）。
  * メッセージはユーザーごとに Claude で生成（タスク/予定/進捗を踏まえた一言）。
  */
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
 import { getClaude, CLAUDE_MODEL, SECRETARY_NAME } from "@/lib/claude";
-import { sendNtfy } from "@/lib/ntfy";
 import { sendPushToUser, pushConfigured } from "@/lib/push";
 import { getTodayCard } from "@/lib/questCard";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from "@/lib/google";
@@ -17,21 +16,24 @@ import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr } from
 type Slot = "morning" | "midday" | "afternoon" | "evening";
 
 const SLOT_LABEL: Record<Slot, string> = {
-  morning: "10時の声かけ（午前の優先確認）",
-  midday: "13時の声かけ（午前の振り返り＋午後の調整）",
+  morning: "6:30の声かけ（今日を始める）",
+  midday: "12:00の声かけ（気にかける・確認する）",
   afternoon: "15:30の声かけ（残り時間の追い込み）",
-  evening: "17時の声かけ（1日の振り返り）",
+  evening: "20:00の声かけ（1日のレポート）",
 };
 
 const SLOT_PROMPT: Record<Slot, string> = {
-  morning: `いまJST10時前後。淳くんがちゃんと作業を始められてるか、優先タスクの1個目に着手できてるかを軽く確認するメッセージ。
-60〜100文字。プッシュ通知で読むので短く。優先タスク1〜2件のタイトルを引用して「これ、もう手つけた？」のような声かけにする。`,
-  midday: `いまJST13時前後。午前の動きを軽く振り返って、午後を整え直すメッセージ。
-60〜100文字。「午前どうだった？詰まったところは？」みたいな声かけ。完了が0なら無理せず1個から、進んでたら次の優先を促す。`,
+  morning: `いまJST6時半。1日の入り口。「今日もやろう」と背中を押す朝の呼びかけ。
+60〜100文字。まだ何も始まっていない時間なので、詰めない。今日ひとつだけ向き合うものを思い出させる。
+優先タスクがあれば1件だけ具体名で触れて「今日はここからいこっか」のように誘う。`,
+  midday: `いまJST12時。昼の声かけ。まず人として気にかける一言から入る（ごはん食べた？ちゃんと休めてる？等）。
+そのうえで、まだ手つかずのことがあれば1件だけ、責めずに確認する。無ければ普通に会話として問いかけるだけでいい。
+60〜100文字。詰問にしない。「どう、進んでる？」くらいの温度で。`,
   afternoon: `いまJST15時半前後。17時稼働終了まで残り90分。あと1個進めるならどれ？という尻押しメッセージ。
 60〜100文字。優先タスク1個を具体名で挙げて「ここから30〜60分で1個だけ片付ける？」のような提案。`,
-  evening: `いまJST17時前後。1日のクロージング声かけ。今日できたことを軽く拾って、明日に残すものを意識させる。
-60〜100文字。完了数と進捗%を踏まえて「お疲れさま、◯/◯完了。明日に残すのは△△と□□、それでOK？」`,
+  evening: `いまJST20時。1日のレポート。今日やれたことを具体的に拾って渡す（できなかったことを責めない）。
+60〜100文字。完了数を踏まえて「お疲れさま。今日は◯個片づいたね」から入り、
+最後に「振り返り、開いてみる？」と1日の振り返りへ誘う。`,
 };
 
 function isAuthorized(req: Request): boolean {
@@ -56,12 +58,12 @@ export async function GET(req: Request) {
   const supa = supabaseAdmin();
   const { data: users, error } = await supa
     .from("user_settings")
-    .select("user_id, ntfy_topic, anthropic_api_key, google_refresh_token");
+    .select("user_id, anthropic_api_key, google_refresh_token");
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // プッシュ購読者の user_id 集合（ntfy 未設定でもプッシュには送る）
+  // プッシュ購読者の user_id 集合
   const pushUsers = new Set<string>();
   if (pushConfigured()) {
     const { data: subs } = await supa.from("push_subscriptions").select("user_id");
@@ -70,18 +72,10 @@ export async function GET(req: Request) {
 
   const results: any[] = [];
   for (const u of users ?? []) {
-    const wantsNtfy = !!u.ntfy_topic;
     const wantsPush = pushUsers.has(u.user_id);
-    if (!wantsNtfy && !wantsPush) continue;
+    if (!wantsPush) continue;
     try {
       const message = await generateMessage(u.user_id, slot, !!u.google_refresh_token);
-
-      if (wantsNtfy) {
-        const r = await sendNtfy(u.ntfy_topic!, message, { title: `${SECRETARY_NAME}より`, tags: ["sparkles"] });
-        await supa.from("notifications").insert({
-          user_id: u.user_id, channel: "ntfy", type: `checkin:${slot}`, body: message, success: r.ok, error: r.error ?? null,
-        });
-      }
 
       if (wantsPush) {
         let pushOk = false, pushErr: string | null = null;
@@ -127,7 +121,7 @@ export async function GET(req: Request) {
         } catch { /* 失敗しても他をブロックしない */ }
       }
 
-      results.push({ user_id: u.user_id, ntfy: wantsNtfy, push: wantsPush, card, night });
+      results.push({ user_id: u.user_id, push: wantsPush, card, night });
     } catch (e: any) {
       results.push({ user_id: u.user_id, ok: false, error: String(e?.message ?? e) });
     }
@@ -184,9 +178,9 @@ ${ctx}
 
 function fallbackMessage(slot: Slot): string {
   switch (slot) {
-    case "morning": return "おはよう。今日の優先タスク、もう1つ目に手つけた？";
-    case "midday": return "午前どうだった？詰まったところあれば話そう。午後の組み直しもできるよ。";
+    case "morning": return "おはよう。今日もいこっか。まずはひとつだけ、向き合うものを決めよう。";
+    case "midday": return "おつかれ。ごはん食べた？ 午前どうだった？ 詰まってるなら一緒に整えよう。";
     case "afternoon": return "残り90分。今日のうちにあと1個だけ片付けるなら、どれにする？";
-    case "evening": return "お疲れさま。今日できたこと、明日に残したこと、ちょっと整理しよう。";
+    case "evening": return "お疲れさま。今日のこと、3分だけ振り返ってみない？";
   }
 }

@@ -192,6 +192,22 @@ export function ShingaWorld({
   const [debugTrace, setDebugTrace] = useState<any[]>([]);
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  // リアルバースの「休憩する」から来たとき（?rest=1）は、
+  // 何も操作しなくても呼吸ガイドまで自動で進む（目を瞑るだけで整えられるように）
+  useEffect(() => {
+    try {
+      if (new URLSearchParams(window.location.search).get("rest") !== "1") return;
+    } catch { return; }
+    setPhase("done");
+    setView("talk");
+    setMode("peak");
+    setPlace("peak");
+    setMessages([{ role: "assistant", content: "おつかれ😊 よく戦ったね。\nこのまま目を瞑って、呼吸だけ合わせていこう。" }]);
+    setFace("smile");
+    const t = setTimeout(() => setWidget("breath"), 1200); // 少し間を置いてから呼吸へ
+    return () => clearTimeout(t);
+  }, []);
+
   // URL に ?debug=1 が付いているときだけ、可視化パネルを使えるようにする（開発用）
   useEffect(() => {
     try {

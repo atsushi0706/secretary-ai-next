@@ -1,63 +1,78 @@
 "use client";
 
-import { useTimer, TimerGauge } from "./TimerContext";
+import { useTimer } from "./TimerContext";
+
+/**
+ * リアルバースのタイマー＝「クエストに対峙する時間」。
+ * タスクをモンスターに見立て、経過とともに相手のHPが削れていく。
+ * 終わったら休憩へ→そのままピークステート（目を瞑って整える）に入れる。
+ */
+const PRESETS = [
+  { min: 60, label: "1時間", sub: "大物に挑む", emoji: "🐲" },
+  { min: 30, label: "30分", sub: "しっかり削る", emoji: "👹" },
+  { min: 5, label: "5分", sub: "小物を片づける", emoji: "👾" },
+];
 
 export function TimerWidget() {
   const { state, finished, remainingMs, start, stop, dismiss } = useTimer();
   const running = !!state;
   const totalMs = state?.durationMs ?? 0;
-  const progress = running && totalMs > 0 ? remainingMs / totalMs : 0;
+  // 残り時間＝相手のHP。時間が経つほど削れていく
+  const hp = running && totalMs > 0 ? Math.max(0, Math.min(1, remainingMs / totalMs)) : 0;
   const totalSec = Math.ceil(remainingMs / 1000);
   const mm = String(Math.floor(totalSec / 60)).padStart(2, "0");
   const ss = String(totalSec % 60).padStart(2, "0");
+  const hpPct = Math.round(hp * 100);
+  const hpState = hp > 0.5 ? "full" : hp > 0.2 ? "half" : "low";
+  const emoji = PRESETS.find((p) => p.label === state?.label)?.emoji ?? "👾";
 
   return (
     <section className="card">
       <div className="font-bold text-sm mb-2 flex items-center gap-1">
-        ⏱ タイマー
+        ⚔️ クエストに対峙する
       </div>
+
       {running ? (
-        <div>
-          <div className="flex items-center gap-3 mb-2">
-            <div className="text-3xl font-extrabold tabular-nums text-purple-700 leading-none">
-              {mm}:{ss}
+        <div className="rv-battle">
+          <div className="rv-foe">
+            <span className={`rv-foe-emoji ${hpState === "low" ? "is-weak" : ""}`}>{emoji}</span>
+            <div className="rv-foe-info">
+              <div className="rv-foe-name">{state?.label}のクエスト</div>
+              <div className="rv-hpbar">
+                <span className={`rv-hpfill is-${hpState}`} style={{ width: `${hpPct}%` }} />
+              </div>
+              <div className="rv-hptext">残り HP {hpPct}%</div>
             </div>
-            <div className="text-xs text-gray-500 ml-auto">{state?.label}</div>
           </div>
-          <TimerGauge progress={progress} className="mb-3" />
-          <button
-            onClick={stop}
-            className="w-full text-xs bg-gray-100 hover:bg-red-50 hover:text-red-600 px-4 py-1.5 rounded border border-gray-200"
-          >
-            停止
-          </button>
+
+          <div className="rv-clock">{mm}:{ss}</div>
+
+          <button onClick={stop} className="rv-retreat">撤退する（中断）</button>
         </div>
       ) : (
         <>
-          <div className="flex gap-2">
-            <button
-              onClick={() => start(30, "30分")}
-              className="flex-1 bg-[var(--accent)] hover:opacity-90 text-white text-sm font-bold py-2.5 rounded-lg shadow-sm"
-            >
-              30分
-            </button>
-            <button
-              onClick={() => start(5, "5分")}
-              className="flex-1 bg-purple-400 hover:bg-purple-500 text-white text-sm font-bold py-2.5 rounded-lg shadow-sm"
-            >
-              5分
-            </button>
-          </div>
-          {finished && (
-            <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-xs flex items-center gap-2 animate-pulse">
-              <span className="text-amber-700 font-bold">🔔 タイマー終了！(音が鳴ってます)</span>
-              <button
-                onClick={dismiss}
-                className="ml-auto bg-amber-600 text-white px-3 py-1 rounded font-bold hover:bg-amber-700"
-              >
-                停止
-              </button>
+          {finished ? (
+            <div className="rv-win">
+              <div className="rv-win-title">⚔️ 討伐完了！</div>
+              <p className="rv-win-sub">よく戦った。ここで整えると、次がもっと強く踏み込める。</p>
+              <a href="/shinga?place=peak&rest=1" className="rv-rest" onClick={dismiss}>
+                🌬 休憩する（目を瞑って整える）→
+              </a>
+              <button onClick={dismiss} className="rv-skip">まだ続ける</button>
             </div>
+          ) : (
+            <>
+              <p className="rv-lead">どれくらい向き合う？ 時間を決めて、1体ずつ倒していこう。</p>
+              <div className="rv-presets">
+                {PRESETS.map((p) => (
+                  <button key={p.min} onClick={() => start(p.min, p.label)} className="rv-preset">
+                    <span className="e">{p.emoji}</span>
+                    <span className="t">{p.label}</span>
+                    <span className="s">{p.sub}</span>
+                  </button>
+                ))}
+              </div>
+            </>
           )}
         </>
       )}

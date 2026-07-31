@@ -2,7 +2,7 @@
  * セッション自己修復ページ。
  * NextAuth の signOut を使ってセッションを完全クリアし、Google 再認証に強制的に飛ばす。
  *
- * URL: https://secretary-ai-next.vercel.app/reset
+ * URL: https://singaworld.rinq-systeme.jp/reset
  */
 import { signOut, signIn } from "@/auth";
 import { cookies } from "next/headers";

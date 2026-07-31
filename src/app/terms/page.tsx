@@ -23,7 +23,7 @@ export default function TermsPage() {
 
         <section className="bg-white/70 border border-purple-100 rounded-2xl p-6 mb-6 leading-relaxed">
           <p>
-            本規約は、SINGA WORLD（<code>secretary-ai-next.vercel.app</code> で提供する秘書AIアプリおよび
+            本規約は、SINGA WORLD（<code>singaworld.rinq-systeme.jp</code> で提供する秘書AIアプリおよび
             インナーワールド。以下「本サービス」）の利用条件を定めるものです。
             本サービスを利用された方は、本規約に同意したものとみなします。
           </p>

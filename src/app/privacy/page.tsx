@@ -23,7 +23,7 @@ export default function PrivacyPage() {
 
         <section className="bg-white/70 border border-purple-100 rounded-2xl p-6 mb-6 leading-relaxed">
           <p>
-            SINGA WORLD（Chrome 拡張機能および <code>secretary-ai-next.vercel.app</code> の秘書AIアプリ。以下「本サービス」）は、
+            SINGA WORLD（Chrome 拡張機能および <code>singaworld.rinq-systeme.jp</code> の秘書AIアプリ。以下「本サービス」）は、
             ユーザーのプライバシーを最大限尊重します。本ページでは取り扱うデータと、その範囲・送信先を明記します。
           </p>
         </section>
@@ -57,7 +57,7 @@ export default function PrivacyPage() {
 
         <h2 className="text-xl font-bold text-purple-700 mt-8 mb-3">4. 秘書アプリとの連携（拡張機能）</h2>
         <p>
-          <code>secretary-ai-next.vercel.app</code> ドメインを開いている時のみ、本拡張機能はそのアプリの
+          <code>singaworld.rinq-systeme.jp</code> ドメインを開いている時のみ、本拡張機能はそのアプリの
           <code>/api/settings</code> から <strong>ユーザー自身のログインセッション</strong> を使って秘書名・アバターURLを取得します。
           これはユーザー自身がブラウザで開いた秘書アプリの設定を、拡張機能のUIに反映するための処理です。
         </p>

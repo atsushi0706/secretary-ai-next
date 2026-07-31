@@ -12,7 +12,7 @@ export default function HealthPage() {
   return (
     <main style={{ padding: 40, fontFamily: "system-ui, sans-serif", lineHeight: 1.6 }}>
       <h1>✅ OK</h1>
-      <p>secretary-ai-next.vercel.app は正常に応答しています。</p>
+      <p>singaworld.rinq-systeme.jp は正常に応答しています。</p>
       <p style={{ color: "#666" }}>{new Date().toISOString()}</p>
       <hr />
       <p>

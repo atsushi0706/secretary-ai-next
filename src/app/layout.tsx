@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { SWRegister } from "./sw-register";
 import { TimerProvider } from "@/components/TimerContext";
-import { TimerBadge } from "@/components/TimerBadge";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 export const metadata: Metadata = {
@@ -37,7 +36,6 @@ export default function RootLayout({
         <SWRegister />
         <TimerProvider>
           {children}
-          <TimerBadge />
           <PwaInstallBanner />
         </TimerProvider>
       </body>

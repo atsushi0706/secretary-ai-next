@@ -87,6 +87,7 @@ export function ShingaWorld({
   const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
   const [card, setCard] = useState<Card | null>(null);         // 未来からのクエストカード（3日連続で届く）
   const [showCard, setShowCard] = useState(false);
+  const [isAdventurer, setIsAdventurer] = useState(false); // 100%到達＝称号バッジを付ける
   const [letterDramatic, setLetterDramatic] = useState(true);  // 初回は派手に降臨・読み返しは静かに
   // ゾーン突入演出（扉タップ→背景がフュンとズームイン→タイトル→会話へ。タップでスキップ）
   const [entering, setEntering] = useState<ModeKey | null>(null);
@@ -160,6 +161,10 @@ export function ShingaWorld({
     fetch("/api/quest-card").then((r) => r.json()).then((d) => {
       if (d?.card) setCard(d.card);
       else if (d?.needsMigration) console.warn("[quest-card] テーブル未作成のためカードを配れません");
+    }).catch(() => {});
+    // 称号（100%到達）の判定
+    fetch("/api/inner-hud").then((r) => r.json()).then((d) => {
+      if (d?.level && d.level.level >= d.level.max) setIsAdventurer(true);
     }).catch(() => {});
   }, []);
 
@@ -542,6 +547,7 @@ export function ShingaWorld({
           onTasks={() => setTasksOpen(true)}
           onLetter={letter ? () => { setLetterDramatic(false); setPhase("letter"); } : undefined}
           onCard={card && !card.done ? () => setShowCard(true) : undefined}
+          isAdventurer={isAdventurer}
           sending={sending}
         />
       ) : (
@@ -841,7 +847,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, isAdventurer, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -853,6 +859,7 @@ function Home({
   onTasks: () => void;
   onLetter?: () => void;
   onCard?: () => void;
+  isAdventurer?: boolean;
   sending: boolean;
 }) {
   return (
@@ -873,15 +880,19 @@ function Home({
 
       {/* 世界の中に立つキヨセリンク＋吹き出し（すべて中央寄せ） */}
       <div className="iw-scene is-centered">
-        <Image
-          className="iw-figure"
-          src={avatarUrl}
-          alt={guideName}
-          width={280}
-          height={420}
-          priority
-          unoptimized={avatarUrl.startsWith("http")}
-        />
+        <div className="iw-figure-wrap">
+          <Image
+            className="iw-figure"
+            src={avatarUrl}
+            alt={guideName}
+            width={280}
+            height={420}
+            priority
+            unoptimized={avatarUrl.startsWith("http")}
+          />
+          {/* 100%到達者の称号バッジ（枠は出さず、ここにそっと付く） */}
+          {isAdventurer && <span className="iw-badge" title="人生の冒険者">🏆</span>}
+        </div>
         <div className="iw-bubble is-centered">
           <span className="who">{guideName}</span>
           <p>{greetLine()}</p>

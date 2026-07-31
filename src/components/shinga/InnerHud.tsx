@@ -50,8 +50,8 @@ export function InnerHud({ guideName }: { guideName: string }) {
 
   return (
     <div className="ihud">
-      {/* レベル（旅の進捗・累積で 0→100） */}
-      {level && <LevelBar level={level} />}
+      {/* レベル。100%に到達したら枠ごと消す（称号バッジは清瀬リンクの隣に付く） */}
+      {level && level.level < level.max && <LevelBar level={level} />}
 
       {/* 空想↔現実のバランス（中央＝フロー） */}
       <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} lean={lean} />

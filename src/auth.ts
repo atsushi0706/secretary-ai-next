@@ -15,6 +15,12 @@ const SCOPES = [
   "https://www.googleapis.com/auth/tasks",
 ].join(" ");
 
+// 環境変数に古いドメイン（vercel.app）が残っていると、新ドメインからログインしても
+// そちらへ飛ばされ、同意画面のアプリ名も旧ドメイン名で表示されてしまう。
+// アクセスされたホストを常に信頼するため、古い固定URLは無効化しておく。
+if (process.env.NEXTAUTH_URL?.includes("vercel.app")) delete process.env.NEXTAUTH_URL;
+if (process.env.AUTH_URL?.includes("vercel.app")) delete process.env.AUTH_URL;
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   debug: false,

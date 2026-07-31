@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata = {
-  title: "SINGA WORLD - 内側で掴んだものを、現実に落としていく",
-  description: "Googleログインだけで、AI秘書が今日を一緒に組み立てる。タスク管理・集中モード・カレンダー連動・自動ポモドーロ。",
+  title: "Singa World — AIとの対話で予定とタスクを整理する秘書アプリ",
+  description: "Singa World は、AI秘書との会話で「やること」を整理し、Google カレンダーと Google ToDo リストに自動で振り分けるWebアプリです。",
 };
 
 export default function WelcomePage() {
@@ -13,7 +13,7 @@ export default function WelcomePage() {
       <header className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Image src="/kiyose.png" alt="" width={32} height={32} className="rounded-full border border-purple-200" />
-          <span className="font-bold text-lg text-purple-700" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".03em" }}>SINGA WORLD</span>
+          <span className="font-bold text-lg text-purple-700" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".03em" }}>Singa World</span>
         </div>
         <Link
           href="/login"
@@ -28,15 +28,16 @@ export default function WelcomePage() {
         <div className="inline-block bg-purple-100 text-purple-700 text-xs font-bold px-3 py-1 rounded-full mb-4">
           Googleログインだけで始められる
         </div>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-gray-900 leading-tight mb-5">
-          <span className="block text-2xl sm:text-3xl mb-2" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".04em" }}>SINGA WORLD</span>
-          今日の時間割を、<br />
-          <span className="text-[var(--accent)]">AI秘書</span>が一緒に組み立てる
+        <h1 className="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight mb-4">
+          <span className="block text-2xl sm:text-3xl mb-3" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".04em" }}>Singa World</span>
+          AIとの対話で1日の予定とタスクを整理する<br className="hidden sm:block" />
+          <span className="text-[var(--accent)]">パーソナル秘書アプリ</span>
         </h1>
         <p className="text-base sm:text-lg text-gray-600 leading-relaxed mb-8">
-          会話で投げ込んだ「やらなきゃ」を、所要時間と優先度を聞き返してから<br className="hidden sm:block" />
-          Google タスク・カレンダーに自動で振り分け。<br />
-          作業中は集中モードで余計なサイトをブロック、タイマーで進捗を見守ります。
+          <strong>Singa World は、AI秘書との会話で「やること」を整理し、Google カレンダーと Google ToDo リストに
+          自動で振り分けるWebアプリです。</strong><br className="hidden sm:block" />
+          所要時間と優先度をAIが聞き返しながら、その日に実行できる時間割を一緒に組み立てます。<br />
+          作業中はタイマーで進捗を見守り、1日の終わりには振り返りをサポートします。
         </p>
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <Link
@@ -136,7 +137,7 @@ export default function WelcomePage() {
 
       {/* フッター */}
       <footer className="border-t border-purple-100 py-8 text-center text-xs text-gray-500">
-        © SINGA WORLD — Powered by Claude &amp; Gemini
+        © Singa World — Powered by Claude &amp; Gemini
         <div className="mt-2">
           <Link href="/login" className="text-purple-700 hover:underline">ログイン</Link>
         </div>

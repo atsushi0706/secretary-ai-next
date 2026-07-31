@@ -5,7 +5,7 @@ import { TimerProvider } from "@/components/TimerContext";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 export const metadata: Metadata = {
-  title: "SINGA WORLD",
+  title: "Singa World",
   description: "内側で掴んだものを、現実に落としていく。インナーワールド × リアルバース",
   manifest: "/manifest.json",
   icons: {
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "SINGA WORLD",
+    title: "Singa World",
   },
 };
 

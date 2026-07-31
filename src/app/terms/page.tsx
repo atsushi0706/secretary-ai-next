@@ -2,8 +2,8 @@ import Link from "next/link";
 import Image from "next/image";
 
 export const metadata = {
-  title: "利用規約 — SINGA WORLD",
-  description: "SINGA WORLD（秘書AI Web アプリ）の利用規約",
+  title: "利用規約 — Singa World",
+  description: "Singa World（秘書AI Web アプリ）の利用規約",
 };
 
 export default function TermsPage() {
@@ -12,7 +12,7 @@ export default function TermsPage() {
       <header className="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between">
         <Link href="/welcome" className="flex items-center gap-2">
           <Image src="/kiyose.png" alt="" width={32} height={32} className="rounded-full border border-purple-200" />
-          <span className="font-bold text-lg text-purple-700" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".03em" }}>SINGA WORLD</span>
+          <span className="font-bold text-lg text-purple-700" style={{ fontFamily: "Georgia, 'Times New Roman', serif", letterSpacing: ".03em" }}>Singa World</span>
         </Link>
         <Link href="/welcome" className="text-sm text-purple-700 underline">← トップに戻る</Link>
       </header>
@@ -23,7 +23,7 @@ export default function TermsPage() {
 
         <section className="bg-white/70 border border-purple-100 rounded-2xl p-6 mb-6 leading-relaxed">
           <p>
-            本規約は、SINGA WORLD（<code>singaworld.rinq-systeme.jp</code> で提供する秘書AIアプリおよび
+            本規約は、Singa World（<code>singaworld.rinq-systeme.jp</code> で提供する秘書AIアプリおよび
             インナーワールド。以下「本サービス」）の利用条件を定めるものです。
             本サービスを利用された方は、本規約に同意したものとみなします。
           </p>

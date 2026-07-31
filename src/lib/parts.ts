@@ -25,8 +25,10 @@ export type PartFace = {
   acts: string[];
   /** あなたへのメッセージ */
   message: string;
-  /** 画像（未配置ならフォールバックの紋章が出る） */
+  /** カード画像（説明つきの縦長カード全体）。未配置ならフォールバックの紋章が出る */
   img: string;
+  /** 顔だけを切り出した正方形（一覧・進行帯など小さく出すとき用） */
+  face: string;
 };
 
 export type PartTrio = {
@@ -53,7 +55,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "本当は走り出したい子。「やってみたい」を胸に秘め、きっかけを待っている存在。",
       acts: ["ワクワクしたい", "挑戦してみたい", "見つけてほしい", "応援されたい"],
       message: "だいじょうぶ。あなたの勇気は、ここにある。",
-      img: "/parts/child-red.png",
+      img: "/parts/child-red.jpg",
+      face: "/parts/child-red-face.jpg",
     },
     defense: {
       name: "戦う人",
@@ -61,7 +64,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "危険をいち早く察知し、怒りや反発で内なる子を守る存在。",
       acts: ["警戒する", "戦う", "境界線を守る", "近づけさせない"],
       message: "ずっと、傷つけさせないように守ってくれていた。",
-      img: "/parts/def-red.png",
+      img: "/parts/def-red.jpg",
+      face: "/parts/def-red-face.jpg",
     },
     guardian: {
       name: "動かす人",
@@ -69,7 +73,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "火を外からつける人。人を動かし、挑戦へと背中を押す存在。",
       acts: ["挑戦させる", "背中を押す", "突破させる", "決断させる"],
       message: "あなたがいたから、動き出せた。",
-      img: "/parts/guard-red.png",
+      img: "/parts/guard-red.jpg",
+      face: "/parts/guard-red-face.jpg",
     },
   },
   blue: {
@@ -83,7 +88,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "本当は知りたい子。わからないをそのままにせず、安心して学べる場所を求めている存在。",
       acts: ["知りたい", "質問したい", "理解したい", "考えたい", "安心して学びたい"],
       message: "ゆっくりでいい。あなたのペースでわかっていこう。",
-      img: "/parts/child-blue.png",
+      img: "/parts/child-blue.jpg",
+      face: "/parts/child-blue-face.jpg",
     },
     defense: {
       name: "管理する人",
@@ -91,7 +97,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "失敗や否定を避けるため、考え、整え、完璧を目指して内なる子を守る存在。",
       acts: ["分析する", "準備する", "先回りする", "完璧を求める", "ミスを防ぐ"],
       message: "安心できるように、ずっと考えて整えてくれていた。",
-      img: "/parts/def-blue.png",
+      img: "/parts/def-blue.jpg",
+      face: "/parts/def-blue-face.jpg",
     },
     guardian: {
       name: "教える人",
@@ -99,7 +106,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "火の起こし方を教える人。知識や技術を届け、自分でできる力を育てる存在。",
       acts: ["教える", "整理する", "理解させる", "方法を渡す", "考える力を育てる"],
       message: "あなたに教わったから、自分でできるようになった。",
-      img: "/parts/guard-blue.png",
+      img: "/parts/guard-blue.jpg",
+      face: "/parts/guard-blue-face.jpg",
     },
   },
   green: {
@@ -113,7 +121,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "本当は甘えたい子。ぬくもりと安心の中で、自分らしく育ちたがっている存在。",
       acts: ["甘えたい", "安心したい", "抱きしめてほしい", "信じてほしい", "休みたい"],
       message: "ここにいていい。あなたは大切にされていい。",
-      img: "/parts/child-green.png",
+      img: "/parts/child-green.jpg",
+      face: "/parts/child-green-face.jpg",
     },
     defense: {
       name: "隠れる人",
@@ -121,7 +130,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "傷つかないように、静かに引いて距離をとり、安全な場所へ連れていく存在。",
       acts: ["距離をとる", "ひとりになる", "回避する", "休む", "身を守る"],
       message: "もうこれ以上傷つかないように、静けさの中で守ってくれていた。",
-      img: "/parts/def-green.png",
+      img: "/parts/def-green.jpg",
+      face: "/parts/def-green-face.jpg",
     },
     guardian: {
       name: "育てる人",
@@ -129,7 +139,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "火が灯り続ける土壌をつくる人。安心や信頼で、人の心を支え育てる存在。",
       acts: ["受け止める", "癒やす", "寄り添う", "信じる", "続けられる状態をつくる"],
       message: "あなたがいてくれたから、自分を信じられた。",
-      img: "/parts/guard-green.png",
+      img: "/parts/guard-green.jpg",
+      face: "/parts/guard-green-face.jpg",
     },
   },
   yellow: {
@@ -143,7 +154,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "本当は輝きたい子。楽しいことや表現することが大好きで、安心して光る場を待っている存在。",
       acts: ["笑いたい", "表現したい", "見てほしい", "ときめきたい", "遊びたい"],
       message: "そのままのあなたで、もう十分まぶしい。",
-      img: "/parts/child-yellow.png",
+      img: "/parts/child-yellow.jpg",
+      face: "/parts/child-yellow-face.jpg",
     },
     defense: {
       name: "そらす人",
@@ -151,7 +163,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "つらさや痛みから目をそらすため、楽しさや軽さで場を変え、内なる子を守る存在。",
       acts: ["話題を変える", "明るくふるまう", "ごまかす", "笑わせる", "気をそらす"],
       message: "苦しくなりすぎないように、軽やかさで守ってくれていた。",
-      img: "/parts/def-yellow.png",
+      img: "/parts/def-yellow.jpg",
+      face: "/parts/def-yellow-face.jpg",
     },
     guardian: {
       name: "魅せる人",
@@ -159,7 +172,8 @@ export const PARTS: Record<PartColor, PartTrio> = {
       desc: "火を外から輝かせる人。楽しさや感動を届け、心を動かす存在。",
       acts: ["楽しませる", "驚かせる", "感動させる", "新しい世界を見せる", "好奇心を起こす"],
       message: "あなたがいたから、世界が面白く見えた。",
-      img: "/parts/guard-yellow.png",
+      img: "/parts/guard-yellow.jpg",
+      face: "/parts/guard-yellow-face.jpg",
     },
   },
 };

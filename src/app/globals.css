@@ -2713,6 +2713,11 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .pt-slot.is-released { border-color: color-mix(in srgb, var(--pc) 70%, #eed69b); }
 
+/* カード全体を出すとき（説明つきの絵をそのまま見せる） */
+.pt-art.is-full { border-radius: 16px; max-width: 100%; }
+.pk-card { display: flex; justify-content: center; }
+.gr-cardart { display: flex; justify-content: center; margin-bottom: 11px; }
+
 /* ── 選んだ守り手の詳細 ── */
 .pt-peek {
   margin-top: 14px; padding: 15px 16px; border-radius: 18px;
@@ -2737,7 +2742,7 @@ body:has(.realverse-bg) { background: transparent; }
   color: var(--singa-ink);
 }
 .pk-cue {
-  margin-top: 12px; padding: 8px 11px; border-radius: 10px;
+  margin-top: 13px; padding: 8px 11px; border-radius: 10px;
   font-size: .72rem; line-height: 1.7; color: var(--singa-ink-soft);
   background: rgba(255,255,255,.05);
 }

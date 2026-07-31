@@ -24,16 +24,22 @@ export function PushToggle() {
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const [supported, setSupported] = useState(true);
+  const [authLost, setAuthLost] = useState(false);
+  const [netErr, setNetErr] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
     const ok = "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
     setSupported(ok);
-    fetch("/api/push/subscribe").then((r) => r.json()).then((d) => {
+    fetch("/api/push/subscribe").then(async (r) => {
+      // 401（ログインが切れている）を「サーバ未設定」と取り違えないよう分けて扱う。
+      // ドメイン移行でセッションが切れていたとき、鍵はあるのに「準備中」と誤表示されていた。
+      if (r.status === 401) { setAuthLost(true); setConfigured(false); return; }
+      const d = await r.json();
       setConfigured(!!d.configured);
       setPublicKey(d.publicKey ?? null);
       setSubscribed(!!d.subscribed);
-    }).catch(() => setConfigured(false));
+    }).catch(() => { setNetErr(true); setConfigured(false); });
   }, []);
 
   async function enable() {
@@ -101,6 +107,16 @@ export function PushToggle() {
   if (configured === null) return null; // 読み込み中
   if (!supported) {
     return <p className="text-xs text-gray-500">このブラウザはプッシュ通知に対応していません。</p>;
+  }
+  if (authLost) {
+    return (
+      <p className="text-xs text-red-600">
+        ログインが切れているみたい。一度ログインし直すと、ここに通知のONボタンが出るよ。
+      </p>
+    );
+  }
+  if (netErr) {
+    return <p className="text-xs text-red-600">通知の状態を確認できなかった。ページを再読み込みしてみて。</p>;
   }
   if (!configured) {
     return <p className="text-xs text-gray-500">プッシュ通知は準備中です（サーバ側の設定待ち）。</p>;

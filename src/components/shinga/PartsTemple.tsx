@@ -17,16 +17,21 @@ import { PARTS, PART_COLORS, STEP_LABEL, type PartColor, type PartFace, type Par
  * onError だけだと、ハイドレーション前に読み込み失敗した画像を取りこぼすので、
  * マウント時にも「読み終わっているのに幅が0＝失敗」を見て判定する。
  */
-function PartArt({ face, color, size = 120, glow = false }: { face: PartFace; color: PartColor; size?: number; glow?: boolean }) {
+function PartArt({ face, color, size = 120, glow = false, full = false }: {
+  face: PartFace; color: PartColor; size?: number; glow?: boolean;
+  /** true なら説明つきのカード全体、false なら顔だけの正方形 */
+  full?: boolean;
+}) {
   const [broken, setBroken] = useState(false);
   const ref = useRef<HTMLImageElement | null>(null);
   const p = PARTS[color];
+  const src = full ? face.img : face.face;
 
   useEffect(() => {
     setBroken(false);
     const el = ref.current;
     if (el && el.complete && el.naturalWidth === 0) setBroken(true);
-  }, [face.img]);
+  }, [src]);
 
   if (broken) {
     return (
@@ -39,8 +44,8 @@ function PartArt({ face, color, size = 120, glow = false }: { face: PartFace; co
   }
   return (
     // eslint-disable-next-line @next/next/no-img-element
-    <img ref={ref} className={`pt-art ${glow ? "is-glow" : ""}`} src={face.img} alt=""
-      style={{ width: size, height: size, ["--pc" as any]: p.hue }}
+    <img ref={ref} className={`pt-art ${glow ? "is-glow" : ""} ${full ? "is-full" : ""}`} src={src} alt=""
+      style={full ? { width: size, height: "auto", ["--pc" as any]: p.hue } : { width: size, height: size, ["--pc" as any]: p.hue }}
       onError={() => setBroken(true)}
       onLoad={(e) => { if ((e.currentTarget as HTMLImageElement).naturalWidth === 0) setBroken(true); }} />
   );
@@ -123,16 +128,9 @@ function PeekCard({ color, released, onStart }: { color: PartColor; released: bo
   const p = PARTS[color];
   return (
     <div className="pt-peek" style={{ ["--pc" as any]: p.hue }}>
-      <div className="pk-main">
-        <PartArt face={released ? p.guardian : p.defense} color={color} size={148} glow={released} />
-        <div className="pk-body">
-          <div className="pk-name">{(released ? p.guardian : p.defense).name}</div>
-          <div className="pk-title">{(released ? p.guardian : p.defense).title}</div>
-          <p className="pk-desc">{(released ? p.guardian : p.defense).desc}</p>
-          <ul className="pk-acts">
-            {(released ? p.guardian : p.defense).acts.map((a) => <li key={a}>{a}</li>)}
-          </ul>
-        </div>
+      {/* カード画像そのものが説明を持っているので、絵を主役にする */}
+      <div className="pk-card">
+        <PartArt face={released ? p.guardian : p.defense} color={color} size={400} glow={released} full />
       </div>
 
       <div className="pk-cue">こういうとき前に出る：{p.cue}</div>
@@ -225,8 +223,8 @@ export function GuardianReveal({ ev, onClose }: { ev: GuardianEvent; onClose: ()
             <div className="gr-name">{ev.name}</div>
             <div className="gr-title">{ev.title}</div>
             <div className="gr-from">{ev.from} → 解放</div>
-            <p className="gr-msg">「{ev.message}」</p>
-            <ul className="gr-acts">{p.guardian.acts.map((a) => <li key={a}>{a}</li>)}</ul>
+            {/* 手に入れたカードを、そのまま見せる */}
+            <div className="gr-cardart"><PartArt face={p.guardian} color={ev.color} size={340} glow full /></div>
             {ev.first && <div className="gr-gain">🃏 スキルカード獲得 ／ ✦ 統合力 +25</div>}
             <div className="gr-ring">四守の環　{ev.total} / 4</div>
             {ev.complete && <div className="gr-complete">🏵 四守の環、完成。</div>}

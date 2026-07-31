@@ -15,7 +15,9 @@ export default async function HomePage() {
     const { auth } = await import("@/auth");
     const session = await auth();
     if (!session?.user) {
-      redirect("/login");
+      // 未ログインは紹介ページへ。ログイン画面に直行させると、
+      // Google の確認要件「ホームページがログインページだけであってはならない」を満たせない
+      redirect("/welcome");
     }
     userId = (session.user as any).id as string;
     userName = session.user.name ?? "あなた";

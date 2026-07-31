@@ -20,12 +20,10 @@ export const maxDuration = 60;
 // 音声を理解できる Gemini モデル（新→安定の順で試す。ai.ts の連鎖と同方針）
 // モデル順は「無料枠で実際に通るか」を最優先に決める（2026-07 調査）。
 //  ・3.5-flash は無料枠がほぼ枯れており(20 RPD報告)、1回目から429になる報告が多数 → 先頭に置かない
-//  ・3.6-flash は最新の安定版（"latest model" 表記）。まずここ
 //  ・*-flash-lite は高スループット向けで無料枠が緩く、3.1-lite は稼働報告が多い
 //  ・2.5-flash も無料枠で動き続けている実績あり（最後の保険）
 // 参考: https://discuss.ai.google.dev/t/gemini-3-5-flash-and-flash-latest-free-tier-api-failing-immediately-with-quota-resource-exhausted-errors-on-first-request/171753
 const GEMINI_MODELS = [
-  "gemini-3.6-flash",        // 最新の安定版。まずここ
   "gemini-3.5-flash-lite",   // 軽量・高スループット
   "gemini-3.1-flash-lite",   // 無料枠で通る報告が多い
   "gemini-2.5-flash",        // 無料枠で安定して動く実績

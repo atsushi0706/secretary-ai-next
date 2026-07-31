@@ -21,7 +21,6 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
 // Gemini モデルの優先順位。前から順に試して、503/overloaded/404 なら次へフォールバック。
 // 2026-07 調査：1.5系と2.0系は提供終了（shut down）済み。2.5系はまだ稼働中。
 // 並び順は「賢さ」ではなく「無料枠で実際に通るか」で決める：
-//  - gemini-3.6-flash:  最新の安定版。まずここ
 //  - *-flash-lite:      高スループット向けで枠が緩い。実際に通る報告が多い
 //  - gemini-2.5-flash:  無料枠で動き続けている実績あり
 //  - gemini-3.5-flash:  最も賢いが無料枠がほぼ枯れており(20 RPD報告)1回目から429になるため最後に回す
@@ -30,7 +29,6 @@ const ANTHROPIC_MODEL = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
 const GEMINI_FALLBACK_CHAIN: string[] = (() => {
   const userPick = process.env.GEMINI_MODEL?.trim();
   const defaults = [
-    "gemini-3.6-flash",        // 最新の安定版
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemini-2.5-flash-lite",
@@ -217,6 +215,7 @@ export async function* streamChat(opts: {
  * フォールバックして次モデルを試すべき一時障害かを判定。
  *  - 503 (overloaded)
  *  - 404 (モデル名が不正/廃止 — 万一未来に廃止されてもチェーンが死なないため)
+ *  - 400 (invalid argument — モデル名や引数が不正でも、そのモデルだけ飛ばして次へ)
  *  - 500 (Internal Server Error — Google側の一時障害)
  *  - 429 (rate limit) — Gemini は各モデルが独自カウンタなので、3.5 で詰まっても 3.1 Lite はOK
  *  - FirstChunkTimeoutError - 初回チャンクが来ないモデルもタイムアウトでフォールバック
@@ -225,8 +224,8 @@ function shouldFallback(err: unknown): boolean {
   if (err instanceof FirstChunkTimeoutError) return true;
   const msg = err instanceof Error ? err.message : String(err);
   const status = (err as any)?.status ?? (err as any)?.response?.status;
-  if (status === 503 || status === 404 || status === 500 || status === 429) return true;
-  return /\b(503|404|500|429)\b|Service Unavailable|overloaded|high demand|not found|Internal.{0,10}Server.{0,10}Error|Too Many Requests|quota|rate.?limit|timeout/i.test(msg);
+  if (status === 503 || status === 404 || status === 500 || status === 429 || status === 400) return true;
+  return /\b(503|404|500|429|400)\b|Service Unavailable|overloaded|high demand|not found|Internal.{0,10}Server.{0,10}Error|Too Many Requests|quota|rate.?limit|timeout|invalid argument|Bad Request/i.test(msg);
 }
 
 function isOverloadedError(err: unknown): boolean {

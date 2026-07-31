@@ -102,6 +102,53 @@ export function InnerHud({ guideName }: { guideName: string }) {
 
       </div>
       )}
+
+      {/* 集めたスキルカード。旅の戦利品はいちばん最初の画面で見られるように */}
+      <CardShelf />
+    </div>
+  );
+}
+
+/**
+ * スキルカード棚（ホーム用のコンパクト版）。
+ * ワークでブロックを壊すと手に入るカードを、最初の画面でいつでも眺められる。
+ * ふだんは1行（枚数だけ）。タップで開く。0枚のときは何も出さない。
+ */
+type ShelfCard = { key: string; title: string; body: string; rarity: "bronze" | "silver" | "gold"; source: string; date: string };
+const SHELF_RARITY: Record<string, string> = { gold: "金", silver: "銀", bronze: "銅" };
+
+function CardShelf() {
+  const [cards, setCards] = useState<ShelfCard[]>([]);
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/awaken").then((r) => r.json()).then((d) => {
+      setCards(Array.isArray(d.cards) ? d.cards : []);
+    }).catch(() => {});
+  }, []);
+
+  if (cards.length === 0) return null;
+
+  return (
+    <div className="ihud-cards">
+      <button className="ic-head" onClick={() => setOpen((v) => !v)}>
+        <span className="ic-title">🃏 スキルカード <span className="ic-count">{cards.length}枚</span></span>
+        <span className="ic-toggle">{open ? "▲ 閉じる" : "▼ 見る"}</span>
+      </button>
+      {open && (
+        <div className="aw-cardlist">
+          {cards.map((c) => (
+            <div key={c.key} className={`aw-card r-${c.rarity}`}>
+              <div className="c-top">
+                <span className="c-rar">{SHELF_RARITY[c.rarity] ?? "銅"}</span>
+                <span className="c-title">{c.title}</span>
+              </div>
+              <div className="c-body">{c.body}</div>
+              <div className="c-src">{c.source}・{c.date}</div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

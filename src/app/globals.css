@@ -2503,6 +2503,14 @@ body:has(.realverse-bg) { background: transparent; }
 .ihud-quest .q-add input { flex: 1; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px; padding: 8px 10px; color: var(--singa-ink); font-size: .82rem; }
 .ihud-quest .q-add button { padding: 0 14px; border-radius: 10px; font-weight: 700; font-size: .78rem; color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e); }
 
+/* スキルカード棚（ホーム用）。ふだんは1行、開くとカード一覧（.aw-card を流用） */
+.ihud-cards { padding: 10px 14px; border-radius: 14px; background: rgba(20,16,28,.62); border: 1px solid rgba(238,214,155,.28); backdrop-filter: blur(6px); }
+.ihud-cards .ic-head { width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.ihud-cards .ic-title { font-weight: 700; font-size: .86rem; color: var(--singa-ink); }
+.ihud-cards .ic-count { font-size: .68rem; color: var(--singa-gold); margin-left: 2px; }
+.ihud-cards .ic-toggle { font-size: .66rem; color: var(--singa-ink-soft); white-space: nowrap; }
+.ihud-cards .aw-cardlist { margin-top: 10px; }
+
 /* 会話で主人公レベルが動いたときのトースト（そっと出て消える） */
 .hero-toast {
   position: absolute; top: 14px; left: 50%; transform: translateX(-50%);

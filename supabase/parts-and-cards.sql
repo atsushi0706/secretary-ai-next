@@ -130,3 +130,23 @@ create table if not exists public.work_sessions (
 create index if not exists work_sessions_user_idx on public.work_sessions (user_id, created_at desc);
 
 alter table public.work_sessions enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- プッシュ通知の購読先
+--  10) push_subscriptions … 端末ごとの通知の宛先
+--      ※ これが無いと「通知ON」を押しても保存されず、
+--        テスト送信で「購読が見つからなかった」になる
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.push_subscriptions (
+  id          bigserial primary key,
+  user_id     text not null,
+  endpoint    text not null unique,   -- 端末ごとに1件（upsert のキー）
+  p256dh      text not null,
+  auth        text not null,
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now()
+);
+create index if not exists push_subscriptions_user_idx on public.push_subscriptions (user_id);
+
+alter table public.push_subscriptions enable row level security;

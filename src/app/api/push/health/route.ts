@@ -8,7 +8,7 @@
 import { NextResponse } from "next/server";
 import { pushConfigured } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase";
-import { createECDH } from "crypto";
+import { createECDH, createHash } from "crypto";
 
 const unb64u = (v: string) => Buffer.from(v.replace(/-/g, "+").replace(/_/g, "/"), "base64");
 const b64u = (b: Buffer) => b.toString("base64").replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -56,6 +56,10 @@ export async function GET() {
   return NextResponse.json({
     table, rows,
     keyPairMatches: keyPairMatches(pub, priv),
+    // 公開鍵はもともとブラウザに配る公開情報なので、そのまま出して確認に使う
+    pubValue: pub,
+    // 秘密鍵は出さない。ハッシュの先頭だけ（ここから元の値は復元できない）
+    privFingerprint: priv ? createHash("sha256").update(priv).digest("hex").slice(0, 10) : null,
     configured: pushConfigured(),
     pub: look(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY),
     priv: look(process.env.VAPID_PRIVATE_KEY),

@@ -13,7 +13,7 @@ import { streamChat, AIRateLimitError, formatRateLimitForUser } from "@/lib/ai";
 import { extractJson } from "@/lib/claude";
 import { buildGuidePersona, buildWalkPersona } from "@/lib/guide";
 import { isPlaceKey, type PlaceKey } from "@/lib/places";
-import { isModeKey, MODES, type ModeKey } from "@/lib/modes";
+import { isModeKey, MODES, WALK_SCENERY_PROMPT, type ModeKey } from "@/lib/modes";
 import { jstDateStr } from "@/lib/google";
 import { getUserSettings, logError } from "@/lib/supabase";
 import {
@@ -75,7 +75,8 @@ export async function POST(req: Request) {
               birthDate: settings?.birth_date,
               birthName: settings?.birth_name,
               todayStr: today,
-            })
+              // ここは専用人格なので MODES.walk.flow が渡らない。風景の指示だけ別に足す
+            }) + `\n\n${WALK_SCENERY_PROMPT}`
           : buildGuidePersona({
               guideName: settings?.secretary_name,
               userCallName: settings?.user_call_name,
@@ -193,6 +194,11 @@ export async function POST(req: Request) {
         const wallMatch = full.match(/<wall>\s*([1-5])\s*<\/wall>/);
         if (wallMatch) wallStage = Number(wallMatch[1]);
 
+        // パラレルウォーク：理想の解像度＝どこまで歩いたか（1=入口 … 10=理想郷）
+        let walkStage: number | null = null;
+        const walkMatch = full.match(/<walk>\s*(10|[1-9])\s*<\/walk>/);
+        if (walkMatch) walkStage = Number(walkMatch[1]);
+
         // パラレルトラベル：話の抽象度＝高度（1=目の前の出来事 … 10=すべてがつながる）。
         // 背景の風景が、この数字に合わせて引いていく。
         let travelStage: number | null = null;
@@ -277,10 +283,11 @@ export async function POST(req: Request) {
           .replace(/<parts_step>[\s\S]*?<\/parts_step>/g, "")
           .replace(/<guardian>[\s\S]*?<\/guardian>/g, "")
           .replace(/<travel>[\s\S]*?<\/travel>/g, "")
+          .replace(/<walk>[\s\S]*?<\/walk>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch || travelMatch) {
+        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch || travelMatch || walkMatch) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });
@@ -289,6 +296,7 @@ export async function POST(req: Request) {
         if (wallStage) send("wall", { stage: wallStage });
         if (partsStep) send("parts_step", { step: partsStep });
         if (travelStage) send("travel", { stage: travelStage });
+        if (walkStage) send("walk", { stage: walkStage });
 
         // ガーディアン解放：守り手が役割を降り、才能として開いた瞬間
         if (releasedColor) {

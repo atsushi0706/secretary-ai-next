@@ -56,6 +56,21 @@ async function readSse(resp: Response, onEvent: (event: string, data: any) => vo
   }
 }
 
+// パラレルウォークで歩いた地点。背景の絵（/walk-1..10.jpg）と対応している。
+// 「理想がどれだけ具体的に見えているか」で進む。最後は理想郷。
+const WALK_PLACE: string[] = [
+  "門のほとり",       // 1
+  "谷が見えてくる",   // 2
+  "花の道",           // 3
+  "せせらぎのそば",   // 4
+  "ひらけた谷",       // 5
+  "庭園",             // 6
+  "黄金の橋",         // 7
+  "都が見えた",       // 8
+  "大伽藍のふもと",   // 9
+  "理想郷",           // 10
+];
+
 // パラレルトラベルの高度。背景の絵（/travel-1..10.jpg）と対応している。
 // 数字ではなく「いまどこまで視点が上がったか」を言葉で見せる。
 const TRAVEL_ALT: string[] = [
@@ -92,6 +107,7 @@ export function ShingaWorld({
   const [widget, setWidget] = useState<"emotion" | "breath" | null>(null);
   const [wallStage, setWallStage] = useState(1); // ウォールブレイク：扉の開き具合(1=閉〜5=全開)
   const [travelStage, setTravelStage] = useState(1); // パラレルトラベル：高度(1=目の前 〜 10=すべてがつながる)
+  const [walkStage, setWalkStage] = useState(1);     // パラレルウォーク：どこまで歩いたか(1=門 〜 10=理想郷)
   // 内なる子の神殿：入口(gate)で守り手を選ぶ → ワーク中は色と段階を持つ
   const [partsGate, setPartsGate] = useState(false);
   const [partColor, setPartColor] = useState<PartColor | null>(null);
@@ -285,6 +301,7 @@ export function ShingaWorld({
     if (mode !== "breakthrough") return;
     for (let i = 1; i <= 5; i++) { const im = new window.Image(); im.src = `/wall-${i}.png`; }
     for (let i = 1; i <= 10; i++) { const im = new window.Image(); im.src = `/travel-${i}.jpg`; }
+    for (let i = 1; i <= 10; i++) { const im = new window.Image(); im.src = `/walk-${i}.jpg`; }
   }, [mode]);
 
   // タイプ演出のループ
@@ -372,6 +389,7 @@ export function ShingaWorld({
     breathDoneRef.current = false;
     if (m === "breakthrough" && !resume) setWallStage(1); // 扉は固く閉じた状態から始める
     if (m === "travel" && !resume) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
+    if (m === "walk" && !resume) setWalkStage(1);         // 歩きは門のほとりから始まる
     if (!resume) setMessages([]);
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
@@ -467,6 +485,10 @@ export function ShingaWorld({
           // ウォールブレイク：壁が解けた度合いに応じて扉が開く（1〜5）
           const s = Number(data?.stage);
           if (Number.isFinite(s)) setWallStage(Math.max(1, Math.min(5, s)));
+        } else if (name === "walk") {
+          // パラレルウォーク：理想がはっきりするほど、景色が開けていく
+          const n = Number(data?.stage);
+          if (Number.isFinite(n)) setWalkStage(Math.max(1, Math.min(10, n)));
         } else if (name === "travel") {
           // パラレルトラベル：話が抽象へ上がるほど、背景が引いていく（1〜10）
           const n = Number(data?.stage);
@@ -548,6 +570,7 @@ export function ShingaWorld({
     view === "home" || reportOpen ? "/singa-map.jpg"
     : mode === "breakthrough" ? `/wall-${wallStage}.png`
     : mode === "travel" ? `/travel-${travelStage}.jpg`
+    : mode === "walk" ? `/walk-${walkStage}.jpg`
     : here.image;
   // 直前の絵を覚えておき、上に新しい絵をふわっと重ねて切り替える
   const [prevBg, setPrevBg] = useState<string | null>(null);
@@ -700,6 +723,19 @@ export function ShingaWorld({
           {/* ワーク中の進行帯：いま誰が前に出ているかが姿で分かる */}
           {mode === "parts" && !partsGate && <PartsProgress color={partColor} step={partsStep} />}
 
+          {/* パラレルウォーク：いまどこまで歩いたか（背景の風景と対応） */}
+          {mode === "walk" && (
+            <div className="travel-alt is-walk">
+              <span className="ta-label">🚶 歩いた道のり</span>
+              <span className="ta-track">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <span key={i} className={`ta-seg ${i < walkStage ? "on" : ""} ${i === walkStage - 1 ? "now" : ""}`} />
+                ))}
+              </span>
+              <span className="ta-name">{WALK_PLACE[walkStage - 1]}</span>
+            </div>
+          )}
+
           {/* パラレルトラベル：いまどこまで視点が上がったか（背景の風景と対応） */}
           {mode === "travel" && (
             <div className="travel-alt">
@@ -795,7 +831,7 @@ export function ShingaWorld({
         <div className="zone-intro" onClick={skipZoneIntro} role="button" aria-label="スキップ">
           <div
             className="zi-bg"
-            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : PLACES[MODES[entering].place].image})` }}
+            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : entering === "walk" ? "/walk-1.jpg" : PLACES[MODES[entering].place].image})` }}
           />
           <div className="zi-veil" />
           <div className="zi-title">

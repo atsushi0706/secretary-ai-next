@@ -379,6 +379,12 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .travel-alt .ta-seg.on { background: linear-gradient(90deg, #9fb6e8, #e0bd72); }
 .travel-alt .ta-seg.now { box-shadow: 0 0 10px rgba(224,189,114,.8); animation: pp-pulse 1.8s ease-in-out infinite; }
+/* パラレルウォークは明るい画面なので、帯も明るく（.is-bright 側で文字が沈まないように） */
+.travel-alt.is-walk { background: rgba(255,252,244,.82); border-color: rgba(190,150,70,.35); }
+.travel-alt.is-walk .ta-label { color: #8a6a2c; }
+.travel-alt.is-walk .ta-name { color: #4a3a1c; font-weight: 700; }
+.travel-alt.is-walk .ta-seg { background: rgba(120,95,50,.2); }
+.travel-alt.is-walk .ta-seg.on { background: linear-gradient(90deg,#d9b46a,#8a6a2c); }
 .travel-alt .ta-name { font-size: .72rem; color: var(--singa-ink); white-space: nowrap; }
 @media (max-width: 560px) { .travel-alt .ta-label { display: none; } }
 

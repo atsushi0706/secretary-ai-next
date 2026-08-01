@@ -76,33 +76,47 @@ function stopVoice() {
   currentAudio = null;
   try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
 }
-/** 同梱の音声ファイル（Edge TTS生成）を最優先で再生。無ければAPI→ブラウザ読み上げの順に退避 */
+/**
+ * ひとこと喋る。
+ *
+ * 順番が大事：
+ *   1. TTS API（ElevenLabs → OpenAI）… 自然な声。ブラウザにキャッシュするので生成は初回だけ
+ *   2. 同梱の mp3（/voice/breath-*.mp3）… 機械的だが、キーが無くても必ず鳴る保険
+ *   3. ブラウザ読み上げ … 最後の砦
+ *
+ * ※ 以前は 2 を最優先にしていたため、APIを良い声にしても機械的な声のままだった。
+ */
 async function speakStep(step: { say: string; voice?: string }) {
-  if (step.voice) {
-    stopVoice();
-    try {
-      const a = new Audio(`/voice/breath-${step.voice}.mp3`);
-      currentAudio = a;
-      await a.play();
-      return;
-    } catch { /* ファイルが無い/再生失敗 → 動的TTSへ */ }
-  }
-  await speak(step.say);
+  if (await speakApi(step.say)) return;
+  if (step.voice && await playFile(`/voice/breath-${step.voice}.mp3`)) return;
+  speakFallback(step.say);
 }
 
-async function speak(text: string) {
-  const t = text.trim();
-  if (!t) return;
+async function playFile(src: string): Promise<boolean> {
   stopVoice();
   try {
-    const cache = await caches.open("iw-tts-v1");
+    const a = new Audio(src);
+    currentAudio = a;
+    await a.play();
+    return true;
+  } catch { return false; }
+}
+
+/** TTS API で喋る。使えなければ false を返して、呼び出し側が退避する */
+async function speakApi(text: string): Promise<boolean> {
+  const t = text.trim();
+  if (!t) return true;
+  stopVoice();
+  try {
+    // 声のエンジンを変えたらキャッシュも作り直したいので、名前に版を持たせる
+    const cache = await caches.open("iw-tts-v2");
     const key = `/__tts__/${encodeURIComponent(t)}`;
     let res = await cache.match(key);
     if (!res) {
       const r = await fetch("/api/tts", {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: t }),
       });
-      if (!r.ok) throw new Error("tts_unavailable");
+      if (!r.ok) return false;          // キー未設定など → 同梱mp3へ
       await cache.put(key, r.clone());
       res = r;
     }
@@ -112,11 +126,18 @@ async function speak(text: string) {
     currentAudio = a;
     a.onended = () => { try { URL.revokeObjectURL(url); } catch { /* ignore */ } };
     await a.play();
+    return true;
   } catch {
-    // OpenAIキー未設定・失敗時は従来のブラウザ読み上げに退避
-    speakFallback(t);
+    return false;
   }
 }
+
+/** 任意の文を喋る（呼吸のステップ以外から呼ばれる用） */
+async function speak(text: string) {
+  if (await speakApi(text)) return;
+  speakFallback(text);
+}
+
 
 export function BreathGuide({ onDone }: { onDone: () => void }) {
   const [started, setStarted] = useState(false);

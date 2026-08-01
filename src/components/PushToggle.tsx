@@ -57,6 +57,18 @@ export function PushToggle() {
       if (perm !== "granted") { setMsg("通知が許可されませんでした。ブラウザ設定から許可してね。"); return; }
       const reg = await navigator.serviceWorker.register("/push-sw.js");
       await navigator.serviceWorker.ready;
+      // 古い鍵で作られた購読が残っていると、ブラウザは新しい鍵で作り直せずに失敗する
+      //（403 "credentials do not correspond"）。だから先に必ず捨てる。
+      try {
+        const old = await reg.pushManager.getSubscription();
+        if (old) {
+          await fetch("/api/push/subscribe", {
+            method: "DELETE", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ endpoint: old.endpoint }),
+          }).catch(() => {});
+          await old.unsubscribe();
+        }
+      } catch { /* 消せなくても、この下で作り直しを試す */ }
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,

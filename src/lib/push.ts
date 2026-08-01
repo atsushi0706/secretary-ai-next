@@ -80,9 +80,14 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
       sent++;
     } catch (e: any) {
       const code = e?.statusCode;
-      if (code === 404 || code === 410) {
+      const detail = String(e?.body ?? e?.message ?? "");
+      // 鍵を入れ替えると、古い鍵で作られた購読は二度と使えない（403）。失効と同じ扱いで掃除する。
+      const staleKey = code === 403 && /do not correspond|VAPID/i.test(detail);
+      if (code === 404 || code === 410 || staleKey) {
         await removeSubscription(s.endpoint); removed++;
-        errors.push(`${code} 端末側の購読が失効していた（削除した）`);
+        errors.push(staleKey
+          ? "403 古い鍵で作られた購読だったので削除した。もう一度ONにし直して"
+          : `${code} 端末側の購読が失効していた（削除した）`);
       } else {
         const msg = String(e?.body ?? e?.message ?? e).replace(/\s+/g, " ").slice(0, 160);
         errors.push(`${code ?? "?"} ${msg}`);

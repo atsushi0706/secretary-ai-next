@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Voice = { id: string; name: string; labels?: Record<string, string>; category?: string; free?: boolean };
-type Info = { elevenlabs: boolean; openai: boolean; voiceId: string | null; model: string; voices: Voice[]; voicesError?: string | null };
+type Info = { elevenlabs: boolean; openai: boolean; voiceId: string | null; model: string; voices: Voice[]; voicesError?: string | null; voicevox?: boolean; voicevoxSpeaker?: string | null; prefer?: string };
 
 const SAMPLES: { label: string; text: string }[] = [
   { label: "呼吸ガイド", text: "ゆっくり、息を吸って。……そのまま、少し止めてね。" },
@@ -28,13 +28,29 @@ export default function VoiceTest() {
   const [usedVoice, setUsedVoice] = useState("");
   const [askedVoice, setAskedVoice] = useState<Voice | null>(null);
   const [copied, setCopied] = useState(false);
+  const [bake, setBake] = useState<{ baked: Record<string, string>; total: number } | null>(null);
+  const [baking, setBaking] = useState(false);
+  const [bakeMsg, setBakeMsg] = useState("");
 
   useEffect(() => {
     fetch("/api/tts").then((r) => r.json()).then((d: Info) => {
       setInfo(d);
       setPicked(d.voiceId ?? d.voices?.[0]?.id ?? "");
     }).catch(() => {});
+    fetch("/api/tts/bake").then((r) => r.json()).then(setBake).catch(() => {});
   }, []);
+
+  async function runBake() {
+    setBaking(true); setBakeMsg("");
+    try {
+      const r = await fetch("/api/tts/bake", { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "焼き込みに失敗");
+      setBakeMsg(`${d.baked}/${d.total} 本を焼きました（消費 約${d.usedChars}文字）。${d.failed?.length ? "失敗: " + d.failed.join(" / ") : "以後この音声は無料で鳴ります。"}`);
+      fetch("/api/tts/bake").then((x) => x.json()).then(setBake).catch(() => {});
+    } catch (e: any) { setBakeMsg(String(e?.message ?? e)); }
+    finally { setBaking(false); }
+  }
 
   async function play(voiceId?: string) {
     const id = voiceId ?? picked;
@@ -84,6 +100,13 @@ export default function VoiceTest() {
                 {info.elevenlabs
                   ? <>使えます。アカウントの声：<b>{voices.length}種類</b>{info.voiceId ? <> ／ 設定中のID：<code style={{ fontSize: ".7rem" }}>{info.voiceId}</code></> : <> ／ IDは未指定（自動で選ばれます）</>}</>
                   : "ELEVENLABS_API_KEY が未設定です。"}</div>
+            </div>
+            <div className={`gc-row ${info.voicevox ? "ok" : ""}`}>
+              <span className="gc-mark">{info.voicevox ? "✓" : "－"}</span>
+              <div><b>VOICEVOX</b>（無料・日本語ネイティブ・従量課金なし）<br />
+                {info.voicevox
+                  ? <>使えます（話者ID: {info.voicevoxSpeaker}）。{info.prefer === "voicevox" ? "いまはこれを最優先で使っています。" : "ElevenLabs が使えないときの控えです。"}</>
+                  : "未設定。VOICEVOX_URL か VOICEVOX_API_KEY を入れると使えます。文字数の料金がかからないので、人数が増えても枯れません。"}</div>
             </div>
             <div className={`gc-row ${info.openai ? "ok" : ""}`}>
               <span className="gc-mark">{info.openai ? "✓" : "－"}</span>
@@ -191,6 +214,34 @@ export default function VoiceTest() {
         <p className="gd-txt gd-hint" style={{ marginTop: 16 }}>
           ※ 一度作った音声はブラウザに保存されます。声を変えたのに古い声が鳴るときは、
           ブラウザの「サイトデータを削除」をしてから開き直してください。
+        </p>
+      </section>
+
+      <section className="gd-sec">
+        <h2><span className="gd-num">4</span>呼吸ガイドを焼き込む（お金の話）</h2>
+        <p className="gd-txt">
+          呼吸ガイドのセリフは<b>全ユーザー共通で毎回まったく同じ</b>。<br />
+          1回だけ音声を作ってファイルにしておけば、<b>以後は何人使っても料金は0</b>になります。<br />
+          焼かないままだと、開かれるたびに生成が走って、人が増えた瞬間にクレジットが枯れます。
+        </p>
+        <div className="gd-check">
+          <div className={`gc-row ${bake && Object.keys(bake.baked).length >= (bake.total ?? 10) ? "ok" : "ng"}`}>
+            <span className="gc-mark">{bake && Object.keys(bake.baked).length >= (bake.total ?? 10) ? "✓" : "！"}</span>
+            <div>
+              <b>焼き込みの状態</b><br />
+              {bake ? `${Object.keys(bake.baked).length} / ${bake.total} 本` : "確認中…"}
+              {bake && Object.keys(bake.baked).length < (bake.total ?? 10) &&
+                <><br />まだ焼けていません。下のボタンを1回押してください（約240文字ぶん消費）。</>}
+            </div>
+          </div>
+        </div>
+        <button className="gd-btn" style={{ marginTop: 12 }} onClick={() => void runBake()} disabled={baking}>
+          {baking ? "焼いています…" : "🔥 いまの声で焼き込む（1回だけ）"}
+        </button>
+        {bakeMsg && <p className="gd-txt" style={{ marginTop: 10, color: "#8fd0a0", wordBreak: "break-all" }}>{bakeMsg}</p>}
+        <p className="gd-txt gd-hint" style={{ marginTop: 12 }}>
+          ※ 声を変えたら、もう一度押してください（新しい声で焼き直します）。<br />
+          ※ 管理者だけが実行できます。
         </p>
       </section>
 

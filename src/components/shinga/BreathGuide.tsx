@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { BREATH_LINES } from "@/lib/breath-lines";
 import { feelGuide } from "@/lib/feelGuide";
 
 /**
@@ -29,6 +30,9 @@ const SETTLE = 15; // ゆっくり呼吸で、15秒かけてならす
 function buildSteps(emotionRaw?: string): Step[] {
   // 手紙由来の値に <山括弧> やかっこが混ざったまま画面に出ないよう、入口で落とす
   const emotion = emotionRaw?.replace(/[<>「」]/g, "").trim() || undefined;
+  // 喋る言葉は breath-lines.ts が唯一の正（焼き込みと画面がズレないように）。
+  // 感情は画面の文字だけで見せる。音声に入れると全員ぶんを焼けなくなるため。
+  const L = (k: string) => BREATH_LINES.find((x) => x.key === k)?.text ?? "";
   const inhaleInstr = emotion ? `一気に、強く吸う（未来からの「${emotion}」を）` : "一気に、強く吸う";
   const inhaleSay = emotion ? `いっきに、みらいからの、${emotion}を、つよく、すってー` : "いっきに、つよく、すってー";
   const introSay = emotion
@@ -36,21 +40,21 @@ function buildSteps(emotionRaw?: string): Step[] {
     : "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。";
 
   const steps: Step[] = [
-    { instr: emotion ? `立って、体を軽くゆらそう（未来の「${emotion}」を入れる準備）` : "立って、体を軽くゆらそう", say: introSay, count: SETTLE, scale: 1, voice: "intro" },
+    { instr: emotion ? `立って、体を軽くゆらそう（未来の「${emotion}」を入れる準備）` : "立って、体を軽くゆらそう", say: L("intro"), count: SETTLE, scale: 1, voice: "intro" },
   ];
   for (let i = 0; i < 3; i++) {
     steps.push(
-      { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, round: i + 1, say: `${i + 1}かいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね`, count: EXHALE, scale: 0.35, img: IMG_EXHALE, voice: `ex${i + 1}` },
-      { instr: `吐ききったら、少し止める（真空を作る・${HOLD}秒）`, round: i + 1, say: "そのまま、すこし止めてね。からっぽの真空をつくるよ", count: HOLD, scale: 0.28, img: IMG_HOLD, voice: "hold" },
-      { instr: inhaleInstr, say: inhaleSay, count: INHALE, scale: 1.1, img: IMG_INHALE, voice: "inhale" },
-      { instr: "ゆっくり、呼吸を整える", say: "目をとじて、ゆっくり呼吸を整えてね", count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "settle" },
+      { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, round: i + 1, say: L(`ex${i + 1}`), count: EXHALE, scale: 0.35, img: IMG_EXHALE, voice: `ex${i + 1}` },
+      { instr: `吐ききったら、少し止める（真空を作る・${HOLD}秒）`, round: i + 1, say: L("hold"), count: HOLD, scale: 0.28, img: IMG_HOLD, voice: "hold" },
+      { instr: inhaleInstr, say: L("inhale"), count: INHALE, scale: 1.1, img: IMG_INHALE, voice: "inhale" },
+      { instr: "ゆっくり、呼吸を整える", say: L("settle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "settle" },
     );
   }
   steps.push(
-    { instr: "最後にもう一度、口をすぼめて吐ききる", say: "さいごにもう一回。お口をすぼめて、ぜんぶ吐いてー", count: EXHALE, scale: 0.3, img: IMG_EXHALE, voice: "lastex" },
-    { instr: `少し止める（真空を作る・${HOLD}秒）`, say: "そのまま、すこし止めて、真空をつくってね", count: HOLD, scale: 0.24, img: IMG_HOLD, voice: "lasthold" },
-    { instr: emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : "一気に、強く吸う", say: inhaleSay, count: INHALE, scale: 1.12, img: IMG_INHALE, voice: "inhale" },
-    { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: emotion ? `いいね。ゆっくり呼吸を整えて、その「${emotion}」を身体に馴染ませて。目をあけてね。` : "いいね。ゆっくり呼吸を整えて、目をあけてね。", count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "lastsettle" },
+    { instr: "最後にもう一度、口をすぼめて吐ききる", say: L("lastex"), count: EXHALE, scale: 0.3, img: IMG_EXHALE, voice: "lastex" },
+    { instr: `少し止める（真空を作る・${HOLD}秒）`, say: L("lasthold"), count: HOLD, scale: 0.24, img: IMG_HOLD, voice: "lasthold" },
+    { instr: emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : "一気に、強く吸う", say: L("inhale"), count: INHALE, scale: 1.12, img: IMG_INHALE, voice: "inhale" },
+    { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: L("lastsettle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "lastsettle" },
   );
   return steps;
 }
@@ -88,8 +92,28 @@ function stopVoice() {
  *
  * ※ 以前は 2 を最優先にしていたため、APIを良い声にしても機械的な声のままだった。
  */
+/** 焼き込み済み音声の場所（1回だけ取りに行く）。全ユーザー共通なので料金がかからない */
+let bakedMap: Record<string, string> | null = null;
+let bakedTried = false;
+async function loadBaked() {
+  if (bakedTried) return;
+  bakedTried = true;
+  try {
+    const d = await (await fetch("/api/tts/bake")).json();
+    bakedMap = d?.baked ?? null;
+  } catch { bakedMap = null; }
+}
+
 async function speakStep(step: { say: string; voice?: string }) {
+  // ① 焼き込み済み（0円・全員同じ音）
+  if (step.voice) {
+    await loadBaked();
+    const url = bakedMap?.[step.voice];
+    if (url && await playFile(url)) return;
+  }
+  // ② その場で生成（料金がかかる。焼いていないときだけ）
   if (await speakApi(step.say)) return;
+  // ③ 同梱mp3 → ④ ブラウザ読み上げ
   if (step.voice && await playFile(`/voice/breath-${step.voice}.mp3`)) return;
   speakFallback(step.say);
 }

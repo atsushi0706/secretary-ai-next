@@ -2,9 +2,14 @@
  * テキスト→音声。
  *
  * 使う順（上から、使えるものを使う）:
- *   1. ElevenLabs … いちばん自然。日本語もちゃんと喋る。ELEVENLABS_API_KEY があれば最優先
- *   2. OpenAI TTS  … 次点。OPENAI_API_KEY があれば
- *   3. どちらも無ければ 503 → 画面側が同梱mp3／ブラウザ読み上げに退避
+ *   1. VOICEVOX  … 日本語ネイティブで無料・従量課金なし。TTS_ENGINE=voicevox で最優先にできる
+ *   2. ElevenLabs … 自然さは随一。ただし文字数ぶんクレジットを食う
+ *   3. OpenAI TTS … 次点
+ *   4. どれも無ければ 503 → 画面側が焼き込み音声／同梱mp3／ブラウザ読み上げに退避
+ *
+ * 【お金の話】ElevenLabs は1文字ずつクレジットを消費するので、人が増えると枯れる。
+ * 呼吸ガイドのような固定セリフは /api/tts/bake で1回だけ焼いてファイルにすること。
+ * VOICEVOX を使う場合はそもそも従量課金が無いので、この心配がなくなる。
  *
  * 声について：
  *   ELEVENLABS_VOICE_ID を決めていなければ、そのアカウントで使える声を自動で拾う。
@@ -22,6 +27,53 @@ const DEFAULT_INSTRUCTIONS =
 
 const EL_MODEL = process.env.ELEVENLABS_MODEL?.trim() || "eleven_multilingual_v2";
 const elKey = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
+
+/* ─────────────── VOICEVOX（無料・日本語ネイティブ） */
+// 自前サーバ（VOICEVOX ENGINE）か、公式のWeb版APIのどちらでも使える
+const VV_URL = process.env.VOICEVOX_URL?.trim() || "";
+const VV_KEY = process.env.VOICEVOX_API_KEY?.trim() || "";
+const VV_SPEAKER = process.env.VOICEVOX_SPEAKER?.trim() || "3";  // 3 = ずんだもん（ノーマル）
+
+/** エンジンの優先順。TTS_ENGINE=voicevox にすると VOICEVOX が最優先になる */
+const PREFER = (process.env.TTS_ENGINE?.trim() || "").toLowerCase();
+
+async function voicevox(text: string): Promise<{ res?: Response; error?: string }> {
+  // ① 自前の VOICEVOX ENGINE（audio_query → synthesis の2段）
+  if (VV_URL) {
+    try {
+      const base = VV_URL.replace(/\/$/, "");
+      const q = await fetch(`${base}/audio_query?text=${encodeURIComponent(text)}&speaker=${VV_SPEAKER}`, { method: "POST" });
+      if (!q.ok) return { error: `VOICEVOX audio_query ${q.status}` };
+      const query = await q.json();
+      // 呼吸ガイドに合わせて、少しゆっくり・やわらかく
+      query.speedScale = 0.92;
+      query.pitchScale = 0.0;
+      query.intonationScale = 1.05;
+      const r = await fetch(`${base}/synthesis?speaker=${VV_SPEAKER}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(query),
+      });
+      if (!r.ok) return { error: `VOICEVOX synthesis ${r.status}` };
+      return { res: audio(await r.arrayBuffer(), "voicevox", VV_SPEAKER) };
+    } catch (e: any) {
+      return { error: `VOICEVOX 通信エラー: ${String(e?.message ?? e).slice(0, 120)}` };
+    }
+  }
+  // ② 公式Web版API（キーだけで使える。1リクエストで完結）
+  if (VV_KEY) {
+    try {
+      const u = `https://deprecatedapis.tts.quest/v2/voicevox/audio/?key=${encodeURIComponent(VV_KEY)}&speaker=${VV_SPEAKER}&text=${encodeURIComponent(text)}`;
+      const r = await fetch(u);
+      if (!r.ok) return { error: `VOICEVOX Web ${r.status}` };
+      const buf = await r.arrayBuffer();
+      if (buf.byteLength < 500) return { error: "VOICEVOX Web: 音声が返らなかった（キーや残量を確認）" };
+      return { res: audio(buf, "voicevox", VV_SPEAKER) };
+    } catch (e: any) {
+      return { error: `VOICEVOX 通信エラー: ${String(e?.message ?? e).slice(0, 120)}` };
+    }
+  }
+  return { error: "VOICEVOX は未設定（VOICEVOX_URL か VOICEVOX_API_KEY）" };
+}
+const vvReady = () => !!(VV_URL || VV_KEY);
 
 export type ElVoice = {
   id: string; name: string; labels?: Record<string, string>;
@@ -175,14 +227,31 @@ export async function POST(req: Request) {
   // 画面から「この声で試す」ができるように、1回きりの指定を受け付ける
   const voiceId = typeof body.voiceId === "string" ? body.voiceId : undefined;
 
+  const notes: string[] = [];
+
+  // VOICEVOX を先に使う設定なら、まずそちら（無料・日本語ネイティブ）
+  if (PREFER === "voicevox" && vvReady()) {
+    const vv = await voicevox(text);
+    if (vv.res) return vv.res;
+    if (vv.error) notes.push(vv.error);
+  }
+
   const el = await elevenlabs(text, voiceId);
   if (el.res) return el.res;
+  if (el.error) notes.push(el.error);
+
+  // ElevenLabs がだめでも VOICEVOX があれば鳴らす（クレジット切れの保険）
+  if (PREFER !== "voicevox" && vvReady()) {
+    const vv = await voicevox(text);
+    if (vv.res) return vv.res;
+    if (vv.error) notes.push(vv.error);
+  }
 
   const oa = await openai(text, voice, instructions);
   if (oa) return oa;
 
   // 失敗の理由を隠さない（ここを黙らせると原因にたどり着けない）
-  return new Response(JSON.stringify({ error: "no_tts_engine", detail: el.error ?? "" }), {
+  return new Response(JSON.stringify({ error: "no_tts_engine", detail: notes.join(" / ") }), {
     status: 503, headers: { "Content-Type": "application/json" },
   });
 }
@@ -197,5 +266,8 @@ export async function GET() {
     model: EL_MODEL,
     voices,
     voicesError: lastVoiceError || null,
+    voicevox: vvReady(),
+    voicevoxSpeaker: vvReady() ? VV_SPEAKER : null,
+    prefer: PREFER || "elevenlabs",
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 }

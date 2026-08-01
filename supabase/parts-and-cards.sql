@@ -81,3 +81,30 @@ alter table public.user_settings add column if not exists referred_by text;
 
 alter table public.methods         enable row level security;
 alter table public.broadcast_posts enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- 自分の取扱説明書
+--   7) manual_answers … 16問の回答（1ユーザー1件・上書き）
+--   8) manuals        … 生成した取扱説明書（何度でも作れる／履歴が残る）
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.manual_answers (
+  user_id     text primary key,
+  answers     jsonb not null default '{}'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+
+create table if not exists public.manuals (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,
+  headline    text not null default '',
+  sections    jsonb not null default '[]'::jsonb,
+  actions     jsonb not null default '[]'::jsonb,
+  scores      jsonb not null default '{}'::jsonb,
+  created_at  timestamptz not null default now()
+);
+create index if not exists manuals_user_idx on public.manuals (user_id, created_at desc);
+
+alter table public.manual_answers enable row level security;
+alter table public.manuals        enable row level security;

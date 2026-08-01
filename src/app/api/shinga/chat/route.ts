@@ -102,9 +102,30 @@ export async function POST(req: Request) {
           }));
         }
 
+        // 「真ん中に戻す」では、いまの偏りと"実際にやったことの記録"を必ず渡す。
+        // これが無いと、やれているのに「動けてないね」と言ってしまう。
+        let balanceCtx = "";
+        if (mode === "balance") {
+          const { readLean, recentDoneText } = await import("@/lib/lean");
+          const [lean, done] = await Promise.all([
+            readLean(userId).catch(() => null),
+            recentDoneText(userId).catch(() => ""),
+          ]);
+          balanceCtx = [
+            "# いま画面に出ている状態",
+            lean
+              ? `- 偏り：${lean.lean === "image" ? "空想寄り" : lean.lean === "real" ? "現実寄り" : "整っている"}（強さ ${lean.strength}）\n- 気づき：${lean.pattern}`
+              : "- 偏りはまだ読めていない（本人の実感を聞くところから始める）",
+            "",
+            "# この人が実際にやったこと（事実。ここにあることは全部やっている。無かったことにしない）",
+            done || "（記録なし）",
+          ].join("\n");
+        }
+
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
-        const systemFull = mode !== "parts" ? system : [
-          system,
+        const systemBase = balanceCtx ? `${system}\n\n${balanceCtx}` : system;
+        const systemFull = mode !== "parts" ? systemBase : [
+          systemBase,
           partColor
             ? partPrompt(partColor)
             : ["# まだ守り手が決まっていない", "相手の話から、どの守り手が前に出ているかを一緒に見立てる。決めつけず、確かめる。", cuesForPrompt()].join("\n"),

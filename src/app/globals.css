@@ -1178,9 +1178,15 @@ body:has(.realverse-bg) { background: transparent; }
 .iw-scene.is-centered { height: auto; display: flex; flex-direction: column; align-items: center; gap: 12px; margin-top: 4px; }
 .iw-scene.is-centered .iw-figure { position: static; height: auto; width: auto; max-height: 190px; max-width: 46%; margin: 0 auto; animation: iw-breathe-c 5s ease-in-out infinite; }
 .iw-bubble.is-centered { position: relative; left: auto; top: auto; right: auto; max-width: min(520px, 94%); margin: 0 auto; text-align: left; }
-/* 吹き出しのしっぽ（上のキヨセリンクへ向ける） */
+/* 吹き出しのしっぽ（上のキヨセリンクへ向ける）
+   ※ right/bottom を必ず打ち消すこと。既定の .iw-bubble::after が right:-9px / bottom:16px を
+   　 持っており、それが残ったまま left/top も付くと、四辺が確定してボックスが引き伸ばされ、
+   　 8px の濃い下ボーダーが「黒い帯」として本文の上に乗ってしまう。 */
 .iw-bubble.is-centered::after {
-  content: ""; position: absolute; left: 50%; top: -9px; transform: translateX(-50%);
+  content: ""; position: absolute;
+  left: 50%; top: -9px; right: auto; bottom: auto;
+  width: 0; height: 0;
+  transform: translateX(-50%);
   border: 8px solid transparent; border-bottom-color: rgba(20,16,11,.9); border-top: 0;
 }
 
@@ -2514,6 +2520,16 @@ body:has(.realverse-bg) { background: transparent; }
 .balance .b-fix-row .arr { color: var(--singa-ink-soft); font-size: .64rem; margin-left: 4px; white-space: nowrap; }
 .balance .b-fix-row.is-hot { background: rgba(238,214,155,.16); border: 1px solid rgba(238,214,155,.4); }
 .balance .b-fix-row.is-hot b { color: #eed69b; }
+/* メーターから「じゃあどうする？」の対話へ入るボタン（言いっぱなしにしない） */
+.balance .b-talk {
+  width: 100%; margin-top: 10px; padding: 11px; border-radius: 12px;
+  font-size: .8rem; font-weight: 700; color: #1a1208;
+  background: linear-gradient(160deg, #f0dca8, #c9a55e);
+  box-shadow: 0 6px 20px rgba(201,165,94,.3);
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.balance .b-talk:hover { transform: translateY(-2px); box-shadow: 0 10px 26px rgba(201,165,94,.42); }
+
 .balance .b-fix-note { margin-top: 7px; font-size: .66rem; line-height: 1.6; color: var(--singa-ink-soft); }
 
 .ihud-quest { padding: 12px 14px; border-radius: 14px; background: rgba(20,16,28,.62); border: 1px solid rgba(238,214,155,.28); backdrop-filter: blur(6px); }

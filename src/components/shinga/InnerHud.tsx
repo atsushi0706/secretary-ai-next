@@ -15,7 +15,11 @@ type Level = { level: number; max: number; actions: LevelAction[] };
 // 対話の中身から読み取った偏り（回数では見えない"状態"）
 type Lean = { lean: "image" | "real" | "zone"; strength: number; pattern: string; message: string };
 
-export function InnerHud({ guideName }: { guideName: string }) {
+export function InnerHud({ guideName, onTalkBalance }: {
+  guideName: string;
+  /** メーターから「どうすれば戻る？」の対話へ入る */
+  onTalkBalance?: () => void;
+}) {
   const [g, setG] = useState<Grounding>({ imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [level, setLevel] = useState<Level | null>(null);
@@ -54,7 +58,7 @@ export function InnerHud({ guideName }: { guideName: string }) {
       {level && level.level < level.max && <LevelBar level={level} />}
 
       {/* 空想↔現実のバランス（中央＝フロー） */}
-      <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} lean={lean} />
+      <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} lean={lean} onTalk={onTalkBalance} />
 
       {/* ハイヤークエスト＝未来から降りてきたクエストと同じもの。
           まだ決まっていない日も「どこにあるか」が分かるよう、場所だけは常に見せる。 */}
@@ -196,7 +200,9 @@ function LevelBar({ level }: { level: Level }) {
  * 空想↔現実のバランス。%ではなく"どっちに寄ってるか"。中央＝フロー（空想を現実に落とし込めている＝最適）。
  * 現実に寄りすぎ＝やることに追われて未来が見えてない。空想に寄りすぎ＝上に浮いて地に足がついてない。
  */
-function BalanceMeter({ imageDays, realDays, lean }: { imageDays: number; realDays: number; lean?: Lean | null }) {
+function BalanceMeter({ imageDays, realDays, lean, onTalk }: {
+  imageDays: number; realDays: number; lean?: Lean | null; onTalk?: () => void;
+}) {
   const [open, setOpen] = useState(false); // 説明はふだん畳んでおく（うるさくしない）
   const total = imageDays + realDays;
   const diff = realDays - imageDays; // 正＝現実寄り / 負＝空想寄り
@@ -259,6 +265,13 @@ function BalanceMeter({ imageDays, realDays, lean }: { imageDays: number; realDa
           <div className="br-pattern">👀 {lean.pattern}</div>
           <div className="br-msg">{lean.message}</div>
         </div>
+      )}
+
+      {/* 言いっぱなしにしない。「じゃあどうする？」を一緒に決める場所へ */}
+      {state !== "neutral" && state !== "zone" && onTalk && (
+        <button className="b-talk" onClick={onTalk}>
+          💬 どうすれば真ん中に戻る？ 話しながら決める
+        </button>
       )}
 
       {!open ? null : (

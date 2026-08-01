@@ -587,6 +587,7 @@ export function ShingaWorld({
           onTasks={() => setTasksOpen(true)}
           onLetter={letter ? () => { setLetterDramatic(false); setPhase("letter"); } : undefined}
           onCard={card && !card.done ? () => setShowCard(true) : undefined}
+          onBalance={() => void enter("balance")}
           isAdventurer={isAdventurer}
           sending={sending}
         />
@@ -902,7 +903,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, isAdventurer, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, isAdventurer, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -914,6 +915,8 @@ function Home({
   onTasks: () => void;
   onLetter?: () => void;
   onCard?: () => void;
+  /** メーターから「どうすれば真ん中に戻る？」の対話へ */
+  onBalance?: () => void;
   isAdventurer?: boolean;
   sending: boolean;
 }) {
@@ -955,7 +958,7 @@ function Home({
       </div>
 
       {/* ゲームHUD：空想↔現実のバランス＋ハイヤークエスト */}
-      <InnerHud guideName={guideName} />
+      <InnerHud guideName={guideName} onTalkBalance={onBalance} />
 
       {/* または、行き先を選ぶ */}
       <div className="iw-doors">

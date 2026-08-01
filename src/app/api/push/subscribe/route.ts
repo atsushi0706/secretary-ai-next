@@ -17,7 +17,7 @@ export async function GET() {
   try {
     return NextResponse.json({
       configured: pushConfigured(),
-      publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null,
+      publicKey: (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? "").trim() || null,
       subscribed: pushConfigured() ? await hasSubscription(userId) : false,
       // どちらの鍵が見えていないかだけ返す（値そのものは返さない）
       has: {

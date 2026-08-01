@@ -13,17 +13,20 @@ import { supabaseAdmin } from "./supabase";
 export type PushPayload = { title: string; body: string; url?: string; tag?: string };
 
 let configured = false;
+/** 環境変数は貼り付けミスで前後に空白や改行が入りがち。鍵として使う前に必ず落とす */
+const env = (k: string) => (process.env[k] ?? "").trim();
+
 export function pushConfigured(): boolean {
-  return !!(process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY);
+  return !!(env("NEXT_PUBLIC_VAPID_PUBLIC_KEY") && env("VAPID_PRIVATE_KEY"));
 }
 
 function ensureConfigured() {
   if (configured) return;
   if (!pushConfigured()) throw new Error("VAPID 未設定（NEXT_PUBLIC_VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY）");
   webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT || "mailto:affection.alice@gmail.com",
-    process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-    process.env.VAPID_PRIVATE_KEY!,
+    env("VAPID_SUBJECT") || "mailto:affection.alice@gmail.com",
+    env("NEXT_PUBLIC_VAPID_PUBLIC_KEY"),
+    env("VAPID_PRIVATE_KEY"),
   );
   configured = true;
 }

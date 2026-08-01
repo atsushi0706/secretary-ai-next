@@ -14,6 +14,9 @@
  */
 import { auth } from "@/auth";
 
+// 設定を変えたら即反映したいので、固めない
+export const dynamic = "force-dynamic";
+
 const DEFAULT_INSTRUCTIONS =
   "やわらかく、あたたかい、少し子どもっぽい落ち着いた声で。急がず、やさしく、包むように。呼吸に寄り添うテンポで。";
 

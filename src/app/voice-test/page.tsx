@@ -26,6 +26,7 @@ export default function VoiceTest() {
   const [msg, setMsg] = useState("");
   const [engine, setEngine] = useState("");
   const [usedVoice, setUsedVoice] = useState("");
+  const [askedVoice, setAskedVoice] = useState<Voice | null>(null);
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -37,7 +38,8 @@ export default function VoiceTest() {
 
   async function play(voiceId?: string) {
     const id = voiceId ?? picked;
-    setBusy(id || "x"); setMsg(""); setEngine("");
+    setBusy(id || "x"); setMsg(""); setEngine(""); setUsedVoice("");
+    setAskedVoice((info?.voices ?? []).find((v) => v.id === id) ?? null);
     try {
       const r = await fetch("/api/tts", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -115,9 +117,11 @@ export default function VoiceTest() {
         {engine && (
           <p className="gd-txt" style={{ color: "#e0bd72", marginTop: 10 }}>
             ▶ いま鳴った声：<b>{usedVoice || "（不明）"}</b>
-            {picked && usedVoice && !usedVoice.includes(picked) && (info?.voices ?? []).find((v) => v.id === picked && !v.free) && (
+            {askedVoice && !askedVoice.free && usedVoice !== askedVoice.name && (
               <><br /><span style={{ color: "#e0b48c" }}>
-                ※ 選んだ声は有料プラン専用なので、無料で使える声に切り替えて鳴らしたよ
+                ※「{askedVoice.name}」は有料プラン専用で鳴らせないため、
+                無料で使える<b>「{usedVoice}」</b>の声で鳴らしました。
+                ElevenLabs のサイトで聴く声と違うのはこのためです。
               </span></>
             )}
           </p>

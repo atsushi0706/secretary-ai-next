@@ -221,7 +221,7 @@ export default function SettingsPage() {
   return (
     <main className="min-h-screen p-6 max-w-2xl mx-auto pb-20">
       <h1 className="text-2xl font-bold mb-4">⚙️ 設定</h1>
-      <Link href="/" className="text-sm text-[var(--accent)] underline">← ホームに戻る</Link>
+      <Link href="/shinga" className="text-sm text-[var(--accent)] underline">← もどる</Link>
 
       {/* ── 秘書のカスタマイズ ── */}
       <div className="card mt-6 space-y-5">

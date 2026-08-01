@@ -137,8 +137,9 @@ export default function GuidePage() {
           </div>
         </div>
         <p className="gd-txt gd-hint">
-          ※ アプリを開くと最初は<b>リアルバース</b>が出ます。ワークをしたいときは、上のタブで
-          <b>インナーワールド</b>に切り替えてください。
+          ※ アプリを開くと、まず<b>インナーワールド</b>が出ます。朝の流れ（今の気分 → 今日の動けそう度 →
+          未来からの手紙）もここから始まります。<br />
+          予定やタスクを見たいときは、上のタブで<b>リアルバース</b>に切り替えてください。
         </p>
       </section>
 
@@ -310,7 +311,7 @@ export default function GuidePage() {
       <footer className="gd-foot">
         <Link href="/settings" className="gd-btn">⚙️ 設定ページへ</Link>
         <Link href="/shinga" className="gd-btn is-ghost">🔑 インナーワールドへ</Link>
-        <Link href="/" className="gd-btn is-ghost">🧭 リアルバースへ</Link>
+        <Link href="/realverse" className="gd-btn is-ghost">🧭 リアルバースへ</Link>
       </footer>
     </main>
   );

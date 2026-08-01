@@ -14,7 +14,7 @@ export type Realm = "realverse" | "shinga";
 const REALMS: Array<{ key: Realm; href: string; emoji: string; label: string; tag: string }> = [
   {
     key: "realverse",
-    href: "/",
+    href: "/realverse",
     emoji: "🧭",
     label: "リアルバース",
     tag: "Plan it. Do it. Become it.",

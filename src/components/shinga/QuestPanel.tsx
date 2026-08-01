@@ -217,7 +217,7 @@ function QuestDetail({
       {added !== null ? (
         <p className="text-[11px]">
           {added}件をリアルバースに渡しました。
-          <Link href="/" className="underline font-bold ml-1">見に行く</Link>
+          <Link href="/realverse" className="underline font-bold ml-1">見に行く</Link>
         </p>
       ) : candidates.length === 0 ? (
         <button onClick={suggest} disabled={loading} className="singa-panel-btn is-cross">

@@ -2,7 +2,7 @@
   "name": "Singa World",
   "short_name": "Singa World",
   "description": "内側で掴んだものを、現実に落としていく。インナーワールド × リアルバース",
-  "start_url": "/",
+  "start_url": "/shinga",
   "display": "standalone",
   "background_color": "#f5f3fb",
   "theme_color": "#7a6dd6",

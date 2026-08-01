@@ -93,7 +93,14 @@ ${purpose}
 
     if (b.action === "save") {
       const w = b.work as CustomWork;
-      if (!isValidWork(w)) return NextResponse.json({ error: "ワークの形が不完全です（名前と、進め方が1つ以上必要）" }, { status: 400 });
+      if (!w?.name?.trim()) return NextResponse.json({ error: "ワークの名前を入れてね" }, { status: 400 });
+      if (!Array.isArray(w?.steps) || w.steps.length === 0) {
+        return NextResponse.json({ error: "進め方を1つ以上入れてね（💬 問いかけ か 🎴 カード）" }, { status: 400 });
+      }
+      if (w.steps.some((st: any) => st?.kind === "q" && !String(st.q ?? "").trim())) {
+        return NextResponse.json({ error: "空っぽの問いかけがあるよ。文を入れるか、✕で消してね" }, { status: 400 });
+      }
+      if (!isValidWork(w)) return NextResponse.json({ error: "ワークの形が不完全です" }, { status: 400 });
       const supa = supabaseAdmin();
       const row = {
         user_id: userId,
@@ -134,7 +141,7 @@ ${purpose}
 
     return NextResponse.json({ error: "unknown action" }, { status: 400 });
   } catch (e: any) {
-    if (isMissingTable(e)) return NextResponse.json({ error: MIGRATION_HINT, needsMigration: true }, { status: 503 });
+    if (isMissingTable(e)) return NextResponse.json({ error: "保存先がまだ作られていません。Supabase で custom_works のSQLを流してね。", needsMigration: true }, { status: 503 });
     await logError(userId, "/api/custom-works", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });
   }

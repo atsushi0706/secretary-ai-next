@@ -3956,6 +3956,7 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .bo-note { font-size: .66rem; color: var(--singa-ink-soft); margin-top: 2px; }
 
+
 /* ══════════════════════════════════════════════════════════
    じぶんワーク（ワークメーカー＋カードを引く演出）
    ══════════════════════════════════════════════════════════ */
@@ -3966,83 +3967,168 @@ body:has(.realverse-bg) { background: transparent; }
   background: linear-gradient(180deg, rgba(10,8,14,.93), rgba(10,8,14,.88));
   border-radius: 20px; border: 1px solid rgba(238,214,155,.16);
 }
-.wm-head h2 {
-  font-family: Georgia, "Yu Mincho", "游明朝", serif;
-  font-size: 1.2rem; letter-spacing: .08em; text-align: center;
-  color: var(--singa-gold); margin: 8px 0 8px;
-}
-.wm-lead { font-size: .78rem; line-height: 1.9; text-align: center; color: var(--singa-ink-soft); margin-bottom: 14px; }
-.wm-err { font-size: .74rem; color: #e6a0a0; margin: 10px 0; }
-
+.wm-lead { font-size: .8rem; line-height: 1.95; text-align: center; color: var(--singa-ink-soft); margin-bottom: 16px; }
+.wm-lead b { color: var(--singa-gold); }
+.wm-err { font-size: .76rem; color: #e6a0a0; margin: 10px 0; line-height: 1.7; }
 .wm-purpose {
   width: 100%; padding: 13px 15px; border-radius: 14px;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.16);
-  color: var(--singa-ink); font-size: .9rem; line-height: 1.9; resize: vertical;
+  background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.15);
+  color: var(--singa-ink); font-size: .88rem; line-height: 1.9; resize: vertical;
 }
-.wm-examples { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-.wm-examples button {
-  text-align: left; padding: 9px 13px; border-radius: 11px; font-size: .74rem;
-  color: var(--singa-ink-soft); background: rgba(255,255,255,.04);
-  border: 1px dashed rgba(238,214,155,.3);
-}
-.wm-examples button:hover { color: var(--singa-gold); }
-.wm-go {
-  width: 100%; margin-top: 14px; padding: 14px; border-radius: 14px;
-  font-weight: 700; font-size: .9rem; color: #1a1208;
-  background: linear-gradient(160deg,#f0dca8,#c9a55e);
-  box-shadow: 0 8px 26px rgba(201,165,94,.35);
-}
-.wm-go:disabled { opacity: .65; }
+.wm-purpose::placeholder { color: rgba(244,236,221,.3); }
 
-.wm-title-row { display: flex; gap: 8px; margin-bottom: 12px; }
+/* ══════════════════════════════════════════════════════════
+   じぶんワーク：作る体験（儀式を編む）
+   ══════════════════════════════════════════════════════════ */
+
+/* ── ① はじまり ── */
+.wm-hero { text-align: center; padding: 6px 0 18px; }
+.wm-orb {
+  width: 84px; height: 84px; margin: 0 auto 14px; border-radius: 999px;
+  display: grid; place-items: center; font-size: 2.2rem;
+  background: radial-gradient(circle at 50% 35%, rgba(224,189,114,.35), rgba(120,90,190,.2) 60%, transparent);
+  border: 1px solid rgba(238,214,155,.4);
+  box-shadow: 0 0 36px rgba(238,214,155,.28), inset 0 0 24px rgba(238,214,155,.1);
+  animation: wm-float 4s ease-in-out infinite;
+}
+@keyframes wm-float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-7px); } }
+.wm-hero h2 {
+  font-family: Georgia, "Yu Mincho", "游明朝", serif;
+  font-size: 1.3rem; letter-spacing: .1em; color: var(--singa-gold);
+}
+.wm-hero h2::after {
+  content: ""; display: block; width: 54px; height: 1.5px; margin: 12px auto 0;
+  background: linear-gradient(90deg, transparent, var(--singa-gold), transparent);
+}
+
+.wm-seeds { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; }
+@media (max-width: 480px) { .wm-seeds { grid-template-columns: 1fr; } }
+.wm-seed {
+  display: flex; align-items: center; gap: 10px; text-align: left;
+  padding: 12px 13px; border-radius: 14px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.11);
+  transition: transform .16s ease, border-color .16s ease, background .16s ease;
+}
+.wm-seed:hover { transform: translateY(-2px); border-color: rgba(238,214,155,.4); }
+.wm-seed.on {
+  background: rgba(238,214,155,.13); border-color: var(--singa-gold);
+  box-shadow: 0 6px 20px rgba(201,165,94,.24);
+}
+.wm-seed .ws-emoji { font-size: 1.25rem; flex-shrink: 0; }
+.wm-seed .ws-txt { font-size: .76rem; line-height: 1.65; color: var(--singa-ink); }
+.wm-note { margin-top: 10px; font-size: .68rem; text-align: center; color: var(--singa-ink-soft); }
+
+/* ── ② 巻物（作りかけの儀式） ── */
+.wm-scroll {
+  padding: 15px 16px 13px; border-radius: 18px; margin-bottom: 6px;
+  background:
+    radial-gradient(circle at 20% 0%, rgba(238,214,155,.14), transparent 60%),
+    linear-gradient(165deg, rgba(40,32,52,.9), rgba(18,14,26,.95));
+  border: 1px solid rgba(238,214,155,.34);
+  box-shadow: 0 12px 34px rgba(0,0,0,.42), inset 0 0 30px rgba(238,214,155,.05);
+}
+.wm-scroll-top { display: flex; gap: 10px; align-items: center; }
 .wm-emoji {
-  width: 56px; text-align: center; font-size: 1.3rem; padding: 9px 0;
-  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16); border-radius: 12px;
-  color: var(--singa-ink);
+  width: 54px; height: 54px; flex-shrink: 0; border-radius: 15px; font-size: 1.5rem;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(238,214,155,.34);
+  transition: transform .15s ease;
 }
+.wm-emoji:hover { transform: scale(1.06); }
 .wm-name {
-  flex: 1; padding: 9px 13px; font-size: .95rem; font-weight: 700;
-  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16); border-radius: 12px;
-  color: var(--singa-ink);
+  flex: 1; min-width: 0; padding: 10px 0; background: transparent; border: none;
+  border-bottom: 1px dashed rgba(238,214,155,.32); outline: none;
+  color: var(--singa-ink); font-size: 1.1rem; font-weight: 700;
+  font-family: Georgia, "Yu Mincho", serif; letter-spacing: .04em;
 }
-.wm-label { display: block; font-size: .68rem; color: var(--singa-gold); margin: 14px 0 6px; letter-spacing: .06em; }
-.wm-input {
-  width: 100%; padding: 10px 13px; font-size: .84rem;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 11px;
-  color: var(--singa-ink);
+.wm-name::placeholder { color: rgba(244,236,221,.3); font-weight: 400; }
+.wm-emojipick {
+  display: grid; grid-template-columns: repeat(8, 1fr); gap: 5px; margin-top: 11px;
+  padding: 9px; border-radius: 12px; background: rgba(0,0,0,.32);
 }
+.wm-emojipick button {
+  aspect-ratio: 1; border-radius: 9px; font-size: 1.05rem;
+  border: 1px solid transparent; background: rgba(255,255,255,.05);
+}
+.wm-emojipick button.on, .wm-emojipick button:hover { border-color: var(--singa-gold); background: rgba(238,214,155,.16); }
+.wm-meta { display: flex; gap: 12px; margin-top: 11px; font-size: .68rem; color: var(--singa-ink-soft); }
+.wm-meta .wm-min { margin-left: auto; color: var(--singa-gold); }
 
-.wm-steps { display: flex; flex-direction: column; gap: 8px; }
-.wm-step {
-  display: flex; align-items: center; gap: 9px;
-  padding: 9px 11px; border-radius: 13px;
-  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
-}
-.wm-step.is-card { border-color: rgba(238,214,155,.4); background: rgba(238,214,155,.07); }
-.ws-icon { flex-shrink: 0; font-size: 1rem; }
-.wm-step input, .wm-step select {
-  width: 100%; padding: 8px 11px; font-size: .82rem;
-  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); border-radius: 9px;
+.wm-label { display: block; font-size: .66rem; color: var(--singa-gold); margin: 16px 0 6px; letter-spacing: .1em; }
+.wm-input {
+  width: 100%; padding: 11px 13px; font-size: .84rem; line-height: 1.7;
+  background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.14); border-radius: 12px;
   color: var(--singa-ink);
 }
-.ws-card { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
-.wm-step > input { flex: 1; min-width: 0; }
-.ws-ops { flex-shrink: 0; display: flex; gap: 3px; }
-.ws-ops button {
-  width: 26px; height: 26px; border-radius: 8px; font-size: .62rem;
-  color: var(--singa-ink-soft); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.12);
+.wm-input::placeholder { color: rgba(244,236,221,.32); }
+
+/* ── 道のり ── */
+.wm-path { position: relative; display: flex; flex-direction: column; gap: 9px; }
+.wm-path::before {
+  content: ""; position: absolute; left: 21px; top: 22px; bottom: 22px; width: 2px;
+  background: linear-gradient(180deg, rgba(238,214,155,.45), rgba(238,214,155,.12));
 }
-.ws-ops button:hover { color: var(--singa-gold); }
-.wm-add { display: flex; gap: 8px; margin-top: 9px; }
+.wm-node {
+  position: relative; display: flex; align-items: flex-start; gap: 11px;
+  padding: 11px 12px; border-radius: 15px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+  animation: wm-in .35s ease both;
+}
+@keyframes wm-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.wm-node.is-card { border-color: rgba(238,214,155,.42); background: rgba(238,214,155,.075); }
+.wm-node.is-end { border-style: dashed; opacity: .9; }
+.wn-mark {
+  position: relative; z-index: 1; flex-shrink: 0;
+  width: 30px; height: 30px; border-radius: 999px; display: grid; place-items: center;
+  font-size: .95rem; background: rgba(20,16,28,.98); border: 1.5px solid rgba(238,214,155,.5);
+}
+.wn-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.wn-body input {
+  width: 100%; padding: 9px 11px; font-size: .82rem; line-height: 1.6;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.13); border-radius: 10px;
+  color: var(--singa-ink);
+}
+.wn-body input::placeholder { color: rgba(244,236,221,.3); }
+.wn-decks { display: flex; gap: 5px; }
+.wn-decks button {
+  flex: 1; padding: 7px 8px; border-radius: 9px; font-size: .68rem;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+}
+.wn-decks button.on { color: #1a1208; background: linear-gradient(160deg,#eed69b,#c9a55e); border-color: transparent; font-weight: 700; }
+.wn-ops { flex-shrink: 0; display: flex; flex-direction: column; gap: 3px; }
+.wn-ops button {
+  width: 24px; height: 22px; border-radius: 7px; font-size: .58rem;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.11);
+}
+.wn-ops button:hover { color: var(--singa-gold); border-color: rgba(238,214,155,.4); }
+
+.wm-add { display: flex; gap: 8px; margin-top: 11px; }
 .wm-add button {
-  flex: 1; padding: 10px; border-radius: 11px; font-size: .76rem;
-  color: var(--singa-gold); background: rgba(255,255,255,.05);
-  border: 1px dashed rgba(238,214,155,.4);
+  flex: 1; padding: 11px; border-radius: 12px; font-size: .76rem;
+  color: var(--singa-gold); background: rgba(255,255,255,.045);
+  border: 1px dashed rgba(238,214,155,.42);
+  transition: background .16s ease, transform .16s ease;
 }
+.wm-add button:hover { background: rgba(238,214,155,.12); transform: translateY(-1px); }
+
 .wm-cards-toggle {
-  width: 100%; margin-top: 16px; padding: 10px; border-radius: 11px; font-size: .74rem;
+  width: 100%; margin-top: 16px; padding: 11px; border-radius: 12px; font-size: .76rem;
   color: var(--singa-ink-soft); background: transparent; border: 1px dashed rgba(255,255,255,.2);
 }
+.wm-cards-toggle:hover { color: var(--singa-gold); border-color: rgba(238,214,155,.4); }
+
+.wm-saved {
+  margin-top: 12px; text-align: center; font-size: .82rem; font-weight: 700; color: #8fd0a0;
+  animation: burst-in .4s cubic-bezier(.2,.8,.3,1) both;
+}
+.wm-go {
+  width: 100%; margin-top: 14px; padding: 15px; border-radius: 15px;
+  font-weight: 700; font-size: .92rem; letter-spacing: .04em; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e);
+  box-shadow: 0 10px 30px rgba(201,165,94,.38);
+  transition: transform .16s ease, box-shadow .16s ease;
+}
+.wm-go:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 14px 36px rgba(201,165,94,.5); }
+.wm-go:disabled { opacity: .6; box-shadow: none; }
 
 /* じぶんの札 */
 .oc-editor { margin-top: 10px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.04); }

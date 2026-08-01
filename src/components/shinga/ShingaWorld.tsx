@@ -353,10 +353,14 @@ export function ShingaWorld({
    * ワークを終える（地図に戻る／別のワークへ移る）ときに、その1回ぶんを素材として残す。
    * 発信スタジオはここで貯まったものだけを使う（会話を後からまとめて漁らない）。
    */
+  const savedSigRef = useRef("");   // 同じワークを二重に素材化しない（戻る→別ワークで2回呼ばれるため）
   const finishWork = useCallback(async (m: ModeKey | null, msgs: Message[]) => {
     if (!m || savingWorkRef.current) return;
     const mine = msgs.filter((x) => x.role === "user" && x.content.trim());
     if (mine.length < 2) return;            // ほとんど話していない＝素材にしない
+    const sig = `${m}:${msgs.length}:${msgs[msgs.length - 1]?.content?.slice(0, 40) ?? ""}`;
+    if (savedSigRef.current === sig) return; // すでにこの内容で保存済み
+    savedSigRef.current = sig;
     savingWorkRef.current = true;
     try {
       const r = await fetch("/api/work-session", {
@@ -364,7 +368,12 @@ export function ShingaWorld({
         body: JSON.stringify({ mode: m, messages: msgs }),
       });
       const d = await r.json();
-      if (d?.session?.title) setMaterialToast({ id: d.session.id, title: d.session.title });
+      // 内省が深いワーク（神殿・ディープ・ウォールブレイク）の直後は、発信の提案を出さない。
+      // 無防備になったところへ「公開しよう」は危うい。素材は静かに貯まり、スタジオを開けば選べる。
+      const INTROSPECTIVE: ModeKey[] = ["parts", "deep", "breakthrough"];
+      if (d?.session?.title && !INTROSPECTIVE.includes(m)) {
+        setMaterialToast({ id: d.session.id, title: d.session.title });
+      }
     } catch { /* 残せなくてもワークは終わっている */ }
     finally { savingWorkRef.current = false; }
   }, []);
@@ -478,6 +487,11 @@ export function ShingaWorld({
         body: JSON.stringify({
           text: body, place: p, mode: m ?? undefined, greet, opener,
           partColor: m === "parts" ? partColorRef.current ?? undefined : undefined,
+          // 画面に出ている進行状況。AIが「いまどこか」を知らないと同じ質問を繰り返す
+          partsStep: m === "parts" ? partsStep : undefined,
+          walkStage: m === "walk" ? walkStage : undefined,
+          travelStage: m === "travel" ? travelStage : undefined,
+          wallStage: m === "breakthrough" ? wallStage : undefined,
           debug: debugAvailable && debug,
         }),
       });
@@ -528,6 +542,15 @@ export function ShingaWorld({
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
+        } else if (name === "quests") {
+          // 本当に書き込まれたものだけをチップで見せる（言いっぱなし防止の見える化）
+          const qs = (data?.quests as { title: string }[]) ?? [];
+          if (qs.length) {
+            setMessages((prev) => [...prev,
+              { role: "assistant", content: `[[quests]]${qs.map((q) => q.title).join("／")}` }]);
+          }
+        } else if (name === "care") {
+          setMessages((prev) => [...prev, { role: "assistant", content: `[[care]]${data?.text ?? ""}` }]);
         } else if (name === "hero") {
           const changes = (data.changes as { label: string; from: number; to: number }[]) ?? [];
           if (changes.length) {
@@ -804,12 +827,18 @@ export function ShingaWorld({
                     />
                   )}
                   <div className="singa-line-body">
-                  {m.role === "assistant" && <span className="who">{guideName}</span>}
+                  {m.role === "assistant" && !m.content.startsWith("[[") && <span className="who">{guideName}</span>}
+                  {m.content.startsWith("[[quests]]") ? (
+                    <div className="chip-quest">✓ クエストに置いたよ：{m.content.slice(10)}</div>
+                  ) : m.content.startsWith("[[care]]") ? (
+                    <div className="care-card">{m.content.slice(8)}</div>
+                  ) : (
                   <p>
                     {showDots
                       ? <span className="typing-dots"><span /><span /><span /></span>
                       : m.content}
                   </p>
+                  )}
                   </div>
                 </div>
               );

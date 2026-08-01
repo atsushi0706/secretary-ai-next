@@ -26,7 +26,9 @@ const INHALE = 4;  // 一気に、強く吸う
 const SETTLE = 15; // ゆっくり呼吸で、15秒かけてならす
 
 // emotion があれば、吸うステップで「未来からの◯◯を吸う」＝インストールにする
-function buildSteps(emotion?: string): Step[] {
+function buildSteps(emotionRaw?: string): Step[] {
+  // 手紙由来の値に <山括弧> やかっこが混ざったまま画面に出ないよう、入口で落とす
+  const emotion = emotionRaw?.replace(/[<>「」]/g, "").trim() || undefined;
   const inhaleInstr = emotion ? `一気に、強く吸う（未来からの「${emotion}」を）` : "一気に、強く吸う";
   const inhaleSay = emotion ? `いっきに、みらいからの、${emotion}を、つよく、すってー` : "いっきに、つよく、すってー";
   const introSay = emotion

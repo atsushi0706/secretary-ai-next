@@ -2537,7 +2537,7 @@ body:has(.realverse-bg) { background: transparent; }
 .balance .b-zone { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
   width: 26px; height: 26px; border-radius: 50%; background: rgba(120,220,150,.28);
   border: 2px solid rgba(140,235,165,.9); box-shadow: 0 0 12px rgba(120,220,150,.6); }
-.balance .b-needle { position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 999px; background: #fff;
+.balance .b-needle { transition: left .9s cubic-bezier(.2,.8,.3,1); position: absolute; top: 50%; width: 16px; height: 16px; border-radius: 999px; background: #fff;
   box-shadow: 0 0 10px 2px rgba(255,255,255,.7); transform: translate(-50%, -50%); transition: left .8s cubic-bezier(.2,.9,.2,1); z-index: 2; }
 .balance.zone .b-needle, .balance.flow .b-needle { box-shadow: 0 0 16px 4px rgba(120,220,150,.95); }
 
@@ -3859,4 +3859,34 @@ body:has(.realverse-bg) { background: transparent; }
   width: 100%; margin-top: 8px; padding: 12px; border-radius: 13px;
   font-weight: 700; font-size: .86rem; color: #1a1208;
   background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}
+
+/* ✓を付けた瞬間の「効いたよ」ポップ */
+.hud-burst {
+  align-self: center;
+  padding: 8px 16px; border-radius: 999px;
+  font-size: .76rem; font-weight: 700; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e);
+  box-shadow: 0 8px 26px rgba(201,165,94,.5);
+  animation: burst-in .5s cubic-bezier(.2,.8,.3,1) both, burst-out .4s ease 2.6s both;
+}
+@keyframes burst-in { from { opacity: 0; transform: translateY(10px) scale(.8); } to { opacity: 1; transform: none; } }
+@keyframes burst-out { to { opacity: 0; transform: translateY(-8px); } }
+
+/* 会話の中の「本当に書き込まれた」確定チップ */
+.chip-quest {
+  display: inline-block; padding: 9px 15px; border-radius: 12px;
+  font-size: .8rem; font-weight: 700; color: #0e1a0b;
+  background: linear-gradient(160deg,#a8dba0,#5aa04a);
+  box-shadow: 0 6px 18px rgba(90,160,74,.35);
+  animation: burst-in .45s cubic-bezier(.2,.8,.3,1) both;
+}
+
+/* 命に関わる言葉が出たときの相談先カード（免責含む） */
+.care-card {
+  display: inline-block; padding: 13px 16px; border-radius: 14px;
+  font-size: .78rem; line-height: 2; white-space: pre-wrap;
+  color: #f4ecdd; background: rgba(70,90,140,.35);
+  border: 1px solid rgba(150,180,255,.45);
+  backdrop-filter: blur(8px);
 }

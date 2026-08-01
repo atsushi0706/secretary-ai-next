@@ -25,6 +25,9 @@ export function InnerHud({ guideName, onTalkBalance }: {
   const [level, setLevel] = useState<Level | null>(null);
   const [lean, setLean] = useState<Lean | null>(null);
   const [ready, setReady] = useState(false);
+  // ✓を付けた瞬間に出す「効いたよ」の合図（言われないと気づかない問題への答え）
+  const [burst, setBurst] = useState<string | null>(null);
+  const burstTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function apply(d: { grounding?: Grounding; quest?: Quest; level?: Level; lean?: Lean | null }) {
     if (d.grounding) setG(d.grounding);
@@ -34,9 +37,17 @@ export function InnerHud({ guideName, onTalkBalance }: {
   }
 
   useEffect(() => {
+    // まず速い読み込み（所見はキャッシュ）。画面を待たせない
     fetch("/api/inner-hud").then((r) => r.json()).then((d) => {
       if (!d.error) apply(d);
     }).catch(() => {}).finally(() => setReady(true));
+    // 所見の作り直しは裏で。できたら差し替える（できなくても画面はそのまま）
+    fetch("/api/inner-hud", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "lean_refresh" }),
+    }).then((r) => r.json()).then((d) => {
+      if (d?.ok) setLean(d.lean ?? null);
+    }).catch(() => {});
   }, []);
 
   async function post(body: any) {
@@ -46,6 +57,12 @@ export function InnerHud({ guideName, onTalkBalance }: {
     const d = await r.json();
     if (!r.ok) return;
     apply(d);
+    // ✓を付けた＝現実化。目に見える形で返す
+    if (body.action === "done" && body.done) {
+      setBurst("🔨 現実化 +1 ── 針が右へ動いた");
+      if (burstTimer.current) clearTimeout(burstTimer.current);
+      burstTimer.current = setTimeout(() => setBurst(null), 3000);
+    }
   }
 
   const solvedToday = quest.items.some((it) => it.done);
@@ -59,6 +76,7 @@ export function InnerHud({ guideName, onTalkBalance }: {
 
       {/* 空想↔現実のバランス（中央＝フロー） */}
       <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} lean={lean} onTalk={onTalkBalance} />
+      {burst && <div className="hud-burst">{burst}</div>}
 
       {/* ハイヤークエスト＝未来から降りてきたクエストと同じもの。
           まだ決まっていない日も「どこにあるか」が分かるよう、場所だけは常に見せる。 */}

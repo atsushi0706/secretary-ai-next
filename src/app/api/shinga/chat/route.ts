@@ -25,6 +25,10 @@ import { releaseGuardian } from "@/lib/parts-db";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
+function clean0(t: string): string {
+  return t.replace(/<[^>]{1,60}>/g, " ");
+}
+
 function sseEvent(name: string, data: any): Uint8Array {
   return new TextEncoder().encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
 }
@@ -47,6 +51,13 @@ export async function POST(req: Request) {
   const debug = !!body.debug;   // 可視化用：何を読み込みAIに渡したかを返す
   // 内なる子の神殿：いま扱っている守り手の色（画面で選ばれたもの）
   const partColor: PartColor | null = isPartColor(body.partColor) ? body.partColor : null;
+  // 画面に表示中の進行状況。AIに「いまどこか」を教えて、同じ質問の堂々巡りを止める
+  const progress = {
+    partsStep: Number.isFinite(Number(body.partsStep)) ? Number(body.partsStep) : null,
+    walkStage: Number.isFinite(Number(body.walkStage)) ? Number(body.walkStage) : null,
+    travelStage: Number.isFinite(Number(body.travelStage)) ? Number(body.travelStage) : null,
+    wallStage: Number.isFinite(Number(body.wallStage)) ? Number(body.wallStage) : null,
+  };
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -123,8 +134,40 @@ export async function POST(req: Request) {
           ].join("\n");
         }
 
+        // いまの進行状況（画面に出ている段階）。これが無いとAIは自分がどこまで進めたか分からず、
+        // 同じ質問を繰り返して「1/9のまま堂々巡り」になる。
+        let progressCtx = "";
+        if (!greet) {
+          const lines: string[] = [];
+          if (mode === "parts" && progress.partsStep) {
+            lines.push(`- 内なる子の神殿：いま段階 ${progress.partsStep}/9（画面に表示中）。`);
+            lines.push(`  この段階の問いにはもう答えをもらっている前提で進める。**同じ質問を二度しない。**`);
+            lines.push(`  答えを受け取ったら次の段階へ進み、<parts_step>${Math.min(9, progress.partsStep + 1)}</parts_step> 以上を付ける。`);
+            lines.push(`  同じ数字を3回続けて出してはいけない（進むか、進めない理由の"新しい"問いを出す）。`);
+          }
+          if (mode === "walk" && progress.walkStage) {
+            lines.push(`- パラレルウォーク：いまの地点 ${progress.walkStage}/10。`);
+            lines.push(`  理想の解像度が少しでも上がったら必ず数字を上げる。同じ数字を2回続けたら、次は上げるか、五感・人・役割など"まだ聞いていない角度"の問いを出す。`);
+          }
+          if (mode === "travel" && progress.travelStage) {
+            lines.push(`- パラレルトラベル：いまの高度 ${progress.travelStage}/10。話が広がったら必ず上げる。`);
+          }
+          if (mode === "breakthrough" && progress.wallStage) {
+            lines.push(`- ウォールブレイク：扉はいま ${progress.wallStage}/5。ほどけてきたら必ず上げる。`);
+          }
+          if (lines.length) progressCtx = ["# いまの進行状況（厳守）", ...lines].join("\n");
+        }
+
+        // 実書き込みの掟（AIが「入れておいた」と言ったのに実体が無い、を絶対に起こさない）
+        const honestyCtx = [
+          "# 実行の掟（最重要）",
+          "- 「クエストに置いておく」「追加しておく」と言うときは、**同じ返事の最後に必ず** <quest_to_add>[{\"title\":\"...\"}]</quest_to_add> を付ける。",
+          "- タグを付けずに「置いた」「入れた」と言うのは嘘になる。絶対に禁止。",
+          "- タグが出せない状況なら「いまは置けなかった」と正直に言う。",
+        ].join("\n");
+
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
-        const systemBase = balanceCtx ? `${system}\n\n${balanceCtx}` : system;
+        const systemBase = [system, honestyCtx, progressCtx, balanceCtx].filter(Boolean).join("\n\n");
         const systemFull = mode !== "parts" ? systemBase : [
           systemBase,
           partColor
@@ -270,6 +313,30 @@ export async function POST(req: Request) {
           }
         }
 
+        // 「クエストに置いた」と言ったのにタグが無い場合は、発言から拾って本当に置く。
+        // （AIの約束を実体にする。これが無いと信頼が一番傷つく）
+        const claimedQuest = /(クエスト|一手).{0,14}(置|入れ|追加|登録)/.test(full) && !questMatch;
+        if (claimedQuest && !greet) {
+          try {
+            const { complete } = await import("@/lib/ai");
+            const raw = await complete({
+              userId,
+              prompt: `下の発言で「クエストに置く」と約束した内容を、そのままクエスト化して。約束していなければ空配列。\nJSONのみ：{"quests":[{"title":"20字以内の行動","body":"ひとこと補足"}]}\n\n# 発言\n${clean0(full).slice(0, 1200)}`,
+              maxTokens: 300, temperature: 0.2,
+            });
+            const m2 = raw.match(/\{[\s\S]*\}/);
+            if (m2) {
+              const arr = (JSON.parse(m2[0])?.quests ?? []) as any[];
+              for (const c of arr.slice(0, 2)) {
+                const title = String(c?.title ?? "").trim();
+                if (!title) continue;
+                const q = await createQuest(userId, { title, body: String(c?.body ?? ""), category: "life" });
+                addedQuests.push({ id: q.id, title: q.title });
+              }
+            }
+          } catch { /* 拾えなければ、下の掟の強化に任せる */ }
+        }
+
         // 本文からタグを全部取り除く
         const clean = full
           .replace(/<face>[\s\S]*?<\/face>/g, "")
@@ -358,6 +425,19 @@ ${talked}`,
             }
           } catch { /* カードが出せなくても会話は続ける */ }
         }
+        // 命に関わる言葉が出たときは、相談先を必ず添える（機能ではなく責任として）
+        if (!greet && /死にたい|消えたい|自殺|いなくなりたい|生きて(る|いる)意味|生きる意味|終わらせたい|リストカット/.test(text)) {
+          send("care", {
+            text: [
+              "ひとりで抱えないでほしい。つらさが強いときは、人の声につながってね。",
+              "・よりそいホットライン 0120-279-338（24時間・無料）",
+              "・いのちの電話 0570-783-556",
+              "・SNS相談「生きづらびっと」（LINE）",
+              "このアプリは医療やカウンセリングの代わりにはなれません。",
+            ].join("\n"),
+          });
+        }
+
         if (choices) send("choices", { choices });
         if (moveTo) send("move", { place: moveTo });
         if (addedQuests.length > 0) send("quests", { quests: addedQuests });

@@ -308,6 +308,18 @@ export default function GuidePage() {
         </div>
       </section>
 
+      {/* 免責 */}
+      <section className="gd-sec">
+        <h2><span className="gd-num">6</span>大切なおことわり</h2>
+        <div className="gd-warn">
+          このアプリのワークや秘書の言葉は、自己理解のための道具であり、
+          <b>医療・心理カウンセリングの代わりにはなれません</b>。<br />
+          心や身体のつらさが続くときは、医療機関や専門の相談窓口につながってください。<br />
+          ・よりそいホットライン 0120-279-338（24時間・無料）<br />
+          ・いのちの電話 0570-783-556
+        </div>
+      </section>
+
       <footer className="gd-foot">
         <Link href="/settings" className="gd-btn">⚙️ 設定ページへ</Link>
         <Link href="/shinga" className="gd-btn is-ghost">🔑 インナーワールドへ</Link>

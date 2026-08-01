@@ -170,3 +170,16 @@ create table if not exists public.step_logs (
 create index if not exists step_logs_user_idx on public.step_logs (user_id, date desc);
 
 alter table public.step_logs enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- 偏り所見のキャッシュ
+--  12) lean_cache … メーターの「読み」を保存。開くたびにAI生成しない
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.lean_cache (
+  user_id     text primary key,
+  lean        jsonb,
+  updated_at  timestamptz not null default now()
+);
+
+alter table public.lean_cache enable row level security;

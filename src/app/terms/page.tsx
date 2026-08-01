@@ -106,6 +106,16 @@ export default function TermsPage() {
           <Link href="/welcome" className="text-purple-700 underline">トップに戻る</Link>
         </div>
       </article>
+          <section className="mt-8">
+        <h2 className="font-bold text-base mb-2">免責事項</h2>
+        <p className="text-sm leading-relaxed text-gray-600">
+          本アプリが提供するワーク・AIとの対話・診断的な文章は、自己理解を助けるためのものであり、
+          医療・心理カウンセリング・専門的な助言の代わりになるものではありません。
+          心身の不調が続く場合は、医療機関または公的な相談窓口（よりそいホットライン
+          0120-279-338、いのちの電話 0570-783-556 等）をご利用ください。
+          本アプリの利用により生じたいかなる損害についても、運営者は責任を負いかねます。
+        </p>
+      </section>
     </main>
   );
 }

@@ -7,7 +7,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { computeGrounding, computeLevel, getTodayQuest, addQuestItem, toggleQuestItem, removeQuestItem, reconcileQuestWithTasks } from "@/lib/inner";
-import { readLean } from "@/lib/lean";
+import { readLeanCached, refreshLean } from "@/lib/lean";
 import { isMissingTable, MIGRATION_HINT } from "@/lib/shinga";
 import { logError } from "@/lib/supabase";
 
@@ -27,7 +27,7 @@ export async function GET() {
       computeGrounding(userId),
       getTodayQuest(userId),
       computeLevel(userId),
-      readLean(userId).catch(() => null),   // 対話の中身から偏りを読む（材料が薄ければ null）
+      readLeanCached(userId),   // キャッシュのみ（AIを呼ばない＝一瞬で返る）。作り直しは lean_refresh
     ]);
     return NextResponse.json({ grounding, quest, level, lean });
   } catch (e: any) {
@@ -42,6 +42,11 @@ export async function POST(req: Request) {
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   try {
     const b = await req.json();
+    // 所見の作り直し（画面が裏で呼ぶ。開くのを待たせない）
+    if (b.action === "lean_refresh") {
+      const lean = await refreshLean(userId);
+      return NextResponse.json({ ok: true, lean });
+    }
     if (b.action === "add") await addQuestItem(userId, String(b.text ?? ""));
     else if (b.action === "done") await toggleQuestItem(userId, Number(b.index), !!b.done);
     else if (b.action === "remove") await removeQuestItem(userId, Number(b.index));

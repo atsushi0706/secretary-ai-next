@@ -85,6 +85,31 @@ export async function recentDoneText(userId: string, days = 7): Promise<string> 
 }
 
 /**
+ * キャッシュから読む（AIを呼ばない＝速い）。ホームを開くときはこちらを使う。
+ * 所見の作り直しは refreshLean で、イベント（✓を付けた・ワークを終えた）のときだけ。
+ */
+export async function readLeanCached(userId: string): Promise<LeanRead | null> {
+  try {
+    const supa = supabaseAdmin();
+    const { data } = await supa.from("lean_cache").select("lean").eq("user_id", userId).maybeSingle();
+    return (data?.lean as LeanRead) ?? null;
+  } catch { return null; }
+}
+
+/** 所見を作り直してキャッシュする（AIを呼ぶ・遅い）。裏で呼ぶこと */
+export async function refreshLean(userId: string): Promise<LeanRead | null> {
+  const lean = await readLean(userId).catch(() => null);
+  try {
+    const supa = supabaseAdmin();
+    await supa.from("lean_cache").upsert(
+      { user_id: userId, lean, updated_at: new Date().toISOString() },
+      { onConflict: "user_id" },
+    );
+  } catch { /* キャッシュできなくても返す */ }
+  return lean;
+}
+
+/**
  * 対話から偏りを読む。会話が少なければ null（数値だけで判断させる）。
  */
 export async function readLean(userId: string): Promise<LeanRead | null> {

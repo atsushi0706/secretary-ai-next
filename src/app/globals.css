@@ -3751,3 +3751,112 @@ body:has(.realverse-bg) { background: transparent; }
 .sc-wave .sc-bar:nth-child(4).on { height: 14px; }
 .sc-wave .sc-bar:nth-child(5).on { height: 16px; }
 .sc-tip { font-size: .68rem; line-height: 1.7; color: #8a7350; margin: 9px 0 10px; }
+
+/* ── 散歩のおとも：今日と次の目標 ── */
+.sc-streak {
+  font-size: .66rem; color: #a4522c; padding: 3px 9px; border-radius: 999px;
+  background: rgba(220, 120, 60, .14); border: 1px solid rgba(210, 120, 60, .34);
+}
+.sc-todaybar {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 10px 12px; border-radius: 12px; margin-bottom: 10px;
+  background: rgba(190, 150, 70, .1); border: 1px solid rgba(190, 150, 70, .22);
+}
+.sc-tnum { display: flex; align-items: baseline; gap: 4px; }
+.sc-tnum b {
+  font-family: Georgia, "Yu Mincho", serif; font-size: 1.5rem; color: #3a2c12;
+  font-variant-numeric: tabular-nums;
+}
+.sc-tnum span { font-size: .66rem; color: #8a7350; }
+.sc-next { flex: 1; min-width: 150px; }
+.sc-next.is-live { margin: 10px 0 0; }
+.sc-next-txt { font-size: .68rem; color: #6b5630; margin-bottom: 5px; line-height: 1.5; }
+.sc-next-txt b { color: #8a6a2c; font-weight: 700; }
+.sc-next-track {
+  display: block; height: 5px; border-radius: 999px; overflow: hidden;
+  background: rgba(120, 95, 50, .18);
+}
+.sc-next-fill {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg, #d9b46a, #8a6a2c);
+  transition: width .5s cubic-bezier(.2,.8,.3,1);
+}
+.sc-next-done { flex: 1; font-size: .72rem; color: #8a6a2c; font-weight: 700; }
+
+.sc-logtoggle {
+  width: 100%; margin-top: 8px; padding: 8px; border-radius: 10px;
+  font-size: .7rem; color: #8a7350; background: transparent;
+  border: 1px dashed rgba(150, 120, 60, .35);
+}
+
+/* ── 記録 ── */
+.sc-log { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(150, 120, 60, .22); }
+.sc-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; margin-bottom: 14px; }
+.sc-stat {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 8px 4px; border-radius: 10px; background: rgba(190, 150, 70, .1);
+}
+.sc-stat b {
+  font-family: Georgia, serif; font-size: 1rem; color: #3a2c12;
+  font-variant-numeric: tabular-nums; line-height: 1.2;
+}
+.sc-stat span { font-size: .56rem; color: #8a7350; }
+
+.sc-chart {
+  display: flex; align-items: flex-end; gap: 2px; height: 64px;
+  padding: 0 2px; border-bottom: 1px solid rgba(150, 120, 60, .3);
+}
+.sc-col { flex: 1; display: flex; align-items: flex-end; height: 100%; }
+.sc-colbar {
+  width: 100%; border-radius: 2px 2px 0 0; background: rgba(150, 120, 60, .35);
+  transition: height .4s ease;
+}
+.sc-colbar.is-goal { background: linear-gradient(180deg, #e0bd72, #a8813a); }
+.sc-axis { display: flex; justify-content: space-between; font-size: .58rem; color: #9a8560; margin-top: 4px; }
+.sc-best { margin-top: 8px; font-size: .68rem; color: #6b5630; }
+.sc-empty { font-size: .72rem; color: #8a7350; line-height: 1.8; padding: 10px 0; }
+
+.sc-goals { margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(150, 120, 60, .28); }
+.sc-goals-t { font-size: .68rem; font-weight: 700; color: #8a6a2c; margin-bottom: 7px; }
+.sc-goal { font-size: .68rem; line-height: 1.9; color: #6b5630; }
+.sc-goal .g-n {
+  display: inline-block; min-width: 44px; font-weight: 700; color: #3a2c12;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ── 歩いて手に入れたカード ── */
+.sw-overlay {
+  position: fixed; inset: 0; z-index: 92; display: grid; place-items: center; padding: 18px;
+  background: radial-gradient(circle at 50% 45%, rgba(0,0,0,.7), rgba(0,0,0,.92));
+  backdrop-filter: blur(6px); animation: gr-fade .35s ease both;
+}
+.sw-card {
+  width: min(420px, 100%); padding: 22px 20px 18px; border-radius: 20px; text-align: center;
+  background: linear-gradient(170deg, rgba(40,32,20,.97), rgba(18,14,10,.98));
+  border: 1px solid rgba(224,189,114,.5);
+  box-shadow: 0 26px 70px rgba(0,0,0,.7), 0 0 50px rgba(224,189,114,.2);
+  animation: pk-in .4s ease both;
+}
+.sw-kicker { font-size: .66rem; letter-spacing: .22em; color: var(--singa-gold); margin-bottom: 16px; }
+.sw-item {
+  padding: 14px 15px; border-radius: 14px; margin-bottom: 10px; text-align: left;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14);
+}
+.sw-item.r-gold { border-color: rgba(238,214,155,.7); background: rgba(238,214,155,.12); }
+.sw-item.r-silver { border-color: rgba(210,215,225,.6); background: rgba(210,215,225,.1); }
+.sw-item.r-bronze { border-color: rgba(200,150,110,.6); background: rgba(200,150,110,.1); }
+.sw-top { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+.sw-rar {
+  font-size: .62rem; width: 20px; height: 20px; border-radius: 999px;
+  display: flex; align-items: center; justify-content: center; font-weight: 700; color: #221b10;
+  background: linear-gradient(160deg,#eed69b,#c9a55e);
+}
+.sw-item.r-silver .sw-rar { background: linear-gradient(160deg,#e8ecf2,#aab2c0); }
+.sw-item.r-bronze .sw-rar { background: linear-gradient(160deg,#e0b48c,#a8764a); }
+.sw-title { font-size: .92rem; font-weight: 700; color: var(--singa-ink); }
+.sw-body { font-size: .74rem; line-height: 1.85; color: var(--singa-ink-soft); }
+.sw-close {
+  width: 100%; margin-top: 8px; padding: 12px; border-radius: 13px;
+  font-weight: 700; font-size: .86rem; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}

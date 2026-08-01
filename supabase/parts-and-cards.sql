@@ -150,3 +150,23 @@ create table if not exists public.push_subscriptions (
 create index if not exists push_subscriptions_user_idx on public.push_subscriptions (user_id);
 
 alter table public.push_subscriptions enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- 散歩のおとも（歩数）
+--  11) step_logs … 1日1行。アプリを開いて歩いたぶんが積み上がる
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.step_logs (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,              -- JSTの日付 YYYY-MM-DD
+  steps       integer not null default 0,
+  seconds     integer not null default 0, -- 歩いた時間の合計
+  sessions    integer not null default 0, -- その日に歩いた回数
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now(),
+  unique (user_id, date)
+);
+create index if not exists step_logs_user_idx on public.step_logs (user_id, date desc);
+
+alter table public.step_logs enable row level security;

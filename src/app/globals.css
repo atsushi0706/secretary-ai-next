@@ -4141,3 +4141,105 @@ body:has(.realverse-bg) { background: transparent; }
 
 /* じぶんワーク：もどるボタンがタイトルに重ならないように */
 .wm-screen .singa-back { position: static; display: inline-block; margin-bottom: 10px; }
+
+/* ══════════════════════════════════════════════════════════
+   からだの記録（毎朝の体重・体脂肪率）
+   ══════════════════════════════════════════════════════════ */
+.wt-screen {
+  position: relative; z-index: 3;
+  max-width: 620px; margin: 0 auto; padding: 14px 16px 40px;
+  overflow-y: auto; max-height: calc(100dvh - 20px);
+}
+.wt-card {
+  padding: 16px; border-radius: 20px;
+  background: linear-gradient(180deg, rgba(10,8,14,.93), rgba(10,8,14,.88));
+  border: 1px solid rgba(238,214,155,.18);
+}
+.wt-err { font-size: .74rem; color: #e6a0a0; margin: 8px 0; line-height: 1.7; }
+.wt-ok { font-size: .76rem; color: #8fd0a0; margin: 8px 0; }
+
+/* 入力（主役） */
+.wt-input {
+  margin-top: 12px; padding: 15px; border-radius: 16px;
+  background: rgba(238,214,155,.08); border: 1px solid rgba(238,214,155,.3);
+}
+.wt-day { font-size: .66rem; color: var(--singa-gold); letter-spacing: .06em; margin-bottom: 11px; }
+.wt-fields { display: flex; gap: 10px; }
+.wt-fields label {
+  flex: 1; display: flex; align-items: center; gap: 6px;
+  padding: 10px 12px; border-radius: 13px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
+}
+.wt-fields .k { font-size: .62rem; color: var(--singa-ink-soft); white-space: nowrap; }
+.wt-fields input {
+  flex: 1; min-width: 0; background: transparent; border: none; outline: none;
+  color: var(--singa-ink); font-size: 1.15rem; font-weight: 700;
+  font-variant-numeric: tabular-nums; text-align: right;
+  font-family: Georgia, serif;
+}
+.wt-fields input::-webkit-outer-spin-button,
+.wt-fields input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+.wt-fields .u { font-size: .68rem; color: var(--singa-ink-soft); }
+.wt-save {
+  width: 100%; margin-top: 12px; padding: 14px; border-radius: 14px;
+  font-weight: 700; font-size: .9rem; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e);
+  box-shadow: 0 8px 24px rgba(201,165,94,.35);
+}
+.wt-save:disabled { opacity: .5; box-shadow: none; }
+.wt-hint { margin-top: 10px; font-size: .66rem; line-height: 1.8; color: var(--singa-ink-soft); }
+
+/* 7日平均を主役に */
+.wt-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; }
+.wt-stat {
+  display: flex; align-items: baseline; gap: 5px; flex-wrap: wrap;
+  padding: 11px 13px; border-radius: 13px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+}
+.wt-stat.is-main { grid-column: 1 / -1; border-color: rgba(238,214,155,.35); background: rgba(238,214,155,.08); }
+.wt-stat .k { font-size: .62rem; color: var(--singa-ink-soft); width: 100%; }
+.wt-stat b {
+  font-family: Georgia, serif; font-size: 1.3rem; color: var(--singa-ink);
+  font-variant-numeric: tabular-nums;
+}
+.wt-stat.is-main b { font-size: 1.9rem; color: var(--singa-gold); }
+.wt-stat .u { font-size: .66rem; color: var(--singa-ink-soft); }
+.wt-stat .t {
+  margin-left: auto; font-size: .72rem; font-weight: 700; padding: 3px 10px; border-radius: 999px;
+  background: rgba(255,255,255,.08); color: var(--singa-ink-soft);
+}
+.wt-stat .t.down { color: #8fd0a0; background: rgba(120,200,140,.14); }
+.wt-stat .t.up { color: #e0b48c; background: rgba(224,180,140,.14); }
+.wt-read { margin-top: 11px; font-size: .76rem; line-height: 1.9; color: var(--singa-ink-soft); }
+
+/* 線グラフ */
+.wt-chartwrap { margin-top: 18px; }
+.wt-range { display: flex; gap: 6px; margin-bottom: 9px; }
+.wt-range button {
+  padding: 5px 13px; border-radius: 999px; font-size: .68rem;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.13);
+}
+.wt-range button.on { color: #1a1208; background: linear-gradient(160deg,#eed69b,#c9a55e); border-color: transparent; font-weight: 700; }
+.wt-chart {
+  width: 100%; height: 130px; display: block;
+  background: rgba(255,255,255,.03); border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+}
+.wt-axis { display: flex; justify-content: space-between; font-size: .6rem; color: var(--singa-ink-soft); margin-top: 4px; }
+.wt-empty { font-size: .74rem; color: var(--singa-ink-soft); padding: 16px 0; line-height: 1.8; }
+.wt-marks { margin-top: 12px; font-size: .7rem; line-height: 2; color: var(--singa-ink-soft); }
+.wt-marks b { color: var(--singa-gold); }
+
+.wt-log { margin-top: 18px; }
+.wt-log summary { font-size: .74rem; color: var(--singa-gold); cursor: pointer; padding: 8px 0; }
+.wt-rows { display: flex; flex-direction: column; gap: 2px; max-height: 300px; overflow-y: auto; margin-top: 6px; }
+.wt-row {
+  display: grid; grid-template-columns: 60px 1fr 1fr; gap: 8px;
+  padding: 8px 11px; border-radius: 9px; font-size: .74rem;
+  background: rgba(255,255,255,.03); font-variant-numeric: tabular-nums;
+}
+.wt-row .d { color: var(--singa-ink-soft); }
+.wt-row .w { color: var(--singa-ink); font-weight: 700; }
+.wt-row .f { color: var(--singa-ink-soft); }
+
+.iw-report.is-weight { border-color: rgba(140,200,180,.5); }

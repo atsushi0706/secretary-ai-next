@@ -205,3 +205,24 @@ create table if not exists public.custom_works (
 create index if not exists custom_works_user_idx on public.custom_works (user_id, created_at);
 
 alter table public.custom_works enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- からだの記録（毎朝の体重・体脂肪率）
+--  14) weight_logs … 1日1行。消さずにずっと貯め続ける
+--      numeric(6,2) = 小数第2位まで（例 62.35kg / 18.40%）
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.weight_logs (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,              -- JSTの日付 YYYY-MM-DD
+  weight      numeric(6,2),               -- kg
+  fat         numeric(5,2),               -- %
+  note        text,
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now(),
+  unique (user_id, date)
+);
+create index if not exists weight_logs_user_idx on public.weight_logs (user_id, date desc);
+
+alter table public.weight_logs enable row level security;

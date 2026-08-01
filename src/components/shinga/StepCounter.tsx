@@ -50,6 +50,16 @@ export function StepCounter({ onFinish }: { onFinish?: (steps: number, seconds: 
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const handler = useRef<((e: DeviceMotionEvent) => void) | null>(null);
 
+  // 万一この部品が作り直されても、計測中の歩数を失わないための退避先。
+  // （以前、話しかけるたびに作り直されて0に戻る不具合があった）
+  const KEEP = "sw-walking";
+  const keep = (steps: number, sec: number, on: boolean) => {
+    try {
+      if (on) localStorage.setItem(KEEP, JSON.stringify({ steps, sec, at: Date.now() }));
+      else localStorage.removeItem(KEEP);
+    } catch { /* ignore */ }
+  };
+
   const load = useCallback(() => {
     fetch("/api/steps").then((r) => r.json()).then(setSum).catch(() => {});
   }, []);
@@ -57,6 +67,17 @@ export function StepCounter({ onFinish }: { onFinish?: (steps: number, seconds: 
   useEffect(() => {
     if (typeof window !== "undefined" && !("DeviceMotionEvent" in window)) setPhase("unsupported");
     load();
+    // 計測中に作り直されていたら、続きから復帰する（5分以内のものだけ）
+    try {
+      const raw = localStorage.getItem(KEEP);
+      if (raw) {
+        const k = JSON.parse(raw);
+        if (k && Date.now() - k.at < 300_000 && k.steps > 0) {
+          stepsRef.current = k.steps; setSteps(k.steps);
+          secRef.current = k.sec; setSeconds(k.sec);
+        } else localStorage.removeItem(KEEP);
+      }
+    } catch { /* ignore */ }
   }, [load]);
 
   useEffect(() => () => { if (handler.current) window.removeEventListener("devicemotion", handler.current); }, []);
@@ -65,6 +86,7 @@ export function StepCounter({ onFinish }: { onFinish?: (steps: number, seconds: 
     if (handler.current) { window.removeEventListener("devicemotion", handler.current); handler.current = null; }
     if (timer.current) { clearInterval(timer.current); timer.current = null; }
     setPhase("idle"); setLevel(0);
+    keep(0, 0, false);
     const s = stepsRef.current, sec = secRef.current;
     stepsRef.current = 0; secRef.current = 0;
     setSteps(0); setSeconds(0);
@@ -121,7 +143,10 @@ export function StepCounter({ onFinish }: { onFinish?: (steps: number, seconds: 
     };
     handler.current = onMotion;
     window.addEventListener("devicemotion", onMotion);
-    timer.current = setInterval(() => { secRef.current += 1; setSeconds(secRef.current); }, 1000);
+    timer.current = setInterval(() => {
+      secRef.current += 1; setSeconds(secRef.current);
+      keep(stepsRef.current, secRef.current, true);   // 作り直されても続きから数えられるように
+    }, 1000);
     setPhase("walking");
   }
 

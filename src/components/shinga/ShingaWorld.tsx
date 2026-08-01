@@ -21,6 +21,7 @@ import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
 import { StepCounter } from "./StepCounter";
 import { WorkMaker, CardDrawOverlay } from "./WorkMaker";
+import { WeightPanel } from "./WeightPanel";
 import { type CustomWork, type OwnCard } from "@/lib/custom-work-types";
 import type { PartColor, PartsStep } from "@/lib/parts";
 
@@ -136,6 +137,7 @@ export function ShingaWorld({
   const [tasksOpen, setTasksOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
+  const [weightOpen, setWeightOpen] = useState(false); // からだの記録
   // じぶんワーク（本人が作ったワーク）
   const [customWorks, setCustomWorks] = useState<CustomWork[]>([]);
   const [makerOpen, setMakerOpen] = useState(false);
@@ -835,6 +837,8 @@ export function ShingaWorld({
         />
       ) : manualOpen ? (
         <ManualScreen guideName={guideName} onBack={() => setManualOpen(false)} />
+      ) : weightOpen ? (
+        <WeightPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeightOpen(false)} />
       ) : reportOpen ? (
         <ReportScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setReportOpen(false)} />
       ) : dailyOpen ? (
@@ -854,6 +858,7 @@ export function ShingaWorld({
           onBalance={() => void enter("balance")}
           onCast={() => setCastOpen(true)}
           onManual={() => setManualOpen(true)}
+          onWeight={() => setWeightOpen(true)}
           customWorks={customWorks}
           onRunCustom={(w) => enterCustom(w)}
           onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
@@ -920,7 +925,9 @@ export function ShingaWorld({
           )}
 
           {/* パラレルウォークは実際に歩きながらやれる。歩数はアプリを開いている間だけ数える */}
-          {mode === "walk" && !sending && (
+          {/* 送信中も絶対に消さないこと。消すと歩数計ごと作り直されて、
+              数えていた歩数もセンサーの購読も失われる（歩きながら話すと0に戻る） */}
+          {mode === "walk" && (
             <StepCounter onFinish={(n, sec) => {
               const min = Math.max(1, Math.round(sec / 60));
               void talk(`（実際に ${n} 歩、${min}分ほど歩いてきた）`);
@@ -1233,7 +1240,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, onManual, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1251,6 +1258,8 @@ function Home({
   onCast?: () => void;
   /** 自分の取扱説明書（生年月日×16問） */
   onManual?: () => void;
+  /** からだの記録（毎朝の体重・体脂肪率） */
+  onWeight?: () => void;
   customWorks: CustomWork[];
   onRunCustom: (w: CustomWork) => void;
   onEditCustom: (w: CustomWork) => void;
@@ -1340,6 +1349,7 @@ function Home({
         <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
         <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
         <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
+        <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>
         {/* 1日の振り返りは夜だけ。夜になったらプッシュ通知で「開いたよ」と知らせる（それまでは鍵） */}
         {new Date().getHours() >= REFLECT_FROM_HOUR
           ? <button className="iw-report is-night" onClick={onDaily}>🌙 1日の振り返り</button>

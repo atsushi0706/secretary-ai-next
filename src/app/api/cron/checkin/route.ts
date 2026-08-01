@@ -63,6 +63,15 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
+  // 朝は「まだ体重を記録していない人」に一言そえる（責めない・触れるだけ）
+  const weighedToday = new Set<string>();
+  if (slot === "morning") {
+    try {
+      const { data } = await supa.from("weight_logs").select("user_id").eq("date", jstDateStr());
+      for (const r of (data ?? []) as { user_id: string }[]) if (r.user_id) weighedToday.add(r.user_id);
+    } catch { /* テーブルが無くても通知は出す */ }
+  }
+
   // プッシュ購読者の user_id 集合
   const pushUsers = new Set<string>();
   if (pushConfigured()) {
@@ -80,7 +89,11 @@ export async function GET(req: Request) {
       if (wantsPush) {
         let pushOk = false, pushErr: string | null = null;
         try {
-          const pr = await sendPushToUser(u.user_id, { title: `${SECRETARY_NAME}より`, body: message, url: "/", tag: `checkin:${slot}` });
+          const withWeight = slot === "morning" && !weighedToday.has(u.user_id)
+            ? `${message}
+（起きたらまず、体重をひとつ置いていこう）`
+            : message;
+          const pr = await sendPushToUser(u.user_id, { title: `${SECRETARY_NAME}より`, body: withWeight, url: "/", tag: `checkin:${slot}` });
           pushOk = pr.sent > 0;
         } catch (e: any) { pushErr = String(e?.message ?? e); }
         await supa.from("notifications").insert({

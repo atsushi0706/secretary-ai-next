@@ -6,6 +6,10 @@
  *   2. OpenAI TTS  … 次点。OPENAI_API_KEY があれば
  *   3. どちらも無ければ 503 → 画面側が同梱mp3／ブラウザ読み上げに退避
  *
+ * 声について：
+ *   ELEVENLABS_VOICE_ID を決めていなければ、そのアカウントで使える声を自動で拾う。
+ *   （固定のIDを埋め込むと、そのアカウントに無い声だったときに必ず失敗するため）
+ *
  * セリフはほぼ固定なので、画面側がブラウザのキャッシュに貯める。生成は初回だけ。
  */
 import { auth } from "@/auth";
@@ -13,26 +17,60 @@ import { auth } from "@/auth";
 const DEFAULT_INSTRUCTIONS =
   "やわらかく、あたたかい、少し子どもっぽい落ち着いた声で。急がず、やさしく、包むように。呼吸に寄り添うテンポで。";
 
-// 声は環境変数で差し替えられる（ELEVENLABS_VOICE_ID）
-const EL_VOICE = process.env.ELEVENLABS_VOICE_ID?.trim() || "8EkOjt4xTPGMclNlh1pk";
 const EL_MODEL = process.env.ELEVENLABS_MODEL?.trim() || "eleven_multilingual_v2";
+const elKey = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
 
-function audio(buf: ArrayBuffer, engine: string) {
+export type ElVoice = { id: string; name: string; labels?: Record<string, string> };
+
+let voiceCache: { at: number; list: ElVoice[] } | null = null;
+
+/** アカウントで使える声の一覧（10分だけ覚えておく） */
+async function listVoices(): Promise<ElVoice[]> {
+  const key = elKey();
+  if (!key) return [];
+  if (voiceCache && Date.now() - voiceCache.at < 600_000) return voiceCache.list;
+  try {
+    const r = await fetch("https://api.elevenlabs.io/v1/voices", { headers: { "xi-api-key": key } });
+    if (!r.ok) return [];
+    const d = await r.json();
+    const list: ElVoice[] = (d?.voices ?? []).map((v: any) => ({
+      id: String(v.voice_id), name: String(v.name ?? ""), labels: v.labels ?? {},
+    }));
+    voiceCache = { at: Date.now(), list };
+    return list;
+  } catch { return []; }
+}
+
+/** 使う声を決める。指定があればそれ、無ければアカウントの1つ目 */
+async function pickVoice(override?: string): Promise<string | null> {
+  const fixed = override?.trim() || process.env.ELEVENLABS_VOICE_ID?.trim();
+  if (fixed) return fixed;
+  const list = await listVoices();
+  if (list.length === 0) return null;
+  // 日本語っぽい声があれば優先（無ければ先頭）
+  const ja = list.find((v) => /japan/i.test(JSON.stringify(v.labels ?? {})));
+  return (ja ?? list[0]).id;
+}
+
+function audio(buf: ArrayBuffer, engine: string, voiceId: string) {
   return new Response(buf, {
     status: 200,
     headers: {
       "Content-Type": "audio/mpeg",
       "Cache-Control": "public, max-age=31536000, immutable",
       "X-TTS-Engine": engine,
+      "X-TTS-Voice": voiceId,
     },
   });
 }
 
-async function elevenlabs(text: string): Promise<Response | null> {
-  const key = process.env.ELEVENLABS_API_KEY?.trim();
-  if (!key) return null;
+async function elevenlabs(text: string, override?: string): Promise<{ res?: Response; error?: string }> {
+  const key = elKey();
+  if (!key) return { error: "ELEVENLABS_API_KEY が未設定" };
+  const voiceId = await pickVoice(override);
+  if (!voiceId) return { error: "使える声が見つかりません（アカウントに声が1つもない可能性）" };
   try {
-    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${EL_VOICE}`, {
+    const r = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`, {
       method: "POST",
       headers: { "xi-api-key": key, "Content-Type": "application/json", Accept: "audio/mpeg" },
       body: JSON.stringify({
@@ -47,13 +85,12 @@ async function elevenlabs(text: string): Promise<Response | null> {
       }),
     });
     if (!r.ok) {
-      console.warn("[tts] elevenlabs failed:", r.status, (await r.text().catch(() => "")).slice(0, 200));
-      return null;   // 失敗したら次のエンジンへ落とす
+      const body = (await r.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 240);
+      return { error: `ElevenLabs ${r.status}（声ID: ${voiceId}）${body}` };
     }
-    return audio(await r.arrayBuffer(), "elevenlabs");
-  } catch (e) {
-    console.warn("[tts] elevenlabs error:", e);
-    return null;
+    return { res: audio(await r.arrayBuffer(), "elevenlabs", voiceId) };
+  } catch (e: any) {
+    return { error: `ElevenLabs 通信エラー: ${String(e?.message ?? e).slice(0, 160)}` };
   }
 }
 
@@ -67,7 +104,7 @@ async function openai(text: string, voice: string, instructions: string): Promis
       body: JSON.stringify({ model: "gpt-4o-mini-tts", voice, input: text, instructions, response_format: "mp3" }),
     });
     if (!r.ok) return null;
-    return audio(await r.arrayBuffer(), "openai");
+    return audio(await r.arrayBuffer(), "openai", voice);
   } catch { return null; }
 }
 
@@ -81,21 +118,29 @@ export async function POST(req: Request) {
   if (!text) return new Response(JSON.stringify({ error: "empty" }), { status: 400 });
   const voice = typeof body.voice === "string" ? body.voice : "shimmer";
   const instructions = typeof body.instructions === "string" ? body.instructions : DEFAULT_INSTRUCTIONS;
+  // 画面から「この声で試す」ができるように、1回きりの指定を受け付ける
+  const voiceId = typeof body.voiceId === "string" ? body.voiceId : undefined;
 
-  const out = (await elevenlabs(text)) ?? (await openai(text, voice, instructions));
-  if (out) return out;
+  const el = await elevenlabs(text, voiceId);
+  if (el.res) return el.res;
 
-  return new Response(JSON.stringify({ error: "no_tts_engine" }), {
+  const oa = await openai(text, voice, instructions);
+  if (oa) return oa;
+
+  // 失敗の理由を隠さない（ここを黙らせると原因にたどり着けない）
+  return new Response(JSON.stringify({ error: "no_tts_engine", detail: el.error ?? "" }), {
     status: 503, headers: { "Content-Type": "application/json" },
   });
 }
 
-/** どの声が使えるかの確認（設定の切り分け用。鍵の値は返さない） */
+/** 使えるエンジンと、アカウントの声の一覧（選ぶ画面用） */
 export async function GET() {
+  const voices = await listVoices();
   return new Response(JSON.stringify({
-    elevenlabs: !!process.env.ELEVENLABS_API_KEY?.trim(),
+    elevenlabs: !!elKey(),
     openai: !!process.env.OPENAI_API_KEY?.trim(),
-    voiceId: process.env.ELEVENLABS_API_KEY?.trim() ? EL_VOICE : null,
+    voiceId: process.env.ELEVENLABS_VOICE_ID?.trim() || null,
     model: EL_MODEL,
+    voices,
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 }

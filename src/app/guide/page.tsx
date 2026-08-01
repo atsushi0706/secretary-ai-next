@@ -128,7 +128,7 @@ export default function GuidePage() {
           <div className="gd-realm is-real">
             <div className="gr-name">🧭 リアルバース</div>
             <div className="gr-sub">現実の側</div>
-            <p>今日の予定・タスク・時間割。<b>やることを decide して、こなす</b>ところ。Googleカレンダーとつながります。</p>
+            <p>今日の予定・タスク・時間割。<b>やることを決めて、こなす</b>ところ。Googleカレンダーとつながります。</p>
           </div>
           <div className="gd-realm is-singa">
             <div className="gr-name">🔑 インナーワールド</div>

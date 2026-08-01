@@ -15,7 +15,7 @@ export async function POST() {
       url: "/",
       tag: "test",
     });
-    return NextResponse.json({ ok: true, ...r });
+    return NextResponse.json({ ok: true, ...r });   // found / sent / removed / errors
   } catch (e: any) {
     await logError(userId, "/api/push/test", e);
     return NextResponse.json({ error: String(e?.message ?? e) }, { status: 500 });

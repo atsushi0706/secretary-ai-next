@@ -52,8 +52,14 @@ export async function removeSubscription(endpoint: string): Promise<void> {
   await supa.from("push_subscriptions").delete().eq("endpoint", endpoint);
 }
 
-/** 1ユーザーの全端末に送る。期限切れ(404/410)の購読は自動で掃除。成功件数を返す。 */
-export async function sendPushToUser(userId: string, payload: PushPayload): Promise<{ sent: number; removed: number }> {
+/**
+ * 1ユーザーの全端末に送る。期限切れ(404/410)の購読は自動で掃除。
+ *
+ * ※ 以前は送信エラーを全部握りつぶしていたため、鍵が合っていなくても
+ *   「sent:0」としか分からず、画面には「購読が見つからなかった」と誤った案内が出ていた。
+ *   失敗の理由は必ず持ち帰る。
+ */
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<{ sent: number; removed: number; found: number; errors: string[] }> {
   ensureConfigured();
   const supa = supabaseAdmin();
   const { data, error } = await supa
@@ -64,6 +70,7 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
   const subs = (data ?? []) as SubRow[];
   const body = JSON.stringify(payload);
   let sent = 0, removed = 0;
+  const errors: string[] = [];
   await Promise.all(subs.map(async (s) => {
     try {
       await webpush.sendNotification(
@@ -73,10 +80,16 @@ export async function sendPushToUser(userId: string, payload: PushPayload): Prom
       sent++;
     } catch (e: any) {
       const code = e?.statusCode;
-      if (code === 404 || code === 410) { await removeSubscription(s.endpoint); removed++; }
+      if (code === 404 || code === 410) {
+        await removeSubscription(s.endpoint); removed++;
+        errors.push(`${code} 端末側の購読が失効していた（削除した）`);
+      } else {
+        const msg = String(e?.body ?? e?.message ?? e).replace(/\s+/g, " ").slice(0, 160);
+        errors.push(`${code ?? "?"} ${msg}`);
+      }
     }
   }));
-  return { sent, removed };
+  return { sent, removed, found: subs.length, errors };
 }
 
 export async function hasSubscription(userId: string): Promise<boolean> {

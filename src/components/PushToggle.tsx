@@ -103,7 +103,10 @@ export function PushToggle() {
       const r = await fetch("/api/push/test", { method: "POST" });
       const d = await r.json();
       if (d.error) throw new Error(d.error);
-      setMsg(d.sent > 0 ? "送ったよ！数秒で届くはず。" : "購読が見つからなかった。一度OFF→ONしてみて。");
+      if (d.sent > 0) { setMsg("送ったよ！数秒で届くはず。"); return; }
+      // 送れなかった理由を隠さない（以前は全部「購読が見つからなかった」と出していた）
+      if (!d.found) setMsg("この端末の登録が見つからない。一度OFF→ONし直してみて。");
+      else setMsg(`登録は${d.found}件あるのに送れなかった。理由：${(d.errors ?? []).join(" / ") || "不明"}`);
     } catch (e: any) {
       setMsg(`送信できなかった: ${String(e?.message ?? e)}`);
     } finally {

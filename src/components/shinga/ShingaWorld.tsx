@@ -16,7 +16,7 @@ import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
-import { PartsGate, PartsProgress, GuardianReveal, type GuardianEvent } from "./PartsTemple";
+import { PartsGate, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
 import type { PartColor, PartsStep } from "@/lib/parts";
@@ -26,8 +26,9 @@ type Choice = { label: string; mode?: ModeKey };
 type Message = { role: "user" | "assistant"; content: string };
 
 // タグが本文に混じっても画面に出さない（最初のタグ開始で切る）
+// ※ ここに書き忘れたタグは、生成中そのまま画面に出てしまう。新しいタグを足したら必ずここにも足す。
 function stripTags(t: string): string {
-  const i = t.search(/<(face|move|choices|quest_to_add|hero_delta|wall)\b/);
+  const i = t.search(/<(face|move|choices|quest_to_add|hero_delta|wall|breath|emotion|guardian|parts_step|travel|walk)\b/);
   return (i >= 0 ? t.slice(0, i) : t).trimEnd();
 }
 
@@ -115,6 +116,9 @@ export function ShingaWorld({
   const partColorRef = useRef<PartColor | null>(null);
   const [partsStep, setPartsStep] = useState<PartsStep>(1);
   const [guardianEv, setGuardianEv] = useState<GuardianEvent | null>(null);
+  // 段階4で一度だけ、「守り手はこの子を守っていた」を絵で見せる
+  const [childReveal, setChildReveal] = useState<PartColor | null>(null);
+  const childShownRef = useRef(false);
   const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
   const [sending, setSending] = useState(false);
@@ -310,6 +314,18 @@ export function ShingaWorld({
     const id = setInterval(() => {
       const target = targetRef.current;
       const shownText = stripTags(target);
+      // 表示ずみが本文より長い＝サーバから短い「タグを削った本文」が届いた直後。
+      // ここで縮めないと、タグ入りの古い本文が画面に残り続ける。
+      if (shownRef.current > shownText.length) {
+        shownRef.current = shownText.length;
+        setMessages((prev) => {
+          const arr = [...prev];
+          const last = arr[arr.length - 1];
+          if (last?.role === "assistant") arr[arr.length - 1] = { ...last, content: shownText };
+          return arr;
+        });
+        return;
+      }
       if (shownRef.current < shownText.length) {
         // 遅れているほど速く追いつく（詰まっても自然に見せる）
         const behind = shownText.length - shownRef.current;
@@ -368,6 +384,7 @@ export function ShingaWorld({
       setChoices(null); setWidget(null); setEmoPick(null);
       setMessages([]);
       partColorRef.current = null;
+      childShownRef.current = false;
       setPartColor(null);
       setPartsStep(1);
       setPartsGate(true);
@@ -496,13 +513,13 @@ export function ShingaWorld({
         } else if (name === "parts_step") {
           // 内なる子の神殿：段階が進むと、前に出る姿が守り手→内なる子へ変わる
           const s = Number(data?.step);
-          if (Number.isFinite(s)) setPartsStep(Math.max(1, Math.min(6, s)) as PartsStep);
+          if (Number.isFinite(s)) setPartsStep(Math.max(1, Math.min(8, s)) as PartsStep);
         } else if (name === "guardian") {
           // 守り手が解き放たれた。進化演出を出す（色が未確定だったならここで確定）
           const ev = data as GuardianEvent;
           partColorRef.current = ev.color;
           setPartColor(ev.color);
-          setPartsStep(6);
+          setPartsStep(7);
           setGuardianEv(ev);
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
@@ -618,6 +635,9 @@ export function ShingaWorld({
           <button className="mt-close" onClick={() => setMaterialToast(null)}>あとで</button>
         </div>
       )}
+
+      {/* 内なる子に出会った瞬間：守り手との前後関係を絵で見せる */}
+      {childReveal && <ChildReveal color={childReveal} onClose={() => setChildReveal(null)} />}
 
       {/* 守り手が解き放たれた瞬間：ガーディアンへの進化演出 */}
       {guardianEv && <GuardianReveal ev={guardianEv} onClose={() => setGuardianEv(null)} />}

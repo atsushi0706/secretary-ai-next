@@ -185,7 +185,7 @@ export function isPartColor(v: unknown): v is PartColor {
 }
 
 /** ワークの段階。画面の演出（誰が前に出ているか）もこれで決まる */
-export type PartsStep = 1 | 2 | 3 | 4 | 5 | 6;
+export type PartsStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export const STEP_LABEL: Record<PartsStep, string> = {
   1: "守り手に出会う",
@@ -193,7 +193,9 @@ export const STEP_LABEL: Record<PartsStep, string> = {
   3: "その奥へ",
   4: "内なる子に出会う",
   5: "癒す",
-  6: "解き放つ",
+  6: "自分に取り込む",
+  7: "守り手を解き放つ",
+  8: "最初の感覚にもどる",
 };
 
 /** AI に渡す、そのパーツぶんの人物設定 */

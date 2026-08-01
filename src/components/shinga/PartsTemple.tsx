@@ -70,10 +70,19 @@ export function PartsGate({ onStart }: { onStart: (color: PartColor | null) => v
       <div className="pt-gate-head">
         <h2>内なる子の神殿</h2>
         <p className="pt-lead">
-          いま困っている「クセ」は、きみを守るために前に立っている<b>守り手</b>。
-          その奥には、まだ満たされていない<b>内なる子</b>がいる。
-          <br />会いに行って、癒すと——守り手は役割を降りて、<b>才能</b>に変わる。
+          カッとなる。逃げたくなる。黙り込む。凹む。<br />
+          ——それは全部、<b>守り手</b>の働き。
         </p>
+        <div className="pt-howto">
+          <div className="ph-row"><span className="ph-n">1</span>
+            <span>奥に<b>内なる子</b>がいる。傷ついたときのまま、時間が止まっている</span></div>
+          <div className="ph-row"><span className="ph-n">2</span>
+            <span>守り手は、その子がもう傷つかないように<b>前に立って</b>その反応を出している</span></div>
+          <div className="ph-row"><span className="ph-n">3</span>
+            <span>奥へ入って子に会い、癒して<b>今の自分に取り込む</b></span></div>
+          <div className="ph-row"><span className="ph-n">4</span>
+            <span>守り手は守る役目を終えて、<b>才能</b>として自由になる</span></div>
+        </div>
       </div>
 
       <div className="pt-ring">
@@ -170,19 +179,65 @@ export function PartsProgress({ color, step }: { color: PartColor | null; step: 
     );
   }
   const p = PARTS[color];
-  // 4以降は内なる子が前に出る。6で解放
-  const front: PartFace = step >= 4 ? p.child : p.defense;
+  // 1-3=守り手 / 4-6=内なる子（癒して取り込む）/ 7-8=解き放たれた姿
+  const front: PartFace = step >= 7 ? p.guardian : step >= 4 ? p.child : p.defense;
   return (
     <div className="pt-prog" style={{ ["--pc" as any]: p.hue }}>
-      <PartArt face={front} color={color} size={54} glow={step >= 5} />
+      <PartArt face={front} color={color} size={54} glow={step >= 6} />
       <div className="pp-body">
         <div className="pp-who">{front.name}<span className="pp-sub">{front.title}</span></div>
         <div className="pp-track">
-          {([1, 2, 3, 4, 5, 6] as PartsStep[]).map((n) => (
+          {([1, 2, 3, 4, 5, 6, 7, 8] as PartsStep[]).map((n) => (
             <span key={n} className={`pp-seg ${n <= step ? "on" : ""} ${n === step ? "now" : ""}`} title={STEP_LABEL[n]} />
           ))}
         </div>
         <div className="pp-step">{STEP_LABEL[step]}</div>
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────── 出会いの瞬間（守り手 → 守られていた子） */
+
+/**
+ * 段階4で一度だけ出す。
+ * 「あの守り手は、この子を守っていた」という前後関係を、絵で分からせる。
+ * 文章だけだと関係が伝わらないので、ここは必ず視覚で見せる。
+ */
+export function ChildReveal({ color, onClose }: { color: PartColor; onClose: () => void }) {
+  const [phase, setPhase] = useState<0 | 1>(0);
+  const p = PARTS[color];
+  useEffect(() => {
+    const t = setTimeout(() => setPhase(1), 1100);
+    return () => clearTimeout(t);
+  }, []);
+  return (
+    <div className="cr-overlay" onClick={phase === 1 ? onClose : undefined}>
+      <div className={`cr-card ph-${phase}`} style={{ ["--pc" as any]: p.hue }} onClick={(e) => e.stopPropagation()}>
+        <div className="cr-kicker">この守り手が、守っていたのは</div>
+        <div className="cr-row">
+          <div className="cr-side">
+            <PartArt face={p.defense} color={color} size={110} />
+            <span className="cr-name">{p.defense.name}</span>
+            <span className="cr-role">前に立って守っていた</span>
+          </div>
+          {/* 向きは 守り手 → 内なる子。守っているのは守り手のほう */}
+          <div className="cr-arrow">まもっていた</div>
+          <div className="cr-side is-child">
+            <PartArt face={p.child} color={color} size={130} glow />
+            <span className="cr-name">{p.child.title}</span>
+            <span className="cr-role">傷ついたまま、待っていた</span>
+          </div>
+        </div>
+        {phase === 1 && (
+          <>
+            <p className="cr-msg">
+              {p.defense.message}<br />
+              その奥で、この子はずっと「{p.child.acts[0]}」と思っていた。
+            </p>
+            <button className="cr-close" onClick={onClose}>この子に会いにいく</button>
+          </>
+        )}
       </div>
     </div>
   );

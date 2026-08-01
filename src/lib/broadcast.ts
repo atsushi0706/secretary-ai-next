@@ -13,13 +13,43 @@
  */
 import { supabaseAdmin } from "./supabase";
 import { complete } from "./ai";
-import { extractJson } from "./claude";
 import { jstDateStr } from "./google";
 import { getHero } from "./hero";
 import { recentDoneText } from "./lean";
 import {
   type BroadcastPost, type Method, type MethodAssets, type Slide, EMPTY_ASSETS,
 } from "./broadcast-types";
+
+/**
+ * AIの返事から JSON オブジェクトを取り出す。
+ *
+ * ※ 共通の extractJson は「配列を先に探す」作りなので、
+ *   {"slides":[...]} を渡すと中の配列だけを拾ってしまい、本体が失われる。
+ *   ここは必ずオブジェクトとして読みたいので、専用に持つ。
+ *   文字列リテラルの中の { } は数えない（本文に括弧が入っても壊れないように）。
+ */
+function parseObject<T>(text: string): T | null {
+  let t = String(text ?? "").trim();
+  if (t.startsWith("```")) t = t.replace(/^```(?:json)?\s*/, "").replace(/\s*```\s*$/, "");
+  const start = t.indexOf("{");
+  if (start < 0) return null;
+  let depth = 0, inStr = false, escaped = false;
+  for (let i = start; i < t.length; i++) {
+    const c = t[i];
+    if (escaped) { escaped = false; continue; }
+    if (c === "\\") { escaped = true; continue; }
+    if (c === '"') { inStr = !inStr; continue; }
+    if (inStr) continue;
+    if (c === "{") depth++;
+    else if (c === "}") {
+      depth--;
+      if (depth === 0) {
+        try { return JSON.parse(t.slice(start, i + 1)) as T; } catch { return null; }
+      }
+    }
+  }
+  return null; // 閉じ括弧が無い＝途中で切れている
+}
 
 /* ────────────────────────────── メソッド */
 
@@ -219,14 +249,12 @@ ${pastText}
     maxTokens: 1200,
     temperature: 0.9,
   });
-  const plan = extractJson<any>(planRaw) ?? {};
+  const plan = parseObject<any>(planRaw) ?? {};
   const angle = String(plan.angle ?? "今日の気づきを渡す").slice(0, 60);
   const format = String(plan.format ?? "表紙＋本文3枚").slice(0, 120);
 
   // ── ② 執筆：企画どおりに書く
-  const writeRaw = await complete({
-    userId,
-    prompt: `あなたはSNS発信のライター。編集会議で決まった企画どおりに、カルーセル投稿を書く。
+  const writePrompt = `あなたはSNS発信のライター。編集会議で決まった企画どおりに、カルーセル投稿を書く。
 
 # 決まった企画
 - 企画：${angle}
@@ -257,15 +285,37 @@ ${SLIDE_SPEC}
  "slides": [ { "kind": "cover", "title": "...", "body": "..." }, ... ],
  "caption": "投稿本文。1〜3行で要点→改行→補足。最後に軽い問いかけ1つ（任意）",
  "hashtags": ["タグ", "3〜6個", "#は付けない"]
-}`,
-    maxTokens: 2400,
-    temperature: 0.85,
-  });
-  const w = extractJson<any>(writeRaw) ?? {};
-  const slides: Slide[] = Array.isArray(w.slides)
-    ? w.slides.filter((s: any) => s && typeof s.kind === "string").slice(0, 9)
-    : [];
-  if (slides.length === 0) throw new Error("スライドを生成できませんでした（AIの応答が不正）");
+}
+
+# 出力の注意（守らないと画面に出せない）
+- JSON以外は一切書かない（前置き・あとがき・コードブロックの説明も不要）
+- 途中で切れないよう、スライドは多くても7枚まで
+- 文字列の中で改行したいときは \\n と書く（生の改行を入れない）`;
+
+  // 1回目で読めなければ、より短く・確実な形でもう一度だけ頼む（AIの気まぐれで止めない）
+  let w: any = null;
+  let lastRaw = "";
+  for (let attempt = 0; attempt < 2 && !w; attempt++) {
+    lastRaw = await complete({
+      userId,
+      prompt: attempt === 0
+        ? writePrompt
+        : `${writePrompt}\n\n# 前回、JSONとして読めなかった。今度は必ず、余計な文字を一切付けず、{ から } までのJSONだけを返して。スライドは5枚以内でよい。`,
+      maxTokens: 3200,
+      temperature: attempt === 0 ? 0.85 : 0.5,
+    });
+    const parsed = parseObject<any>(lastRaw);
+    if (parsed && Array.isArray(parsed.slides) && parsed.slides.length > 0) w = parsed;
+  }
+  if (!w) {
+    // 何が返ってきたかを添える（原因が分かるように）
+    const head = String(lastRaw ?? "").replace(/\s+/g, " ").slice(0, 120);
+    throw new Error(`投稿を組み立てられませんでした。AIの返事を読み取れていません。${head ? `（返事の先頭：${head}…）` : "（返事が空でした）"}`);
+  }
+  const slides: Slide[] = (w.slides as any[])
+    .filter((s: any) => s && typeof s.kind === "string")
+    .slice(0, 9);
+  if (slides.length === 0) throw new Error("投稿を組み立てられませんでした（スライドの形式が不正）");
 
   const supa = supabaseAdmin();
   const { data, error } = await supa.from("broadcast_posts").insert({
@@ -298,7 +348,7 @@ ${JSON.stringify(slides).slice(0, 1500)}
         maxTokens: 700,
         temperature: 0.4,
       });
-      const mined = extractJson<Partial<MethodAssets>>(mineRaw);
+      const mined = parseObject<Partial<MethodAssets>>(mineRaw);
       if (mined) await appendAssets(userId, mined);
     } catch { /* 採掘は任意 */ }
   }

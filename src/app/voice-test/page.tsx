@@ -25,6 +25,7 @@ export default function VoiceTest() {
   const [busy, setBusy] = useState("");
   const [msg, setMsg] = useState("");
   const [engine, setEngine] = useState("");
+  const [usedVoice, setUsedVoice] = useState("");
   const [copied, setCopied] = useState(false);
 
   useEffect(() => {
@@ -47,6 +48,10 @@ export default function VoiceTest() {
         throw new Error(d.detail || d.error || `エラー ${r.status}`);
       }
       setEngine(r.headers.get("X-TTS-Engine") ?? "?");
+      // 実際に鳴った声を出す（頼んだ声と違うことがあるため。無料プランの自動切替など）
+      const usedId = r.headers.get("X-TTS-Voice") ?? "";
+      const used = (info?.voices ?? []).find((v) => v.id === usedId);
+      setUsedVoice(used ? used.name : usedId);
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
       const a = new Audio(url);
@@ -107,7 +112,16 @@ export default function VoiceTest() {
         {msg && (
           <p className="gd-txt" style={{ color: "#e6a0a0", marginTop: 12, wordBreak: "break-all" }}>{msg}</p>
         )}
-        {engine && <p className="gd-txt" style={{ color: "#e0bd72", marginTop: 10 }}>▶ {engine} で再生しました</p>}
+        {engine && (
+          <p className="gd-txt" style={{ color: "#e0bd72", marginTop: 10 }}>
+            ▶ いま鳴った声：<b>{usedVoice || "（不明）"}</b>
+            {picked && usedVoice && !usedVoice.includes(picked) && (info?.voices ?? []).find((v) => v.id === picked && !v.free) && (
+              <><br /><span style={{ color: "#e0b48c" }}>
+                ※ 選んだ声は有料プラン専用なので、無料で使える声に切り替えて鳴らしたよ
+              </span></>
+            )}
+          </p>
+        )}
       </section>
 
       <section className="gd-sec">

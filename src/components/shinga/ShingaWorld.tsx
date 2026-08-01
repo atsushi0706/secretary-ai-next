@@ -19,7 +19,7 @@ import { QuestCard, type Card } from "./QuestCard";
 import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
-import { StepCounter } from "./StepCounter";
+import { StepCounter, type StepCounterHandle } from "./StepCounter";
 import { WorkMaker, CardDrawOverlay } from "./WorkMaker";
 import { WeightPanel } from "./WeightPanel";
 import { type CustomWork, type OwnCard } from "@/lib/custom-work-types";
@@ -138,6 +138,16 @@ export function ShingaWorld({
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
   const [weightOpen, setWeightOpen] = useState(false); // からだの記録
+  // 散歩のおとも：入ったら勝手に数え、出るときに確定して保存する
+  const stepRef = useRef<StepCounterHandle | null>(null);
+  const [stepWon, setStepWon] = useState<string[] | null>(null);
+  const finishSteps = useCallback(async () => {
+    const r = await stepRef.current?.finish().catch(() => null);
+    if (r && r.steps >= 20) {
+      const min = Math.max(1, Math.round(r.seconds / 60));
+      void talk(`（実際に ${r.steps} 歩、${min}分ほど歩いてきた）`);
+    }
+  }, []);
   // じぶんワーク（本人が作ったワーク）
   const [customWorks, setCustomWorks] = useState<CustomWork[]>([]);
   const [makerOpen, setMakerOpen] = useState(false);
@@ -483,6 +493,7 @@ export function ShingaWorld({
   async function enter(m: ModeKey, resume = false) {
     runWorkRef.current = null; setRunWork(null); setDrawStep(null);
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
+    if (mode === "walk" && m !== "walk") void finishSteps();
     if (!resume && mode && mode !== m) void finishWork(mode, messages);
     // 内なる子の神殿は、いきなり会話に入らない。まず守り手を選ぶ盤面を出す。
     if (m === "parts" && !resume) {
@@ -760,6 +771,17 @@ export function ShingaWorld({
         </div>
       )}
 
+      {/* 歩いて手に入れたカード（小さく知らせるだけ） */}
+      {stepWon && (
+        <div className="material-toast" onClick={() => setStepWon(null)}>
+          <div className="mt-body">
+            <span className="mt-kicker">👟 歩いて手に入れた</span>
+            <span className="mt-title">{stepWon.join("・")}</span>
+          </div>
+          <button className="mt-close" onClick={() => setStepWon(null)}>閉じる</button>
+        </div>
+      )}
+
       {/* 内なる子に出会った瞬間：守り手との前後関係を絵で見せる */}
       {childReveal && <ChildReveal color={childReveal} onClose={() => setChildReveal(null)} />}
 
@@ -868,7 +890,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { void finishWork(mode, messages); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 
@@ -924,14 +946,35 @@ export function ShingaWorld({
             </div>
           )}
 
-          {/* パラレルウォークは実際に歩きながらやれる。歩数はアプリを開いている間だけ数える */}
-          {/* 送信中も絶対に消さないこと。消すと歩数計ごと作り直されて、
-              数えていた歩数もセンサーの購読も失われる（歩きながら話すと0に戻る） */}
+          {/* 散歩のおとも：小さなバッジだけ。数えるのは自動、保存は出るとき */}
           {mode === "walk" && (
-            <StepCounter onFinish={(n, sec) => {
-              const min = Math.max(1, Math.round(sec / 60));
-              void talk(`（実際に ${n} 歩、${min}分ほど歩いてきた）`);
-            }} />
+            <StepCounter ref={stepRef} onEarn={(titles) => setStepWon(titles)} />
+          )}
+
+          {/* じぶんワーク：いま何歩目か */}
+          {runWork && (
+            <div className="travel-alt">
+              <span className="ta-label">{runWork.emoji} {runWork.name}</span>
+              <span className="ta-track">
+                {runWork.steps.map((_, i) => (
+                  <span key={i} className={`ta-seg ${i < customIdx ? "on" : ""} ${i === customIdx ? "now" : ""}`} />
+                ))}
+              </span>
+              <span className="ta-name">{customIdx >= runWork.steps.length ? "しめくくり" : `${customIdx + 1} / ${runWork.steps.length}`}</span>
+            </div>
+          )}
+
+          {/* パラレルウォーク：いまどこまで歩いたか（背景の風景と対応） */}
+          {mode === "walk" && (
+            <div className="travel-alt is-walk">
+              <span className="ta-label">🚶 歩いた道のり</span>
+              <span className="ta-track">
+                {Array.from({ length: 10 }, (_, i) => (
+                  <span key={i} className={`ta-seg ${i < walkStage ? "on" : ""} ${i === walkStage - 1 ? "now" : ""}`} />
+                ))}
+              </span>
+              <span className="ta-name">{WALK_PLACE[walkStage - 1]}</span>
+            </div>
           )}
 
           {/* パラレルトラベル：いまどこまで視点が上がったか（背景の風景と対応） */}

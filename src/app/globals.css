@@ -1031,7 +1031,8 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-breath li { margin-bottom: 4px; }
 
 /* ── 入力欄：量に合わせて伸びる ── */
-.vbar-text { max-height: none !important; overflow-y: auto; }
+/* 長文でも入力欄は伸びすぎない。伸ばし放題にすると送信ボタンが画面外に出て押せなくなる */
+.vbar-text { max-height: 38vh !important; overflow-y: auto !important; }
 
 /* ── パラレルウォーク：明るい空と海の画面 ── */
 .singa-stage.is-bright {
@@ -1594,7 +1595,8 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-breath li { margin-bottom: 4px; }
 
 /* ── 入力欄：量に合わせて伸びる ── */
-.vbar-text { max-height: none !important; overflow-y: auto; }
+/* 長文でも入力欄は伸びすぎない。伸ばし放題にすると送信ボタンが画面外に出て押せなくなる */
+.vbar-text { max-height: 38vh !important; overflow-y: auto !important; }
 
 /* ── パラレルウォーク：明るい空と海の画面 ── */
 .singa-stage.is-bright {
@@ -4243,3 +4245,32 @@ body:has(.realverse-bg) { background: transparent; }
 .wt-row .f { color: var(--singa-ink-soft); }
 
 .iw-report.is-weight { border-color: rgba(140,200,180,.5); }
+
+/* 入力まわり：長文になってもマイクと送信が必ず見える位置に留まる */
+.vbar-input { align-items: flex-end; }
+.vbar-mic, .vbar-go { flex-shrink: 0; align-self: flex-end; }
+.vbar { max-height: 52vh; }
+
+/* ══════════════════════════════════════════════════════════
+   散歩のおとも：ワークの邪魔をしない小さなバッジだけ
+   （以前は大きなパネルが出続けて会話を圧迫していた）
+   ══════════════════════════════════════════════════════════ */
+.sc-chip {
+  position: relative; z-index: 3;
+  display: inline-flex; align-items: center; gap: 6px;
+  margin: 0 auto 6px; padding: 5px 13px; border-radius: 999px;
+  font-size: .74rem; color: #4a3a1c;
+  background: rgba(255,252,244,.86);
+  border: 1px solid rgba(190,150,70,.4);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 3px 12px rgba(120,90,40,.16);
+}
+.sc-chip b { font-family: Georgia, serif; font-size: .95rem; font-variant-numeric: tabular-nums; }
+.sc-chip .sc-dot {
+  width: 6px; height: 6px; border-radius: 999px; background: #c9a55e;
+  animation: sc-blink 1.6s ease-in-out infinite;
+}
+@keyframes sc-blink { 0%,100% { opacity: .35; } 50% { opacity: 1; } }
+.sc-chip.is-ask {
+  cursor: pointer; color: #8a6a2c; border-style: dashed;
+}

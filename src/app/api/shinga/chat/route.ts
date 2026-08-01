@@ -193,6 +193,12 @@ export async function POST(req: Request) {
         const wallMatch = full.match(/<wall>\s*([1-5])\s*<\/wall>/);
         if (wallMatch) wallStage = Number(wallMatch[1]);
 
+        // パラレルトラベル：話の抽象度＝高度（1=目の前の出来事 … 10=すべてがつながる）。
+        // 背景の風景が、この数字に合わせて引いていく。
+        let travelStage: number | null = null;
+        const travelMatch = full.match(/<travel>\s*(10|[1-9])\s*<\/travel>/);
+        if (travelMatch) travelStage = Number(travelMatch[1]);
+
         // 内なる子の神殿：ワークの段階（1=守り手に出会う … 6=解き放つ）と、解放されたガーディアン
         let partsStep: number | null = null;
         const stepMatch = full.match(/<parts_step>\s*([1-6])\s*<\/parts_step>/);
@@ -270,10 +276,11 @@ export async function POST(req: Request) {
           .replace(/<wall>[\s\S]*?<\/wall>/g, "")
           .replace(/<parts_step>[\s\S]*?<\/parts_step>/g, "")
           .replace(/<guardian>[\s\S]*?<\/guardian>/g, "")
+          .replace(/<travel>[\s\S]*?<\/travel>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch) {
+        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch || travelMatch) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });
@@ -281,6 +288,7 @@ export async function POST(req: Request) {
         if (wantBreath) send("breath", {});
         if (wallStage) send("wall", { stage: wallStage });
         if (partsStep) send("parts_step", { step: partsStep });
+        if (travelStage) send("travel", { stage: travelStage });
 
         // ガーディアン解放：守り手が役割を降り、才能として開いた瞬間
         if (releasedColor) {

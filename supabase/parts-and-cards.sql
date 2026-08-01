@@ -47,3 +47,37 @@ create index if not exists deep_reads_user_idx on public.deep_reads (user_id, da
 alter table public.guardians   enable row level security;
 alter table public.skill_cards enable row level security;
 alter table public.deep_reads  enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- 発信スタジオ（SNSアウトプット）
+--   4) methods         … 育てるメソッド（1ユーザー1つ・資産がたまる）
+--   5) broadcast_posts … 生成したカルーセル投稿
+--   6) user_settings.referred_by … 紹介リンク（?ref=）で来た人の記録
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.methods (
+  user_id     text primary key,
+  name        text not null default '',
+  tagline     text not null default '',
+  assets      jsonb not null default '{}'::jsonb,
+  updated_at  timestamptz not null default now()
+);
+
+create table if not exists public.broadcast_posts (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,
+  angle       text not null default '',
+  format      text not null default '',
+  title       text not null default '',
+  slides      jsonb not null default '[]'::jsonb,
+  caption     text not null default '',
+  hashtags    jsonb not null default '[]'::jsonb,
+  created_at  timestamptz not null default now()
+);
+create index if not exists broadcast_posts_user_idx on public.broadcast_posts (user_id, created_at desc);
+
+alter table public.user_settings add column if not exists referred_by text;
+
+alter table public.methods         enable row level security;
+alter table public.broadcast_posts enable row level security;

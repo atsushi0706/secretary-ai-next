@@ -2942,3 +2942,120 @@ body:has(.realverse-bg) { background: transparent; }
   background: linear-gradient(160deg, #f0dca8, #c9a55e);
   box-shadow: 0 8px 24px rgba(201,165,94,.34);
 }
+
+/* ══════════════════════════════════════════════════════════
+   発信スタジオ（ワーク体験 → SNSカルーセル投稿）
+   ══════════════════════════════════════════════════════════ */
+.bc-screen {
+  position: relative; z-index: 3;
+  max-width: 900px; margin: 0 auto; padding: 14px 16px 40px;
+  overflow-y: auto; max-height: calc(100dvh - 20px);
+  background: linear-gradient(180deg, rgba(10,8,14,.92), rgba(10,8,14,.86));
+  border-radius: 20px; border: 1px solid rgba(238,214,155,.16);
+}
+.bc-head h2 {
+  font-family: Georgia, "Yu Mincho", "游明朝", serif;
+  font-size: 1.25rem; letter-spacing: .08em; text-align: center;
+  color: var(--singa-gold); margin: 6px 0 8px;
+}
+.bc-lead { font-size: .76rem; line-height: 1.85; text-align: center; color: var(--singa-ink-soft); margin-bottom: 14px; }
+.bc-lead b { color: var(--singa-gold); }
+.bc-err { margin: 10px 0; font-size: .74rem; color: #e6a0a0; text-align: center; line-height: 1.7; }
+
+/* メソッドの看板 */
+.bc-method { margin-bottom: 12px; }
+.bcm-row {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 14px; border-radius: 13px; font-size: .82rem; font-weight: 700; color: var(--singa-ink);
+  background: rgba(255,255,255,.06); border: 1px solid rgba(238,214,155,.3);
+}
+.bcm-row.is-empty { color: var(--singa-gold); border-style: dashed; font-weight: 400; font-size: .76rem; }
+.bcm-name { color: var(--singa-gold); }
+.bcm-count { font-size: .66rem; color: var(--singa-ink-soft); font-weight: 400; }
+.bcm-edit { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-radius: 0 0 13px 13px; background: rgba(255,255,255,.04); }
+.bcm-edit input {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 10px;
+  padding: 9px 11px; color: var(--singa-ink); font-size: .82rem;
+}
+.bcm-edit > button {
+  align-self: flex-end; padding: 8px 18px; border-radius: 10px; font-weight: 700; font-size: .78rem;
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e);
+}
+.bcm-assets { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 4px; }
+.bcm-assets .a-chip {
+  font-size: .64rem; padding: 3px 9px; border-radius: 999px;
+  background: rgba(238,214,155,.12); border: 1px solid rgba(238,214,155,.3); color: var(--singa-ink-soft);
+}
+
+.bc-generate {
+  width: 100%; padding: 14px; border-radius: 14px; font-weight: 700; font-size: .9rem;
+  color: #1a1208; background: linear-gradient(160deg,#f0dca8,#c9a55e);
+  box-shadow: 0 8px 26px rgba(201,165,94,.35);
+}
+.bc-generate:disabled { opacity: .7; }
+
+.bc-list { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.bc-item {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 3px;
+  padding: 11px 14px; border-radius: 13px; text-align: left;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+}
+.bc-item:hover { background: rgba(255,255,255,.09); }
+.bi-title { font-size: .86rem; font-weight: 700; color: var(--singa-ink); }
+.bi-sub { font-size: .66rem; color: var(--singa-ink-soft); }
+
+/* 投稿ビュー */
+.bc-post-head { margin: 4px 0 10px; }
+.bp-title { font-size: 1rem; font-weight: 700; color: var(--singa-ink); }
+.bp-sub { font-size: .68rem; color: var(--singa-ink-soft); margin-top: 3px; line-height: 1.6; }
+
+.bc-toolbar { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 12px; }
+.bc-theme {
+  padding: 6px 13px; border-radius: 999px; font-size: .72rem;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
+}
+.bc-theme.on { color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e); font-weight: 700; border-color: transparent; }
+.bc-sp { flex: 1; }
+.bc-act {
+  padding: 7px 12px; border-radius: 10px; font-size: .72rem; font-weight: 700;
+  color: var(--singa-ink); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+}
+.bc-act.is-danger { color: #e6a0a0; }
+
+/* カルーセル（横スクロール）。中身は1080x1350を0.26倍で表示 */
+.bc-slides {
+  display: flex; gap: 12px; overflow-x: auto; padding: 4px 2px 12px;
+  scroll-snap-type: x mandatory;
+}
+.bc-slidewrap {
+  position: relative; flex: 0 0 auto; width: 281px; height: 351px;
+  border-radius: 14px; overflow: hidden; scroll-snap-align: center;
+  border: 2px solid rgba(255,255,255,.12); cursor: pointer;
+}
+.bc-slidewrap.is-edit { border-color: var(--singa-gold); box-shadow: 0 0 18px rgba(238,214,155,.35); }
+.bc-slideinner { width: 1080px; height: 1350px; transform: scale(0.26); transform-origin: top left; pointer-events: none; }
+.bc-tapedit {
+  position: absolute; right: 8px; top: 8px; font-size: .6rem; padding: 3px 8px; border-radius: 999px;
+  background: rgba(0,0,0,.55); color: rgba(255,255,255,.85);
+}
+
+/* 編集パネル */
+.bc-editor { display: flex; flex-direction: column; gap: 9px; padding: 12px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid rgba(238,214,155,.25); margin-bottom: 12px; }
+.bc-editor label { display: flex; flex-direction: column; gap: 4px; font-size: .68rem; color: var(--singa-gold); }
+.bc-editor input, .bc-editor textarea {
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); border-radius: 10px;
+  padding: 9px 11px; color: var(--singa-ink); font-size: .84rem; line-height: 1.7; resize: vertical;
+}
+.bc-close-edit { align-self: flex-end; font-size: .7rem; color: var(--singa-ink-soft); padding: 5px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.2); }
+
+/* キャプション */
+.bc-caption { margin-top: 4px; }
+.bc-caption .cap-head { font-size: .72rem; color: var(--singa-gold); margin-bottom: 6px; }
+.bc-caption textarea {
+  width: 100%; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15); border-radius: 12px;
+  padding: 11px 13px; color: var(--singa-ink); font-size: .84rem; line-height: 1.8; resize: vertical;
+}
+.bc-caption .cap-tags { margin-top: 6px; font-size: .72rem; color: #9ab0d8; line-height: 1.7; }
+
+/* ホームのボタン色 */
+.iw-report.is-cast { border-color: rgba(224,160,120,.5); }

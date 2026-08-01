@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { RefCatch } from "./RefCatch";
 
 export const metadata = {
   title: "Singa World — AIとの対話で予定とタスクを整理する秘書アプリ",
@@ -9,6 +10,7 @@ export const metadata = {
 export default function WelcomePage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-[#f5f3fb] via-[#ecf2fb] to-white">
+      <RefCatch />
       {/* ヘッダー */}
       <header className="max-w-6xl mx-auto px-6 py-5 flex items-center justify-between">
         <div className="flex items-center gap-2">

@@ -17,6 +17,16 @@ export async function GET(req: Request) {
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const settings = await getUserSettings(userId);
+
+  // 紹介リンク経由なら「誰の紹介か」を1回だけ記録（発信スタジオの紹介の仕組み）
+  try {
+    const ref = req.headers.get("cookie")?.match(/(?:^|;\s*)sw_ref=([^;]+)/)?.[1];
+    const referredBy = ref ? decodeURIComponent(ref) : "";
+    if (referredBy && referredBy !== userId && !(settings as any)?.referred_by) {
+      const { upsertUserSettings } = await import("@/lib/supabase");
+      await upsertUserSettings(userId, { referred_by: referredBy } as any);
+    }
+  } catch { /* 記録できなくても本体は動かす */ }
   // Claude(共通) or 個人 Anthropic キーがあればOK。Google接続は必須。
   const hasAnthropic = !!(settings?.anthropic_api_key) || !!process.env.ANTHROPIC_API_KEY;
   const setupNeeded = !hasAnthropic || !settings?.google_refresh_token;

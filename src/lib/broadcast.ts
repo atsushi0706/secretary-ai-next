@@ -1,0 +1,307 @@
+/**
+ * 発信スタジオ：素材集め → 編集者AI（チェーン3段）→ 保存。サーバ専用。
+ *
+ * チェーン（一撃生成しない）:
+ *   ① 編集会議 … 素材・世界観・メソッド・過去投稿を見て「この回の企画」を決める
+ *   ② 執筆     … 決まった企画どおりにスライドとキャプションを書く
+ *   ③ 採掘     … 今回の素材からメソッド資産（原理・問い・言葉）を拾って蓄積する
+ *
+ * 守ること：
+ *  - 内面の会話を逐語で外に出さない（体験は要約・変換してから使う）
+ *  - 本人が体験していない実績・変化を作らない
+ *  - 過去の投稿と同じ型を繰り返さない（過去10回ぶんの企画を渡して外させる）
+ */
+import { supabaseAdmin } from "./supabase";
+import { complete } from "./ai";
+import { extractJson } from "./claude";
+import { jstDateStr } from "./google";
+import { getHero } from "./hero";
+import { recentDoneText } from "./lean";
+import {
+  type BroadcastPost, type Method, type MethodAssets, type Slide, EMPTY_ASSETS,
+} from "./broadcast-types";
+
+/* ────────────────────────────── メソッド */
+
+export async function getMethod(userId: string): Promise<Method | null> {
+  try {
+    const supa = supabaseAdmin();
+    const { data } = await supa.from("methods").select("name, tagline, assets")
+      .eq("user_id", userId).maybeSingle();
+    if (!data) return null;
+    return {
+      name: String(data.name ?? ""),
+      tagline: String(data.tagline ?? ""),
+      assets: { ...EMPTY_ASSETS, ...(data.assets ?? {}) },
+    };
+  } catch { return null; }
+}
+
+export async function saveMethod(userId: string, m: { name: string; tagline?: string }): Promise<void> {
+  const supa = supabaseAdmin();
+  const cur = await getMethod(userId);
+  await supa.from("methods").upsert({
+    user_id: userId,
+    name: m.name.slice(0, 60),
+    tagline: (m.tagline ?? cur?.tagline ?? "").slice(0, 120),
+    assets: cur?.assets ?? EMPTY_ASSETS,
+    updated_at: new Date().toISOString(),
+  }, { onConflict: "user_id" });
+}
+
+/** 資産を追記（重複を除き、各40件まで） */
+async function appendAssets(userId: string, add: Partial<MethodAssets>): Promise<void> {
+  const cur = await getMethod(userId);
+  if (!cur) return; // メソッド未設定なら貯めない（名前が付いてから育てる）
+  const merged: MethodAssets = { ...cur.assets };
+  for (const k of Object.keys(EMPTY_ASSETS) as (keyof MethodAssets)[]) {
+    const inc = (add[k] ?? []).map((s) => String(s).trim()).filter((s) => s.length >= 4);
+    merged[k] = [...new Set([...merged[k], ...inc])].slice(-40);
+  }
+  const supa = supabaseAdmin();
+  await supa.from("methods").update({ assets: merged, updated_at: new Date().toISOString() })
+    .eq("user_id", userId);
+}
+
+/* ────────────────────────────── 投稿の保存・取得 */
+
+export async function listPosts(userId: string, limit = 20): Promise<BroadcastPost[]> {
+  try {
+    const supa = supabaseAdmin();
+    const { data } = await supa.from("broadcast_posts")
+      .select("id, date, angle, format, title, slides, caption, hashtags, created_at")
+      .eq("user_id", userId).order("created_at", { ascending: false }).limit(limit);
+    return (data ?? []) as BroadcastPost[];
+  } catch { return []; }
+}
+
+export async function updatePost(
+  userId: string, id: number,
+  patch: { slides?: Slide[]; caption?: string; title?: string },
+): Promise<void> {
+  const supa = supabaseAdmin();
+  await supa.from("broadcast_posts").update({
+    ...(patch.slides ? { slides: patch.slides } : {}),
+    ...(patch.caption != null ? { caption: patch.caption } : {}),
+    ...(patch.title != null ? { title: patch.title } : {}),
+  }).eq("user_id", userId).eq("id", id);
+}
+
+export async function deletePost(userId: string, id: number): Promise<void> {
+  const supa = supabaseAdmin();
+  await supa.from("broadcast_posts").delete().eq("user_id", userId).eq("id", id);
+}
+
+/* ────────────────────────────── 素材集め */
+
+/**
+ * 直近のワークから「外に出してよい形の素材」を作る。
+ * 内面の会話は逐語では渡さず、本人の発言を短い断片に刻んで
+ * 「これは変換の材料であり、引用禁止」と明記してAIに渡す。
+ */
+async function gatherMaterial(userId: string): Promise<string> {
+  const supa = supabaseAdmin();
+  const since = jstDateStr(new Date(Date.now() - 3 * 86400000));
+
+  const [talk, skills, guards, done] = await Promise.all([
+    supa.from("shinga_conversations").select("date, content").eq("user_id", userId)
+      .eq("role", "user").gte("date", since)
+      .order("created_at", { ascending: false }).limit(30)
+      .then((r) => r.data ?? [], () => []),
+    supa.from("skill_cards").select("date, title, body, source").eq("user_id", userId)
+      .order("created_at", { ascending: false }).limit(5)
+      .then((r) => r.data ?? [], () => []),
+    supa.from("guardians").select("date, color, wish").eq("user_id", userId)
+      .order("created_at", { ascending: false }).limit(4)
+      .then((r) => r.data ?? [], () => []),
+    recentDoneText(userId, 3).catch(() => ""),
+  ]);
+
+  const parts: string[] = [];
+  if ((skills as any[]).length) {
+    parts.push("## 手に入れた力（スキルカード。壊したブロックの裏返し）");
+    for (const s of skills as any[]) parts.push(`- [${s.date}] ${s.title}：${String(s.body ?? "").slice(0, 90)}（${String(s.source ?? "")}）`);
+  }
+  if ((guards as any[]).length) {
+    parts.push("## 解放した守り手（防衛パーツ→才能への転換体験）");
+    for (const g of guards as any[]) parts.push(`- [${g.date}] ${g.color} を解放。本当はどうしたい：${String(g.wish ?? "").slice(0, 80)}`);
+  }
+  if (done) { parts.push("## 実際にやったこと"); parts.push(done); }
+  if ((talk as any[]).length) {
+    parts.push("## 本人がワーク中に口にした断片（※変換の材料。逐語引用・固有名詞の使用は禁止）");
+    for (const t of (talk as any[]).slice(0, 18)) parts.push(`- ${String(t.content ?? "").slice(0, 100)}`);
+  }
+  return parts.join("\n") || "（直近3日の素材が少ない。一般化した内容ではなく「素材が薄い」と正直に扱うこと）";
+}
+
+/** 世界観（主人公設定）を文字列に */
+async function worldText(userId: string): Promise<string> {
+  const h: any = await getHero(userId).catch(() => null);
+  if (!h) return "（未設定）";
+  return [
+    h.desired_world?.trim() ? `- 増やしたい世界：${h.desired_world.trim()}` : "",
+    h.enemy_world?.trim() ? `- 減らしたい世界：${h.enemy_world.trim()}` : "",
+    h.needed_people?.trim() ? `- その世界に必要な人：${h.needed_people.trim()}` : "",
+    h.hero_statement?.trim() ? `- 主人公像：${h.hero_statement.trim()}` : "",
+  ].filter(Boolean).join("\n") || "（未設定）";
+}
+
+/* ────────────────────────────── 生成チェーン */
+
+const SLIDE_SPEC = `# 文字の演出（画像デザインに直結する）
+- いちばん立てたい言葉は **強調** で囲む（1スライド1〜2箇所。金色の太字になる）
+- cover と quote の title/body は、読みやすい位置で \\n を入れて2〜3行に割る（1行10〜14字）
+
+スライドの kind は次から選ぶ：
+- cover: 表紙。title=フックの一言（\\nで2〜3行に）、body=続きを読みたくなる副題
+- body: title=見出し、body=本文（120字以内）
+- list: title=見出し、items=3〜5個（チェックリスト・手順・診断）
+- quote: body=大きく置く言葉（40字以内）
+- compare: title=見出し、items=各行「左|右」形式で2〜4行（例「止まる人|進む人」を1行目に）
+- manga: panels=4コマ。各 {scene, speaker, line, narration?}。speaker が本人なら "自分"
+- ask: title=問いかけ、body=読者への促し
+- signature: 触らなくてよい（アプリ側で自動付与）`;
+
+export async function generatePost(userId: string): Promise<BroadcastPost> {
+  const [material, world, method, past] = await Promise.all([
+    gatherMaterial(userId),
+    worldText(userId),
+    getMethod(userId),
+    listPosts(userId, 10),
+  ]);
+
+  const methodText = method?.name
+    ? [
+        `名前：${method.name}${method.tagline ? `（${method.tagline}）` : ""}`,
+        method.assets.principles.length ? `原理：${method.assets.principles.slice(-6).join("／")}` : "",
+        method.assets.questions.length ? `問い：${method.assets.questions.slice(-6).join("／")}` : "",
+        method.assets.phrases.length ? `言い回し：${method.assets.phrases.slice(-8).join("／")}` : "",
+        method.assets.works.length ? `ワーク：${method.assets.works.slice(-4).join("／")}` : "",
+      ].filter(Boolean).join("\n")
+    : "（まだ名前だけ／未設定。無理にメソッド語りをしない）";
+
+  const pastText = past.length
+    ? past.map((p) => `- [${p.date}] 企画:${p.angle}／構成:${p.format}／表紙:${p.slides?.[0]?.title ?? ""}`).join("\n")
+    : "（まだ投稿なし）";
+
+  // ── ① 編集会議：この回の企画を決める（型に流し込まない要）
+  const planRaw = await complete({
+    userId,
+    prompt: `あなたはSNS発信の編集者。ある人のワーク体験を「フォロワーの役に立つカルーセル投稿」に変える企画会議をする。
+
+# この人の世界観（発信の軸）
+${world}
+
+# この人のメソッド
+${methodText}
+
+# 今回の素材（直近のワークから）
+${material}
+
+# 過去の投稿（同じ企画・構成・書き出しを繰り返さないこと）
+${pastText}
+
+# 企画の選び方
+- 素材が一番活きる切り口を選ぶ。自分語りではなく「読者が持ち帰れるもの」を主役に。
+- 切り口の例（これに縛られず独自企画も可）：ワークを読者に渡す／メソッド解説／診断・チェックリスト／常識を覆す／比較／体験ストーリー／世界観メッセージ／問いかけ／4コマ。
+- 過去の投稿と企画・構成・表紙の型が被るなら、必ず別の切り口へずらす。
+- 枚数は内容で決める（表紙＋中身3〜7枚。署名はアプリが足すので数えない）。
+- 素材が薄い日は、無理に膨らませず「短くて濃い」1案にする。
+
+# 出力（JSONのみ）
+{
+ "angle": "この回の企画を一言で",
+ "why": "なぜこの素材にはこの切り口か（一文）",
+ "format": "構成の説明（例：診断リスト型5枚。表紙→3つの兆候→処方→問い）",
+ "outline": ["スライド1で言うこと", "スライド2で言うこと", "..."],
+ "usable": ["素材のうち、変換して使ってよい要素（逐語ではなく要約で）"]
+}`,
+    maxTokens: 1200,
+    temperature: 0.9,
+  });
+  const plan = extractJson<any>(planRaw) ?? {};
+  const angle = String(plan.angle ?? "今日の気づきを渡す").slice(0, 60);
+  const format = String(plan.format ?? "表紙＋本文3枚").slice(0, 120);
+
+  // ── ② 執筆：企画どおりに書く
+  const writeRaw = await complete({
+    userId,
+    prompt: `あなたはSNS発信のライター。編集会議で決まった企画どおりに、カルーセル投稿を書く。
+
+# 決まった企画
+- 企画：${angle}
+- 理由：${String(plan.why ?? "")}
+- 構成：${format}
+- 各スライドの狙い：${JSON.stringify(plan.outline ?? [])}
+- 使ってよい素材（要約済み）：${JSON.stringify(plan.usable ?? [])}
+
+# この人の世界観・声
+${world}
+
+# メソッド（あれば言葉遣いに滲ませる。押し売りしない）
+${methodText}
+
+# 書くときの掟
+- 読者への価値が主役。自分語りで終わらせない。
+- 体験は「実際にあったこと」だけ。数字・実績・他人の変化を作らない。
+- 内面の会話・固有名詞・個人が特定される事情は書かない（体験は一般化して使う）。
+- 同じ書き出しの連発、AIっぽい定型文（「〜しませんか？」の乱発）を避ける。
+- 1枚1メッセージ。スマホで2秒で読める文字量に。
+- 日本語。敬体か常体かは表紙の勢いに合わせて統一。
+
+${SLIDE_SPEC}
+
+# 出力（JSONのみ）
+{
+ "title": "管理用タイトル（15字以内）",
+ "slides": [ { "kind": "cover", "title": "...", "body": "..." }, ... ],
+ "caption": "投稿本文。1〜3行で要点→改行→補足。最後に軽い問いかけ1つ（任意）",
+ "hashtags": ["タグ", "3〜6個", "#は付けない"]
+}`,
+    maxTokens: 2400,
+    temperature: 0.85,
+  });
+  const w = extractJson<any>(writeRaw) ?? {};
+  const slides: Slide[] = Array.isArray(w.slides)
+    ? w.slides.filter((s: any) => s && typeof s.kind === "string").slice(0, 9)
+    : [];
+  if (slides.length === 0) throw new Error("スライドを生成できませんでした（AIの応答が不正）");
+
+  const supa = supabaseAdmin();
+  const { data, error } = await supa.from("broadcast_posts").insert({
+    user_id: userId,
+    date: jstDateStr(),
+    angle, format,
+    title: String(w.title ?? angle).slice(0, 40),
+    slides,
+    caption: String(w.caption ?? "").slice(0, 1200),
+    hashtags: Array.isArray(w.hashtags) ? w.hashtags.map((h: any) => String(h).replace(/^#/, "")).slice(0, 6) : [],
+  }).select("id, date, angle, format, title, slides, caption, hashtags, created_at").single();
+  if (error) throw error;
+
+  // ── ③ 採掘：メソッド資産を拾う（失敗しても投稿は返す）
+  if (method?.name) {
+    try {
+      const mineRaw = await complete({
+        userId,
+        prompt: `下の素材と投稿から、この人のメソッド「${method.name}」に蓄積できる資産を拾って。
+本人が実際に言った・やったことだけ。無ければ空配列でよい（作らない）。
+
+# 素材
+${material.slice(0, 2400)}
+
+# 今回の投稿
+${JSON.stringify(slides).slice(0, 1500)}
+
+# 出力（JSONのみ）
+{"principles":["新しい原理(30字以内)"],"questions":["独自の問い"],"works":["実践ワーク(手順を一文で)"],"phrases":["特徴的な言い回し"],"examples":["本人に起きた変化(一文)"]}`,
+        maxTokens: 700,
+        temperature: 0.4,
+      });
+      const mined = extractJson<Partial<MethodAssets>>(mineRaw);
+      if (mined) await appendAssets(userId, mined);
+    } catch { /* 採掘は任意 */ }
+  }
+
+  return data as BroadcastPost;
+}

@@ -17,6 +17,7 @@ import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
 import { PartsGate, PartsProgress, GuardianReveal, type GuardianEvent } from "./PartsTemple";
+import { BroadcastStudio } from "./BroadcastStudio";
 import type { PartColor, PartsStep } from "@/lib/parts";
 
 type Face = "neutral" | "smile" | "anxious";
@@ -91,6 +92,7 @@ export function ShingaWorld({
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [tasksOpen, setTasksOpen] = useState(false);
+  const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
@@ -571,6 +573,8 @@ export function ShingaWorld({
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
       ) : tasksOpen ? (
         <TaskListPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setTasksOpen(false)} />
+      ) : castOpen ? (
+        <BroadcastStudio guideName={guideName} onBack={() => setCastOpen(false)} />
       ) : reportOpen ? (
         <ReportScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setReportOpen(false)} />
       ) : dailyOpen ? (
@@ -588,6 +592,7 @@ export function ShingaWorld({
           onLetter={letter ? () => { setLetterDramatic(false); setPhase("letter"); } : undefined}
           onCard={card && !card.done ? () => setShowCard(true) : undefined}
           onBalance={() => void enter("balance")}
+          onCast={() => setCastOpen(true)}
           isAdventurer={isAdventurer}
           sending={sending}
         />
@@ -903,7 +908,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, isAdventurer, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, isAdventurer, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -917,6 +922,8 @@ function Home({
   onCard?: () => void;
   /** メーターから「どうすれば真ん中に戻る？」の対話へ */
   onBalance?: () => void;
+  /** 発信スタジオ（ワーク体験→SNS投稿） */
+  onCast?: () => void;
   isAdventurer?: boolean;
   sending: boolean;
 }) {
@@ -987,6 +994,7 @@ function Home({
       <div className="iw-reflect-row">
         <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
         <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
+        <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
         {/* 1日の振り返りは夜だけ。夜になったらプッシュ通知で「開いたよ」と知らせる（それまでは鍵） */}
         {new Date().getHours() >= REFLECT_FROM_HOUR
           ? <button className="iw-report is-night" onClick={onDaily}>🌙 1日の振り返り</button>

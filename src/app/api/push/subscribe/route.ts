@@ -19,6 +19,12 @@ export async function GET() {
       configured: pushConfigured(),
       publicKey: process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ?? null,
       subscribed: pushConfigured() ? await hasSubscription(userId) : false,
+      // どちらの鍵が見えていないかだけ返す（値そのものは返さない）
+      has: {
+        pub: !!process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY,
+        priv: !!process.env.VAPID_PRIVATE_KEY,
+        subject: !!process.env.VAPID_SUBJECT,
+      },
     });
   } catch (e: any) {
     if (isMissingTable(e)) return NextResponse.json({ configured: pushConfigured(), subscribed: false, needsMigration: true });

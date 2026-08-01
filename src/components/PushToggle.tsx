@@ -26,6 +26,7 @@ export function PushToggle() {
   const [supported, setSupported] = useState(true);
   const [authLost, setAuthLost] = useState(false);
   const [netErr, setNetErr] = useState(false);
+  const [missing, setMissing] = useState<string[]>([]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -39,6 +40,12 @@ export function PushToggle() {
       setConfigured(!!d.configured);
       setPublicKey(d.publicKey ?? null);
       setSubscribed(!!d.subscribed);
+      if (d.has) {
+        const miss: string[] = [];
+        if (!d.has.pub) miss.push("NEXT_PUBLIC_VAPID_PUBLIC_KEY");
+        if (!d.has.priv) miss.push("VAPID_PRIVATE_KEY");
+        setMissing(miss);
+      }
     }).catch(() => { setNetErr(true); setConfigured(false); });
   }, []);
 
@@ -119,7 +126,22 @@ export function PushToggle() {
     return <p className="text-xs text-red-600">通知の状態を確認できなかった。ページを再読み込みしてみて。</p>;
   }
   if (!configured) {
-    return <p className="text-xs text-gray-500">プッシュ通知は準備中です（サーバ側の設定待ち）。</p>;
+    return (
+      <div className="text-xs text-gray-600 leading-relaxed space-y-1">
+        <p className="text-red-600 font-bold">通知の鍵がサーバから見えていません。</p>
+        {missing.length > 0 && (
+          <p>
+            足りないもの：<br />
+            {missing.map((m) => <span key={m} className="font-mono text-[10px] break-all block">・{m}</span>)}
+          </p>
+        )}
+        <p className="text-gray-500">
+          Vercel の Environment Variables に、上の名前で登録されているか／
+          <b>Production</b> にチェックが入っているかを確認してね。
+          追加・変更したあとは <b>Redeploy</b> が必要です。
+        </p>
+      </div>
+    );
   }
 
   return (

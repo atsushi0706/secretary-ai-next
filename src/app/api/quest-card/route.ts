@@ -5,7 +5,7 @@
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
-import { getTodayCard, interpretCard, completeCard } from "@/lib/questCard";
+import { getTodayCard, interpretCard, completeCard, adoptAsHigherQuest } from "@/lib/questCard";
 import { isMissingTable, MIGRATION_HINT } from "@/lib/shinga";
 import { logError } from "@/lib/supabase";
 
@@ -40,6 +40,10 @@ export async function POST(req: Request) {
       return NextResponse.json({ ok: true, card });
     }
     if (b.action === "done") {
+      // 「これに立ち向かう」を押したときに初めてクエストへ入れる。
+      // （見ただけで勝手に入れない＝決めるのは本人）
+      const act = String(b.action_text ?? "").trim();
+      if (act) await adoptAsHigherQuest(userId, act).catch(() => {});
       await completeCard(userId);
       return NextResponse.json({ ok: true });
     }

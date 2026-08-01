@@ -8,11 +8,12 @@ import { ArrivalFx } from "./ArrivalFx";
  * 抽象シンボルの絵を見て、本人が「今日乗り越えること」を受け取る → AI(清瀬リンク)が今日の課題に深める → 立ち向かう。
  * 画像は public/quest-sym-1.png 〜 quest-sym-16.png。無ければプレースホルダー表示。
  */
-export type Card = { date: string; symbol: number; interpretation: string; challenge: string; done: boolean };
+export type Card = { date: string; symbol: number; interpretation: string; challenge: string; action?: string; done: boolean };
 
 export function QuestCard({ card, onClose, onDone }: { card: Card; onClose: () => void; onDone: () => void }) {
   const [text, setText] = useState(card.interpretation ?? "");
   const [challenge, setChallenge] = useState(card.challenge ?? "");
+  const [action, setAction] = useState(card.action ?? "");
   const [busy, setBusy] = useState(false);
   const [imgOk, setImgOk] = useState(true);
   const [err, setErr] = useState("");
@@ -27,6 +28,7 @@ export function QuestCard({ card, onClose, onDone }: { card: Card; onClose: () =
       const d = await r.json();
       if (!r.ok) { setErr(d.error || `HTTP ${r.status}`); return; }
       setChallenge(d.card?.challenge ?? "");
+      setAction(d.card?.action ?? "");
     } catch (e: any) { setErr(String(e?.message ?? e)); }
     finally { setBusy(false); }
   }
@@ -35,7 +37,8 @@ export function QuestCard({ card, onClose, onDone }: { card: Card; onClose: () =
     setBusy(true); setErr("");
     try {
       const r = await fetch("/api/quest-card", {
-        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "done" }),
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "done", action_text: action }),
       });
       if (!r.ok) { const d = await r.json().catch(() => ({})); setErr(d.error || `HTTP ${r.status}`); return; }
       onDone();
@@ -76,7 +79,11 @@ export function QuestCard({ card, onClose, onDone }: { card: Card; onClose: () =
             <div className="qcard-challenge">
               <div className="k">未来からのクエスト</div>
               <p>{challenge}</p>
-              <div className="qc-adopted">🔨 これが今日の<b>ハイヤークエスト</b>になったよ（リアルバースのタスクにも入ってる）</div>
+              <div className="qc-adopted">
+                🔨 受け取ると、これが今日の<b>ハイヤークエスト</b>になるよ。
+                {action && <><br /><span className="qc-act">「{action}」</span></>}
+                <br /><span className="qc-note">受け取らなくてもいい。決めるのはきみ。</span>
+              </div>
             </div>
             {err && <div className="qcard-err">{err}</div>}
             <button className="qcard-btn is-go" disabled={busy} onClick={face}>

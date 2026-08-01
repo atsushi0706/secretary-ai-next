@@ -215,3 +215,6 @@ create table if not exists public.weight_logs (
 create index if not exists weight_logs_user_idx on public.weight_logs (user_id, date desc);
 
 alter table public.weight_logs enable row level security;
+
+-- 未来からのクエスト：受け取ったときに入れる「一手」を覚えておく列
+alter table public.quest_cards add column if not exists action text;

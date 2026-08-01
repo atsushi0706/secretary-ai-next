@@ -14,6 +14,8 @@ export type QuestCard = {
   symbol: number;          // 1..16
   interpretation: string;  // 本人の解釈
   challenge: string;       // AIが深めた今日の課題
+  /** 受け取ったときにクエストへ入れる一手（押すまでは入れない） */
+  action?: string;
   done: boolean;
 };
 
@@ -54,7 +56,11 @@ export async function interpretCard(userId: string, interpretation: string): Pro
   if (!card) throw new Error("今日のカードがまだありません");
   const text = interpretation.trim().slice(0, 500);
 
-  const prompt = `あなたは「清瀬リンク」。友達距離・タメ口・適度な絵文字・若干皮肉（きよブラック）。
+  const prompt = `あなたは「清瀬リンク」。友達距離・適度な絵文字・若干皮肉（きよブラック）。
+# 呼び方（厳守）
+- 「お前」「てめえ」など見下す二人称は絶対に使わない。相手は対等な友達。
+- 二人称は「きみ」。名前が分かっていればその名前で呼ぶ。
+- 命令形（〜しろ、〜みろ）で終わらせない。誘う形（〜してみない？ 〜しよっか）にする。
 相手が"未来からのクエストカード"（抽象的なシンボルの絵）を引いて、その絵から今日について、こう受け取った：
 「${text || "（まだうまく言葉にできていない）"}」
 
@@ -75,18 +81,31 @@ export async function interpretCard(userId: string, interpretation: string): Pro
   const r = await client.messages.create({ model: CLAUDE_MODEL, max_tokens: 500, temperature: 0.85, messages: [{ role: "user", content: prompt }] });
   let challenge = r.content.filter((b: any) => b.type === "text").map((b: any) => b.text).join("\n").trim();
 
-  // 「たった一つの行動」を取り出して、そのままハイヤークエストにする（＝この2つは同じもの）
+  // 「たった一つの行動」は取り出して覚えておくだけ。
+  // ※ ここで勝手にクエストへ入れない。受け取るかどうかは本人が決めること。
+  //   （見る前から「今日のクエストになった」と書かれているのは、決定を奪っている）
   const m = challenge.match(/<行動>\s*([^<]{1,60}?)\s*<\/行動>/);
   const action = m ? m[1].trim() : "";
-  challenge = challenge.replace(/<行動>[\s\S]*?<\/行動>/g, "").trim();
-  if (action) await adoptAsHigherQuest(userId, action).catch(() => {});
+  challenge = softenTone(challenge.replace(/<行動>[\s\S]*?<\/行動>/g, "").trim());
 
   const supa = supabaseAdmin();
-  await supa.from("quest_cards").update({ interpretation: text, challenge }).eq("user_id", userId).eq("date", date);
-  return { ...card, interpretation: text, challenge };
+  await supa.from("quest_cards").update({ interpretation: text, challenge, action })
+    .eq("user_id", userId).eq("date", date);
+  return { ...card, interpretation: text, challenge, action };
 }
 
 /** 立ち向かった＝完了。レベルが上がる（computeLevelがquest_cardsのdone日数を数える）。 */
+/**
+ * 生成文の最後の砦。指示しても稀に「お前」が出るので、表に出す前に置き換える。
+ * （見下された言い方は、この世界観では一番やってはいけない）
+ */
+export function softenTone(t: string): string {
+  return String(t ?? "")
+    .replace(/お前(たち|ら)?/g, "きみ")
+    .replace(/てめえ/g, "きみ")
+    .replace(/貴様/g, "きみ");
+}
+
 export async function completeCard(userId: string): Promise<void> {
   const supa = supabaseAdmin();
   await supa.from("quest_cards").update({ done: true }).eq("user_id", userId).eq("date", jstDateStr());

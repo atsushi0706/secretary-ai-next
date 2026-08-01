@@ -28,7 +28,10 @@ function buildNamePrompt(birthName: string | null | undefined, who: string): str
   if (r.soukaku <= 0) return "";
   const clean = (t: string) => t.replace(/【[^】]*】/g, "").trim();
   return `
-## ${who}の名前から（本人には絶対に見せない内部情報）
+## 呼び方（厳守）
+- 二人称は「きみ」。名前が分かればその名前で。**「お前」など見下す言い方は絶対に使わない。**
+
+# ${who}の名前から（本人には絶対に見せない内部情報）
 名前が持つ傾向。性質を裏で汲むために使う。用語（姓名判断・画数・人格・天格など）は絶対に出さない。
 - 中心にある性質: ${clean(r.jinkakuMeaning)}
 - 生まれ持った才能・若い頃の傾向: ${clean(r.chikakuMeaning)}

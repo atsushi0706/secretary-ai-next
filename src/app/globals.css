@@ -3198,3 +3198,69 @@ body:has(.realverse-bg) { background: transparent; }
 
 /* ホームのボタン */
 .iw-report.is-manual { border-color: rgba(200,170,255,.5); }
+
+/* ══════════════════════════════════════════════════════════
+   発信の素材（ワーク1回＝1件）。ここから選んで投稿を作る
+   ══════════════════════════════════════════════════════════ */
+.bc-materials { margin-top: 16px; }
+.bm-title { font-size: .78rem; font-weight: 700; color: var(--singa-gold); margin-bottom: 10px; }
+.bm-empty {
+  font-size: .76rem; line-height: 1.9; color: var(--singa-ink-soft);
+  padding: 16px 14px; border-radius: 14px;
+  background: rgba(255,255,255,.04); border: 1px dashed rgba(238,214,155,.3);
+}
+.bm-empty b { color: var(--singa-gold); }
+.bm-list { display: flex; flex-direction: column; gap: 10px; }
+.bm-item {
+  padding: 13px 15px; border-radius: 15px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(238,214,155,.26);
+}
+.bm-item.is-used { opacity: .62; border-color: rgba(255,255,255,.12); }
+.bm-head { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+.bm-mode {
+  font-size: .62rem; padding: 3px 9px; border-radius: 999px;
+  background: rgba(238,214,155,.15); border: 1px solid rgba(238,214,155,.35); color: var(--singa-gold);
+}
+.bm-date { font-size: .62rem; color: var(--singa-ink-soft); }
+.bm-used {
+  font-size: .6rem; padding: 2px 8px; border-radius: 999px;
+  background: rgba(255,255,255,.1); color: var(--singa-ink-soft);
+}
+.bm-name { font-size: .9rem; font-weight: 700; color: var(--singa-ink); margin-bottom: 5px; line-height: 1.5; }
+.bm-sum { font-size: .74rem; line-height: 1.8; color: var(--singa-ink-soft); margin-bottom: 11px; }
+.bm-go {
+  width: 100%; padding: 11px; border-radius: 12px; font-weight: 700; font-size: .82rem;
+  color: #1a1208; background: linear-gradient(160deg,#f0dca8,#c9a55e);
+  box-shadow: 0 6px 20px rgba(201,165,94,.28);
+}
+.bm-item.is-used .bm-go {
+  color: var(--singa-ink); background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.18); box-shadow: none; font-weight: 400;
+}
+.bm-go:disabled { opacity: .6; }
+
+/* ワークを終えた瞬間の知らせ（素材が1件たまった） */
+.material-toast {
+  position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%);
+  z-index: 60; display: flex; align-items: center; gap: 12px;
+  width: min(520px, calc(100% - 24px)); padding: 12px 14px;
+  border-radius: 16px; background: rgba(18,14,26,.95);
+  border: 1px solid rgba(238,214,155,.4);
+  box-shadow: 0 16px 46px rgba(0,0,0,.6);
+  animation: mt-in .45s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes mt-in { from { opacity: 0; transform: translate(-50%, 14px); } to { opacity: 1; transform: translate(-50%, 0); } }
+.material-toast .mt-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.material-toast .mt-kicker { font-size: .62rem; letter-spacing: .1em; color: var(--singa-gold); }
+.material-toast .mt-title {
+  font-size: .82rem; color: var(--singa-ink); line-height: 1.5;
+  overflow: hidden; text-overflow: ellipsis; display: -webkit-box;
+  -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+.material-toast .mt-go {
+  flex-shrink: 0; padding: 9px 15px; border-radius: 11px; font-size: .76rem; font-weight: 700;
+  color: #1a1208; background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}
+.material-toast .mt-close {
+  flex-shrink: 0; font-size: .68rem; color: var(--singa-ink-soft); padding: 6px 4px;
+}

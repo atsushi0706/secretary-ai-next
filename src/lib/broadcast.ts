@@ -1,13 +1,18 @@
 /**
- * 発信スタジオ：素材集め → 編集者AI（チェーン3段）→ 保存。サーバ専用。
+ * 発信スタジオ：ワーク1回ぶんの素材 → 編集者AI（チェーン3段）→ 保存。サーバ専用。
+ *
+ * 【重要】素材は必ず「ワーク1回」を指定して渡す。混ぜない。
+ *   以前は直近3日の会話をまとめて要約していたが、それだと個別のワークの中身が消え、
+ *   たまたま会話に出ていた話題が主役になり、本人のメソッドとも無関係な投稿が出た。
+ *   素材は work_sessions（ワークが終わるたびに1件たまる）から1件選ぶ。
  *
  * チェーン（一撃生成しない）:
- *   ① 編集会議 … 素材・世界観・メソッド・過去投稿を見て「この回の企画」を決める
+ *   ① 編集会議 … その1回の体験・世界観・メソッド・過去投稿を見て「この回の企画」を決める
  *   ② 執筆     … 決まった企画どおりにスライドとキャプションを書く
- *   ③ 採掘     … 今回の素材からメソッド資産（原理・問い・言葉）を拾って蓄積する
+ *   ③ 採掘     … その体験からメソッド資産（原理・問い・言葉）を拾って蓄積する
  *
  * 守ること：
- *  - 内面の会話を逐語で外に出さない（体験は要約・変換してから使う）
+ *  - 内面の会話を逐語で外に出さない（work-session の時点で要約済み・それ以上は遡らない）
  *  - 本人が体験していない実績・変化を作らない
  *  - 過去の投稿と同じ型を繰り返さない（過去10回ぶんの企画を渡して外させる）
  */
@@ -15,7 +20,7 @@ import { supabaseAdmin } from "./supabase";
 import { complete } from "./ai";
 import { jstDateStr } from "./google";
 import { getHero } from "./hero";
-import { recentDoneText } from "./lean";
+import { getWorkSession, listWorkSessions, markUsed, materialText } from "./work-session";
 import {
   type BroadcastPost, type Method, type MethodAssets, type Slide, EMPTY_ASSETS,
 } from "./broadcast-types";
@@ -122,48 +127,6 @@ export async function deletePost(userId: string, id: number): Promise<void> {
   await supa.from("broadcast_posts").delete().eq("user_id", userId).eq("id", id);
 }
 
-/* ────────────────────────────── 素材集め */
-
-/**
- * 直近のワークから「外に出してよい形の素材」を作る。
- * 内面の会話は逐語では渡さず、本人の発言を短い断片に刻んで
- * 「これは変換の材料であり、引用禁止」と明記してAIに渡す。
- */
-async function gatherMaterial(userId: string): Promise<string> {
-  const supa = supabaseAdmin();
-  const since = jstDateStr(new Date(Date.now() - 3 * 86400000));
-
-  const [talk, skills, guards, done] = await Promise.all([
-    supa.from("shinga_conversations").select("date, content").eq("user_id", userId)
-      .eq("role", "user").gte("date", since)
-      .order("created_at", { ascending: false }).limit(30)
-      .then((r) => r.data ?? [], () => []),
-    supa.from("skill_cards").select("date, title, body, source").eq("user_id", userId)
-      .order("created_at", { ascending: false }).limit(5)
-      .then((r) => r.data ?? [], () => []),
-    supa.from("guardians").select("date, color, wish").eq("user_id", userId)
-      .order("created_at", { ascending: false }).limit(4)
-      .then((r) => r.data ?? [], () => []),
-    recentDoneText(userId, 3).catch(() => ""),
-  ]);
-
-  const parts: string[] = [];
-  if ((skills as any[]).length) {
-    parts.push("## 手に入れた力（スキルカード。壊したブロックの裏返し）");
-    for (const s of skills as any[]) parts.push(`- [${s.date}] ${s.title}：${String(s.body ?? "").slice(0, 90)}（${String(s.source ?? "")}）`);
-  }
-  if ((guards as any[]).length) {
-    parts.push("## 解放した守り手（防衛パーツ→才能への転換体験）");
-    for (const g of guards as any[]) parts.push(`- [${g.date}] ${g.color} を解放。本当はどうしたい：${String(g.wish ?? "").slice(0, 80)}`);
-  }
-  if (done) { parts.push("## 実際にやったこと"); parts.push(done); }
-  if ((talk as any[]).length) {
-    parts.push("## 本人がワーク中に口にした断片（※変換の材料。逐語引用・固有名詞の使用は禁止）");
-    for (const t of (talk as any[]).slice(0, 18)) parts.push(`- ${String(t.content ?? "").slice(0, 100)}`);
-  }
-  return parts.join("\n") || "（直近3日の素材が少ない。一般化した内容ではなく「素材が薄い」と正直に扱うこと）";
-}
-
 /** 世界観（主人公設定）を文字列に */
 async function worldText(userId: string): Promise<string> {
   const h: any = await getHero(userId).catch(() => null);
@@ -192,9 +155,24 @@ const SLIDE_SPEC = `# 文字の演出（画像デザインに直結する）
 - ask: title=問いかけ、body=読者への促し
 - signature: 触らなくてよい（アプリ側で自動付与）`;
 
-export async function generatePost(userId: string): Promise<BroadcastPost> {
-  const [material, world, method, past] = await Promise.all([
-    gatherMaterial(userId),
+/**
+ * 投稿を作る。**どのワークの体験から作るか**を必ず指定する。
+ * sessionId を省いたときは、まだ投稿にしていない最新の1件を使う（それも無ければエラー）。
+ */
+export async function generatePost(userId: string, sessionId?: number): Promise<BroadcastPost> {
+  const sessions = await listWorkSessions(userId, 20);
+  const target = sessionId != null
+    ? await getWorkSession(userId, sessionId)
+    : (sessions.find((w) => !w.used) ?? null);
+
+  if (!target) {
+    throw new Error(sessions.length === 0
+      ? "まだ発信の素材がありません。どれかワークをやり終えると、その体験がここに貯まります。"
+      : "その素材が見つかりませんでした。一覧から選び直してみて。");
+  }
+
+  const material = materialText(target);
+  const [world, method, past] = await Promise.all([
     worldText(userId),
     getMethod(userId),
     listPosts(userId, 10),
@@ -225,13 +203,17 @@ ${world}
 # この人のメソッド
 ${methodText}
 
-# 今回の素材（直近のワークから）
+# 今回の素材（この1回のワークだけ。ここに無い話題は使わない）
 ${material}
 
 # 過去の投稿（同じ企画・構成・書き出しを繰り返さないこと）
 ${pastText}
 
 # 企画の選び方
+- **素材に書かれていない話題を持ち出さない。** 素材がこの体験なら、投稿もこの体験の話になる。
+- **メソッドが設定されているなら、その考え方のレンズでこの体験を語る。**
+  （例：メソッドが「人生脚本の書き換え」なら、この体験を"脚本"の言葉で読み解く）
+  メソッドと無関係な一般論に流れない。
 - 素材が一番活きる切り口を選ぶ。自分語りではなく「読者が持ち帰れるもの」を主役に。
 - 切り口の例（これに縛られず独自企画も可）：ワークを読者に渡す／メソッド解説／診断・チェックリスト／常識を覆す／比較／体験ストーリー／世界観メッセージ／問いかけ／4コマ。
 - 過去の投稿と企画・構成・表紙の型が被るなら、必ず別の切り口へずらす。
@@ -270,6 +252,8 @@ ${world}
 ${methodText}
 
 # 書くときの掟
+- **素材に書かれていないことは書かない。** この体験の話として最後まで通す。
+- メソッドがあるなら、その言葉づかい・考え方で語る（押し売りはしない）。
 - 読者への価値が主役。自分語りで終わらせない。
 - 体験は「実際にあったこと」だけ。数字・実績・他人の変化を作らない。
 - 内面の会話・固有名詞・個人が特定される事情は書かない（体験は一般化して使う）。
@@ -328,6 +312,9 @@ ${SLIDE_SPEC}
     hashtags: Array.isArray(w.hashtags) ? w.hashtags.map((h: any) => String(h).replace(/^#/, "")).slice(0, 6) : [],
   }).select("id, date, angle, format, title, slides, caption, hashtags, created_at").single();
   if (error) throw error;
+
+  // 使った素材に印を付ける（次からは別の体験が選ばれる）
+  if (target.id != null) await markUsed(userId, target.id);
 
   // ── ③ 採掘：メソッド資産を拾う（失敗しても投稿は返す）
   if (method?.name) {

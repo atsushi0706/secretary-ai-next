@@ -108,3 +108,25 @@ create index if not exists manuals_user_idx on public.manuals (user_id, created_
 
 alter table public.manual_answers enable row level security;
 alter table public.manuals        enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- 発信の素材：ワーク1回ぶんの記録
+--   9) work_sessions … ワークが終わるたびに1件たまる。投稿はここから作る
+--      （直近の会話をまとめて漁ると、やってもいない話題が主役になるため）
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.work_sessions (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,
+  mode        text not null,
+  title       text not null default '',
+  summary     text not null default '',
+  insights    jsonb not null default '[]'::jsonb,
+  quotes      jsonb not null default '[]'::jsonb,
+  used        boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+create index if not exists work_sessions_user_idx on public.work_sessions (user_id, created_at desc);
+
+alter table public.work_sessions enable row level security;

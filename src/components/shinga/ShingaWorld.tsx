@@ -111,6 +111,9 @@ export function ShingaWorld({
   const [tasksOpen, setTasksOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
+  // ワークを終えると、その1回ぶんが発信の素材になる（ここで知らせて、そのまま投稿へ行ける）
+  const [materialToast, setMaterialToast] = useState<{ id?: number; title: string } | null>(null);
+  const savingWorkRef = useRef(false);
   const [heroToast, setHeroToast] = useState<{ label: string; from: number; to: number }[] | null>(null);
   const heroToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [letter, setLetter] = useState<Letter | null>(null);   // 未来からの手紙
@@ -310,6 +313,26 @@ export function ShingaWorld({
     return () => clearInterval(id);
   }, [typing]);
 
+  /**
+   * ワークを終える（地図に戻る／別のワークへ移る）ときに、その1回ぶんを素材として残す。
+   * 発信スタジオはここで貯まったものだけを使う（会話を後からまとめて漁らない）。
+   */
+  const finishWork = useCallback(async (m: ModeKey | null, msgs: Message[]) => {
+    if (!m || savingWorkRef.current) return;
+    const mine = msgs.filter((x) => x.role === "user" && x.content.trim());
+    if (mine.length < 2) return;            // ほとんど話していない＝素材にしない
+    savingWorkRef.current = true;
+    try {
+      const r = await fetch("/api/work-session", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mode: m, messages: msgs }),
+      });
+      const d = await r.json();
+      if (d?.session?.title) setMaterialToast({ id: d.session.id, title: d.session.title });
+    } catch { /* 残せなくてもワークは終わっている */ }
+    finally { savingWorkRef.current = false; }
+  }, []);
+
   const moveTo = useCallback((next: PlaceKey) => {
     setMoving(true);
     setPanelOpen(true);
@@ -318,6 +341,8 @@ export function ShingaWorld({
   }, []);
 
   async function enter(m: ModeKey, resume = false) {
+    // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
+    if (!resume && mode && mode !== m) void finishWork(mode, messages);
     // 内なる子の神殿は、いきなり会話に入らない。まず守り手を選ぶ盤面を出す。
     if (m === "parts" && !resume) {
       setMode("parts");
@@ -559,6 +584,18 @@ export function ShingaWorld({
         )}
       </div>
 
+      {/* ワークが終わって、発信の素材が1件たまった */}
+      {materialToast && (
+        <div className="material-toast">
+          <div className="mt-body">
+            <span className="mt-kicker">📣 発信の素材になったよ</span>
+            <span className="mt-title">{materialToast.title}</span>
+          </div>
+          <button className="mt-go" onClick={() => { setMaterialToast(null); setCastOpen(true); }}>投稿にする</button>
+          <button className="mt-close" onClick={() => setMaterialToast(null)}>あとで</button>
+        </div>
+      )}
+
       {/* 守り手が解き放たれた瞬間：ガーディアンへの進化演出 */}
       {guardianEv && <GuardianReveal ev={guardianEv} onClose={() => setGuardianEv(null)} />}
 
@@ -640,7 +677,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { void finishWork(mode, messages); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 

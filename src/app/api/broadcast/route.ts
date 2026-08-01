@@ -45,12 +45,15 @@ export async function GET() {
   }
 }
 
-export async function POST() {
+export async function POST(req: Request) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
   try {
-    const post = await generatePost(userId);
+    // どのワークの体験から作るかを必ず指定する（素材を混ぜない）
+    const b = await req.json().catch(() => ({}));
+    const sessionId = Number.isFinite(Number(b?.sessionId)) ? Number(b.sessionId) : undefined;
+    const post = await generatePost(userId, sessionId);
     return NextResponse.json({ post });
   } catch (e: any) {
     if (e instanceof AIRateLimitError) {

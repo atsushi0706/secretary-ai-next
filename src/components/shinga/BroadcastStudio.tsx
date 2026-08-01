@@ -14,6 +14,14 @@ import {
 } from "@/lib/broadcast-types";
 import { slideHtml, type SlideMeta } from "./slide-render";
 
+/** ワーク1回ぶんの素材（work_sessions） */
+type WorkMaterial = { id: number; date: string; mode: string; title: string; summary: string; used?: boolean };
+const MODE_LABEL: Record<string, string> = {
+  peak: "ピークステート", walk: "パラレルウォーク", akashic: "アカシックレコーダー",
+  higher: "ハイヤークエスト", deep: "ディープアイデンティティ", travel: "パラレルトラベル",
+  breakthrough: "ウォールブレイク", parts: "内なる子の神殿", balance: "真ん中に戻す",
+};
+
 /* スライド描画は slide-render.ts（プレビューと書き出しで同一HTML） */
 
 /* ────────────────── PNG書き出し（SVG foreignObject → canvas。ライブラリ不要） */
@@ -66,6 +74,7 @@ export function BroadcastStudio({ guideName, onBack }: { guideName: string; onBa
   const [err, setErr] = useState("");
   const [editIdx, setEditIdx] = useState<number | null>(null);
   const [needsMigration, setNeedsMigration] = useState(false);
+  const [materials, setMaterials] = useState<WorkMaterial[]>([]);
   const [methodDraft, setMethodDraft] = useState({ name: "", tagline: "" });
   const [methodOpen, setMethodOpen] = useState(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -73,7 +82,11 @@ export function BroadcastStudio({ guideName, onBack }: { guideName: string; onBa
   useEffect(() => {
     (async () => {
       try {
-        const d = await (await fetch("/api/broadcast")).json();
+        const [d, ws] = await Promise.all([
+          (await fetch("/api/broadcast")).json(),
+          fetch("/api/work-session").then((r) => r.json()).catch(() => ({ sessions: [] })),
+        ]);
+        setMaterials(ws.sessions ?? []);
         if (d.needsMigration) setNeedsMigration(true);
         setPosts(d.posts ?? []);
         setMethod(d.method ?? null);
@@ -101,15 +114,19 @@ export function BroadcastStudio({ guideName, onBack }: { guideName: string; onBa
     return [...base, { kind: "signature" as const }];
   }, [cur]);
 
-  async function generate() {
+  async function generate(sessionId: number) {
     setBusy(true); setErr("");
     try {
-      const r = await fetch("/api/broadcast", { method: "POST" });
+      const r = await fetch("/api/broadcast", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "生成に失敗");
       setPosts((p) => [d.post, ...p]);
       setCur(d.post);
       setEditIdx(null);
+      setMaterials((ms) => ms.map((m) => (m.id === sessionId ? { ...m, used: true } : m)));
     } catch (e: any) {
       setErr(String(e?.message ?? e));
     } finally { setBusy(false); }
@@ -226,9 +243,33 @@ export function BroadcastStudio({ guideName, onBack }: { guideName: string; onBa
           )}
         </div>
 
-        <button className="bc-generate" onClick={() => void generate()} disabled={busy}>
-          {busy ? "編集会議中…（企画を選んでいます）" : "✨ 今日の素材から投稿をつくる"}
-        </button>
+        {/* 素材＝ワーク1回ぶん。どの体験から作るかを必ず選ぶ（混ぜない） */}
+        <div className="bc-materials">
+          <div className="bm-title">🧩 発信の素材（ワークを終えるたびに増える）</div>
+          {materials.length === 0 ? (
+            <p className="bm-empty">
+              まだ素材がないよ。地図からワークをひとつやり終えると、その体験がここに貯まる。
+              <br />そこから投稿を作るから、<b>やってもいない話が出てくることはない</b>。
+            </p>
+          ) : (
+            <div className="bm-list">
+              {materials.map((m) => (
+                <div key={m.id} className={`bm-item ${m.used ? "is-used" : ""}`}>
+                  <div className="bm-head">
+                    <span className="bm-mode">{MODE_LABEL[m.mode] ?? m.mode}</span>
+                    <span className="bm-date">{m.date}</span>
+                    {m.used && <span className="bm-used">投稿ずみ</span>}
+                  </div>
+                  <div className="bm-name">{m.title}</div>
+                  <div className="bm-sum">{m.summary}</div>
+                  <button className="bm-go" onClick={() => void generate(m.id)} disabled={busy}>
+                    {busy ? "編集会議中…" : m.used ? "もう一度、別の切り口で作る" : "✨ この体験から投稿をつくる"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         {err && <p className="bc-err">{err}</p>}
 
         {posts.length > 0 && (

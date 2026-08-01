@@ -6,6 +6,7 @@
 --  ・「Success. No rows returned」と出れば成功です
 --
 --  入っているもの
+--   0 土台（quest_cards / higher_quest / link_letter / goals）
 --   1 guardians          内なる子の神殿で解放したガーディアン
 --   2 skill_cards        ワークで手に入れたカード（金銀銅）
 --   3 deep_reads         ディープアイデンティティの読み取り
@@ -21,6 +22,70 @@
 --  13 custom_works       じぶんワーク
 --  ＋ user_settings に referred_by 列を追加（紹介リンク用）
 -- ══════════════════════════════════════════════════════════════════════
+
+-- ══════════════════════════════════════════════════════════════
+--  土台のテーブル（これが無いと下の ALTER でエラーになります）
+--   quest_cards   未来からのクエストカード（1日1枚）
+--   higher_quest  ハイヤークエスト（今日の一手）
+--   link_letter   未来からの手紙
+--   goals         年・月・週の目標
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.quest_cards (
+  id             bigserial primary key,
+  user_id        text not null,
+  date           text not null,
+  symbol         integer not null default 1,
+  title          text,
+  interpretation text not null default '',
+  challenge      text not null default '',
+  done           boolean not null default false,
+  created_at     timestamptz not null default now(),
+  unique (user_id, date)
+);
+create index if not exists quest_cards_user_idx on public.quest_cards (user_id, date desc);
+
+create table if not exists public.higher_quest (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,
+  items       jsonb not null default '[]'::jsonb,
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now(),
+  unique (user_id, date)
+);
+create index if not exists higher_quest_user_idx on public.higher_quest (user_id, date desc);
+
+create table if not exists public.link_letter (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,
+  kind        text not null default 'future',
+  body        text not null default '',
+  source      text,
+  read        boolean not null default false,
+  created_at  timestamptz not null default now(),
+  unique (user_id, date)
+);
+create index if not exists link_letter_user_idx on public.link_letter (user_id, date desc);
+
+create table if not exists public.goals (
+  id          bigserial primary key,
+  user_id     text not null,
+  scope       text not null,              -- year / month / week
+  period      text not null,              -- 2026 / 2026-08 / 2026-W31 など
+  vision      text not null default '',
+  emotion     text not null default '',
+  updated_at  timestamptz not null default now(),
+  created_at  timestamptz not null default now(),
+  unique (user_id, scope, period)
+);
+create index if not exists goals_user_idx on public.goals (user_id, scope);
+
+alter table public.quest_cards  enable row level security;
+alter table public.higher_quest enable row level security;
+alter table public.link_letter  enable row level security;
+alter table public.goals        enable row level security;
 
 create table if not exists public.guardians (
   id          bigserial primary key,
@@ -85,7 +150,15 @@ create table if not exists public.broadcast_posts (
 );
 create index if not exists broadcast_posts_user_idx on public.broadcast_posts (user_id, created_at desc);
 
-alter table public.user_settings add column if not exists referred_by text;
+-- 紹介リンク（?ref=）で来た人の記録。user_settings は既存テーブル。
+-- 万一まだ無くても、ここで止まらないようにする
+do $$
+begin
+  if exists (select 1 from information_schema.tables
+             where table_schema = 'public' and table_name = 'user_settings') then
+    alter table public.user_settings add column if not exists referred_by text;
+  end if;
+end $$;
 
 alter table public.methods         enable row level security;
 alter table public.broadcast_posts enable row level security;

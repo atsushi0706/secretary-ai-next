@@ -20,6 +20,8 @@ import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
 import { StepCounter } from "./StepCounter";
+import { WorkMaker, CardDrawOverlay } from "./WorkMaker";
+import { type CustomWork, type OwnCard } from "@/lib/custom-work-types";
 import type { PartColor, PartsStep } from "@/lib/parts";
 
 type Face = "neutral" | "smile" | "anxious";
@@ -134,6 +136,15 @@ export function ShingaWorld({
   const [tasksOpen, setTasksOpen] = useState(false);
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
+  // じぶんワーク（本人が作ったワーク）
+  const [customWorks, setCustomWorks] = useState<CustomWork[]>([]);
+  const [makerOpen, setMakerOpen] = useState(false);
+  const [editWork, setEditWork] = useState<CustomWork | null>(null);
+  const [runWork, setRunWork] = useState<CustomWork | null>(null);   // いま実行中のじぶんワーク
+  const runWorkRef = useRef<CustomWork | null>(null);
+  const [customIdx, setCustomIdx] = useState(0);                     // いま何歩目か
+  const customIdxRef = useRef(0);
+  const [drawStep, setDrawStep] = useState<{ deck: "oracle" | "own"; lead?: string } | null>(null);
   // ワークを終えると、その1回ぶんが発信の素材になる（ここで知らせて、そのまま投稿へ行ける）
   const [materialToast, setMaterialToast] = useState<{ id?: number; title: string } | null>(null);
   const savingWorkRef = useRef(false);
@@ -174,6 +185,13 @@ export function ShingaWorld({
       if (d?.letter?.body) setLetter(d.letter);
     } catch { /* 手紙が取れなくても進める */ }
   }
+
+  const loadCustomWorks = useCallback(() => {
+    fetch("/api/custom-works").then((r) => r.json()).then((d) => {
+      setCustomWorks(d.works ?? []);
+    }).catch(() => {});
+  }, []);
+  useEffect(() => { loadCustomWorks(); }, [loadCustomWorks]);
 
   useEffect(() => {
     const today = todayStrLocal();
@@ -300,8 +318,11 @@ export function ShingaWorld({
   }, [face, avatarUrl, isDefaultFace]);
 
   useEffect(() => {
-    scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages, typing, choices]);
+    // レイアウト確定後に送る（進行帯などが挟まると1フレーム前の高さで止まるため）
+    requestAnimationFrame(() => {
+      scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
+    });
+  }, [messages, typing, choices, widget, partsStep, walkStage, travelStage]);
 
   // ウォールブレイクに入ったら、扉の5段階を先読みしておく（開くとき一瞬のチラつき防止）
   useEffect(() => {
@@ -385,7 +406,80 @@ export function ShingaWorld({
     setTimeout(() => setMoving(false), 1100);
   }, []);
 
+  /** じぶんワークを始める */
+  function enterCustom(w: CustomWork) {
+    if (mode) void finishWork(mode, messages);
+    setMode(null);
+    setPlace("peak");
+    setView("talk");
+    setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null);
+    setMessages([]);
+    runWorkRef.current = w; setRunWork(w);
+    customIdxRef.current = 0; setCustomIdx(0);
+    setDrawStep(null);
+    void talkCustom("", true);
+  }
+
+  /** じぶんワークの1ターン。ステップの前進とカードはこちら（画面側）が管理する */
+  async function talkCustom(textIn: string, greet = false) {
+    const w = runWorkRef.current;
+    if (!w || sending) return;
+    const body = textIn.trim();
+    if (!body && !greet) return;
+    setSending(true);
+    if (!greet) setMessages((prev) => [...prev, { role: "user", content: body }]);
+    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+    targetRef.current = ""; shownRef.current = 0; finalRef.current = false;
+    setTyping(true);
+    try {
+      const r = await fetch("/api/shinga/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: body, place: "peak", greet,
+          customWork: { name: w.name, purpose: w.purpose, intro: w.intro, closing: w.closing, steps: w.steps },
+          customIdx: customIdxRef.current,
+        }),
+      });
+      if (!r.ok) { targetRef.current = "（うまく届かなかった）"; finalRef.current = true; return; }
+      await readSse(r, (name, data) => {
+        if (name === "delta") targetRef.current += data.text;
+        else if (name === "replace") targetRef.current = data.text;
+        else if (name === "face") setFace(data.face as Face);
+        else if (name === "care") setMessages((prev) => [...prev, { role: "assistant", content: `[[care]]${data?.text ?? ""}` }]);
+      });
+    } catch {
+      targetRef.current = "（うまく届かなかった）";
+    } finally {
+      finalRef.current = true;
+      setSending(false);
+      // AIが答え終わったあと、次の一歩がカードならこちらから差し出す
+      if (!greet || customIdxRef.current === 0) {
+        const next = w.steps[customIdxRef.current];
+        if (next?.kind === "card") {
+          setTimeout(() => setDrawStep({ deck: next.deck, lead: next.lead }), 600);
+        }
+      }
+    }
+  }
+
+  /** じぶんワーク：本人が答えた（またはカードを受け取った）→ 次の一歩へ */
+  function advanceCustom(text: string) {
+    const w = runWorkRef.current;
+    if (!w) return;
+    customIdxRef.current = Math.min(customIdxRef.current + 1, w.steps.length);
+    setCustomIdx(customIdxRef.current);
+    void talkCustom(text);
+    // 全部歩き終えたら、完走の記録（初回は銀カード）
+    if (customIdxRef.current >= w.steps.length && w.id) {
+      fetch("/api/custom-works", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "complete", id: w.id }),
+      }).catch(() => {});
+    }
+  }
+
   async function enter(m: ModeKey, resume = false) {
+    runWorkRef.current = null; setRunWork(null); setDrawStep(null);
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (!resume && mode && mode !== m) void finishWork(mode, messages);
     // 内なる子の神殿は、いきなり会話に入らない。まず守り手を選ぶ盤面を出す。
@@ -456,6 +550,7 @@ export function ShingaWorld({
   }
 
   async function talk(textIn: string, greet = false, m: ModeKey | null = mode, p: PlaceKey = place) {
+    if (runWorkRef.current) { advanceCustom(textIn); return; }
     if (sending) return;
     const body = textIn.trim();
     if (!body && !greet) return;
@@ -666,6 +761,17 @@ export function ShingaWorld({
       {/* 内なる子に出会った瞬間：守り手との前後関係を絵で見せる */}
       {childReveal && <ChildReveal color={childReveal} onClose={() => setChildReveal(null)} />}
 
+      {/* じぶんワーク：カードを引く */}
+      {drawStep && runWork && (
+        <CardDrawOverlay
+          work={runWork} deck={drawStep.deck} lead={drawStep.lead}
+          onDone={(card: OwnCard) => {
+            setDrawStep(null);
+            advanceCustom(`（カード「${card.name}」を引いた。意味：${card.meaning}）`);
+          }}
+        />
+      )}
+
       {/* 守り手が解き放たれた瞬間：ガーディアンへの進化演出 */}
       {guardianEv && <GuardianReveal ev={guardianEv} onClose={() => setGuardianEv(null)} />}
 
@@ -721,6 +827,12 @@ export function ShingaWorld({
         <TaskListPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setTasksOpen(false)} />
       ) : castOpen ? (
         <BroadcastStudio guideName={guideName} onBack={() => setCastOpen(false)} />
+      ) : makerOpen ? (
+        <WorkMaker
+          initial={editWork}
+          onSaved={() => { setMakerOpen(false); setEditWork(null); loadCustomWorks(); }}
+          onBack={() => { setMakerOpen(false); setEditWork(null); }}
+        />
       ) : manualOpen ? (
         <ManualScreen guideName={guideName} onBack={() => setManualOpen(false)} />
       ) : reportOpen ? (
@@ -742,12 +854,16 @@ export function ShingaWorld({
           onBalance={() => void enter("balance")}
           onCast={() => setCastOpen(true)}
           onManual={() => setManualOpen(true)}
+          customWorks={customWorks}
+          onRunCustom={(w) => enterCustom(w)}
+          onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
+          onMake={() => { setEditWork(null); setMakerOpen(true); }}
           isAdventurer={isAdventurer}
           sending={sending}
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { void finishWork(mode, messages); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { void finishWork(mode, messages); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 
@@ -776,6 +892,19 @@ export function ShingaWorld({
 
           {/* ワーク中の進行帯：守り手→内なる子→才能 の関係を常に見せておく */}
           {mode === "parts" && !partsGate && !partsIntro && <PartsProgress color={partColor} step={partsStep} />}
+
+          {/* じぶんワーク：いま何歩目か */}
+          {runWork && (
+            <div className="travel-alt">
+              <span className="ta-label">{runWork.emoji} {runWork.name}</span>
+              <span className="ta-track">
+                {runWork.steps.map((_, i) => (
+                  <span key={i} className={`ta-seg ${i < customIdx ? "on" : ""} ${i === customIdx ? "now" : ""}`} />
+                ))}
+              </span>
+              <span className="ta-name">{customIdx >= runWork.steps.length ? "しめくくり" : `${customIdx + 1} / ${runWork.steps.length}`}</span>
+            </div>
+          )}
 
           {/* パラレルウォーク：いまどこまで歩いたか（背景の風景と対応） */}
           {mode === "walk" && (
@@ -1104,7 +1233,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, onManual, isAdventurer, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, onManual, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1122,6 +1251,10 @@ function Home({
   onCast?: () => void;
   /** 自分の取扱説明書（生年月日×16問） */
   onManual?: () => void;
+  customWorks: CustomWork[];
+  onRunCustom: (w: CustomWork) => void;
+  onEditCustom: (w: CustomWork) => void;
+  onMake: () => void;
   isAdventurer?: boolean;
   sending: boolean;
 }) {
@@ -1186,6 +1319,19 @@ function Home({
             </button>
           );
         })}
+        {/* じぶんワーク：本人が作った扉。＋で新しく作れる */}
+        {customWorks.map((w) => (
+          <button key={`cw-${w.id}`} className="iw-door is-sub is-custom" onClick={() => onRunCustom(w)}
+            onContextMenu={(e) => { e.preventDefault(); onEditCustom(w); }}>
+            <span className="emoji">{w.emoji}</span>
+            <span className="ja">{w.name}</span>
+            <span className="cw-edit" onClick={(e) => { e.stopPropagation(); onEditCustom(w); }}>✎</span>
+          </button>
+        ))}
+        <button className="iw-door is-sub is-make" onClick={onMake}>
+          <span className="emoji">🎨</span>
+          <span className="ja">じぶんワークを{customWorks.length ? "つくる" : "つくってみる"}</span>
+        </button>
       </div>
 
       {/* 主人公（レベル）＋ふりかえり */}

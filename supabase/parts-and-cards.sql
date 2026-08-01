@@ -183,3 +183,25 @@ create table if not exists public.lean_cache (
 );
 
 alter table public.lean_cache enable row level security;
+
+-- ══════════════════════════════════════════════════════════════
+-- じぶんワーク（ユーザーが自分で作るワーク／カードワーク）
+--  13) custom_works … 名前・進め方（問いとカード）・じぶんの札
+-- ══════════════════════════════════════════════════════════════
+
+create table if not exists public.custom_works (
+  id          bigserial primary key,
+  user_id     text not null,
+  name        text not null,
+  emoji       text not null default '🌟',
+  purpose     text not null default '',
+  intro       text not null default '',
+  closing     text not null default '',
+  steps       jsonb not null default '[]'::jsonb,
+  cards       jsonb not null default '[]'::jsonb,
+  runs        integer not null default 0,
+  created_at  timestamptz not null default now()
+);
+create index if not exists custom_works_user_idx on public.custom_works (user_id, created_at);
+
+alter table public.custom_works enable row level security;

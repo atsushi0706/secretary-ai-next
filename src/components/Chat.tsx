@@ -16,6 +16,8 @@ function slotify(text: string): string {
 
 function mdToHtml(text: string): string {
   let s = slotify(text);
+  // 見出し（### 明日の時間割）を生のまま出さない
+  s = s.replace(/^#{1,3}\s+(.+)$/gm, '<strong class="md-h">$1</strong>');
   s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
   s = s.replace(/(?<!\*)\*([^*]+)\*(?!\*)/g, "<em>$1</em>");
   s = s.replace(/^- (.+)$/gm, "<li>$1</li>");

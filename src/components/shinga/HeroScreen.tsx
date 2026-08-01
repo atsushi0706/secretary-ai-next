@@ -120,6 +120,14 @@ export function HeroScreen({ guideName, avatarUrl, onBack }: { guideName: string
             <button className="hero-btn is-go" onClick={saveIdentity}>この主人公で生きる</button>
             {hasId && <button className="hero-btn" onClick={() => { fill(hero); setEditing(false); }}>やめる</button>}
           </div>
+        ) : !hasLevels && hasId ? (
+          <div className="hero-firstrun">
+            <p>
+              主人公は決まってる。あとは<b>「今どのへんにいるか」</b>を教えて。<br />
+              5つの層をポチポチ選ぶだけ（1分）。分からないところは「まだ分からない」でOK。
+            </p>
+            <button className="hero-btn is-go" onClick={() => setPicking(true)}>現在地を選ぶ（1分）</button>
+          </div>
         ) : picking ? (
           <div className="hero-pick">
             <p className="hero-pick-lead">

@@ -204,6 +204,31 @@ JSONのみ:
           );
         }
 
+        // インナーワールドの文脈。内側で決めた一手を「謎の雑務」として扱わせない
+        try {
+          const { getTodayQuest } = await import("@/lib/inner");
+          const { listWorkSessions } = await import("@/lib/work-session");
+          const [iq, ws] = await Promise.all([
+            getTodayQuest(userId).catch(() => null),
+            listWorkSessions(userId, 3).catch(() => []),
+          ]);
+          const items = (iq?.items ?? [])
+            .map((it: any) => `・${it.text}${it.done ? "（✓済）" : ""}`).join("\n");
+          if (items) {
+            ctxLines.push(
+              "[インナーワールドの今日の一手（ハイヤークエスト）]\n" + items +
+              "\n※ これは本人が内面ワークで自分の理想から降ろした一手。雑務ではない。" +
+              "触れるときは「内側で決めたやつ」として意図を尊重する。意味が分からなくても茶化さない。"
+            );
+          }
+          if (ws.length) {
+            ctxLines.push(
+              "[最近の内面ワーク] " + ws.map((w: any) => `${w.date}「${w.title}」`).join(" / ") +
+              "\n※ 本人から持ち出したときだけ触れる。こちらから内容を掘り返さない。"
+            );
+          }
+        } catch { /* 読めなくても秘書は動く */ }
+
         const allMessages = await loadMessages(userId, today, mode);
         // 最新が今追加した user メッセージ → 30件取って Claude 形式へ
         const history = allMessages.slice(-30).map((m) => ({

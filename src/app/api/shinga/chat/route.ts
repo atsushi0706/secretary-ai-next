@@ -52,6 +52,10 @@ export async function POST(req: Request) {
   // 内なる子の神殿：いま扱っている守り手の色（画面で選ばれたもの）
   const partColor: PartColor | null = isPartColor(body.partColor) ? body.partColor : null;
   // 画面に表示中の進行状況。AIに「いまどこか」を教えて、同じ質問の堂々巡りを止める
+  // じぶんワーク：定義そのものを毎ターン受け取る（DBを引かない＝ステートレスで簡単）
+  const customWork = body.customWork && typeof body.customWork === "object" ? body.customWork : null;
+  const customIdx = Number.isFinite(Number(body.customIdx)) ? Number(body.customIdx) : 0;
+
   const progress = {
     partsStep: Number.isFinite(Number(body.partsStep)) ? Number(body.partsStep) : null,
     walkStage: Number.isFinite(Number(body.walkStage)) ? Number(body.walkStage) : null,
@@ -158,6 +162,30 @@ export async function POST(req: Request) {
           if (lines.length) progressCtx = ["# いまの進行状況（厳守）", ...lines].join("\n");
         }
 
+        // じぶんワーク：本人が作った進め方どおりに、1つずつ進める
+        let customCtx = "";
+        if (customWork) {
+          const steps = (customWork.steps ?? []) as any[];
+          const cur = steps[customIdx];
+          const total = steps.length;
+          const stepLine = (st: any, i: number) =>
+            `${i + 1}. ${st.kind === "q" ? `問いかけ「${st.q}」` : "カードを1枚引く（画面が担当）"}`;
+          customCtx = [
+            `# いまは本人が自分で作ったワーク「${customWork.name}」の最中`,
+            `- このワークの目的：${customWork.purpose || "（本人の内省の時間）"}`,
+            `- 進め方（全${total}歩）：`,
+            ...steps.map(stepLine),
+            `- いまは ${Math.min(customIdx + 1, total)} 歩目。`,
+            cur?.kind === "q"
+              ? `- やること：問いかけ「${cur.q}」を、あなたの言葉でやさしく1つだけ聞く。前の答えがあれば短く受け止めてから。`
+              : `- やること：直前の答えを受け止める。カードは画面側が引くので、あなたは引く動作に触れない。`,
+            customIdx >= total
+              ? `- 全部歩き終えた。締めかた：「${customWork.closing || "今日の自分にひとことを置いて、深呼吸して終わる"}」に沿って、短くあたたかく締める。新しい問いは出さない。`
+              : "",
+            `- 本人が作ったワークであることを尊重する。問いの言い換えは最小限。順番を飛ばさない。`,
+          ].filter(Boolean).join("\n");
+        }
+
         // 実書き込みの掟（AIが「入れておいた」と言ったのに実体が無い、を絶対に起こさない）
         const honestyCtx = [
           "# 実行の掟（最重要）",
@@ -167,7 +195,7 @@ export async function POST(req: Request) {
         ].join("\n");
 
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
-        const systemBase = [system, honestyCtx, progressCtx, balanceCtx].filter(Boolean).join("\n\n");
+        const systemBase = [system, honestyCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
         const systemFull = mode !== "parts" ? systemBase : [
           systemBase,
           partColor
@@ -176,7 +204,9 @@ export async function POST(req: Request) {
         ].join("\n\n");
 
         if (greet) {
-          const openLine = mode === "parts" && partColor
+          const openLine = customWork
+            ? `（本人が作ったワーク「${customWork.name}」をいま始める。まず intro（「${customWork.intro || "はじめよう"}」）を自分の言葉で言ってから、1歩目へ。過去の別の話は持ち出さない）`
+            : mode === "parts" && partColor
             ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。**しくみの説明は画面がもう見せたので繰り返さない**。前置きも断り書きも要らない。【1】①の問い（その守り手はどんな感覚か・身体のどこにあるか）だけを、1つ投げかけて）`
             : mode
             ? `（「${MODES[mode].label}」の時間を、いま新しく始める。過去の別の話は持ち出さない。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`

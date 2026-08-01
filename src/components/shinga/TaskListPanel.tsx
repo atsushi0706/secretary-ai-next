@@ -59,6 +59,21 @@ export function TaskListPanel({ guideName, avatarUrl, onBack }: { guideName: str
     finally { setSaving(false); }
   }
 
+  // 青写真から 今月/週/今日 を清瀬リンクが下書きする（保存は本人が押す）
+  const [bd, setBd] = useState<{ month: string; week: string; today: string[] } | null>(null);
+  const [bdBusy, setBdBusy] = useState(false);
+  const [bdErr, setBdErr] = useState("");
+  async function breakdown() {
+    setBdBusy(true); setBdErr(""); setBd(null);
+    try {
+      const r = await fetch("/api/goals/breakdown", { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || "下書きに失敗");
+      setBd(d);
+    } catch (e: any) { setBdErr(String(e?.message ?? e)); }
+    finally { setBdBusy(false); }
+  }
+
   async function addTask(title: string) {
     const t = title.trim();
     if (!t) return;
@@ -96,11 +111,43 @@ export function TaskListPanel({ guideName, avatarUrl, onBack }: { guideName: str
         {!goals ? <div className="rep-loading">読み込み中…</div> : (
           <>
             {tab === "year" && (
+              <>
               <GoalEditor
                 lead="2026年、どんな理想を生きる？ 青写真をそのまま書いていい。"
                 vision={goals.year.vision} onSave={(v) => saveGoal("year", { vision: v })}
                 saving={saving} placeholder="例：自分の可能性を信じて、届けたい人に価値を届けられている一年。"
               />
+              {goals.year.vision.trim() && (
+                <div className="tl-bd">
+                  <button className="tl-bd-go" onClick={() => void breakdown()} disabled={bdBusy}>
+                    {bdBusy ? "下ろしています…" : "✨ この青写真を、今月→今週→今日へ下ろす"}
+                  </button>
+                  {bdErr && <p className="tl-bd-err">{bdErr}</p>}
+                  {bd && (
+                    <div className="tl-bd-out">
+                      <div className="bo-row">
+                        <div className="bo-k">今月</div>
+                        <div className="bo-v">{bd.month}</div>
+                        <button onClick={() => { void saveGoal("month", { vision: bd.month }); }}>採用</button>
+                      </div>
+                      <div className="bo-row">
+                        <div className="bo-k">今週</div>
+                        <div className="bo-v">{bd.week}</div>
+                        <button onClick={() => { void saveGoal("week", { vision: bd.week }); }}>採用</button>
+                      </div>
+                      {bd.today.map((t, i) => (
+                        <div className="bo-row" key={i}>
+                          <div className="bo-k">今日</div>
+                          <div className="bo-v">{t}</div>
+                          <button onClick={() => { void addTask(t); }}>今日に置く</button>
+                        </div>
+                      ))}
+                      <p className="bo-note">気に入ったものだけ「採用」してね。文言は各タブで直せるよ。</p>
+                    </div>
+                  )}
+                </div>
+              )}
+              </>
             )}
 
             {tab === "month" && (
@@ -160,7 +207,7 @@ function GoalEditor({
     <div className="tl-field">
       <label>{lead}</label>
       <textarea value={v} onChange={(e) => setV(e.target.value)} rows={4} placeholder={placeholder} />
-      <button className="tl-save" disabled={saving || !dirty} onClick={() => onSave(v)}>{saving ? "保存中…" : dirty ? "保存する" : "保存済み"}</button>
+      <button className="tl-save" disabled={saving || !dirty} onClick={() => onSave(v)}>{saving ? "保存中…" : dirty ? "保存する" : v.trim() ? "保存済み" : "未入力"}</button>
     </div>
   );
 }

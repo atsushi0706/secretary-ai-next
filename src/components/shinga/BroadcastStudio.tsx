@@ -307,7 +307,7 @@ export function BroadcastStudio({ guideName, onBack }: { guideName: string; onBa
       </div>
 
       {/* カルーセル：横スクロール。タップで編集 */}
-      <div className="bc-slides">
+      <div className="bc-slides" key={theme}>
         {slidesWithSig.map((s, i) => (
           <div key={i} className={`bc-slidewrap ${editIdx === i ? "is-edit" : ""}`}
             onClick={() => setEditIdx(s.kind === "signature" ? null : i)}>

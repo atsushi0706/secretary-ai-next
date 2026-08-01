@@ -1,5 +1,14 @@
 "use client";
 
+/** 手紙などの本文に混ざるMarkdown記号を、そのまま出さずに整える */
+function mdLiteHtml(text: string): string {
+  let s = String(text ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  s = s.replace(/^#{1,3}\s+(.+)$/gm, "<strong>$1</strong>");
+  s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  s = s.replace(/^[-・]\s+(.+)$/gm, "・$1");
+  return s.replace(/\n/g, "<br/>");
+}
+
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { decadeUnlock, remainingLabel } from "@/lib/akashic";
@@ -200,7 +209,7 @@ function DeepReads() {
               {busy === c.key ? "記録を読み解いてる…" : "この記録をひらく →"}
             </button>
           )}
-          {c.body && <p className="dr-body">{c.body}</p>}
+          {c.body && <p className="dr-body" dangerouslySetInnerHTML={{ __html: mdLiteHtml(c.body) }} />}
         </div>
       ))}
     </div>

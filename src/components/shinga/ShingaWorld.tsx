@@ -19,6 +19,7 @@ import { QuestCard, type Card } from "./QuestCard";
 import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
+import { StepCounter } from "./StepCounter";
 import type { PartColor, PartsStep } from "@/lib/parts";
 
 type Face = "neutral" | "smile" | "anxious";
@@ -764,6 +765,14 @@ export function ShingaWorld({
               </span>
               <span className="ta-name">{WALK_PLACE[walkStage - 1]}</span>
             </div>
+          )}
+
+          {/* パラレルウォークは実際に歩きながらやれる。歩数はアプリを開いている間だけ数える */}
+          {mode === "walk" && !sending && (
+            <StepCounter onFinish={(n, sec) => {
+              const min = Math.max(1, Math.round(sec / 60));
+              void talk(`（実際に ${n} 歩、${min}分ほど歩いてきた）`);
+            }} />
           )}
 
           {/* パラレルトラベル：いまどこまで視点が上がったか（背景の風景と対応） */}

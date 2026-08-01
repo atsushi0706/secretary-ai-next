@@ -134,7 +134,7 @@ export async function POST(req: Request) {
 
         if (greet) {
           const openLine = mode === "parts" && partColor
-            ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。前置きや断り書きは要らない。【1】のとおり、まず「いま出ている反応は守り手の働きで、その奥に守られている子がいる」というしくみを短く渡してから、①の問い（どんな感覚か・身体のどこか）を1つだけ投げかけて）`
+            ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。**しくみの説明は画面がもう見せたので繰り返さない**。前置きも断り書きも要らない。【1】①の問い（その守り手はどんな感覚か・身体のどこにあるか）だけを、1つ投げかけて）`
             : mode
             ? `（「${MODES[mode].label}」の時間を、いま新しく始める。過去の別の話は持ち出さない。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`
             : (history.length === 0
@@ -207,7 +207,7 @@ export async function POST(req: Request) {
 
         // 内なる子の神殿：ワークの段階（1=守り手に出会う … 6=解き放つ）と、解放されたガーディアン
         let partsStep: number | null = null;
-        const stepMatch = full.match(/<parts_step>\s*([1-8])\s*<\/parts_step>/);
+        const stepMatch = full.match(/<parts_step>\s*([1-9])\s*<\/parts_step>/);
         if (stepMatch) partsStep = Number(stepMatch[1]);
         const guardMatch = full.match(/<guardian>\s*(red|blue|green|yellow)\s*<\/guardian>/i);
         const releasedColor = guardMatch && isPartColor(guardMatch[1].toLowerCase())

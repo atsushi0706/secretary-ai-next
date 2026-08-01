@@ -16,7 +16,7 @@ import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
-import { PartsGate, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
+import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
 import type { PartColor, PartsStep } from "@/lib/parts";
@@ -111,6 +111,8 @@ export function ShingaWorld({
   const [walkStage, setWalkStage] = useState(1);     // パラレルウォーク：どこまで歩いたか(1=門 〜 10=理想郷)
   // 内なる子の神殿：入口(gate)で守り手を選ぶ → ワーク中は色と段階を持つ
   const [partsGate, setPartsGate] = useState(false);
+  // 守り手を選んだ直後、会話の前に「幻獣を見せてしくみを渡す」導入画面を挟む
+  const [partsIntro, setPartsIntro] = useState<PartColor | null>(null);
   const [partColor, setPartColor] = useState<PartColor | null>(null);
   // 選んだ直後にすぐ talk() へ渡す必要があるので、state と同時に ref にも入れる
   const partColorRef = useRef<PartColor | null>(null);
@@ -385,6 +387,7 @@ export function ShingaWorld({
       setMessages([]);
       partColorRef.current = null;
       childShownRef.current = false;
+      setPartsIntro(null);
       setPartColor(null);
       setPartsStep(1);
       setPartsGate(true);
@@ -519,7 +522,7 @@ export function ShingaWorld({
           const ev = data as GuardianEvent;
           partColorRef.current = ev.color;
           setPartColor(ev.color);
-          setPartsStep(7);
+          setPartsStep(8);
           setGuardianEv(ev);
         } else if (name === "move") {
           moveTo(data.place as PlaceKey);
@@ -720,7 +723,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { void finishWork(mode, messages); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { void finishWork(mode, messages); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 
@@ -736,12 +739,19 @@ export function ShingaWorld({
               setPartColor(c);
               setPartsStep(1);
               setPartsGate(false);
-              void enter("parts", true);
+              // 守り手が決まっているときは、まず幻獣を見せてから会話に入る
+              if (c) setPartsIntro(c);
+              else void enter("parts", true);
             }} />
           )}
 
-          {/* ワーク中の進行帯：いま誰が前に出ているかが姿で分かる */}
-          {mode === "parts" && !partsGate && <PartsProgress color={partColor} step={partsStep} />}
+          {/* 導入：幻獣を大きく見せて「その感情はきみを守るために出ている」を渡す */}
+          {mode === "parts" && partsIntro && (
+            <PartsIntro color={partsIntro} onStart={() => { setPartsIntro(null); void enter("parts", true); }} />
+          )}
+
+          {/* ワーク中の進行帯：守り手→内なる子→才能 の関係を常に見せておく */}
+          {mode === "parts" && !partsGate && !partsIntro && <PartsProgress color={partColor} step={partsStep} />}
 
           {/* パラレルウォーク：いまどこまで歩いたか（背景の風景と対応） */}
           {mode === "walk" && (
@@ -770,7 +780,7 @@ export function ShingaWorld({
           )}
 
           {/* 会話（メッセージごとにキヨセリンクの顔アイコンを出す） */}
-          <div ref={scrollRef} className="singa-talk">
+          <div ref={scrollRef} className="singa-talk" style={partsIntro ? { display: "none" } : undefined}>
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
               const showDots = m.role === "assistant" && isLast && typing && !m.content;

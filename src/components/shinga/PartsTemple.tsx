@@ -168,7 +168,30 @@ function PeekCard({ color, released, onStart }: { color: PartColor; released: bo
   );
 }
 
-/* ────────────────────────────────────── ワーク中の進行帯 */
+/* ────────────────────────────────────── ワーク中の進行帯（常時表示のカード列） */
+
+/**
+ * ワーク中、ずっと上に出ている。
+ *
+ * 【守り手】→まもる→【内なる子】⇒解放⇒【ガーディアン】
+ *
+ * この3枚をいつでも見せておかないと、いま誰の話をしているのか・
+ * 何が何を守っているのかが分からなくなる。だから1体だけ出す形はやめた。
+ * まだ出会っていない姿は伏せておき、進むにつれて開く。
+ */
+function ChainCard({ face, color, label, active, revealed }: {
+  face: PartFace; color: PartColor; label: string; active: boolean; revealed: boolean;
+}) {
+  return (
+    <div className={`pc-card ${active ? "is-now" : ""} ${revealed ? "" : "is-hidden"}`}>
+      {revealed
+        ? <PartArt face={face} color={color} size={44} glow={active} />
+        : <span className="pc-veil">？</span>}
+      <span className="pc-role">{label}</span>
+      <span className="pc-name">{revealed ? face.name : "？？？"}</span>
+    </div>
+  );
+}
 
 export function PartsProgress({ color, step }: { color: PartColor | null; step: PartsStep }) {
   if (!color) {
@@ -179,19 +202,85 @@ export function PartsProgress({ color, step }: { color: PartColor | null; step: 
     );
   }
   const p = PARTS[color];
-  // 1-3=守り手 / 4-6=内なる子（癒して取り込む）/ 7-8=解き放たれた姿
-  const front: PartFace = step >= 7 ? p.guardian : step >= 4 ? p.child : p.defense;
+  // 1-4=守り手の話 / 5-7=内なる子の話 / 8-9=解き放たれた姿
+  const stage = step <= 4 ? 0 : step <= 7 ? 1 : 2;
+  const metChild = step >= 5;     // 出会うまで内なる子は伏せる
+  const released = step >= 8;     // 解放するまでガーディアンは伏せる
+
   return (
-    <div className="pt-prog" style={{ ["--pc" as any]: p.hue }}>
-      <PartArt face={front} color={color} size={54} glow={step >= 6} />
-      <div className="pp-body">
-        <div className="pp-who">{front.name}<span className="pp-sub">{front.title}</span></div>
-        <div className="pp-track">
-          {([1, 2, 3, 4, 5, 6, 7, 8] as PartsStep[]).map((n) => (
-            <span key={n} className={`pp-seg ${n <= step ? "on" : ""} ${n === step ? "now" : ""}`} title={STEP_LABEL[n]} />
+    <div className="pt-chain" style={{ ["--pc" as any]: p.hue }}>
+      <div className="pc-cards">
+        <ChainCard face={p.defense} color={color} label="守り手" active={stage === 0} revealed />
+        <span className="pc-arrow"><b>→</b>まもる</span>
+        <ChainCard face={p.child} color={color} label="内なる子" active={stage === 1} revealed={metChild} />
+        <span className={`pc-arrow ${released ? "is-on" : ""}`}><b>⇒</b>解放</span>
+        <ChainCard face={p.guardian} color={color} label="才能" active={stage === 2} revealed={released} />
+      </div>
+      <div className="pc-foot">
+        <span className="pc-track">
+          {([1, 2, 3, 4, 5, 6, 7, 8, 9] as PartsStep[]).map((n) => (
+            <span key={n} className={`pc-seg ${n <= step ? "on" : ""} ${n === step ? "now" : ""}`} title={STEP_LABEL[n]} />
           ))}
+        </span>
+        <span className="pc-step">{step}/9　{STEP_LABEL[step]}</span>
+      </div>
+    </div>
+  );
+}
+
+/* ────────────────────────────────────── ワークの導入（幻獣をバンと出す） */
+
+/**
+ * 守り手を選んだ直後に出る。会話はここが終わってから始まる。
+ * いきなり質問に入らず、まず「その感情はきみを守るために出ている」を見せて渡す。
+ */
+export function PartsIntro({ color, onStart }: { color: PartColor; onStart: () => void }) {
+  const [phase, setPhase] = useState<0 | 1 | 2>(0);
+  const p = PARTS[color];
+  useEffect(() => {
+    const a = setTimeout(() => setPhase(1), 1400);
+    const b = setTimeout(() => setPhase(2), 2800);
+    return () => { clearTimeout(a); clearTimeout(b); };
+  }, []);
+
+  return (
+    <div className="pi-screen" style={{ ["--pc" as any]: p.hue }}>
+      <div className={`pi-inner ph-${phase}`}>
+        <div className="pi-beast">
+          <PartArt face={p.defense} color={color} size={230} glow />
         </div>
-        <div className="pp-step">{STEP_LABEL[step]}</div>
+        <div className="pi-name">{p.defense.name}</div>
+        <div className="pi-title">{p.defense.title}</div>
+
+        <p className="pi-line-1">
+          いま出てきたその感情は——<br />
+          <b>きみを守るために出ている。</b>
+        </p>
+
+        {phase >= 1 && (
+          <p className="pi-line-2">
+            この守り手は、その感情を出すことで<b>何か</b>を守っている。<br />
+            {p.defense.acts.slice(0, 3).join("・")}——全部そのため。
+          </p>
+        )}
+
+        {phase >= 2 && (
+          <>
+            <div className="pi-behind">
+              <span className="pi-behind-label">そして、その守っている先に</span>
+              <div className="pi-behind-row">
+                <PartArt face={p.child} color={color} size={72} />
+                <div className="pi-behind-txt">
+                  <b>内なる子</b>がいる。<br />
+                  傷ついたときのまま、ずっと待っている。
+                </div>
+              </div>
+            </div>
+            <button className="pi-go" onClick={onStart}>
+              この守り手が何を守っているのか、聞いてみる →
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

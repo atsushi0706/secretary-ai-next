@@ -9,7 +9,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-type Voice = { id: string; name: string; labels?: Record<string, string> };
+type Voice = { id: string; name: string; labels?: Record<string, string>; category?: string; free?: boolean };
 type Info = { elevenlabs: boolean; openai: boolean; voiceId: string | null; model: string; voices: Voice[]; voicesError?: string | null };
 
 const SAMPLES: { label: string; text: string }[] = [
@@ -131,6 +131,13 @@ export default function VoiceTest() {
         ) : (
           <>
             <p className="gd-txt">▶ を押すと、上の文をその声で読みます。決めたら「この声にする」でIDをコピー。</p>
+            {voices.some((v) => !v.free) && (
+              <div className="gd-warn">
+                💳 <b>無料プランでは「ライブラリの声」をAPIから使えません</b>（Morioki など）。
+                <b>無料OK</b>の印がある標準の声を選んでね。<br />
+                有料プランにすると、ライブラリの声も使えるようになります。
+              </div>
+            )}
             <div className="gd-list">
               {voices.map((v) => (
                 <div key={v.id} className="gl-row" style={{ alignItems: "center" }}>
@@ -140,6 +147,11 @@ export default function VoiceTest() {
                   </button>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <b>{v.name}</b>
+                    <span style={{ marginLeft: 8, fontSize: ".6rem", padding: "2px 7px", borderRadius: 999,
+                      color: v.free ? "#8fd0a0" : "#e0b48c",
+                      border: `1px solid ${v.free ? "rgba(140,210,160,.5)" : "rgba(224,180,140,.5)"}` }}>
+                      {v.free ? "無料OK" : "有料プラン"}
+                    </span>
                     {info?.voiceId === v.id && <span style={{ marginLeft: 8, fontSize: ".64rem", color: "#8fd0a0" }}>いま使用中</span>}
                     <br />
                     <code style={{ fontSize: ".64rem", color: "#a99a80", wordBreak: "break-all" }}>{v.id}</code>

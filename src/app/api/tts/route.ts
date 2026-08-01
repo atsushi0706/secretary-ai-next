@@ -20,7 +20,12 @@ const DEFAULT_INSTRUCTIONS =
 const EL_MODEL = process.env.ELEVENLABS_MODEL?.trim() || "eleven_multilingual_v2";
 const elKey = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
 
-export type ElVoice = { id: string; name: string; labels?: Record<string, string> };
+export type ElVoice = {
+  id: string; name: string; labels?: Record<string, string>;
+  /** premade = 標準の声。無料プランでもAPIから使える。library/generated は有料プランが必要 */
+  category?: string;
+  free?: boolean;
+};
 
 let voiceCache: { at: number; list: ElVoice[] } | null = null;
 let lastVoiceError = "";
@@ -49,9 +54,15 @@ async function listVoices(): Promise<ElVoice[]> {
         continue;
       }
       const d = await r.json();
-      const list: ElVoice[] = (d?.voices ?? []).map((v: any) => ({
-        id: String(v.voice_id), name: String(v.name ?? ""), labels: v.labels ?? {},
-      }));
+      const list: ElVoice[] = (d?.voices ?? []).map((v: any) => {
+        const category = String(v.category ?? "");
+        return {
+          id: String(v.voice_id), name: String(v.name ?? ""), labels: v.labels ?? {},
+          category,
+          // 無料プランでAPIから鳴らせるのは標準の声だけ（Voice Library の声は有料）
+          free: category === "premade" || category === "default",
+        };
+      });
       if (list.length === 0) { notes.push(`${url.includes("/v2/") ? "v2" : "v1"}: 0件`); continue; }
       lastVoiceError = "";
       voiceCache = { at: Date.now(), list };
@@ -64,15 +75,26 @@ async function listVoices(): Promise<ElVoice[]> {
   return [];
 }
 
-/** 使う声を決める。指定があればそれ、無ければアカウントの1つ目 */
+/** 無料プランでも鳴らせる標準の声を1つ選ぶ（402 のときの逃げ道） */
+async function pickFreeVoice(): Promise<string | null> {
+  const list = await listVoices();
+  const free = list.filter((v) => v.free);
+  if (free.length === 0) return null;
+  // 落ち着いた女性寄りの声を優先（呼吸ガイドに合う）
+  const pref = free.find((v) => /rachel|bella|elli|charlotte|alice|lily|sarah/i.test(v.name));
+  return (pref ?? free[0]).id;
+}
+
+/** 使う声を決める。指定があればそれ、無ければ「無料で使える声」を優先して選ぶ */
 async function pickVoice(override?: string): Promise<string | null> {
   const fixed = override?.trim() || process.env.ELEVENLABS_VOICE_ID?.trim();
   if (fixed) return fixed;
   const list = await listVoices();
   if (list.length === 0) return null;
-  // 日本語っぽい声があれば優先（無ければ先頭）
-  const ja = list.find((v) => /japan/i.test(JSON.stringify(v.labels ?? {})));
-  return (ja ?? list[0]).id;
+  const free = list.filter((v) => v.free);
+  const pool = free.length > 0 ? free : list;
+  const ja = pool.find((v) => /japan/i.test(JSON.stringify(v.labels ?? {})));
+  return (ja ?? pool[0]).id;
 }
 
 function audio(buf: ArrayBuffer, engine: string, voiceId: string) {
@@ -87,7 +109,7 @@ function audio(buf: ArrayBuffer, engine: string, voiceId: string) {
   });
 }
 
-async function elevenlabs(text: string, override?: string): Promise<{ res?: Response; error?: string }> {
+async function elevenlabs(text: string, override?: string, retried = false): Promise<{ res?: Response; error?: string }> {
   const key = elKey();
   if (!key) return { error: "ELEVENLABS_API_KEY が未設定" };
   const voiceId = await pickVoice(override);
@@ -109,6 +131,12 @@ async function elevenlabs(text: string, override?: string): Promise<{ res?: Resp
     });
     if (!r.ok) {
       const body = (await r.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 240);
+      // 無料プランは Voice Library の声をAPIから使えない。標準の声で鳴らし直す
+      if (r.status === 402 && /paid_plan_required|library voices/i.test(body) && !retried) {
+        const freeId = await pickFreeVoice();
+        if (freeId && freeId !== voiceId) return elevenlabs(text, freeId, true);
+        return { error: "無料プランでは Voice Library の声を使えません。標準の声（Default Voices）を選んでね。" };
+      }
       return { error: `ElevenLabs ${r.status}（声ID: ${voiceId}）${body}` };
     }
     return { res: audio(await r.arrayBuffer(), "elevenlabs", voiceId) };

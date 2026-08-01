@@ -79,10 +79,26 @@ export function PushToggle() {
       });
       const d = await r.json();
       if (d.error) throw new Error(d.error);
+      // 本当にサーバに残ったかを確かめてから「ON」と言う（見かけだけONにしない）
+      const chk = await (await fetch("/api/push/subscribe")).json().catch(() => null);
+      if (!chk?.subscribed) throw new Error("登録が保存されなかった（もう一度押してみて）");
       setSubscribed(true);
-      setMsg("通知をONにしたよ😊");
+      setMsg("通知をONにしたよ😊 テスト通知で確かめてね。");
     } catch (e: any) {
-      setMsg(`ONにできなかった: ${String(e?.message ?? e)}`);
+      const raw = String(e?.name === "NotAllowedError" ? "NotAllowedError" : (e?.message ?? e));
+      let hint = "";
+      if (/NotAllowedError|denied|許可されません/i.test(raw)) {
+        hint = "ブラウザがこのサイトの通知を『ブロック』にしています。アドレスバーの🔒（または ⋮ → サイト設定）から『通知』を『許可』に変えてね。";
+      } else if (/InvalidStateError|different applicationServerKey/i.test(raw)) {
+        hint = "古い購読が残っています。ブラウザの『サイトデータを削除』をしてから、もう一度ONを押してね。";
+      } else if (/AbortError|push service|registration failed/i.test(raw)) {
+        hint = "端末がプッシュ配信サーバに繋がれていません。Chrome にGoogleアカウントでログインしているか、省電力設定でブラウザが制限されていないか確認してね。";
+      } else if (/not supported|undefined is not|PushManager/i.test(raw)) {
+        hint = "このブラウザは通知に対応していないかも。Android は Chrome、iPhone は「ホーム画面に追加」したアイコンから開いてね。";
+      }
+      setMsg(`ONにできなかった: ${raw}${hint ? `
+
+→ ${hint}` : ""}`);
     } finally {
       setBusy(false);
     }
@@ -181,7 +197,7 @@ export function PushToggle() {
           </button>
         </div>
       )}
-      {msg && <div className="text-xs text-gray-600">{msg}</div>}
+      {msg && <div className="text-xs text-gray-600 whitespace-pre-wrap leading-relaxed">{msg}</div>}
       <p className="text-xs text-gray-400 leading-relaxed">
         ※ iPhoneは「共有 → ホーム画面に追加」でアプリ化してから開くと通知をONにできます。
       </p>

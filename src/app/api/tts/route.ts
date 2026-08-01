@@ -23,22 +23,45 @@ const elKey = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
 export type ElVoice = { id: string; name: string; labels?: Record<string, string> };
 
 let voiceCache: { at: number; list: ElVoice[] } | null = null;
+let lastVoiceError = "";
 
-/** アカウントで使える声の一覧（10分だけ覚えておく） */
+/**
+ * アカウントで使える声の一覧。
+ * v2 が新しい入口。古い鍵や権限では v2 が使えないことがあるので v1 にも落とす。
+ * 取れなかった理由は lastVoiceError に残して、画面で見えるようにする。
+ */
 async function listVoices(): Promise<ElVoice[]> {
   const key = elKey();
-  if (!key) return [];
-  if (voiceCache && Date.now() - voiceCache.at < 600_000) return voiceCache.list;
-  try {
-    const r = await fetch("https://api.elevenlabs.io/v1/voices", { headers: { "xi-api-key": key } });
-    if (!r.ok) return [];
-    const d = await r.json();
-    const list: ElVoice[] = (d?.voices ?? []).map((v: any) => ({
-      id: String(v.voice_id), name: String(v.name ?? ""), labels: v.labels ?? {},
-    }));
-    voiceCache = { at: Date.now(), list };
-    return list;
-  } catch { return []; }
+  if (!key) { lastVoiceError = "ELEVENLABS_API_KEY が未設定"; return []; }
+  if (voiceCache && Date.now() - voiceCache.at < 120_000) return voiceCache.list;
+
+  const tries = [
+    "https://api.elevenlabs.io/v2/voices?page_size=100",
+    "https://api.elevenlabs.io/v1/voices",
+  ];
+  const notes: string[] = [];
+  for (const url of tries) {
+    try {
+      const r = await fetch(url, { headers: { "xi-api-key": key } });
+      if (!r.ok) {
+        const body = (await r.text().catch(() => "")).replace(/\s+/g, " ").slice(0, 200);
+        notes.push(`${url.includes("/v2/") ? "v2" : "v1"}: ${r.status} ${body}`);
+        continue;
+      }
+      const d = await r.json();
+      const list: ElVoice[] = (d?.voices ?? []).map((v: any) => ({
+        id: String(v.voice_id), name: String(v.name ?? ""), labels: v.labels ?? {},
+      }));
+      if (list.length === 0) { notes.push(`${url.includes("/v2/") ? "v2" : "v1"}: 0件`); continue; }
+      lastVoiceError = "";
+      voiceCache = { at: Date.now(), list };
+      return list;
+    } catch (e: any) {
+      notes.push(`${url.includes("/v2/") ? "v2" : "v1"}: ${String(e?.message ?? e).slice(0, 120)}`);
+    }
+  }
+  lastVoiceError = notes.join(" / ");
+  return [];
 }
 
 /** 使う声を決める。指定があればそれ、無ければアカウントの1つ目 */
@@ -142,5 +165,6 @@ export async function GET() {
     voiceId: process.env.ELEVENLABS_VOICE_ID?.trim() || null,
     model: EL_MODEL,
     voices,
+    voicesError: lastVoiceError || null,
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 }

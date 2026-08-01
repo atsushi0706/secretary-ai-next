@@ -10,7 +10,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Voice = { id: string; name: string; labels?: Record<string, string> };
-type Info = { elevenlabs: boolean; openai: boolean; voiceId: string | null; model: string; voices: Voice[] };
+type Info = { elevenlabs: boolean; openai: boolean; voiceId: string | null; model: string; voices: Voice[]; voicesError?: string | null };
 
 const SAMPLES: { label: string; text: string }[] = [
   { label: "呼吸ガイド", text: "ゆっくり、息を吸って。……そのまま、少し止めてね。" },
@@ -113,10 +113,21 @@ export default function VoiceTest() {
       <section className="gd-sec">
         <h2><span className="gd-num">3</span>声をえらぶ</h2>
         {voices.length === 0 ? (
-          <p className="gd-txt gd-hint">
-            アカウントに声がありません。ElevenLabs の <b>Voice Library</b> で気に入った声を開いて
-            「<b>Add to My Voices</b>」しておくと、ここに出てきます。
-          </p>
+          <>
+            <p className="gd-txt gd-hint">
+              声の一覧を取れませんでした。<b>ElevenLabs の APIキーに「Voices: Read」の権限</b>が
+              付いていないと、ここには出てきません。
+            </p>
+            {info?.voicesError && (
+              <p className="gd-txt" style={{ color: "#e6a0a0", wordBreak: "break-all", fontSize: ".72rem" }}>
+                {info.voicesError}
+              </p>
+            )}
+            <div className="gd-warn" style={{ marginTop: 12 }}>
+              一覧が出なくても大丈夫。ElevenLabs の <b>My Voices</b> で声の「⋯」→
+              <b>Copy Voice ID</b> して、Vercel の <b>ELEVENLABS_VOICE_ID</b> に入れれば使えます。
+            </div>
+          </>
         ) : (
           <>
             <p className="gd-txt">▶ を押すと、上の文をその声で読みます。決めたら「この声にする」でIDをコピー。</p>

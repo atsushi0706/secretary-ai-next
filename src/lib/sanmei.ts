@@ -214,3 +214,103 @@ export function computeLife(
 
   return { startAge, periods, currentIndex, nearBoundary: isNearBoundary(by, bm, bd) };
 }
+
+/* ══════════════════════════════════════════════════════════════
+   鑑定に使う材料をまとめて取り出す（取扱説明書用）
+
+   これまでは「星10種＋今の10年」しか渡しておらず、鑑定が浅くなっていた。
+   本来の鑑定は、三柱・五行の偏り・エネルギーの段階・10年ごとの流れを
+   突き合わせて読む。ここでその材料を全部そろえる。
+   ※ ユーザーには専門用語を出さない。AIへの内部資料としてだけ使う。
+   ══════════════════════════════════════════════════════════════ */
+
+export type Chart = {
+  /** 三柱（内部用） */
+  year: { kan: string; shi: string };
+  month: { kan: string; shi: string };
+  day: { kan: string; shi: string };
+  /** 日干＝その人の本質 */
+  nikkan: string;
+  /** 五行の数（多い＝強く出る／0＝欠けている） */
+  gogyo: Record<"木" | "火" | "土" | "金" | "水", number>;
+  /** 多すぎるもの・欠けているもの */
+  strong: string[];
+  missing: string[];
+  /** 生まれ持ったエネルギーの段階（十二運・日支基準） */
+  energy: { label: string; meaning: string };
+  /** 節入り際で計算がぶれる生まれか */
+  nearBoundary: boolean;
+};
+
+const KAN_GOGYO: Record<string, "木" | "火" | "土" | "金" | "水"> = {
+  甲: "木", 乙: "木", 丙: "火", 丁: "火", 戊: "土", 己: "土", 庚: "金", 辛: "金", 壬: "水", 癸: "水",
+};
+const SHI_GOGYO: Record<string, "木" | "火" | "土" | "金" | "水"> = {
+  寅: "木", 卯: "木", 巳: "火", 午: "火", 申: "金", 酉: "金", 亥: "水", 子: "水",
+  辰: "土", 戌: "土", 丑: "土", 未: "土",
+};
+
+/** 日支から見た十二支（日柱の地支）を出す */
+function dayBranch(y: number, m: number, d: number): string {
+  return SHI[kanshiIndex(y, m, d) % 12];
+}
+
+/** 生年月日から命式の材料をそろえる */
+export function computeChart(birth: string | null | undefined): Chart | null {
+  const m0 = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birth?.trim() ?? "");
+  if (!m0) return null;
+  const y = Number(m0[1]), mo = Number(m0[2]), d = Number(m0[3]);
+  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+
+  const py = pillarYear(y, mo, d);
+  const yk = yearStem(py);
+  const ysh = SHI[(((py - 4) % 12) + 12) % 12];
+  const [mk, msh] = monthPillar(yk, monthBranch(y, mo, d));
+  const dk = dayStem(y, mo, d);
+  const dsh = dayBranch(y, mo, d);
+
+  const gogyo = { 木: 0, 火: 0, 土: 0, 金: 0, 水: 0 };
+  for (const k of [yk, mk, dk]) gogyo[KAN_GOGYO[k]]++;
+  for (const s of [ysh, msh, dsh]) gogyo[SHI_GOGYO[s]]++;
+
+  const entries = Object.entries(gogyo) as ["木" | "火" | "土" | "金" | "水", number][];
+  const strong = entries.filter(([, n]) => n >= 3).map(([k]) => k);
+  const missing = entries.filter(([, n]) => n === 0).map(([k]) => k);
+
+  const energy = LIFE_PHASE[juniunIndex(dk, dsh)];
+
+  return {
+    year: { kan: yk, shi: ysh },
+    month: { kan: mk, shi: msh },
+    day: { kan: dk, shi: dsh },
+    nikkan: dk,
+    gogyo,
+    strong,
+    missing,
+    energy,
+    nearBoundary: isNearBoundary(y, mo, d),
+  };
+}
+
+/** 日干（本質）の読み。専門用語を出さず、性質だけを日常語で */
+export const NIKKAN_NATURE: Record<string, { core: string; work: string; caution: string }> = {
+  甲: { core: "まっすぐ伸びる大木。曲がることを嫌い、正面から進む。頼られると強い。", work: "旗を立てる／先頭に立つ／組織を育てる／教える", caution: "折れるまで曲げないので、無理が限界まで見えにくい" },
+  乙: { core: "しなやかな草花。折れずに巻きつき、環境に合わせて生き延びる。", work: "調整する／間をつなぐ／育てる／細やかな仕事", caution: "合わせすぎて、自分の望みが分からなくなる" },
+  丙: { core: "太陽。惜しみなく照らし、いるだけで場が明るくなる。裏表がない。", work: "人前に出る／広める／盛り上げる／看板になる", caution: "照らし続けて燃え尽きる。陰の努力が見えにくい" },
+  丁: { core: "灯火。小さくでも暗がりを照らす。一点を深く温める。", work: "一対一で寄り添う／専門を極める／文章・表現", caution: "気が回りすぎて消耗する。嫉妬を抱えやすい" },
+  戊: { core: "山。動かない安心感。時間をかけて大きなものを築く。", work: "土台をつくる／守る／長期の事業／不動のポジション", caution: "動き出しが遅く、一度決めると変えにくい" },
+  己: { core: "畑の土。何を植えても育てる。人を伸ばす力がある。", work: "育成／裏方／整える／人の可能性を引き出す", caution: "抱え込みすぎる。自分の作物を持ち忘れる" },
+  庚: { core: "鋼。曲がらない。白黒つける強さと、切り開く力。", work: "決断する／改革する／勝負する／技術を磨く", caution: "強さが人を傷つける。柔らかい場面で浮く" },
+  辛: { core: "宝石。磨けば磨くほど光る。繊細で、美意識が鋭い。", work: "美しさを扱う／細部を仕上げる／人を魅せる", caution: "傷つきやすく、雑に扱われることに耐えられない" },
+  壬: { core: "大河・海。境界を越えて流れる。自由と広さを求める。", work: "越境する／広い世界を見る／流れをつくる／発信", caution: "留まれず、深い関係を築く前に流れてしまう" },
+  癸: { core: "雨・雫。静かに深く染み込む。感受性が高く、察しがいい。", work: "感じ取る／癒やす／研究する／内面を扱う", caution: "受け取りすぎて、人の感情まで自分のものにする" },
+};
+
+/** 五行の欠け・過多が示すもの（内部資料） */
+export const GOGYO_MEANING: Record<string, { much: string; none: string }> = {
+  木: { much: "伸びる力が強く、方向が決まると速い。ただし折り合いが苦手", none: "始める勢いが出にくい。誰かの号令があると動ける" },
+  火: { much: "熱量と表現力。人を巻き込むが、消耗も激しい", none: "自分を見せるのが苦手。表に出す場を意識的に作る必要がある" },
+  土: { much: "安定と受容。動かない強さがあるが、腰が重い", none: "土台が揺れやすい。習慣と居場所を先に作ると安定する" },
+  金: { much: "決断力と鋭さ。切り分けるのが得意だが、当たりが強くなる", none: "断ることが苦手。線を引く練習が要る" },
+  水: { much: "柔軟さと知性。流れに乗るが、留まるのが苦手", none: "溜め込みやすい。流す・出す習慣が効く" },
+};

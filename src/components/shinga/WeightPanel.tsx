@@ -12,6 +12,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 
 type Day = { date: string; weight: number | null; fat: number | null };
+type StepDay = { date: string; steps: number };
+type StepSum = {
+  today: number; streak: number; bestStreak: number; total: number; days: number;
+  best: { date: string; steps: number } | null;
+  history: StepDay[];
+  next: { label: string; at: number; left: number } | null;
+};
 type Summary = {
   today: Day | null; yesterday: Day | null;
   avg7: { weight: number | null; fat: number | null };
@@ -41,6 +48,8 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
   const [msg, setMsg] = useState("");
   const [err, setErr] = useState("");
   const [range, setRange] = useState<30 | 90 | 180>(30);
+  // 歩数もここで見られるようにする（朝ここを開けば、からだの数字が全部そろう）
+  const [steps, setSteps] = useState<StepSum | null>(null);
 
   const load = useCallback(() => {
     fetch("/api/weight").then((r) => r.json()).then((d: any) => {
@@ -51,6 +60,11 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
     }).catch(() => {});
   }, []);
   useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    fetch("/api/steps").then((r) => r.json()).then((d: any) => {
+      if (!d?.error) setSteps(d as StepSum);
+    }).catch(() => {});
+  }, []);
 
   async function save() {
     setBusy(true); setErr(""); setMsg("");
@@ -204,6 +218,9 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
           </div>
         )}
 
+        {/* 歩数（散歩のおともで自動でたまるぶん） */}
+        <StepsSection steps={steps} range={range} />
+
         {/* 過去の記録 */}
         {(sum?.history?.length ?? 0) > 0 && (
           <details className="wt-log">
@@ -220,6 +237,59 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
           </details>
         )}
       </div>
+    </div>
+  );
+}
+
+/** 歩数のふりかえり。パラレルウォークで自動でたまったぶんが、ここに積み上がる */
+function StepsSection({ steps, range }: { steps: StepSum | null; range: 30 | 90 | 180 }) {
+  const days = ((steps?.history ?? []).slice(0, range)).reverse();
+  const max = Math.max(3000, ...days.map((d) => d.steps));
+  const md = (s: string) => s.slice(5).replace("-", "/");
+
+  return (
+    <div className="wt-steps">
+      <div className="ws-head">
+        <span className="ws-title">👟 歩数</span>
+        {steps && steps.streak > 0 && <span className="ws-streak">🔥 {steps.streak}日つづけて</span>}
+      </div>
+
+      <div className="wt-stats">
+        <div className="wt-stat is-main">
+          <span className="k">今日</span>
+          <b>{(steps?.today ?? 0).toLocaleString()}</b><span className="u">歩</span>
+          {steps?.next && (
+            <span className="t">「{steps.next.label}」まで あと{steps.next.left.toLocaleString()}</span>
+          )}
+        </div>
+        <div className="wt-stat">
+          <span className="k">歩いた日</span><b>{steps?.days ?? 0}</b><span className="u">日</span>
+        </div>
+        <div className="wt-stat">
+          <span className="k">累計</span><b>{(steps?.total ?? 0).toLocaleString()}</b><span className="u">歩</span>
+        </div>
+      </div>
+
+      {days.length === 0 ? (
+        <p className="wt-empty">パラレルウォークを歩くと、ここに積み上がっていくよ。</p>
+      ) : (
+        <>
+          <div className="sc-chart" style={{ marginTop: 10 }}>
+            {days.map((d) => (
+              <span key={d.date} className="sc-col" title={`${d.date}　${d.steps.toLocaleString()}歩`}>
+                <span className={`sc-colbar ${d.steps >= 3000 ? "is-goal" : ""}`}
+                  style={{ height: `${Math.max(3, (d.steps / max) * 100)}%` }} />
+              </span>
+            ))}
+          </div>
+          <div className="wt-axis">
+            <span>{days[0] ? md(days[0].date) : ""}</span><span>今日</span>
+          </div>
+          {steps?.best && (
+            <div className="wt-marks">いちばん歩いた日：{md(steps.best.date)}　{steps.best.steps.toLocaleString()}歩</div>
+          )}
+        </>
+      )}
     </div>
   );
 }

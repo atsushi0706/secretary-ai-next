@@ -4274,3 +4274,25 @@ body:has(.realverse-bg) { background: transparent; }
 .sc-chip.is-ask {
   cursor: pointer; color: #8a6a2c; border-style: dashed;
 }
+
+/* からだの記録の中の歩数セクション */
+.wt-steps { margin-top: 22px; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.1); }
+.wt-steps .ws-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.wt-steps .ws-title { font-size: .84rem; font-weight: 700; color: var(--singa-gold); }
+.wt-steps .ws-streak {
+  font-size: .64rem; color: #e0b48c; padding: 3px 9px; border-radius: 999px;
+  background: rgba(220,120,60,.14); border: 1px solid rgba(210,120,60,.3);
+}
+.wt-steps .wt-stats { grid-template-columns: 1fr 1fr; }
+.wt-steps .wt-stat .t {
+  font-size: .62rem; font-weight: 400; color: var(--singa-ink-soft);
+  background: transparent; padding: 0; margin-left: auto;
+}
+/* 棒グラフ（散歩のおともの記録と同じ見た目） */
+.wt-steps .sc-chart {
+  display: flex; align-items: flex-end; gap: 2px; height: 64px; padding: 0 2px;
+  border-bottom: 1px solid rgba(255,255,255,.16);
+}
+.wt-steps .sc-col { flex: 1; display: flex; align-items: flex-end; height: 100%; }
+.wt-steps .sc-colbar { width: 100%; border-radius: 2px 2px 0 0; background: rgba(255,255,255,.18); }
+.wt-steps .sc-colbar.is-goal { background: linear-gradient(180deg, #e0bd72, #a8813a); }

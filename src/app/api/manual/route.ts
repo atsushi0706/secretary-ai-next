@@ -6,7 +6,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { generateManual, latestManual, listManuals, loadAnswers, saveAnswers } from "@/lib/manual";
-import { answeredCount, type Answers } from "@/lib/manual-quiz";
+import { answeredCount, QUESTIONS, type Answers } from "@/lib/manual-quiz";
 import { AIRateLimitError } from "@/lib/ai";
 import { isMissingTable, MIGRATION_HINT } from "@/lib/shinga";
 import { getUserSettings, logError } from "@/lib/supabase";
@@ -42,8 +42,16 @@ export async function POST(req: Request) {
   try {
     const b = await req.json();
     const answers = (b?.answers ?? {}) as Answers;
-    if (answeredCount(answers) < 16) {
-      return NextResponse.json({ error: "16問すべてに答えてね" }, { status: 400 });
+
+    // 途中保存：答えるたびに残す（作り直さないと保存されない、を無くす）
+    if (b?.action === "save") {
+      await saveAnswers(userId, answers).catch(() => {});
+      return NextResponse.json({ ok: true, saved: answeredCount(answers) });
+    }
+
+    if (answeredCount(answers) < QUESTIONS.length) {
+      return NextResponse.json(
+        { error: `まだ ${QUESTIONS.length - answeredCount(answers)} 問のこってるよ` }, { status: 400 });
     }
     await saveAnswers(userId, answers).catch(() => { /* 保存できなくても生成は進める */ });
     const manual = await generateManual(userId, answers);

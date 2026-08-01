@@ -39,6 +39,22 @@ export function ManualScreen({ guideName, onBack }: { guideName: string; onBack:
   const [hasBirth, setHasBirth] = useState(true);
   const [needsMigration, setNeedsMigration] = useState(false);
   const quizTop = useRef<HTMLDivElement | null>(null);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  /** 答えを選ぶたびに、少し待ってから保存する（作り直さなくても残る） */
+  function pick(id: number, value: number) {
+    setAnswers((a) => {
+      const next = { ...a, [id]: value };
+      if (saveTimer.current) clearTimeout(saveTimer.current);
+      saveTimer.current = setTimeout(() => {
+        fetch("/api/manual", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "save", answers: next }),
+        }).catch(() => {});
+      }, 700);
+      return next;
+    });
+  }
 
   useEffect(() => {
     fetch("/api/manual").then((r) => r.json()).then((d) => {
@@ -46,7 +62,10 @@ export function ManualScreen({ guideName, onBack }: { guideName: string; onBack:
       setAnswers(d.answers ?? {});
       setHistory(d.history ?? []);
       setHasBirth(d.hasBirth !== false);
-      if (d.manual) { setManual(d.manual); setMode("read"); }
+      // 16問そろっていないのに結果を見せない（「やってないのに決められてる」を防ぐ）
+      const ans = d.answers ?? {};
+      const filled = Object.values(ans).filter((v) => typeof v === "number").length;
+      if (d.manual && filled >= QUESTIONS.length) { setManual(d.manual); setMode("read"); }
       else setMode("quiz");
     }).catch(() => setMode("quiz"));
   }, []);
@@ -112,7 +131,7 @@ export function ManualScreen({ guideName, onBack }: { guideName: string; onBack:
                 {SCALE.map((s) => (
                   <button key={s.value}
                     className={`mq-opt ${answers[q.id] === s.value ? "on" : ""}`}
-                    onClick={() => setAnswers((a) => ({ ...a, [q.id]: s.value }))}
+                    onClick={() => pick(q.id, s.value)}
                     title={s.label}>
                     <span className="o-dot" />
                     <span className="o-label">{s.label}</span>

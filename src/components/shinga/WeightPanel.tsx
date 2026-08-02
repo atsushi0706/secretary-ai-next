@@ -93,20 +93,36 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
   }, [sum]);
 
   const days = useMemo(() => (sum?.history ?? []).slice(0, range).reverse(), [sum, range]);
-  const chart = useMemo(() => {
-    const vs = days.map((d) => d.weight).filter((v): v is number => typeof v === "number");
+
+  /**
+   * 体重と体脂肪率を、同じ枠に重ねて描く。
+   *
+   * kg と % は数の大きさが違うので、**それぞれ自分の幅**で上下いっぱいに伸ばす。
+   * だから縦軸に共通の目盛りは無い。前は目盛りの上端・下端（68.7 / 67.8）を
+   * 左右に並べていて、横軸の日付のように見えて意味が通らなかった。
+   * 見るべきなのは数字の目盛りではなく「線の向き」と「実際の値」なので、
+   * 値は線の最後に直接そえる。
+   */
+  function series(pick: (d: Day) => number | null) {
+    const vs = days.map(pick).filter((v): v is number => typeof v === "number");
     if (vs.length < 2) return null;
     const min = Math.min(...vs), max = Math.max(...vs);
-    const pad = Math.max(0.4, (max - min) * 0.15);
+    const pad = Math.max(0.4, (max - min) * 0.18);
     const lo = min - pad, hi = max + pad;
     const pts = days.map((d, i) => {
-      if (typeof d.weight !== "number") return null;
-      const x = (i / Math.max(1, days.length - 1)) * 100;
-      const y = 100 - ((d.weight - lo) / (hi - lo)) * 100;
-      return { x, y, d };
-    }).filter(Boolean) as { x: number; y: number; d: Day }[];
-    return { pts, lo, hi };
-  }, [days]);
+      const v = pick(d);
+      if (typeof v !== "number") return null;
+      return {
+        x: (i / Math.max(1, days.length - 1)) * 100,
+        y: 100 - ((v - lo) / (hi - lo)) * 100,
+        v, date: d.date,
+      };
+    }).filter(Boolean) as { x: number; y: number; v: number; date: string }[];
+    return { pts, min, max, first: pts[0], last: pts[pts.length - 1] };
+  }
+  const wChart = useMemo(() => series((d) => d.weight), [days]);
+  const fChart = useMemo(() => series((d) => d.fat), [days]);
+  const hasChart = !!(wChart || fChart);
 
   return (
     <div className="wt-screen">
@@ -186,25 +202,16 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
               <button key={n} className={range === n ? "on" : ""} onClick={() => setRange(n)}>{n}日</button>
             ))}
           </div>
-          {!chart ? (
+          {!hasChart ? (
             <p className="wt-empty">2日ぶん記録すると、ここに線が出るよ。</p>
           ) : (
             <>
-              <svg className="wt-chart" viewBox="0 0 100 100" preserveAspectRatio="none">
-                <polyline points={chart.pts.map((p) => `${p.x},${p.y}`).join(" ")}
-                  fill="none" stroke="url(#wtg)" strokeWidth="1.2" vectorEffect="non-scaling-stroke" />
-                <defs>
-                  <linearGradient id="wtg" x1="0" y1="0" x2="1" y2="0">
-                    <stop offset="0%" stopColor="#9fb6e8" /><stop offset="100%" stopColor="#eed69b" />
-                  </linearGradient>
-                </defs>
-                {chart.pts.slice(-1).map((p, i) => (
-                  <circle key={i} cx={p.x} cy={p.y} r="1.6" fill="#eed69b" vectorEffect="non-scaling-stroke" />
-                ))}
-              </svg>
-              <div className="wt-axis">
-                <span>{chart.hi.toFixed(1)}kg</span><span>{chart.lo.toFixed(1)}kg</span>
-              </div>
+              <MiniChart title="体重" unit="kg" tone="w" s={wChart} />
+              <MiniChart title="体脂肪率" unit="%" tone="f" s={fChart} />
+              <p className="wt-axis-note">
+                ※ 高さの目盛りは出していない。日々の増減は水分でも動くから、
+                見るのは<b>線の向き</b>と、いまの数字。
+              </p>
             </>
           )}
         </div>
@@ -239,6 +246,51 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
             </div>
           </details>
         )}
+      </div>
+    </div>
+  );
+}
+
+type Pt = { x: number; y: number; v: number; date: string };
+type Series = { pts: Pt[]; min: number; max: number; first: Pt; last: Pt } | null;
+
+/**
+ * 1つの数字ぶんの小さな折れ線。
+ *
+ * 体重と体脂肪は単位が違うので、重ねずに1本ずつ描く。
+ * 縦軸の数字は出さない——前は上限・下限（68.7 / 67.8）を左右に並べていて、
+ * 横軸の日付のように見えてしまい、何の数字か分からなくなっていた。
+ * 代わりに「いまの値」を大きく、「動いた幅」を小さく、日付を横軸に出す。
+ */
+function MiniChart({ title, unit, tone, s }: { title: string; unit: string; tone: "w" | "f"; s: Series }) {
+  if (!s) {
+    return (
+      <div className={`wt-mini is-${tone}`}>
+        <div className="wm-head"><span className="wm-title">{title}</span>
+          <span className="wm-none">2日ぶん記録すると、線が出るよ</span></div>
+      </div>
+    );
+  }
+  const diff = Math.round((s.last.v - s.first.v) * 100) / 100;
+  const color = tone === "w" ? "#eed69b" : "#7fc4d8";
+  return (
+    <div className={`wt-mini is-${tone}`}>
+      <div className="wm-head">
+        <span className="wm-title">{title}</span>
+        <span className="wm-now"><b>{s.last.v.toFixed(2)}</b>{unit}</span>
+        <span className={`wm-diff ${diff < 0 ? "down" : diff > 0 ? "up" : ""}`}>
+          {diff > 0 ? "+" : ""}{diff.toFixed(2)}{unit}
+        </span>
+      </div>
+      <svg className="wt-chart" viewBox="0 0 100 100" preserveAspectRatio="none">
+        <polyline points={s.pts.map((p) => `${p.x},${p.y}`).join(" ")}
+          fill="none" stroke={color} strokeWidth="2" vectorEffect="non-scaling-stroke" strokeLinejoin="round" />
+        <circle cx={s.last.x} cy={s.last.y} r="2" fill={color} vectorEffect="non-scaling-stroke" />
+      </svg>
+      <div className="wt-axis">
+        <span>{s.first.date.slice(5).replace("-", "/")}</span>
+        <span className="wm-band">この間 {s.min.toFixed(1)}〜{s.max.toFixed(1)}{unit}</span>
+        <span>今日</span>
       </div>
     </div>
   );

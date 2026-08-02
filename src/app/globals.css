@@ -4768,3 +4768,24 @@ body:has(.realverse-bg) { background: transparent; }
   text-align: center; font-size: .64rem; color: var(--singa-ink-soft);
   margin-top: 12px; opacity: .7;
 }
+
+/* ── からだの記録：体重と体脂肪を、1本ずつ別のグラフで ── */
+.wt-mini { margin-bottom: 14px; }
+.wt-mini .wt-chart { height: 96px; }
+.wm-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 5px; }
+.wm-title { font-size: .7rem; color: var(--singa-ink-soft); }
+.wt-mini.is-w .wm-title { color: var(--singa-gold); }
+.wt-mini.is-f .wm-title { color: #7fc4d8; }
+.wm-now { font-size: .66rem; color: var(--singa-ink-soft); }
+.wm-now b {
+  font-size: 1.1rem; font-weight: 800; color: var(--singa-ink);
+  font-variant-numeric: tabular-nums; margin-right: 1px;
+}
+.wm-diff { margin-left: auto; font-size: .66rem; color: var(--singa-ink-soft); font-variant-numeric: tabular-nums; }
+.wm-diff.down { color: #8fd0a0; }
+.wm-diff.up { color: #e0b48c; }
+.wm-none { font-size: .66rem; color: var(--singa-ink-soft); opacity: .7; }
+.wm-band { font-size: .56rem; opacity: .65; }
+
+.wt-axis-note { margin-top: 2px; font-size: .6rem; line-height: 1.85; color: var(--singa-ink-soft); opacity: .82; }
+.wt-axis-note b { color: var(--singa-gold); }

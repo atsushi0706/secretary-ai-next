@@ -61,7 +61,12 @@ export async function POST(req: Request) {
     walkStage: Number.isFinite(Number(body.walkStage)) ? Number(body.walkStage) : null,
     travelStage: Number.isFinite(Number(body.travelStage)) ? Number(body.travelStage) : null,
     wallStage: Number.isFinite(Number(body.wallStage)) ? Number(body.wallStage) : null,
+    shadowStep: Number.isFinite(Number(body.shadowStep)) ? Number(body.shadowStep) : null,
   };
+  // 影獣の鏡：画面のゲートで選ばれた安全度と、選択ずみの影
+  const { isShadowPairId, shadowPair } = await import("@/lib/shadow");
+  const shadowSafety: "normal" | "boundary" = body.shadowSafety === "boundary" ? "boundary" : "normal";
+  const shadowPicked = isShadowPairId(body.shadowPair) ? body.shadowPair : null;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -159,6 +164,18 @@ export async function POST(req: Request) {
           if (mode === "breakthrough" && progress.wallStage) {
             lines.push(`- ウォールブレイク：扉はいま ${progress.wallStage}/5。ほどけてきたら必ず上げる。`);
           }
+          if (mode === "shadow") {
+            if (progress.shadowStep) {
+              lines.push(`- 影獣の鏡：いま段階 ${progress.shadowStep}/9（画面に表示中）。同じ質問を二度しない。答えを受け取ったら進める。`);
+            }
+            if (shadowPicked) {
+              const p = shadowPair(shadowPicked);
+              lines.push(`- 選ばれた影：${p.shadow.label}（pair_id: ${p.id}）。光は「${p.light.label}」、奥の力は ${p.core.join("・")}。この見立てを勝手に変えない。`);
+            }
+            if (shadowSafety === "boundary") {
+              lines.push(`- **境界線優先モード**：継続的な不安がある相手。鏡の問い（4〜7）を出さない。1→2→8→9で進め、記録・距離・相談を優先する。`);
+            }
+          }
           if (lines.length) progressCtx = ["# いまの進行状況（厳守）", ...lines].join("\n");
         }
 
@@ -208,6 +225,8 @@ export async function POST(req: Request) {
             ? `（本人が作ったワーク「${customWork.name}」をいま始める。まず intro（「${customWork.intro || "はじめよう"}」）を自分の言葉で言ってから、1歩目へ。過去の別の話は持ち出さない）`
             : mode === "parts" && partColor
             ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。**しくみの説明は画面がもう見せたので繰り返さない**。前置きも断り書きも要らない。【1】①の問い（その守り手はどんな感覚か・身体のどこにあるか）だけを、1つ投げかけて）`
+            : mode === "shadow"
+            ? `（「影獣の鏡」をいま始める。しくみの説明は画面がもう見せたので繰り返さない。${shadowSafety === "boundary" ? "境界線優先モード：鏡の話はせず、" : ""}【1】の問い（いつ・どこで・何を言われた／されたかを、一つの場面として聞く）だけを、やさしく1つ投げかけて。<shadow_step>1</shadow_step> を付けて）`
             : mode
             ? `（「${MODES[mode].label}」の時間を、いま新しく始める。過去の別の話は持ち出さない。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`
             : (history.length === 0
@@ -286,6 +305,17 @@ export async function POST(req: Request) {
         const releasedColor = guardMatch && isPartColor(guardMatch[1].toLowerCase())
           ? (guardMatch[1].toLowerCase() as "red" | "blue" | "green" | "yellow")
           : null;
+
+        // 影獣の鏡：段階／選ばれた影／回収の完了
+        let shadowStep: number | null = null;
+        const shStepMatch = full.match(/<shadow_step>\s*([1-9])\s*<\/shadow_step>/);
+        if (shStepMatch) shadowStep = Number(shStepMatch[1]);
+        const shPickMatch = full.match(/<shadow_pick>\s*([a-z_]+)\s*<\/shadow_pick>/);
+        const shadowPick = shPickMatch && isShadowPairId(shPickMatch[1]) ? shPickMatch[1] : null;
+        const shLightMatch = full.match(/<shadow_light>\s*([a-z_]+)\s*<\/shadow_light>/);
+        const shadowLight = shLightMatch && isShadowPairId(shLightMatch[1])
+          ? shLightMatch[1]
+          : (shLightMatch && shadowPicked ? shadowPicked : null);   // idを書き間違えても、選択ずみの影で成立させる
 
         // 選択肢ボタン
         let choices: Array<{ label: string; mode?: string }> | null = null;
@@ -381,10 +411,13 @@ export async function POST(req: Request) {
           .replace(/<guardian>[\s\S]*?<\/guardian>/g, "")
           .replace(/<travel>[\s\S]*?<\/travel>/g, "")
           .replace(/<walk>[\s\S]*?<\/walk>/g, "")
+          .replace(/<shadow_step>[\s\S]*?<\/shadow_step>/g, "")
+          .replace(/<shadow_pick>[\s\S]*?<\/shadow_pick>/g, "")
+          .replace(/<shadow_light>[\s\S]*?<\/shadow_light>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch || travelMatch || walkMatch) {
+        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch || travelMatch || walkMatch || shStepMatch || shPickMatch || shLightMatch) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });
@@ -394,6 +427,64 @@ export async function POST(req: Request) {
         if (partsStep) send("parts_step", { step: partsStep });
         if (travelStage) send("travel", { stage: travelStage });
         if (walkStage) send("walk", { stage: walkStage });
+        if (shadowStep) send("shadow_step", { step: shadowStep });
+        if (shadowPick) send("shadow_pick", { pair: shadowPick });
+
+        // 光の回収が完了 → 会話からカードを抽出して保存し、演出を出す
+        if (shadowLight) {
+          try {
+            const pair = shadowPair(shadowLight);
+            const { complete } = await import("@/lib/ai");
+            const talked = [...history.map((h) => `${h.role === "user" ? "本人" : "案内役"}：${h.content}`), `案内役：${clean}`]
+              .join("\n").slice(-3600);
+            const raw = await complete({
+              userId,
+              prompt: `下は「影獣の鏡」のワークの対話。本人が光を取り戻した記録を、カード1枚ぶんに整理して。
+**本人が言っていないことを作らない。** 出ていない項目は空文字にする。相手の実名・会社名など特定できる情報は入れない。
+JSONだけで返す：
+{"corePower":"取り戻した力(20字以内・本人の言葉ベース)","ownership":"許可の一文(「私は…してよい」の形・40字以内)","otherResp":"相手に返す責任(30字以内)","boundary":"決めた境界線(40字以内)","action24h":"24時間以内の一歩(30字以内)","before":数字かnull,"after":数字かnull}
+
+# 対話
+${talked}`,
+              maxTokens: 400, temperature: 0.3,
+            });
+            const m = String(raw ?? "").match(/\{[\s\S]*\}/);
+            const c = m ? JSON.parse(m[0]) : {};
+            const card = {
+              pairId: pair.id,
+              shadowLabel: pair.shadow.label,
+              lightLabel: pair.light.label,
+              corePower: String(c.corePower ?? "").trim() || pair.core.join("・"),
+              ownership: String(c.ownership ?? "").trim(),
+              otherResp: String(c.otherResp ?? "").trim(),
+              boundary: String(c.boundary ?? "").trim(),
+              action24h: String(c.action24h ?? "").trim(),
+              before: Number.isFinite(Number(c.before)) ? Number(c.before) : null,
+              after: Number.isFinite(Number(c.after)) ? Number(c.after) : null,
+            };
+            // 記録（テーブルが無くても体験は止めない）
+            try {
+              const { saveShadowEncounter } = await import("@/lib/shadow-db");
+              await saveShadowEncounter(userId, card as any);
+            } catch (e) {
+              if (!isMissingTable(e)) console.error("[shinga/chat] saveShadowEncounter failed:", e);
+            }
+            // 集めるカードにも1枚（ホームのコレクションに並ぶ）
+            try {
+              const { grantSkillCard } = await import("@/lib/awaken");
+              await grantSkillCard(userId, {
+                key: `shadow-${pair.id}-${today}`,
+                title: pair.light.label,
+                body: card.ownership || `${pair.shadow.short}の影から「${pair.light.short}」の光を取り戻した。`,
+                rarity: "gold",
+                source: `影獣の鏡（${pair.shadow.short}→${pair.light.short}）`,
+              });
+            } catch { /* カードが出せなくても続ける */ }
+            send("shadow_card", { card });
+          } catch (e) {
+            console.error("[shinga/chat] shadow card failed:", e);
+          }
+        }
 
         // ガーディアン解放：守り手が役割を降り、才能として開いた瞬間
         if (releasedColor) {
@@ -454,6 +545,18 @@ ${talked}`,
               }
             }
           } catch { /* カードが出せなくても会話は続ける */ }
+        }
+        // 影獣の鏡：いま続いている暴力・つきまといの話が出たら、内省ではなく窓口を添える
+        if (!greet && mode === "shadow" && /殴られ|暴力|DV|つきまと|ストーカー|脅され|監視され|閉じ込め/.test(text)) {
+          send("care", {
+            text: [
+              "それは、心のワークより先に、現実の安全がいちばん大事な状況だよ。",
+              "・警察相談専用電話 #9110（緊急なら110）",
+              "・DV相談ナビ #8008（最寄りの相談窓口につながる）",
+              "・よりそいホットライン 0120-279-338（24時間・無料）",
+              "記録を残すこと、物理的に距離を取ること、信頼できる人に話すことを優先してね。",
+            ].join("\n"),
+          });
         }
         // 命に関わる言葉が出たときは、相談先を必ず添える（機能ではなく責任として）
         if (!greet && /死にたい|消えたい|自殺|いなくなりたい|生きて(る|いる)意味|生きる意味|終わらせたい|リストカット/.test(text)) {

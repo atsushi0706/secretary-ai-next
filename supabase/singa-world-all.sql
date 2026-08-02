@@ -291,3 +291,18 @@ alter table public.weight_logs enable row level security;
 
 -- 未来からのクエスト：受け取ったときに入れる「一手」を覚えておく列
 alter table public.quest_cards add column if not exists action text;
+
+-- ═══ ⑦ 影獣の鏡（リアルバース・光回収） ═══
+-- 保存するのは回収の結果（カード）だけ。相談の生の本文はここに入れない。
+
+create table if not exists public.shadow_encounters (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  date        text not null,              -- JSTの日付 YYYY-MM-DD
+  pair_id     text not null,              -- fire_self / wind_self など8種
+  card        jsonb not null,             -- ShadowCard（光・許可の一文・境界線・一歩・Before/After）
+  created_at  timestamptz not null default now()
+);
+create index if not exists shadow_encounters_user_idx on public.shadow_encounters (user_id, created_at desc);
+
+alter table public.shadow_encounters enable row level security;

@@ -8,9 +8,10 @@
  * 各ゾーンは「ここで何をする場所か」を軽く渡すだけ。台本ではない。
  */
 import type { PlaceKey } from "./places";
+import { SHADOW_FLOW } from "./shadow";
 
 // ゾーン(PlaceKey)に加えて、地図の上には無い体験モードも持てる（place で見た目のゾーンを借りる）
-export type ModeKey = PlaceKey | "breakthrough" | "travel" | "parts" | "balance";
+export type ModeKey = PlaceKey | "breakthrough" | "travel" | "parts" | "balance" | "shadow";
 
 export type Mode = {
   key: ModeKey;
@@ -321,6 +322,15 @@ export const MODES: Record<ModeKey, Mode> = {
 - 一度に2つ以上の宿題を出す
 - 「〜すべき」で終わる。決めるのは本人であって、こちらではない
 `.trim(),
+  },
+  shadow: {
+    key: "shadow",
+    label: "影獣の鏡",
+    en: "Mirror of Shadows",
+    desc: "現実に現れた嫌な人は、預けたままの光を映す鏡。影獣を見つけて、光を取り戻す。",
+    place: "deep",
+    tier: "sub",
+    flow: SHADOW_FLOW,
   },
   parts: {
     key: "parts",

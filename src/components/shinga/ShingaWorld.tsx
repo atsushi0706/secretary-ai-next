@@ -17,6 +17,8 @@ import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
 import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
+import { ShadowGate, ShadowProgress, ShadowCardReveal, type ShadowSafety } from "./ShadowMirror";
+import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
 import { StepCounter, type StepCounterHandle } from "./StepCounter";
@@ -125,6 +127,12 @@ export function ShingaWorld({
   // 段階4で一度だけ、「守り手はこの子を守っていた」を絵で見せる
   const [childReveal, setChildReveal] = useState<PartColor | null>(null);
   const childShownRef = useRef(false);
+  // 影獣の鏡：入口(gate)で安全をたしかめる → ワーク中は段階・選ばれた影・完成カードを持つ
+  const [shadowGate, setShadowGate] = useState(false);
+  const [shadowStep, setShadowStep] = useState(1);
+  const shadowSafetyRef = useRef<ShadowSafety>("normal");
+  const shadowPairRef = useRef<ShadowPairId | null>(null);
+  const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
   const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
   const [sending, setSending] = useState(false);
@@ -389,6 +397,8 @@ export function ShingaWorld({
   const savedSigRef = useRef("");   // 同じワークを二重に素材化しない（戻る→別ワークで2回呼ばれるため）
   const finishWork = useCallback(async (m: ModeKey | null, msgs: Message[]) => {
     if (!m || savingWorkRef.current) return;
+    // 影獣の鏡は素材にしない。嫌な相手との生々しい話は、発信の下書きに流さない（本人が書くのは自由）
+    if (m === "shadow") return;
     const mine = msgs.filter((x) => x.role === "user" && x.content.trim());
     if (mine.length < 2) return;            // ほとんど話していない＝素材にしない
     const sig = `${m}:${msgs.length}:${msgs[msgs.length - 1]?.content?.slice(0, 40) ?? ""}`;
@@ -495,6 +505,20 @@ export function ShingaWorld({
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (mode === "walk" && m !== "walk") void finishSteps();
     if (!resume && mode && mode !== m) void finishWork(mode, messages);
+    // 影獣の鏡も、いきなり会話に入らない。まず約束ごとと安全のたしかめ。
+    if (m === "shadow" && !resume) {
+      setMode("shadow");
+      setPlace(MODES.shadow.place);
+      setView("talk");
+      setChoices(null); setWidget(null); setEmoPick(null);
+      setMessages([]);
+      shadowPairRef.current = null;
+      shadowSafetyRef.current = "normal";
+      setShadowCard(null);
+      setShadowStep(1);
+      setShadowGate(true);
+      return;
+    }
     // 内なる子の神殿は、いきなり会話に入らない。まず守り手を選ぶ盤面を出す。
     if (m === "parts" && !resume) {
       setMode("parts");
@@ -600,6 +624,9 @@ export function ShingaWorld({
           walkStage: m === "walk" ? walkStage : undefined,
           travelStage: m === "travel" ? travelStage : undefined,
           wallStage: m === "breakthrough" ? wallStage : undefined,
+          shadowStep: m === "shadow" ? shadowStep : undefined,
+          shadowPair: m === "shadow" ? shadowPairRef.current ?? undefined : undefined,
+          shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
           debug: debugAvailable && debug,
         }),
       });
@@ -640,6 +667,15 @@ export function ShingaWorld({
           // 内なる子の神殿：段階が進むと、前に出る姿が守り手→内なる子へ変わる
           const s = Number(data?.step);
           if (Number.isFinite(s)) setPartsStep(Math.max(1, Math.min(8, s)) as PartsStep);
+        } else if (name === "shadow_step") {
+          const s2 = Number(data?.step);
+          if (Number.isFinite(s2)) setShadowStep(Math.max(1, Math.min(9, s2)));
+        } else if (name === "shadow_pick") {
+          // 本人が選んだ影。以降の会話とカード発行の軸になる
+          if (data?.pair) shadowPairRef.current = data.pair as ShadowPairId;
+        } else if (name === "shadow_card") {
+          // 光の回収が完了。カードの演出を出す
+          if (data?.card) { setShadowCard(data.card as ShadowCard); setShadowStep(9); }
         } else if (name === "guardian") {
           // 守り手が解き放たれた。進化演出を出す（色が未確定だったならここで確定）
           const ev = data as GuardianEvent;
@@ -890,7 +926,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); setShadowGate(false); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 
@@ -898,6 +934,23 @@ export function ShingaWorld({
             <span className="en">{mode ? MODES[mode].en : here.en}</span>
             <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
           </div>
+
+          {/* 影獣の鏡：まず約束ごとと安全のたしかめ（選んだらワークの会話が始まる） */}
+          {mode === "shadow" && shadowGate && (
+            <ShadowGate
+              onStart={(safety) => {
+                shadowSafetyRef.current = safety;
+                setShadowStep(safety === "boundary" ? 1 : 1);
+                setShadowGate(false);
+                void enter("shadow", true);
+              }}
+              onLeave={() => { setShadowGate(false); setView("home"); setMode(null); }}
+            />
+          )}
+          {mode === "shadow" && !shadowGate && (
+            <ShadowProgress step={shadowStep} safety={shadowSafetyRef.current} />
+          )}
+          {shadowCard && <ShadowCardReveal card={shadowCard} onClose={() => setShadowCard(null)} />}
 
           {/* 内なる子の神殿：まず守り手を選ぶ盤面（選んだらワークの会話が始まる） */}
           {mode === "parts" && partsGate && (
@@ -1200,6 +1253,7 @@ const DOORS: { key: ModeKey; emoji: string }[] = [
 ];
 const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "parts", emoji: "🜂" },
+  { key: "shadow", emoji: "🪞" },
   { key: "breakthrough", emoji: "🗝" },
   { key: "travel", emoji: "🚀" },
 ];

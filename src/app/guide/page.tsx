@@ -318,6 +318,9 @@ export default function GuidePage() {
           ・よりそいホットライン 0120-279-338（24時間・無料）<br />
           ・いのちの電話 0570-783-556
         </div>
+        <p className="gd-txt gd-hint" style={{ marginTop: 12 }}>
+          音声合成：VOICEVOX:白上虎太郎（無料で使える日本語の音声合成エンジンです）
+        </p>
       </section>
 
       <footer className="gd-foot">

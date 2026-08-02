@@ -4478,6 +4478,7 @@ body:has(.realverse-bg) { background: transparent; }
 /* ── 進行表示 ── */
 .sm-progress {
   position: relative; z-index: 3; display: flex; align-items: center; justify-content: center;
+  flex-wrap: wrap;   /* スマホで9個が収まらないときは折り返す */
   gap: 7px; margin: 4px auto 8px; padding: 8px 14px; width: fit-content; max-width: 94%;
   background: rgba(10,8,14,.72); border: 1px solid rgba(238,214,155,.2); border-radius: 999px;
   backdrop-filter: blur(2px);

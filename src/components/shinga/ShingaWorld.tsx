@@ -34,7 +34,7 @@ type Message = { role: "user" | "assistant"; content: string };
 // タグが本文に混じっても画面に出さない（最初のタグ開始で切る）
 // ※ ここに書き忘れたタグは、生成中そのまま画面に出てしまう。新しいタグを足したら必ずここにも足す。
 function stripTags(t: string): string {
-  const i = t.search(/<(face|move|choices|quest_to_add|hero_delta|wall|breath|emotion|guardian|parts_step|travel|walk)\b/);
+  const i = t.search(/<(face|move|choices|quest_to_add|hero_delta|wall|breath|emotion|guardian|parts_step|travel|walk|shadow_step|shadow_pick|shadow_light)\b/);
   return (i >= 0 ? t.slice(0, i) : t).trimEnd();
 }
 
@@ -1004,32 +1004,6 @@ export function ShingaWorld({
             <StepCounter ref={stepRef} onEarn={(titles) => setStepWon(titles)} />
           )}
 
-          {/* じぶんワーク：いま何歩目か */}
-          {runWork && (
-            <div className="travel-alt">
-              <span className="ta-label">{runWork.emoji} {runWork.name}</span>
-              <span className="ta-track">
-                {runWork.steps.map((_, i) => (
-                  <span key={i} className={`ta-seg ${i < customIdx ? "on" : ""} ${i === customIdx ? "now" : ""}`} />
-                ))}
-              </span>
-              <span className="ta-name">{customIdx >= runWork.steps.length ? "しめくくり" : `${customIdx + 1} / ${runWork.steps.length}`}</span>
-            </div>
-          )}
-
-          {/* パラレルウォーク：いまどこまで歩いたか（背景の風景と対応） */}
-          {mode === "walk" && (
-            <div className="travel-alt is-walk">
-              <span className="ta-label">🚶 歩いた道のり</span>
-              <span className="ta-track">
-                {Array.from({ length: 10 }, (_, i) => (
-                  <span key={i} className={`ta-seg ${i < walkStage ? "on" : ""} ${i === walkStage - 1 ? "now" : ""}`} />
-                ))}
-              </span>
-              <span className="ta-name">{WALK_PLACE[walkStage - 1]}</span>
-            </div>
-          )}
-
           {/* パラレルトラベル：いまどこまで視点が上がったか（背景の風景と対応） */}
           {mode === "travel" && (
             <div className="travel-alt">
@@ -1044,7 +1018,7 @@ export function ShingaWorld({
           )}
 
           {/* 会話（メッセージごとにキヨセリンクの顔アイコンを出す） */}
-          <div ref={scrollRef} className="singa-talk" style={partsIntro ? { display: "none" } : undefined}>
+          <div ref={scrollRef} className="singa-talk" style={partsIntro || shadowGate ? { display: "none" } : undefined}>
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
               const showDots = m.role === "assistant" && isLast && typing && !m.content;
@@ -1108,7 +1082,8 @@ export function ShingaWorld({
           )}
 
           {/* 音声入力バー */}
-          <VoiceBar onSend={(t) => talk(t)} disabled={sending} />
+          {/* 入口（安全のたしかめ）を出している間は、入力欄を出さない（ゲートを飛ばして話し始めない） */}
+          {!shadowGate && !partsGate && <VoiceBar onSend={(t) => talk(t)} disabled={sending} />}
 
           {/* その場所のパネル（ゾーンに応じて中身が変わる） */}
           {hasPanel && panelOpen && (

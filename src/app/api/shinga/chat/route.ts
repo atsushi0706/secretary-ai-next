@@ -329,7 +329,8 @@ export async function POST(req: Request) {
                 mode: isModeKey(c?.mode) ? c.mode : undefined,
               }))
               .filter((c) => c.label)
-              .slice(0, 3);
+              // ふだんは3つまで。影獣の鏡だけは「鏡の4方向＋当てはまらない」で5つ要る
+              .slice(0, mode === "shadow" ? 5 : 3);
             if (choices.length === 0) choices = null;
           }
         }
@@ -449,7 +450,9 @@ ${talked}`,
               maxTokens: 400, temperature: 0.3,
             });
             const m = String(raw ?? "").match(/\{[\s\S]*\}/);
-            const c = m ? JSON.parse(m[0]) : {};
+            // 抽出に失敗しても、回収の事実（影→光）だけのカードは必ず出す
+            let c: any = {};
+            try { c = m ? JSON.parse(m[0]) : {}; } catch { c = {}; }
             const card = {
               pairId: pair.id,
               shadowLabel: pair.shadow.label,

@@ -337,3 +337,13 @@ create table if not exists public.app_config (
   updated_at  timestamptz not null default now()
 );
 alter table public.app_config enable row level security;
+
+-- ═══ ⑨ 今日のあなたの取扱説明書（10年後の自分から届く・1日1通） ═══
+create table if not exists public.today_manuals (
+  user_id     text not null,
+  date        text not null,              -- JSTの日付 YYYY-MM-DD
+  data        jsonb not null,             -- headline / good[2] / care / closing
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, date)
+);
+alter table public.today_manuals enable row level security;

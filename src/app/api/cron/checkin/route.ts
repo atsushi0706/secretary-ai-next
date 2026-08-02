@@ -93,7 +93,9 @@ export async function GET(req: Request) {
             ? `${message}
 （起きたらまず、体重をひとつ置いていこう）`
             : message;
-          const pr = await sendPushToUser(u.user_id, { title: `${SECRETARY_NAME}より`, body: withWeight, url: "/", tag: `checkin:${slot}` });
+          // 朝は「今日のあなたの取扱説明書」から始まるようにする（開いた瞬間にその日の手引きが読める）
+          const goTo = slot === "morning" ? "/shinga?open=akashic" : "/";
+          const pr = await sendPushToUser(u.user_id, { title: `${SECRETARY_NAME}より`, body: withWeight, url: goTo, tag: `checkin:${slot}` });
           pushOk = pr.sent > 0;
         } catch (e: any) { pushErr = String(e?.message ?? e); }
         await supa.from("notifications").insert({

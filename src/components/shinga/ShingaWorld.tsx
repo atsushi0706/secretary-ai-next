@@ -18,6 +18,7 @@ import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
 import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
 import { ShadowGate, ShadowProgress, ShadowCardReveal, BeastReveal, type ShadowSafety } from "./ShadowMirror";
+import { TodayManual } from "./TodayManual";
 import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
@@ -100,11 +101,13 @@ const FACE_SRC: Record<Face, string> = {
 };
 
 export function ShingaWorld({
-  guideName, avatarUrl, initialPlace,
+  guideName, avatarUrl, initialPlace, openMode,
 }: {
   guideName: string;
   avatarUrl: string;
   initialPlace?: PlaceKey;
+  /** 通知やリンクから「このワークで開いてほしい」と指定されたとき */
+  openMode?: ModeKey;
 }) {
   const [view, setView] = useState<"home" | "talk">(initialPlace ? "talk" : "home");
   const [mode, setMode] = useState<ModeKey | null>(null);
@@ -138,6 +141,8 @@ export function ShingaWorld({
   const [afterPicked, setAfterPicked] = useState<number | null>(null);
   // 鍵がかかっているワーク（親アカウントは常に空＝全部使える）
   const [lockedWorks, setLockedWorks] = useState<string[]>([]);
+  // アカシック：開いた最初に「今日のあなたの取扱説明書」を出す
+  const [todayManual, setTodayManual] = useState(false);
   const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
   const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
@@ -350,6 +355,15 @@ export function ShingaWorld({
     });
   }, [messages, typing, choices, widget, partsStep, walkStage, travelStage]);
 
+  // 通知（朝8時）から来たときは、指定のワークをそのまま開く
+  const openedRef = useRef(false);
+  useEffect(() => {
+    if (openedRef.current || !openMode) return;
+    openedRef.current = true;
+    void enter(openMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [openMode]);
+
   // 鍵がかかっているワークを読む（親アカウントには鍵がかからない）
   useEffect(() => {
     fetch("/api/works").then((r) => r.json()).then((d) => {
@@ -519,6 +533,16 @@ export function ShingaWorld({
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (mode === "walk" && m !== "walk") void finishSteps();
     if (!resume && mode && mode !== m) void finishWork(mode, messages);
+    // アカシックは、いきなり選択肢を出さない。まず「今日のあなたの取扱説明書」から始まる。
+    if (m === "akashic" && !resume) {
+      setMode("akashic");
+      setPlace(MODES.akashic.place);
+      setView("talk");
+      setChoices(null); setWidget(null); setEmoPick(null);
+      setMessages([]);
+      setTodayManual(true);
+      return;
+    }
     // 影獣の鏡も、いきなり会話に入らない。まず約束ごとと安全のたしかめ。
     if (m === "shadow" && !resume) {
       setMode("shadow");
@@ -815,7 +839,8 @@ export function ShingaWorld({
     return () => clearTimeout(t);
   }, [bgUrl]);
 
-  const hasPanel = here.panel !== "none";
+  // 「今日の取扱説明書」を読んでいる間は、ゾーンのパネルを重ねない
+  const hasPanel = here.panel !== "none" && !todayManual;
   // パラレルウォークだけ、明るい空の画面にする（暗いと沈むので）
   const bright = view === "talk" && place === "walk";
 
@@ -989,7 +1014,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); maybeAfterCheck(mode); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); setShadowGate(false); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); maybeAfterCheck(mode); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); setShadowGate(false); setTodayManual(false); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 
@@ -997,6 +1022,24 @@ export function ShingaWorld({
             <span className="en">{mode ? MODES[mode].en : here.en}</span>
             <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
           </div>
+
+          {/* アカシック：まず「今日のあなたの取扱説明書」。読んでから流れを選ぶ */}
+          {mode === "akashic" && todayManual && (
+            <TodayManual
+              guideName={guideName} avatarUrl={faceSrc}
+              onPick={(label) => {
+                // 選ばれた周期をそのまま聞く（改めて選び直させない）
+                setTodayManual(false);
+                setMessages([]);
+                void talk(label, false, "akashic", MODES.akashic.place);
+              }}
+              onClose={() => {
+                setTodayManual(false);
+                setMessages([{ role: "assistant", content: "オッケー。気になってること、なんでも聞いて。流れのことでも、それ以外でも。" }]);
+                setFace("smile");
+              }}
+            />
+          )}
 
           {/* 影獣の鏡：まず約束ごとと安全のたしかめ（選んだらワークの会話が始まる） */}
           {mode === "shadow" && shadowGate && (
@@ -1082,7 +1125,7 @@ export function ShingaWorld({
           )}
 
           {/* 会話（メッセージごとにキヨセリンクの顔アイコンを出す） */}
-          <div ref={scrollRef} className="singa-talk" style={partsIntro || shadowGate ? { display: "none" } : undefined}>
+          <div ref={scrollRef} className="singa-talk" style={partsIntro || shadowGate || todayManual ? { display: "none" } : undefined}>
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
               const showDots = m.role === "assistant" && isLast && typing && !m.content;
@@ -1147,7 +1190,7 @@ export function ShingaWorld({
 
           {/* 音声入力バー */}
           {/* 入口（安全のたしかめ）を出している間は、入力欄を出さない（ゲートを飛ばして話し始めない） */}
-          {!shadowGate && !partsGate && <VoiceBar onSend={(t) => talk(t)} disabled={sending} />}
+          {!shadowGate && !partsGate && !todayManual && <VoiceBar onSend={(t) => talk(t)} disabled={sending} />}
 
           {/* その場所のパネル（ゾーンに応じて中身が変わる） */}
           {hasPanel && panelOpen && (

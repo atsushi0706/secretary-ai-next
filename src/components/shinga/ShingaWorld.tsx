@@ -17,7 +17,7 @@ import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
 import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
-import { ShadowGate, ShadowProgress, ShadowCardReveal, type ShadowSafety } from "./ShadowMirror";
+import { ShadowGate, ShadowProgress, ShadowCardReveal, BeastReveal, type ShadowSafety } from "./ShadowMirror";
 import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
@@ -132,6 +132,7 @@ export function ShingaWorld({
   const [shadowStep, setShadowStep] = useState(1);
   const shadowSafetyRef = useRef<ShadowSafety>("normal");
   const shadowPairRef = useRef<ShadowPairId | null>(null);
+  const [beastReveal, setBeastReveal] = useState<ShadowPairId | null>(null);  // 幻獣が現れた演出
   const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
   const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
@@ -514,6 +515,7 @@ export function ShingaWorld({
       setMessages([]);
       shadowPairRef.current = null;
       shadowSafetyRef.current = "normal";
+      setBeastReveal(null);
       setShadowCard(null);
       setShadowStep(1);
       setShadowGate(true);
@@ -671,8 +673,13 @@ export function ShingaWorld({
           const s2 = Number(data?.step);
           if (Number.isFinite(s2)) setShadowStep(Math.max(1, Math.min(9, s2)));
         } else if (name === "shadow_pick") {
-          // 本人が選んだ影。以降の会話とカード発行の軸になる
-          if (data?.pair) shadowPairRef.current = data.pair as ShadowPairId;
+          // AIが対話から特定した幻獣。以降の会話とカード発行の軸になる。
+          // 初回と、見立て直しで別の幻獣に変わったときだけカード演出を出す
+          if (data?.pair) {
+            const next = data.pair as ShadowPairId;
+            if (shadowPairRef.current !== next) setBeastReveal(next);
+            shadowPairRef.current = next;
+          }
         } else if (name === "shadow_card") {
           // 光の回収が完了。カードの演出を出す
           if (data?.card) { setShadowCard(data.card as ShadowCard); setShadowStep(9); }
@@ -950,6 +957,7 @@ export function ShingaWorld({
           {mode === "shadow" && !shadowGate && (
             <ShadowProgress step={shadowStep} safety={shadowSafetyRef.current} />
           )}
+          {beastReveal && !typing && <BeastReveal pairId={beastReveal} onClose={() => setBeastReveal(null)} />}
           {shadowCard && <ShadowCardReveal card={shadowCard} onClose={() => setShadowCard(null)} />}
 
           {/* 内なる子の神殿：まず守り手を選ぶ盤面（選んだらワークの会話が始まる） */}

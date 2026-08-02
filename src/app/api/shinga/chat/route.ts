@@ -63,7 +63,7 @@ export async function POST(req: Request) {
     wallStage: Number.isFinite(Number(body.wallStage)) ? Number(body.wallStage) : null,
     shadowStep: Number.isFinite(Number(body.shadowStep)) ? Number(body.shadowStep) : null,
   };
-  // 影獣の鏡：画面のゲートで選ばれた安全度と、選択ずみの影
+  // ミラーオブワールド：画面のゲートで選ばれた安全度と、選択ずみの幻獣
   const { isShadowPairId, shadowPair } = await import("@/lib/shadow");
   const shadowSafety: "normal" | "boundary" = body.shadowSafety === "boundary" ? "boundary" : "normal";
   const shadowPicked = isShadowPairId(body.shadowPair) ? body.shadowPair : null;
@@ -166,11 +166,11 @@ export async function POST(req: Request) {
           }
           if (mode === "shadow") {
             if (progress.shadowStep) {
-              lines.push(`- 影獣の鏡：いま段階 ${progress.shadowStep}/9（画面に表示中）。同じ質問を二度しない。答えを受け取ったら進める。`);
+              lines.push(`- ミラーオブワールド：いま段階 ${progress.shadowStep}/9（画面に表示中）。同じ質問を二度しない。答えを受け取ったら進める。`);
             }
             if (shadowPicked) {
               const p = shadowPair(shadowPicked);
-              lines.push(`- 選ばれた影：${p.shadow.label}（pair_id: ${p.id}）。光は「${p.light.label}」、奥の力は ${p.core.join("・")}。この見立てを勝手に変えない。`);
+              lines.push(`- 選ばれた幻獣：${p.shadow.label}（pair_id: ${p.id}）。光は「${p.light.label}」、奥の力は ${p.core.join("・")}。この見立てを勝手に変えない。`);
             }
             if (shadowSafety === "boundary") {
               lines.push(`- **境界線優先モード**：継続的な不安がある相手。鏡の問い（4〜7）を出さない。1→2→8→9で進め、記録・距離・相談を優先する。`);
@@ -226,7 +226,7 @@ export async function POST(req: Request) {
             : mode === "parts" && partColor
             ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。**しくみの説明は画面がもう見せたので繰り返さない**。前置きも断り書きも要らない。【1】①の問い（その守り手はどんな感覚か・身体のどこにあるか）だけを、1つ投げかけて）`
             : mode === "shadow"
-            ? `（「影獣の鏡」をいま始める。しくみの説明は画面がもう見せたので繰り返さない。${shadowSafety === "boundary" ? "境界線優先モード：鏡の話はせず、" : ""}【1】の問い（いつ・どこで・何を言われた／されたかを、一つの場面として聞く）だけを、やさしく1つ投げかけて。<shadow_step>1</shadow_step> を付けて）`
+            ? `（「ミラーオブワールド」をいま始める。しくみの説明は画面がもう見せたので繰り返さない。${shadowSafety === "boundary" ? "境界線優先モード：鏡や幻獣の話はせず、" : ""}まず「いま現実で、関係が悪い人・ネックになってる人のことを、好きなように話してみて」とだけ、やさしく誘って。質問攻めにしない。<shadow_step>1</shadow_step> を付けて）`
             : mode
             ? `（「${MODES[mode].label}」の時間を、いま新しく始める。過去の別の話は持ち出さない。短く迎えて、この時間の最初の問いを1つだけ投げかけて。前置きは要らない）`
             : (history.length === 0
@@ -306,7 +306,7 @@ export async function POST(req: Request) {
           ? (guardMatch[1].toLowerCase() as "red" | "blue" | "green" | "yellow")
           : null;
 
-        // 影獣の鏡：段階／選ばれた影／回収の完了
+        // ミラーオブワールド：段階／選ばれた幻獣／回収の完了
         let shadowStep: number | null = null;
         const shStepMatch = full.match(/<shadow_step>\s*([1-9])\s*<\/shadow_step>/);
         if (shStepMatch) shadowStep = Number(shStepMatch[1]);
@@ -480,7 +480,7 @@ ${talked}`,
                 title: pair.light.label,
                 body: card.ownership || `${pair.shadow.short}の影から「${pair.light.short}」の光を取り戻した。`,
                 rarity: "gold",
-                source: `影獣の鏡（${pair.shadow.short}→${pair.light.short}）`,
+                source: `ミラーオブワールド（${pair.shadow.short}→${pair.light.short}）`,
               });
             } catch { /* カードが出せなくても続ける */ }
             send("shadow_card", { card });
@@ -549,7 +549,7 @@ ${talked}`,
             }
           } catch { /* カードが出せなくても会話は続ける */ }
         }
-        // 影獣の鏡：いま続いている暴力・つきまといの話が出たら、内省ではなく窓口を添える
+        // ミラーオブワールド：いま続いている暴力・つきまといの話が出たら、内省ではなく窓口を添える
         if (!greet && mode === "shadow" && /殴られ|暴力|DV|つきまと|ストーカー|脅され|監視され|閉じ込め/.test(text)) {
           send("care", {
             text: [

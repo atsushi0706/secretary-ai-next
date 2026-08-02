@@ -4530,3 +4530,19 @@ body:has(.realverse-bg) { background: transparent; }
 .sm-row b { flex-shrink: 0; color: var(--singa-gold); font-weight: 700; }
 .sm-row span { color: var(--singa-ink); }
 .sm-card-close-note { font-size: .7rem; line-height: 1.8; color: var(--singa-ink-soft); margin-bottom: 14px; }
+
+/* ── ミラーオブワールド：幻獣が現れた演出 ── */
+.sm-card.is-beast h3 { margin-top: 10px; }
+.sm-beast-emblem { display: grid; place-items: center; margin: 6px 0 2px; animation: beast-in .7s cubic-bezier(.2,.8,.3,1) both; }
+@keyframes beast-in {
+  0% { opacity: 0; transform: scale(.6); filter: blur(8px); }
+  60% { opacity: 1; transform: scale(1.06); filter: blur(0); }
+  100% { transform: scale(1); }
+}
+.sm-beast-desc { font-size: .78rem; line-height: 1.8; color: var(--singa-ink); margin-bottom: 10px; }
+.sm-beast-note {
+  font-size: .74rem; line-height: 1.95; color: var(--singa-ink-soft);
+  padding: 11px 13px; border-radius: 12px; margin-bottom: 14px;
+  background: rgba(255,255,255,.05); border: 1px solid color-mix(in srgb, var(--sc) 35%, transparent);
+}
+.sm-beast-note b { color: var(--singa-gold); }

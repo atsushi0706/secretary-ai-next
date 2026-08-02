@@ -325,9 +325,9 @@ export const MODES: Record<ModeKey, Mode> = {
   },
   shadow: {
     key: "shadow",
-    label: "影獣の鏡",
-    en: "Mirror of Shadows",
-    desc: "現実に現れた嫌な人は、預けたままの光を映す鏡。影獣を見つけて、光を取り戻す。",
+    label: "ミラーオブワールド",
+    en: "Mirror of World",
+    desc: "現実で関係が悪い人・ネックになっている人の話から、内側に潜む幻獣を見つけて、光を取り戻す。",
     place: "deep",
     tier: "sub",
     flow: SHADOW_FLOW,

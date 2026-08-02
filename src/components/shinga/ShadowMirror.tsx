@@ -68,32 +68,18 @@ export function ShadowGate({ onStart, onLeave }: {
   return (
     <div className="sm-gate">
       <div className="sm-gate-head">
-        <h2>影獣の鏡</h2>
+        <h2>ミラーオブワールド</h2>
         <p className="sm-lead">
-          現実に、嫌な人が現れた。<br />
-          ——その人に強く反応してしまうのは、きみの中の<b>まだ認めていない光</b>が、<br />
-          歪んだ影の姿で見えているからかもしれない。
+          いま現実で、関係が悪い人。ネックになっている人。<br />
+          ——その人のことを、まず<b>好きなように話す</b>ところから始めよう。<br />
+          聴いているうちに、そこに潜むものが見えてくる。<br />
+          それは、きみの内側の何かが<b>幻獣の姿</b>で現れているのかもしれない。
         </p>
-        <div className="sm-howto">
-          <div className="sh-row"><span className="sh-n">1</span><span>その人との<b>一つの場面</b>を思い出す（人物まるごとは扱わない）</span></div>
-          <div className="sh-row"><span className="sh-n">2</span><span>そこに現れた<b>影獣</b>を、8つの影から見つける</span></div>
-          <div className="sh-row"><span className="sh-n">3</span><span>影の奥にある<b>光の力</b>を、自分の中に取り戻す</span></div>
-          <div className="sh-row"><span className="sh-n">4</span><span>相手の責任は相手に返して、<b>境界線と一歩</b>を決める</span></div>
-        </div>
         <div className="sm-vow">
           <b>先に、約束ごと。</b><br />
           相手がしたことの責任は、相手にある。きみが引き寄せたんじゃない。<br />
           許すことも、感謝することも、ゴールじゃない。取り戻すのは<b>きみの選択権</b>。
         </div>
-      </div>
-
-      <div className="sm-ring">
-        {SHADOW_PAIRS.map((p) => (
-          <div key={p.id} className="sm-slot" style={{ ["--sc" as any]: p.hue }}>
-            <ShadowEmblem pair={p} lit={false} size={54} />
-            <span className="sm-slot-name">{p.shadow.short}</span>
-          </div>
-        ))}
       </div>
 
       <div className="sm-safety">
@@ -126,6 +112,32 @@ export function ShadowProgress({ step, safety }: { step: number; safety: ShadowS
           </span>
         );
       })}
+    </div>
+  );
+}
+
+/* ── 幻獣が現れた（AIが対話から特定した瞬間のカード） ── */
+export function BeastReveal({ pairId, onClose }: { pairId: ShadowPair["id"]; onClose: () => void }) {
+  const pair = SHADOW_PAIRS.find((p) => p.id === pairId) ?? SHADOW_PAIRS[0];
+  return (
+    <div className="sm-reveal" onClick={onClose}>
+      <div className="sm-card is-beast" style={{ ["--sc" as any]: pair.hue }} onClick={(e) => e.stopPropagation()}>
+        <div className="sm-card-kicker">A BEAST APPEARS</div>
+        <div className="sm-beast-emblem">
+          <ShadowEmblem pair={pair} lit={false} size={110} />
+        </div>
+        <h3>{pair.shadow.label}</h3>
+        <p className="sm-beast-desc">{pair.shadow.desc}</p>
+        <p className="sm-beast-note">
+          それは、きみの内側の何か——<b>{pair.core.join("・")}</b>の力が、<br />
+          幻獣の姿でその人に現れているのかもしれない。<br />
+          この幻獣の奥には「<b>{pair.light.short}</b>」の光が眠っている。
+        </p>
+        <button className="sm-btn" onClick={onClose}>この幻獣と向き合う</button>
+        <p className="sm-card-close-note" style={{ marginTop: 10, marginBottom: 0 }}>
+          違う感じがしたら、閉じてそのまま伝えて。見立て直せるよ。
+        </p>
+      </div>
     </div>
   );
 }

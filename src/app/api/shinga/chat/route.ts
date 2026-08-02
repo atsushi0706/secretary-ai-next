@@ -374,9 +374,19 @@ export async function POST(req: Request) {
           }
         }
 
-        // 「クエストに置いた」と言ったのにタグが無い場合は、発言から拾って本当に置く。
+        // 「クエストに置いた」と**言い切った**のにタグが無い場合だけ、発言から拾って本当に置く。
         // （AIの約束を実体にする。これが無いと信頼が一番傷つく）
-        const claimedQuest = /(クエスト|一手).{0,14}(置|入れ|追加|登録)/.test(full) && !questMatch;
+        //
+        // ※ ここは以前、「クエストに置いとく？」という**問いかけ**にもマッチしていた。
+        //   パラレルウォークは「それ、クエストに置いとく？」と聞く場所なので、
+        //   本人が答える前に勝手に登録されてしまっていた。問いかけは対象外にする。
+        const declaredQuest = clean0(full).split(/[。！\n]/).some((sentence) => {
+          const s = sentence.trim();
+          if (!s || /[？?]$/.test(s)) return false;                    // 問いかけは実行しない
+          if (!/(クエスト|一手)/.test(s)) return false;
+          return /(置いた|置いとく|置いといた|置いておく|置いておいた|入れた|入れとく|入れといた|入れておく|入れておいた|追加した|追加しておく|登録した|登録しておく)/.test(s);
+        });
+        const claimedQuest = declaredQuest && !questMatch;
         if (claimedQuest && !greet) {
           try {
             const { complete } = await import("@/lib/ai");

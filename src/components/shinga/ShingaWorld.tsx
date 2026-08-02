@@ -310,6 +310,7 @@ export function ShingaWorld({
       if (new URLSearchParams(window.location.search).get("rest") !== "1") return;
     } catch { return; }
     setPhase("done");
+    resetWorkState();
     setView("talk");
     setMode("peak");
     setPlace("peak");
@@ -455,13 +456,30 @@ export function ShingaWorld({
     setTimeout(() => setMoving(false), 1100);
   }, []);
 
+  /**
+   * 別の場所へ移るときに、前のワークの持ち物を全部たたむ。
+   *
+   * ここが1か所にまとまっていないと、消し忘れが必ずどこかで起きる。
+   * 実際に「パラレルウォークの画面にじぶんワークの進行帯が出たまま」になっていた。
+   * 入口（enter / enterFree / enterCustom / AIの<move>）は必ずここを通す。
+   */
+  function resetWorkState() {
+    runWorkRef.current = null; setRunWork(null); setDrawStep(null);
+    setChoices(null); setWidget(null); setEmoPick(null);
+    setPartsGate(false); setPartsIntro(null);
+    setShadowGate(false); setBeastReveal(null); setShadowCard(null);
+    shadowPairRef.current = null; shadowSafetyRef.current = "normal";
+    setTodayManual(false);
+    childShownRef.current = false;
+  }
+
   /** じぶんワークを始める */
   function enterCustom(w: CustomWork) {
     if (mode) void finishWork(mode, messages);
+    resetWorkState();
     setMode(null);
     setPlace("peak");
     setView("talk");
-    setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null);
     setMessages([]);
     runWorkRef.current = w; setRunWork(w);
     customIdxRef.current = 0; setCustomIdx(0);
@@ -529,7 +547,7 @@ export function ShingaWorld({
 
   async function enter(m: ModeKey, resume = false) {
     if (lockedWorks.includes(m)) return;   // 鍵がかかっている扉は開かない
-    runWorkRef.current = null; setRunWork(null); setDrawStep(null);
+    resetWorkState();
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (mode === "walk" && m !== "walk") void finishSteps();
     if (!resume && mode && mode !== m) void finishWork(mode, messages);
@@ -587,9 +605,12 @@ export function ShingaWorld({
     }
     emotionDoneRef.current = false; // 新しいセッション＝気分メーター・呼吸は一度だけ許可
     breathDoneRef.current = false;
-    if (m === "breakthrough" && !resume) setWallStage(1); // 扉は固く閉じた状態から始める
-    if (m === "travel" && !resume) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
-    if (m === "walk" && !resume) setWalkStage(1);         // 歩きは門のほとりから始まる
+    // 別のワークから移ってきたら、resume でも数字は振り出しに戻す
+    //（選択肢で「パラレルウォークへ」と移ったとき、前回の地点が残っていた）
+    const fresh = !resume || m !== mode;
+    if (m === "breakthrough" && fresh) setWallStage(1); // 扉は固く閉じた状態から始める
+    if (m === "travel" && fresh) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
+    if (m === "walk" && fresh) setWalkStage(1);         // 歩きは門のほとりから始まる
     if (!resume) setMessages([]);
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
@@ -616,11 +637,10 @@ export function ShingaWorld({
 
   // ホームでそのまま話しかけた → 行き先を決めず、自由に会話へ
   async function enterFree(text: string) {
+    resetWorkState();   // ← これが無いと、話しかけた言葉がじぶんワークの続きに吸われる
     setMode(null);
     setPlace("peak");
     setView("talk");
-    setChoices(null);
-    setWidget(null); setEmoPick(null);   // パネル・メーターの持ち込み防止
     setMessages([{ role: "assistant", content: greetLine() }]);
     await talk(text, false, null, "peak");
   }
@@ -728,6 +748,8 @@ export function ShingaWorld({
           setPartsStep(8);
           setGuardianEv(ev);
         } else if (name === "move") {
+          // AIが場所を動かすときも、前のワークの持ち物は置いていく（進行帯の混入を防ぐ）
+          resetWorkState();
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
         } else if (name === "quests") {
@@ -787,8 +809,14 @@ export function ShingaWorld({
         body: JSON.stringify({ summary: transcript.slice(0, 2000) }),
       }).catch(() => {});
     }
+    // 「終わる」で閉じたときも、歩数と発信の素材はちゃんと残す。
+    // ここが抜けていて、744歩あるのに終わった瞬間に消えていた
+    //（歩数の保存だけ。終わる場面で「◯歩あるいたね」と話しかけ直さない）。
+    void stepRef.current?.finish().catch(() => null);
+    void finishWork("walk", messages);
     maybeAfterCheck("walk");
-    setView("home"); setChoices(null); setMode(null); setWidget(null); setEmoPick(null);
+    resetWorkState();
+    setView("home"); setMode(null);
   }
 
   /**
@@ -796,8 +824,10 @@ export function ShingaWorld({
    * - ピークステートは除く（あそこは入口でチェックする場所）
    * - ちゃんとワークをした（本人の発言が2つ以上ある）ときだけ。開いてすぐ閉じた人には出さない
    */
+  const NO_AFTER_CHECK: ModeKey[] = ["peak", "akashic"];
   function maybeAfterCheck(m: ModeKey | null) {
-    if (!m || m === "peak") return;
+    // ピークステートは入口でチェックする場所。アカシックは"読む"場所でワークではない。
+    if (!m || NO_AFTER_CHECK.includes(m)) return;
     const mine = messages.filter((x) => x.role === "user" && x.content.trim()).length;
     if (mine < 2) return;
     setAfterPicked(null);
@@ -1080,8 +1110,8 @@ export function ShingaWorld({
           {/* ワーク中の進行帯：守り手→内なる子→才能 の関係を常に見せておく */}
           {mode === "parts" && !partsGate && !partsIntro && <PartsProgress color={partColor} step={partsStep} />}
 
-          {/* じぶんワーク：いま何歩目か */}
-          {runWork && (
+          {/* じぶんワーク：いま何歩目か（じぶんワーク中だけ。mode があるときは別のワーク） */}
+          {runWork && !mode && (
             <div className="travel-alt">
               <span className="ta-label">{runWork.emoji} {runWork.name}</span>
               <span className="ta-track">

@@ -306,3 +306,34 @@ create table if not exists public.shadow_encounters (
 create index if not exists shadow_encounters_user_idx on public.shadow_encounters (user_id, created_at desc);
 
 alter table public.shadow_encounters enable row level security;
+
+-- ═══ ⑧ 状態チェックの3点セット＋レポート履歴＋ワークの鍵 ═══
+
+-- どんな一日だったか（夜のチェック。8種類・1日1件で上書き）
+create table if not exists public.day_marks (
+  user_id     text not null,
+  date        text not null,              -- JSTの日付 YYYY-MM-DD
+  kind        text not null,              -- full/burn/calm/wave/fog/spark/hold/empty
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, date)
+);
+alter table public.day_marks enable row level security;
+
+-- 「この頃のわたし」レポートの履歴（1日1件で上書き）
+create table if not exists public.reports (
+  user_id     text not null,
+  date        text not null,
+  report      text not null,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, date)
+);
+alter table public.reports enable row level security;
+
+-- アプリ全体の設定（ワークの鍵など）
+create table if not exists public.app_config (
+  key         text primary key,
+  value       jsonb not null,
+  updated_at  timestamptz not null default now()
+);
+alter table public.app_config enable row level security;

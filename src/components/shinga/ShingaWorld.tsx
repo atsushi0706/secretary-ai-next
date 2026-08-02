@@ -133,6 +133,11 @@ export function ShingaWorld({
   const shadowSafetyRef = useRef<ShadowSafety>("normal");
   const shadowPairRef = useRef<ShadowPairId | null>(null);
   const [beastReveal, setBeastReveal] = useState<ShadowPairId | null>(null);  // 幻獣が現れた演出
+  // ワークを終えたあとの状態チェック（ピークステート以外。スキップ可）
+  const [afterCheck, setAfterCheck] = useState<ModeKey | null>(null);
+  const [afterPicked, setAfterPicked] = useState<number | null>(null);
+  // 鍵がかかっているワーク（親アカウントは常に空＝全部使える）
+  const [lockedWorks, setLockedWorks] = useState<string[]>([]);
   const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
   const [emoPick, setEmoPick] = useState<number | null>(null);
   const [face, setFace] = useState<Face>("neutral");
@@ -345,6 +350,13 @@ export function ShingaWorld({
     });
   }, [messages, typing, choices, widget, partsStep, walkStage, travelStage]);
 
+  // 鍵がかかっているワークを読む（親アカウントには鍵がかからない）
+  useEffect(() => {
+    fetch("/api/works").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d?.locked)) setLockedWorks(d.locked.map(String));
+    }).catch(() => {});
+  }, []);
+
   // ウォールブレイクに入ったら、扉の5段階を先読みしておく（開くとき一瞬のチラつき防止）
   useEffect(() => {
     if (mode !== "breakthrough") return;
@@ -502,6 +514,7 @@ export function ShingaWorld({
   }
 
   async function enter(m: ModeKey, resume = false) {
+    if (lockedWorks.includes(m)) return;   // 鍵がかかっている扉は開かない
     runWorkRef.current = null; setRunWork(null); setDrawStep(null);
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (mode === "walk" && m !== "walk") void finishSteps();
@@ -750,7 +763,31 @@ export function ShingaWorld({
         body: JSON.stringify({ summary: transcript.slice(0, 2000) }),
       }).catch(() => {});
     }
+    maybeAfterCheck("walk");
     setView("home"); setChoices(null); setMode(null); setWidget(null); setEmoPick(null);
+  }
+
+  /**
+   * ワークのあとの状態チェックを出すかどうか。
+   * - ピークステートは除く（あそこは入口でチェックする場所）
+   * - ちゃんとワークをした（本人の発言が2つ以上ある）ときだけ。開いてすぐ閉じた人には出さない
+   */
+  function maybeAfterCheck(m: ModeKey | null) {
+    if (!m || m === "peak") return;
+    const mine = messages.filter((x) => x.role === "user" && x.content.trim()).length;
+    if (mine < 2) return;
+    setAfterPicked(null);
+    setAfterCheck(m);
+  }
+
+  // ワーク後チェック：選んだ → 記録して閉じる（何のあとかも残す＝経過で見える）
+  function pickAfterCheck(n: number) {
+    setAfterPicked(n);
+    fetch("/api/emotions", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ level: n, note: `${afterCheck ? MODES[afterCheck].label : "ワーク"}のあと` }),
+    }).catch(() => {});
+    setTimeout(() => setAfterCheck(null), 900);
   }
 
   // 呼吸トレーニングが終わった → AIに知らせる
@@ -842,6 +879,24 @@ export function ShingaWorld({
       {/* 守り手が解き放たれた瞬間：ガーディアンへの進化演出 */}
       {guardianEv && <GuardianReveal ev={guardianEv} onClose={() => setGuardianEv(null)} />}
 
+      {/* ワークを終えたあとの状態チェック（ピークステート以外・スキップ可）。
+          ピーク前 → ワーク後 → 夜の振り返り、の3点で経過が見えるようになる */}
+      {afterCheck && (
+        <div className="ac-overlay" onClick={() => setAfterCheck(null)}>
+          <div className="ac-card" onClick={(e) => e.stopPropagation()}>
+            {afterPicked == null ? (
+              <>
+                <div className="ac-title">おつかれさま。{MODES[afterCheck].label}のあと、いまの状態は？</div>
+                <EmotionMeter value={null} onChange={pickAfterCheck} />
+                <button className="ac-skip" onClick={() => setAfterCheck(null)}>いまはしない</button>
+              </>
+            ) : (
+              <div className="ac-done">✓ 記録したよ</div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 会話で主人公レベルが動いたときの、そっと出るお知らせ */}
       {heroToast && (
         <div className="hero-toast" onClick={() => { setHeroToast(null); setHeroOpen(true); }}>
@@ -925,6 +980,7 @@ export function ShingaWorld({
           onManual={() => setManualOpen(true)}
           onWeight={() => setWeightOpen(true)}
           customWorks={customWorks}
+          lockedWorks={lockedWorks}
           onRunCustom={(w) => enterCustom(w)}
           onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
           onMake={() => { setEditWork(null); setMakerOpen(true); }}
@@ -933,7 +989,7 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); setShadowGate(false); skipZoneIntro(); }}>
+          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); maybeAfterCheck(mode); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); setShadowGate(false); skipZoneIntro(); }}>
             ← 地図にもどる
           </button>
 
@@ -1320,7 +1376,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending,
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [],
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1340,6 +1396,8 @@ function Home({
   onManual?: () => void;
   /** からだの記録（毎朝の体重・体脂肪率） */
   onWeight?: () => void;
+  /** 鍵がかかっているワーク（親アカウントは常に空） */
+  lockedWorks?: string[];
   customWorks: CustomWork[];
   onRunCustom: (w: CustomWork) => void;
   onEditCustom: (w: CustomWork) => void;
@@ -1391,19 +1449,23 @@ function Home({
       <div className="iw-doors">
         {DOORS.map((d) => {
           const m = MODES[d.key];
+          const locked = lockedWorks.includes(d.key);
           return (
-            <button key={d.key} className={`iw-door ${d.key === "peak" ? "is-start" : ""}`} onClick={() => onPick(d.key)}>
-              {d.key === "peak" && <span className="tag">まずここから</span>}
-              <span className="emoji">{d.emoji}</span>
+            <button key={d.key} className={`iw-door ${d.key === "peak" ? "is-start" : ""} ${locked ? "is-doorlocked" : ""}`}
+              disabled={locked} onClick={() => !locked && onPick(d.key)}>
+              {d.key === "peak" && !locked && <span className="tag">まずここから</span>}
+              <span className="emoji">{locked ? "🔒" : d.emoji}</span>
               <span className="ja">{m.label}</span>
             </button>
           );
         })}
         {DOORS_SUB.map((d) => {
           const m = MODES[d.key];
+          const locked = lockedWorks.includes(d.key);
           return (
-            <button key={d.key} className="iw-door is-sub" onClick={() => onPick(d.key)}>
-              <span className="emoji">{d.emoji}</span>
+            <button key={d.key} className={`iw-door is-sub ${locked ? "is-doorlocked" : ""}`}
+              disabled={locked} onClick={() => !locked && onPick(d.key)}>
+              <span className="emoji">{locked ? "🔒" : d.emoji}</span>
               <span className="ja">{m.label}</span>
             </button>
           );

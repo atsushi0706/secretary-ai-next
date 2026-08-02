@@ -32,6 +32,7 @@ export function ReportScreen({ guideName, avatarUrl, onBack }: { guideName: stri
   const [glance, setGlance] = useState<Glance | null>(null);
   const [empty, setEmpty] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [past, setPast] = useState<{ date: string; report: string }[]>([]);
 
   useEffect(() => {
     fetch("/api/report")
@@ -44,6 +45,11 @@ export function ReportScreen({ guideName, avatarUrl, onBack }: { guideName: stri
       })
       .catch((e) => setErr(String(e?.message ?? e)))
       .finally(() => setLoading(false));
+    // これまでのレポート（保存ずみの履歴。無ければ何も出さない）
+    fetch("/api/report?list=1")
+      .then((r) => r.json())
+      .then((d) => setPast((d.reports ?? []) as { date: string; report: string }[]))
+      .catch(() => {});
   }, []);
 
   return (
@@ -92,6 +98,19 @@ export function ReportScreen({ guideName, avatarUrl, onBack }: { guideName: stri
               </div>
             )}
           </>
+        )}
+
+        {/* これまでのレポート（今日ぶんは上に出ているので除く） */}
+        {past.filter((p) => p.report !== report).length > 0 && (
+          <details className="rep-past">
+            <summary>これまでのレポート（{past.length}件）</summary>
+            {past.map((p) => (
+              <div key={p.date} className="rep-past-item">
+                <div className="d">{p.date}</div>
+                <p>{p.report}</p>
+              </div>
+            ))}
+          </details>
         )}
       </div>
     </div>

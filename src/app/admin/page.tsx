@@ -11,6 +11,20 @@ type AdminUser = {
 };
 type Overview = { totalUsers: number; users: AdminUser[]; generatedAt: string };
 
+// ワークの鍵に出す一覧（key は ModeKey と同じ）
+const LOCKABLE: { key: string; label: string }[] = [
+  { key: "peak", label: "ピークステート" },
+  { key: "walk", label: "パラレルウォーク" },
+  { key: "akashic", label: "アカシックレコーダー" },
+  { key: "higher", label: "ハイヤークエスト" },
+  { key: "deep", label: "ディープアイデンティティ" },
+  { key: "travel", label: "パラレルトラベル" },
+  { key: "breakthrough", label: "ウォールブレイク" },
+  { key: "parts", label: "内なる子の神殿" },
+  { key: "shadow", label: "ミラーオブワールド" },
+  { key: "balance", label: "真ん中に戻す" },
+];
+
 function fmtDate(s: string | null): string {
   if (!s) return "—";
   return s.length > 10 ? s.slice(0, 10) : s;
@@ -22,6 +36,27 @@ export default function AdminPage() {
   const [errMsg, setErrMsg] = useState("");
   const [busy, setBusy] = useState<string>("");
   const [reports, setReports] = useState<Record<string, { loading?: boolean; text?: string; err?: string }>>({});
+  // ワークの鍵（全ユーザー共通。親アカウント＝管理者には効かない）
+  const [locked, setLocked] = useState<string[]>([]);
+  const [lockMsg, setLockMsg] = useState("");
+  const [lockBusy, setLockBusy] = useState(false);
+
+  async function toggleLock(key: string) {
+    if (lockBusy) return;
+    const next = locked.includes(key) ? locked.filter((k) => k !== key) : [...locked, key];
+    setLocked(next); setLockBusy(true); setLockMsg("");
+    try {
+      const r = await fetch("/api/admin/locks", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ locked: next }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setLockMsg(d.error || `HTTP ${r.status}`); return; }
+      setLockMsg("保存した");
+      setTimeout(() => setLockMsg(""), 1800);
+    } catch (e: any) { setLockMsg(String(e?.message ?? e)); }
+    finally { setLockBusy(false); }
+  }
 
   async function genReport(u: AdminUser) {
     setReports((p) => ({ ...p, [u.userId]: { loading: true } }));
@@ -53,7 +88,12 @@ export default function AdminPage() {
       setErrMsg(String(e?.message ?? e)); setStatus("error");
     }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    fetch("/api/admin/locks").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d?.locked)) setLocked(d.locked.map(String));
+    }).catch(() => {});
+  }, []);
 
   async function act(action: "disable-notify" | "delete", u: AdminUser) {
     if (action === "delete") {
@@ -110,6 +150,26 @@ export default function AdminPage() {
           <button onClick={load} className="text-xs border rounded-lg px-3 py-1.5">↻ 更新</button>
           <Link href="/" className="text-xs text-purple-700 underline">← ホーム</Link>
         </div>
+      </div>
+
+      {/* ワークの鍵：チェックを付けたワークは、管理者以外は開けなくなる */}
+      <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="text-sm font-bold">🔑 ワークの鍵（親アカウント以外に効く）</div>
+          <span className="text-xs text-gray-500">{lockMsg || (locked.length ? `${locked.length}個に施錠中` : "全部ひらいている")}</span>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {LOCKABLE.map((w) => {
+            const on = locked.includes(w.key);
+            return (
+              <button key={w.key} onClick={() => void toggleLock(w.key)} disabled={lockBusy}
+                className={`text-xs rounded-full px-3 py-1.5 border ${on ? "bg-gray-800 text-white border-gray-800" : "bg-white text-gray-600 border-gray-300"}`}>
+                {on ? "🔒" : "🔓"} {w.label}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-xs text-gray-500 mt-2">🔒にしたワークは、ほかのユーザーの地図で鍵つきになり開けません。あなた（管理者）はいつでも全部使えます。</p>
       </div>
 
       <div className="flex gap-3 mb-4 text-sm">

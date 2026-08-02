@@ -14,16 +14,27 @@ import {
 } from "@/lib/shinga";
 import { getUserSettings, logError } from "@/lib/supabase";
 import { jstDateStr } from "@/lib/google";
+import { saveReport, listReports } from "@/lib/report-store";
+
+// AI生成が長引いてもレポートを届けきる（途中で関数が切られると「出てこない」になる）
+export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 function daysAgo(iso: string): number {
   const d = new Date(iso).getTime();
   return Math.floor((Date.now() - d) / 86400000);
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
+
+  // これまでのレポート（保存ずみの履歴）だけを返すモード
+  if (new URL(req.url).searchParams.get("list") === "1") {
+    const past = await listReports(userId).catch(() => []);
+    return NextResponse.json({ reports: past });
+  }
 
   try {
     const settings: any = await getUserSettings(userId).catch(() => null);
@@ -100,11 +111,26 @@ export async function GET() {
 # ${who}の記録
 ${material}`;
 
-    const report = await complete({ userId, prompt, maxTokens: 1600, temperature: 0.8 });
+    // AIが失敗しても、数字のサインだけのレポートは必ず返す（「出てこない」を無くす）
+    let report = "";
+    try {
+      report = String((await complete({ userId, prompt, maxTokens: 1600, temperature: 0.8 })) ?? "").trim();
+    } catch (e) {
+      await logError(userId, "/api/report(ai)", e).catch(() => {});
+    }
+    if (!report) {
+      report = [
+        "（今日はAIの声が届かなかったから、記録の数字だけ置いておくね）",
+        ...signals.map((s) => `・${s}`),
+      ].join("\n");
+    }
+
+    // 1日1件で残す（これまでのレポートとして振り返れるように）
+    try { await saveReport(userId, report); } catch { /* テーブルが無くても表示は続ける */ }
 
     return NextResponse.json({
       empty: false,
-      report: String(report ?? "").trim(),
+      report,
       glance: {
         walkCount7,
         emotionTrend: trend,

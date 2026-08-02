@@ -4546,3 +4546,84 @@ body:has(.realverse-bg) { background: transparent; }
   background: rgba(255,255,255,.05); border: 1px solid color-mix(in srgb, var(--sc) 35%, transparent);
 }
 .sm-beast-note b { color: var(--singa-gold); }
+
+/* ══════════════════════════════════════════════════════════
+   状態チェックの3点セット（ピーク前 → ワーク後 → 夜）
+   ══════════════════════════════════════════════════════════ */
+
+/* ── ワーク後の状態チェック（軽いオーバーレイ・スキップ可） ── */
+.ac-overlay {
+  position: fixed; inset: 0; z-index: 58; display: grid; place-items: center; padding: 18px;
+  background: rgba(6,4,10,.6); backdrop-filter: blur(3px);
+  animation: burst-in .3s ease both;
+}
+.ac-card {
+  width: min(460px, 94vw); padding: 18px 16px 14px; border-radius: 18px; text-align: center;
+  background: linear-gradient(170deg, rgba(34,28,46,.98), rgba(14,10,20,.99));
+  border: 1px solid rgba(238,214,155,.32);
+  box-shadow: 0 16px 50px rgba(0,0,0,.55);
+}
+.ac-title { font-size: .84rem; line-height: 1.8; color: var(--singa-ink); margin-bottom: 12px; }
+.ac-skip {
+  margin-top: 10px; padding: 9px 18px; border-radius: 11px; font-size: .74rem;
+  color: var(--singa-ink-soft); background: transparent; border: 1px dashed rgba(255,255,255,.25);
+}
+.ac-skip:hover { color: var(--singa-gold); border-color: rgba(238,214,155,.4); }
+.ac-done { padding: 22px 0 14px; font-size: .95rem; font-weight: 700; color: #8fd0a0; animation: burst-in .35s ease both; }
+
+/* ── 夜：どんな一日だった？（8種類） ── */
+.dk-sec { margin: 6px 0 14px; }
+.dk-q { font-size: .8rem; color: var(--singa-gold); margin-bottom: 9px; letter-spacing: .04em; }
+.dk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+@media (max-width: 480px) { .dk-grid { grid-template-columns: repeat(2, 1fr); } }
+.dk-chip {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px 8px; border-radius: 13px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+  transition: transform .14s ease, border-color .14s ease, background .14s ease;
+}
+.dk-chip:hover { transform: translateY(-2px); border-color: rgba(238,214,155,.4); }
+.dk-chip.on {
+  background: rgba(238,214,155,.14); border-color: var(--singa-gold);
+  box-shadow: 0 6px 18px rgba(201,165,94,.25);
+}
+.dk-chip .e { font-size: 1.25rem; }
+.dk-chip .l { font-size: .7rem; font-weight: 700; color: var(--singa-ink); }
+.dk-chip .h { font-size: .56rem; color: var(--singa-ink-soft); }
+
+/* ── 今日のチェックの経過（タイムライン） ── */
+.dk-timeline {
+  margin: 4px 0 12px; padding: 11px 13px; border-radius: 13px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1);
+  display: flex; flex-direction: column; gap: 7px;
+}
+.dk-tl-title { font-size: .66rem; color: var(--singa-gold); letter-spacing: .08em; margin-bottom: 2px; }
+.dk-tl-row { display: flex; align-items: center; gap: 8px; font-size: .74rem; }
+.dk-tl-row .t { color: var(--singa-ink-soft); font-variant-numeric: tabular-nums; width: 42px; flex-shrink: 0; }
+.dk-tl-row .dot { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+.dk-tl-row .v { color: var(--singa-ink); font-weight: 700; }
+.dk-tl-row .n { font-size: .64rem; color: var(--singa-ink-soft); margin-left: auto; text-align: right; }
+
+/* ── この頃の一日たち（7日ぶんの並び） ── */
+.dk-week { margin-top: 14px; }
+.dk-week-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+.dk-day {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 7px 9px; border-radius: 11px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.1);
+}
+.dk-day .e { font-size: 1.05rem; }
+.dk-day .d { font-size: .56rem; color: var(--singa-ink-soft); }
+
+/* ── これまでのレポート ── */
+.rep-past { margin-top: 16px; }
+.rep-past summary { font-size: .76rem; color: var(--singa-gold); cursor: pointer; padding: 8px 0; }
+.rep-past-item {
+  margin-top: 9px; padding: 11px 13px; border-radius: 13px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.1);
+}
+.rep-past-item .d { font-size: .64rem; color: var(--singa-gold); margin-bottom: 5px; }
+.rep-past-item p { font-size: .78rem; line-height: 1.95; color: var(--singa-ink); white-space: pre-wrap; }
+
+/* ── 鍵のかかった扉 ── */
+.iw-door.is-doorlocked { opacity: .45; filter: grayscale(.6); cursor: not-allowed; }

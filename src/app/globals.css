@@ -4627,3 +4627,31 @@ body:has(.realverse-bg) { background: transparent; }
 
 /* ── 鍵のかかった扉 ── */
 .iw-door.is-doorlocked { opacity: .45; filter: grayscale(.6); cursor: not-allowed; }
+
+/* ══════════════════════════════════════════════════════════
+   呼吸ガイド：図が見えなかったのを直す
+   ══════════════════════════════════════════════════════════ */
+
+/* カウントが inset:0 で図の全面に広がり、そこに backdrop-filter が効いていたため、
+   図ぜんぶが暗い円でぼかされて読めなくなっていた。カウントは右下の小さなバッジにする。 */
+.breath-count {
+  position: absolute;
+  inset: auto 10px 10px auto;
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 2.3em; height: 2.3em; padding: 0 11px;
+  font-size: 1.15rem; font-weight: 800; color: #fff;
+  border-radius: 999px;
+  background: rgba(14,11,18,.75) !important;
+  border: 1px solid rgba(238,214,155,.45);
+  backdrop-filter: none;            /* 図をぼかさない */
+  text-shadow: 0 1px 6px rgba(0,0,0,.8);
+}
+
+/* 図には「動きの流れ」と「ポイント」の文字が入っている。240pxだと潰れて読めないので、
+   読める大きさで見せる（横幅いっぱい・高さは画面の半分まで）。 */
+.breath-orb-wrap { width: 100%; }
+.breath-img {
+  width: 100%; max-width: 560px;
+  max-height: min(48vh, 430px);
+  background: rgba(255,255,255,.03);
+}

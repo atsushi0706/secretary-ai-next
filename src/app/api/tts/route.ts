@@ -18,6 +18,7 @@
  * セリフはほぼ固定なので、画面側がブラウザのキャッシュに貯める。生成は初回だけ。
  */
 import { auth } from "@/auth";
+import { toYomi } from "@/lib/yomi";
 
 // 設定を変えたら即反映したいので、固めない
 export const dynamic = "force-dynamic";
@@ -265,8 +266,11 @@ export async function POST(req: Request) {
   if (!userId) return new Response(JSON.stringify({ error: "unauthenticated" }), { status: 401 });
 
   const body = await req.json().catch(() => ({}));
-  const text = String(body.text ?? "").trim().slice(0, 500);
-  if (!text) return new Response(JSON.stringify({ error: "empty" }), { status: 400 });
+  const raw = String(body.text ?? "").trim().slice(0, 500);
+  if (!raw) return new Response(JSON.stringify({ error: "empty" }), { status: 400 });
+  // 耳に届く形に直してから合成する（「1回目」→「いっかいめ」など）。
+  // 合成側では促音・撥音の変化を直せないので、ここでかなにしておく。
+  const text = toYomi(raw) || raw;
   const voice = typeof body.voice === "string" ? body.voice : "shimmer";
   const instructions = typeof body.instructions === "string" ? body.instructions : DEFAULT_INSTRUCTIONS;
   // 画面から「この声で試す」ができるように、1回きりの指定を受け付ける

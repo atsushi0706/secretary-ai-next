@@ -93,13 +93,16 @@ export async function saveWeight(
   input: { date?: string; weight?: number | null; fat?: number | null; note?: string },
 ): Promise<WeightSummary> {
   const date = (input.date ?? jstDateStr()).slice(0, 10);
-  const clamp = (v: number | null | undefined, lo: number, hi: number) => {
+  // 桁ミスは保存しないが、**黙って捨てない**。
+  // 前は範囲外を null にして前回値を残していたため、「記録したよ」と出るのに
+  // 数字が変わらない、という一番わかりにくい壊れ方をしていた。
+  const clamp = (v: number | null | undefined, lo: number, hi: number, name: string, unit: string) => {
     if (typeof v !== "number" || !Number.isFinite(v)) return null;
-    if (v < lo || v > hi) return null;   // 打ち間違い（桁ミス）は保存しない
+    if (v < lo || v > hi) throw new Error(`${name}が${lo}〜${hi}${unit}の外だよ（入れた値：${v}）。打ち間違いかも。`);
     return round2(v);
   };
-  const weight = clamp(input.weight, 20, 300);
-  const fat = clamp(input.fat, 1, 70);
+  const weight = clamp(input.weight, 20, 300, "体重", "kg");
+  const fat = clamp(input.fat, 1, 70, "体脂肪率", "%");
   if (weight === null && fat === null) throw new Error("体重か体脂肪率のどちらかは入れてね");
 
   const supa = supabaseAdmin();

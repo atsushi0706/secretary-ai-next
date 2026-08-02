@@ -76,6 +76,9 @@ export function WeightPanel({ guideName, avatarUrl, onBack }: {
       const d = await r.json();
       if (!r.ok) throw new Error(d.error || "保存できなかった");
       setSum(d);
+      // 保存された値を欄に戻す。画面の数字と、貯まっている数字を必ず一致させる
+      setW(d.today?.weight != null ? String(d.today.weight) : "");
+      setF(d.today?.fat != null ? String(d.today.fat) : "");
       setMsg("記録したよ。おつかれさま。");
       setTimeout(() => setMsg(""), 2600);
     } catch (e: any) { setErr(String(e?.message ?? e)); }

@@ -10,7 +10,13 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 
 type Voice = { id: string; name: string; labels?: Record<string, string>; category?: string; free?: boolean };
-type Info = { elevenlabs: boolean; openai: boolean; voiceId: string | null; model: string; voices: Voice[]; voicesError?: string | null; voicevox?: boolean; voicevoxSpeaker?: string | null; prefer?: string };
+type VvVoice = { id: string; name: string; note: string };
+type Info = {
+  elevenlabs: boolean; openai: boolean; voiceId: string | null; model: string;
+  voices: Voice[]; voicesError?: string | null;
+  voicevox?: boolean; voicevoxSpeaker?: string | null; voicevoxMode?: string;
+  voicevoxSpeakers?: VvVoice[]; voiceCredit?: string; prefer?: string;
+};
 
 const SAMPLES: { label: string; text: string }[] = [
   { label: "呼吸ガイド", text: "ゆっくり、息を吸って。……そのまま、少し止めてね。" },
@@ -52,14 +58,17 @@ export default function VoiceTest() {
     finally { setBaking(false); }
   }
 
-  async function play(voiceId?: string) {
-    const id = voiceId ?? picked;
+  /** speaker を渡すと VOICEVOX の声、voiceId を渡すと ElevenLabs の声で鳴らす */
+  async function play(voiceId?: string, speaker?: string) {
+    const id = speaker ?? voiceId ?? picked;
     setBusy(id || "x"); setMsg(""); setEngine(""); setUsedVoice("");
-    setAskedVoice((info?.voices ?? []).find((v) => v.id === id) ?? null);
+    setAskedVoice(speaker ? null : (info?.voices ?? []).find((v) => v.id === id) ?? null);
     try {
       const r = await fetch("/api/tts", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text, voiceId: id || undefined }),
+        body: speaker
+          ? JSON.stringify({ text, speaker })
+          : JSON.stringify({ text, voiceId: id || undefined }),
       });
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
@@ -68,7 +77,8 @@ export default function VoiceTest() {
       setEngine(r.headers.get("X-TTS-Engine") ?? "?");
       // 実際に鳴った声を出す（頼んだ声と違うことがあるため。無料プランの自動切替など）
       const usedId = r.headers.get("X-TTS-Voice") ?? "";
-      const used = (info?.voices ?? []).find((v) => v.id === usedId);
+      const used = (info?.voices ?? []).find((v) => v.id === usedId)
+        ?? (info?.voicevoxSpeakers ?? []).find((v) => v.id === usedId);
       setUsedVoice(used ? used.name : usedId);
       const blob = await r.blob();
       const url = URL.createObjectURL(blob);
@@ -104,9 +114,10 @@ export default function VoiceTest() {
             <div className={`gc-row ${info.voicevox ? "ok" : ""}`}>
               <span className="gc-mark">{info.voicevox ? "✓" : "－"}</span>
               <div><b>VOICEVOX</b>（無料・日本語ネイティブ・従量課金なし）<br />
-                {info.voicevox
-                  ? <>使えます（話者ID: {info.voicevoxSpeaker}）。{info.prefer === "voicevox" ? "いまはこれを最優先で使っています。" : "ElevenLabs が使えないときの控えです。"}</>
-                  : "未設定。VOICEVOX_URL か VOICEVOX_API_KEY を入れると使えます。文字数の料金がかからないので、人数が増えても枯れません。"}</div>
+                使えます（話者ID: {info.voicevoxSpeaker} ／ {info.voicevoxMode}）。
+                {info.prefer === "voicevox"
+                  ? "いまはこれを最優先で使っています。文字数の料金がかからないので、人数が増えても枯れません。"
+                  : "ElevenLabs が使えないときの控えです。"}</div>
             </div>
             <div className={`gc-row ${info.openai ? "ok" : ""}`}>
               <span className="gc-mark">{info.openai ? "✓" : "－"}</span>
@@ -151,8 +162,50 @@ export default function VoiceTest() {
         )}
       </section>
 
+      {/* VOICEVOX を主役に。お金がかからないので、ここで決めきってしまうのが一番ラク */}
       <section className="gd-sec">
-        <h2><span className="gd-num">3</span>声をえらぶ</h2>
+        <h2><span className="gd-num">3</span>声をえらぶ（VOICEVOX・無料）</h2>
+        <p className="gd-txt">
+          こちらは<b>クレジットを1文字も使いません</b>。キーの設定もいりません。<br />
+          いまの標準は<b>白上虎太郎</b>（アニメ寄りの、幼い男の子の声）です。
+        </p>
+        <div className="gd-list">
+          {(info?.voicevoxSpeakers ?? []).map((v) => (
+            <div key={`vv-${v.id}`} className="gl-row" style={{ alignItems: "center" }}>
+              <button className="gd-btn" style={{ padding: "8px 14px", flexShrink: 0 }}
+                onClick={() => void play(undefined, v.id)} disabled={!!busy}>
+                {busy === v.id ? "…" : "▶"}
+              </button>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <b>{v.name}</b>
+                <span style={{ marginLeft: 8, fontSize: ".6rem", padding: "2px 7px", borderRadius: 999,
+                  color: "#8fd0a0", border: "1px solid rgba(140,210,160,.5)" }}>無料</span>
+                {info?.voicevoxSpeaker === v.id && (
+                  <span style={{ marginLeft: 8, fontSize: ".64rem", color: "#8fd0a0" }}>いま使用中</span>
+                )}
+                <br />
+                <span style={{ fontSize: ".68rem", color: "#a99a80" }}>{v.note}</span>
+              </div>
+              <button className="gd-btn is-ghost" style={{ padding: "7px 12px", flexShrink: 0, fontSize: ".7rem" }}
+                onClick={() => { navigator.clipboard?.writeText(v.id); setCopied(true); setTimeout(() => setCopied(false), 2000); }}>
+                この声にする
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="gd-warn" style={{ marginTop: 14 }}>
+          別の声にしたいときは、上でコピーした番号を Vercel の環境変数
+          <b> VOICEVOX_SPEAKER</b> に入れて <b>Redeploy</b>。<br />
+          いまの接続のしかた：<b>{info?.voicevoxMode ?? "確認中…"}</b>
+        </div>
+        <p className="gd-txt gd-hint" style={{ marginTop: 10 }}>
+          ※ VOICEVOX は利用規約で、声のクレジット表記が必要です。アプリの説明書に
+          <b>「{info?.voiceCredit ?? "VOICEVOX:白上虎太郎"}」</b>と出しています。
+        </p>
+      </section>
+
+      <section className="gd-sec">
+        <h2><span className="gd-num">4</span>声をえらぶ（ElevenLabs・クレジット消費）</h2>
         {voices.length === 0 ? (
           <>
             <p className="gd-txt gd-hint">
@@ -218,7 +271,7 @@ export default function VoiceTest() {
       </section>
 
       <section className="gd-sec">
-        <h2><span className="gd-num">4</span>呼吸ガイドを焼き込む（お金の話）</h2>
+        <h2><span className="gd-num">5</span>呼吸ガイドを焼き込む（お金の話）</h2>
         <p className="gd-txt">
           呼吸ガイドのセリフは<b>全ユーザー共通で毎回まったく同じ</b>。<br />
           1回だけ音声を作ってファイルにしておけば、<b>以後は何人使っても料金は0</b>になります。<br />

@@ -4252,12 +4252,15 @@ body:has(.realverse-bg) { background: transparent; }
   background: rgba(238,214,155,.08); border: 1px solid rgba(238,214,155,.3);
 }
 .wt-day { font-size: .66rem; color: var(--singa-gold); letter-spacing: .06em; margin-bottom: 11px; }
-.wt-fields { display: flex; gap: 10px; }
+/* 入力欄は横並び。狭い画面では縦に折る（体脂肪率のほうが潰れて空欄に見えるため） */
+.wt-fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+@media (max-width: 420px) { .wt-fields { grid-template-columns: 1fr; } }
 .wt-fields label {
-  flex: 1; display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 6px; min-width: 0;
   padding: 10px 12px; border-radius: 13px;
   background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
 }
+.wt-fields label:focus-within { border-color: rgba(238,214,155,.55); background: rgba(238,214,155,.1); }
 .wt-fields .k { font-size: .62rem; color: var(--singa-ink-soft); white-space: nowrap; }
 .wt-fields input {
   flex: 1; min-width: 0; background: transparent; border: none; outline: none;
@@ -4265,6 +4268,8 @@ body:has(.realverse-bg) { background: transparent; }
   font-variant-numeric: tabular-nums; text-align: right;
   font-family: Georgia, serif;
 }
+/* これが無いとブラウザ既定の暗い灰色になり、暗い背景に溶けて「空欄で入力できない」ように見える */
+.wt-fields input::placeholder { color: rgba(244,236,221,.34); font-weight: 400; }
 .wt-fields input::-webkit-outer-spin-button,
 .wt-fields input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 .wt-fields .u { font-size: .68rem; color: var(--singa-ink-soft); }

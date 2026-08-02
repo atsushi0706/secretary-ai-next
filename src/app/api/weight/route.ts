@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     if (isMissingTable(e)) return NextResponse.json({ error: MIGRATION_HINT, needsMigration: true }, { status: 503 });
     const msg = String(e?.message ?? e);
     // 入力ミス（桁違いなど）は 400 で返して、画面で言い直してもらう
-    if (/入れてね/.test(msg)) return NextResponse.json({ error: msg }, { status: 400 });
+    if (/入れてね|打ち間違い/.test(msg)) return NextResponse.json({ error: msg }, { status: 400 });
     await logError(userId, "/api/weight", e);
     return NextResponse.json({ error: msg }, { status: 500 });
   }

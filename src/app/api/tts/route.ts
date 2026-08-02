@@ -2,14 +2,14 @@
  * テキスト→音声。
  *
  * 使う順（上から、使えるものを使う）:
- *   1. VOICEVOX  … 日本語ネイティブで無料・従量課金なし。TTS_ENGINE=voicevox で最優先にできる
- *   2. ElevenLabs … 自然さは随一。ただし文字数ぶんクレジットを食う
+ *   1. VOICEVOX  … 既定。日本語ネイティブで、従量課金なし。**キーが無くても無料枠で鳴る**
+ *   2. ElevenLabs … VOICEVOX が落ちたときの保険。文字数ぶんクレジットを食う
  *   3. OpenAI TTS … 次点
  *   4. どれも無ければ 503 → 画面側が焼き込み音声／同梱mp3／ブラウザ読み上げに退避
  *
  * 【お金の話】ElevenLabs は1文字ずつクレジットを消費するので、人が増えると枯れる。
+ * だから主役を VOICEVOX に置いた。こちらは従量課金がないので、何人来ても枯れない。
  * 呼吸ガイドのような固定セリフは /api/tts/bake で1回だけ焼いてファイルにすること。
- * VOICEVOX を使う場合はそもそも従量課金が無いので、この心配がなくなる。
  *
  * 声について：
  *   ELEVENLABS_VOICE_ID を決めていなければ、そのアカウントで使える声を自動で拾う。
@@ -32,28 +32,48 @@ const elKey = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
 // 自前サーバ（VOICEVOX ENGINE）か、公式のWeb版APIのどちらでも使える
 const VV_URL = process.env.VOICEVOX_URL?.trim() || "";
 const VV_KEY = process.env.VOICEVOX_API_KEY?.trim() || "";
-const VV_SPEAKER = process.env.VOICEVOX_SPEAKER?.trim() || "3";  // 3 = ずんだもん（ノーマル）
+// 12 = 白上虎太郎（ふつう）。アニメ寄りの、幼い男の子の声
+const VV_SPEAKER = process.env.VOICEVOX_SPEAKER?.trim() || "12";
 
-/** エンジンの優先順。TTS_ENGINE=voicevox にすると VOICEVOX が最優先になる */
-const PREFER = (process.env.TTS_ENGINE?.trim() || "").toLowerCase();
+/**
+ * エンジンの優先順。
+ * 既定は VOICEVOX。理由は、従量課金がなく、キーも要らず、日本語ネイティブだから。
+ * ElevenLabs を主役に戻したいときだけ TTS_ENGINE=elevenlabs にする。
+ */
+const PREFER = (process.env.TTS_ENGINE?.trim() || "voicevox").toLowerCase();
 
-async function voicevox(text: string): Promise<{ res?: Response; error?: string }> {
+/** 声のクレジット表記（VOICEVOX の規約で必要）。画面はこれを出す */
+const VOICE_CREDIT = "VOICEVOX:白上虎太郎";
+
+/** 聴きくらべ用。清瀬リンク（少年）に合いそうな声だけを並べる */
+const VV_SPEAKER_LIST = [
+  ["12", "白上虎太郎（ふつう）", "アニメ寄りの、幼い男の子。いまの標準"],
+  ["32", "白上虎太郎（わーい）", "同じ子の、うれしいとき"],
+  ["33", "白上虎太郎（びくびく）", "同じ子の、こわがっているとき"],
+  ["3",  "ずんだもん（ノーマル）", "中性的で高め。やわらかい"],
+  ["1",  "四国めたん（ノーマル）", "少し年上の、澄んだ声"],
+  ["11", "玄野武宏（ノーマル）", "落ち着いた青年。大人びた回に"],
+] as const;
+const VV_SPEAKERS = VV_SPEAKER_LIST.map(([id, name, note]) => ({ id, name, note }));
+
+async function voicevox(text: string, speakerOverride?: string): Promise<{ res?: Response; error?: string }> {
+  const spk = speakerOverride?.trim() || VV_SPEAKER;
   // ① 自前の VOICEVOX ENGINE（audio_query → synthesis の2段）
   if (VV_URL) {
     try {
       const base = VV_URL.replace(/\/$/, "");
-      const q = await fetch(`${base}/audio_query?text=${encodeURIComponent(text)}&speaker=${VV_SPEAKER}`, { method: "POST" });
+      const q = await fetch(`${base}/audio_query?text=${encodeURIComponent(text)}&speaker=${spk}`, { method: "POST" });
       if (!q.ok) return { error: `VOICEVOX audio_query ${q.status}` };
       const query = await q.json();
       // 呼吸ガイドに合わせて、少しゆっくり・やわらかく
       query.speedScale = 0.92;
       query.pitchScale = 0.0;
       query.intonationScale = 1.05;
-      const r = await fetch(`${base}/synthesis?speaker=${VV_SPEAKER}`, {
+      const r = await fetch(`${base}/synthesis?speaker=${spk}`, {
         method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(query),
       });
       if (!r.ok) return { error: `VOICEVOX synthesis ${r.status}` };
-      return { res: audio(await r.arrayBuffer(), "voicevox", VV_SPEAKER) };
+      return { res: audio(await r.arrayBuffer(), "voicevox", spk) };
     } catch (e: any) {
       return { error: `VOICEVOX 通信エラー: ${String(e?.message ?? e).slice(0, 120)}` };
     }
@@ -61,19 +81,44 @@ async function voicevox(text: string): Promise<{ res?: Response; error?: string 
   // ② 公式Web版API（キーだけで使える。1リクエストで完結）
   if (VV_KEY) {
     try {
-      const u = `https://deprecatedapis.tts.quest/v2/voicevox/audio/?key=${encodeURIComponent(VV_KEY)}&speaker=${VV_SPEAKER}&text=${encodeURIComponent(text)}`;
+      const u = `https://deprecatedapis.tts.quest/v2/voicevox/audio/?key=${encodeURIComponent(VV_KEY)}&speaker=${spk}&text=${encodeURIComponent(text)}`;
       const r = await fetch(u);
       if (!r.ok) return { error: `VOICEVOX Web ${r.status}` };
       const buf = await r.arrayBuffer();
       if (buf.byteLength < 500) return { error: "VOICEVOX Web: 音声が返らなかった（キーや残量を確認）" };
-      return { res: audio(buf, "voicevox", VV_SPEAKER) };
+      return { res: audio(buf, "voicevox", spk) };
     } catch (e: any) {
       return { error: `VOICEVOX 通信エラー: ${String(e?.message ?? e).slice(0, 120)}` };
     }
   }
-  return { error: "VOICEVOX は未設定（VOICEVOX_URL か VOICEVOX_API_KEY）" };
+  // ③ キーなしの無料枠（tts.quest v3）。
+  //    「作ってから取りに行く」2段構え。混んでいると数秒待たされるので、少しだけ粘る。
+  //    ここがあるおかげで、環境変数を1つも設定しなくても声が鳴る。
+  try {
+    const u = `https://api.tts.quest/v3/voicevox/synthesis?speaker=${encodeURIComponent(spk)}&text=${encodeURIComponent(text)}`;
+    const r = await fetch(u);
+    if (!r.ok) return { error: `VOICEVOX 無料枠 ${r.status}（混雑のときは少し待つと戻る）` };
+    const d: any = await r.json().catch(() => null);
+    if (!d?.success || !d?.mp3DownloadUrl) {
+      return { error: `VOICEVOX 無料枠: ${String(d?.errorMessage ?? "音声が作れなかった").slice(0, 120)}` };
+    }
+    for (let i = 0; i < 10; i++) {
+      const s = await fetch(String(d.audioStatusUrl)).then((x) => x.json()).catch(() => null);
+      if (s?.isAudioError) return { error: "VOICEVOX 無料枠: 生成に失敗した" };
+      if (s?.isAudioReady) break;
+      await new Promise((ok) => setTimeout(ok, 700));
+    }
+    const a = await fetch(String(d.mp3DownloadUrl));
+    if (!a.ok) return { error: `VOICEVOX 無料枠 取得 ${a.status}` };
+    const buf = await a.arrayBuffer();
+    if (buf.byteLength < 500) return { error: "VOICEVOX 無料枠: 音声がまだ出来ていない" };
+    return { res: audio(buf, "voicevox-free", spk) };
+  } catch (e: any) {
+    return { error: `VOICEVOX 通信エラー: ${String(e?.message ?? e).slice(0, 120)}` };
+  }
 }
-const vvReady = () => !!(VV_URL || VV_KEY);
+// 無料枠があるので、設定が無くても VOICEVOX は常に使える
+const vvReady = () => true;
 
 export type ElVoice = {
   id: string; name: string; labels?: Record<string, string>;
@@ -226,12 +271,13 @@ export async function POST(req: Request) {
   const instructions = typeof body.instructions === "string" ? body.instructions : DEFAULT_INSTRUCTIONS;
   // 画面から「この声で試す」ができるように、1回きりの指定を受け付ける
   const voiceId = typeof body.voiceId === "string" ? body.voiceId : undefined;
+  const speaker = typeof body.speaker === "string" ? body.speaker : undefined;
 
   const notes: string[] = [];
 
   // VOICEVOX を先に使う設定なら、まずそちら（無料・日本語ネイティブ）
   if (PREFER === "voicevox" && vvReady()) {
-    const vv = await voicevox(text);
+    const vv = await voicevox(text, speaker);
     if (vv.res) return vv.res;
     if (vv.error) notes.push(vv.error);
   }
@@ -242,7 +288,7 @@ export async function POST(req: Request) {
 
   // ElevenLabs がだめでも VOICEVOX があれば鳴らす（クレジット切れの保険）
   if (PREFER !== "voicevox" && vvReady()) {
-    const vv = await voicevox(text);
+    const vv = await voicevox(text, speaker);
     if (vv.res) return vv.res;
     if (vv.error) notes.push(vv.error);
   }
@@ -266,8 +312,11 @@ export async function GET() {
     model: EL_MODEL,
     voices,
     voicesError: lastVoiceError || null,
-    voicevox: vvReady(),
-    voicevoxSpeaker: vvReady() ? VV_SPEAKER : null,
-    prefer: PREFER || "elevenlabs",
+    voicevox: true,
+    voicevoxSpeaker: VV_SPEAKER,
+    voicevoxMode: VV_URL ? "自前サーバ" : VV_KEY ? "キーあり" : "無料枠（キー不要）",
+    voicevoxSpeakers: VV_SPEAKERS,
+    voiceCredit: VOICE_CREDIT,
+    prefer: PREFER,
   }), { status: 200, headers: { "Content-Type": "application/json" } });
 }

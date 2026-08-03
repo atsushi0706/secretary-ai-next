@@ -19,7 +19,7 @@ export default function PrivacyPage() {
 
       <article className="max-w-3xl mx-auto px-6 pb-20 prose prose-purple">
         <h1 className="text-3xl font-bold text-purple-800 mt-4 mb-2">プライバシーポリシー</h1>
-        <p className="text-sm text-gray-500 mb-8">最終更新: 2026-06-18</p>
+        <p className="text-sm text-gray-500 mb-8">最終更新: 2026-08-03</p>
 
         <section className="bg-white/70 border border-purple-100 rounded-2xl p-6 mb-6 leading-relaxed">
           <p>
@@ -34,9 +34,10 @@ export default function PrivacyPage() {
           <li>集中モード ON/OFF 状態</li>
           <li>タブ上限値</li>
           <li>ブロックリスト（ユーザーが入力したドメイン名）</li>
-          <li>ポモドーロ状態と設定（集中時間・休憩時間）</li>
-          <li>今日の集中時間累積</li>
-          <li>今日の時間割テキスト（ユーザーが入力）</li>
+          <li>タイマーのモードと状態・設定（集中時間・休憩時間・退治する時間）</li>
+          <li>今日の集中時間累積と、退治した数</li>
+          <li>「いま何をする時間か」の一言、退治する対象の名前（ユーザーが入力）</li>
+          <li>時間割テキスト（任意・ユーザーが入力）</li>
           <li>秘書名・アバター画像URL（秘書アプリと連携時のみ取得）</li>
         </ul>
 
@@ -47,6 +48,30 @@ export default function PrivacyPage() {
           <li><strong>Google Tasks</strong>: タスクの作成・更新・削除</li>
         </ul>
         <p className="mt-3">取得した情報は AI 秘書の応答生成にのみ使用し、第三者には提供しません。会話履歴は Supabase に保存され、ユーザー本人のみがアクセスできます。</p>
+
+        <h2 className="text-xl font-bold text-purple-700 mt-8 mb-3">2-1. Google ユーザーデータの限定的使用（Limited Use）</h2>
+        <p>
+          本サービスによる Google API から取得した情報の使用および他アプリへの移送は、
+          <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer"
+             className="text-purple-700 underline">Google API Services User Data Policy</a>
+          （<strong>Limited Use requirements</strong> を含む）に準拠します。具体的には次のとおりです。
+        </p>
+        <ul className="list-disc list-inside space-y-1 mt-2">
+          <li>取得したカレンダー・タスクの情報は、<strong>ユーザー本人に機能を提供する目的にのみ</strong>使用します。</li>
+          <li>広告目的で使用・販売することは<strong>一切ありません</strong>。</li>
+          <li>人間が内容を読むことはありません。ただし、ユーザー本人の明示的な許可を得た場合、
+              セキュリティ上必要な場合、法令上必要な場合、および集計・匿名化して内部の運用に用いる場合を除きます。</li>
+          <li>AI モデルの学習には使用しません。</li>
+          <li>第三者に譲渡・提供しません。</li>
+        </ul>
+
+        <h2 className="text-xl font-bold text-purple-700 mt-8 mb-3">2-2. なぜこの権限が必要か</h2>
+        <ul className="list-disc list-inside space-y-1 mt-2">
+          <li><strong>Google Calendar</strong>（閲覧・編集）… 今日の空き時間を読んで一日の組み立てを提案し、
+              ユーザーが決めた予定をその場で登録するため。読み取りだけでは登録ができないため、編集権限が必要です。</li>
+          <li><strong>Google Tasks</strong>（閲覧・編集）… 会話から出てきたやることをタスクとして作成し、
+              完了・削除を反映するため。</li>
+        </ul>
 
         <h2 className="text-xl font-bold text-purple-700 mt-8 mb-3">3. AI 応答の生成</h2>
         <p>

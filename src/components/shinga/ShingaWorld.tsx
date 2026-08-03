@@ -12,13 +12,13 @@ import { BreathGuide } from "./BreathGuide";
 import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
-import { TaskListPanel } from "./TaskListPanel";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
 import { QuestCard, type Card } from "./QuestCard";
 import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type GuardianEvent } from "./PartsTemple";
 import { ShadowGate, ShadowProgress, ShadowCardReveal, BeastReveal, type ShadowSafety } from "./ShadowMirror";
 import { TodayManual } from "./TodayManual";
+import { CardVault } from "./CardVault";
 import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
@@ -139,6 +139,10 @@ export function ShingaWorld({
   // ワークを終えたあとの状態チェック（ピークステート以外。スキップ可）
   const [afterCheck, setAfterCheck] = useState<ModeKey | null>(null);
   const [afterPicked, setAfterPicked] = useState<number | null>(null);
+  // ワークの終わりに「今日1ミリ入れること」を本人が決める
+  const [oneMm, setOneMm] = useState("");
+  const [oneMmBusy, setOneMmBusy] = useState(false);
+  const [oneMmDone, setOneMmDone] = useState<string | null>(null);
   // 鍵がかかっているワーク（親アカウントは常に空＝全部使える）
   const [lockedWorks, setLockedWorks] = useState<string[]>([]);
   // アカシック：開いた最初に「今日のあなたの取扱説明書」を出す
@@ -153,7 +157,7 @@ export function ShingaWorld({
   const [reportOpen, setReportOpen] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
-  const [tasksOpen, setTasksOpen] = useState(false);
+  const [vaultOpen, setVaultOpen] = useState(false);   // カード保管庫
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
   const [weightOpen, setWeightOpen] = useState(false); // からだの記録
@@ -824,14 +828,41 @@ export function ShingaWorld({
    * - ピークステートは除く（あそこは入口でチェックする場所）
    * - ちゃんとワークをした（本人の発言が2つ以上ある）ときだけ。開いてすぐ閉じた人には出さない
    */
+  // 状態チェックを出さない場所。
+  // ピークステートは入口でチェックする場所。アカシックは"読む"場所でワークではない。
   const NO_AFTER_CHECK: ModeKey[] = ["peak", "akashic"];
   function maybeAfterCheck(m: ModeKey | null) {
-    // ピークステートは入口でチェックする場所。アカシックは"読む"場所でワークではない。
-    if (!m || NO_AFTER_CHECK.includes(m)) return;
+    if (!m || m === "peak") return;
     const mine = messages.filter((x) => x.role === "user" && x.content.trim()).length;
     if (mine < 2) return;
     setAfterPicked(null);
+    setOneMm(""); setOneMmDone(null);
     setAfterCheck(m);
+  }
+
+  /**
+   * ワークの終わりに「今日1ミリ入れること」を本人に決めてもらう。
+   *
+   * 理想を見にいっただけでは、現実は動かない。かといってタスク管理をさせたいわけでもない。
+   * だから「今日1日に、1ミリでも入れるとしたら何？」という一問だけを置く。
+   * 置いたものは今日の一手（＝リアルバースのタスク）になり、
+   * ✓を付けるとメーターが真ん中に戻る。ここで輪がつながる。
+   */
+  async function placeOneMm() {
+    const t = oneMm.trim();
+    if (!t || oneMmBusy) return;
+    setOneMmBusy(true);
+    try {
+      const r = await fetch("/api/inner-hud", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "add", text: t }),
+      });
+      if (!r.ok) throw new Error("置けなかった");
+      setOneMmDone(t);
+      setOneMm("");
+    } catch {
+      setOneMmDone(null);
+    } finally { setOneMmBusy(false); }
   }
 
   // ワーク後チェック：選んだ → 記録して閉じる（何のあとかも残す＝経過で見える）
@@ -841,7 +872,7 @@ export function ShingaWorld({
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ level: n, note: `${afterCheck ? MODES[afterCheck].label : "ワーク"}のあと` }),
     }).catch(() => {});
-    setTimeout(() => setAfterCheck(null), 900);
+    setTimeout(() => { setAfterCheck(null); }, 900);
   }
 
   // 呼吸トレーニングが終わった → AIに知らせる
@@ -939,15 +970,51 @@ export function ShingaWorld({
       {afterCheck && (
         <div className="ac-overlay" onClick={() => setAfterCheck(null)}>
           <div className="ac-card" onClick={(e) => e.stopPropagation()}>
-            {afterPicked == null ? (
-              <>
-                <div className="ac-title">おつかれさま。{MODES[afterCheck].label}のあと、いまの状態は？</div>
-                <EmotionMeter value={null} onChange={pickAfterCheck} />
-                <button className="ac-skip" onClick={() => setAfterCheck(null)}>いまはしない</button>
-              </>
-            ) : (
-              <div className="ac-done">✓ 記録したよ</div>
+            <div className="ac-title">おつかれさま。{MODES[afterCheck].label}、よく歩いたね。</div>
+
+            {/* ① 今日1ミリ（ここが主役）。理想を今日に1つだけ落とす */}
+            <div className="mm-box">
+              {oneMmDone ? (
+                <div className="mm-done">
+                  <b>✓ 今日に置いた</b>
+                  <span>{oneMmDone}</span>
+                  <em>ホームの「今日の一手」に入ったよ。できたら ○ をタップ。</em>
+                </div>
+              ) : (
+                <>
+                  <div className="mm-q">
+                    いま見たものを、<b>今日1日に1ミリだけ</b>入れるとしたら、何を入れる？
+                  </div>
+                  <div className="mm-row">
+                    <input
+                      value={oneMm}
+                      onChange={(e) => setOneMm(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") void placeOneMm(); }}
+                      placeholder="例：5分だけ書き出す"
+                      maxLength={40}
+                    />
+                    <button onClick={() => void placeOneMm()} disabled={!oneMm.trim() || oneMmBusy}>
+                      {oneMmBusy ? "…" : "今日に置く"}
+                    </button>
+                  </div>
+                  <div className="mm-hint">小さくていい。大きいものより、今日入るものを。</div>
+                </>
+              )}
+            </div>
+
+            {/* ② 状態チェック（アカシックのような"読む場所"では出さない） */}
+            {!NO_AFTER_CHECK.includes(afterCheck) && (
+              afterPicked == null ? (
+                <div className="mm-emo">
+                  <div className="mm-emo-q">いまの状態は？</div>
+                  <EmotionMeter value={null} onChange={pickAfterCheck} />
+                </div>
+              ) : (
+                <div className="ac-done">✓ 記録したよ</div>
+              )
             )}
+
+            <button className="ac-skip" onClick={() => setAfterCheck(null)}>閉じる</button>
           </div>
         </div>
       )}
@@ -1000,8 +1067,8 @@ export function ShingaWorld({
         />
       ) : heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
-      ) : tasksOpen ? (
-        <TaskListPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setTasksOpen(false)} />
+      ) : vaultOpen ? (
+        <CardVault guideName={guideName} avatarUrl={faceSrc} onBack={() => setVaultOpen(false)} />
       ) : castOpen ? (
         <BroadcastStudio guideName={guideName} onBack={() => setCastOpen(false)} />
       ) : makerOpen ? (
@@ -1027,7 +1094,7 @@ export function ShingaWorld({
           onReport={() => setReportOpen(true)}
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
-          onTasks={() => setTasksOpen(true)}
+          onVault={() => setVaultOpen(true)}
           onLetter={letter ? () => { setLetterDramatic(false); setPhase("letter"); } : undefined}
           onCard={card && !card.done ? () => setShowCard(true) : undefined}
           onBalance={() => void enter("balance")}
@@ -1449,7 +1516,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onTasks, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [],
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onVault, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [],
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1458,7 +1525,8 @@ function Home({
   onReport: () => void;
   onDaily: () => void;
   onHero: () => void;
-  onTasks: () => void;
+  /** カード保管庫（旅で手に入れた力） */
+  onVault: () => void;
   onLetter?: () => void;
   onCard?: () => void;
   /** メーターから「どうすれば真ん中に戻る？」の対話へ */
@@ -1561,7 +1629,7 @@ function Home({
       {/* 主人公（レベル）＋ふりかえり */}
       <div className="iw-reflect-row">
         <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
-        <button className="iw-report is-tasks" onClick={onTasks}>📋 タスクリスト</button>
+        <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
         <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
         <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
         <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>

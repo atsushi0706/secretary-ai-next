@@ -125,9 +125,12 @@ export async function computeBalance(userId: string): Promise<Balance> {
     state = off <= 9 ? "zone" : off <= 22 ? "flow" : pos > 50 ? "real" : "image";
   }
 
-  /* ── 真ん中に戻すために、いまできること ── */
+  /* ── 真ん中に戻すために、いまできること ──
+     整っている（ゾーン／フロー）ときは何も返さない。
+     いま流れに乗っている人へ「これをやれ」と並べるのは、ただの雑音になる。 */
   const next: BalanceNext[] = [];
-  if (!linkedToday) {
+  const offCenter = state === "image" || state === "real";
+  if (offCenter && !linkedToday) {
     next.push({
       key: "quest",
       label: "今日の一手にひとつ ✓ を付ける",
@@ -146,7 +149,7 @@ export async function computeBalance(userId: string): Promise<Balance> {
       how: "理想から生まれたタスクを終えると、それも「合わせた」ことになる。",
     });
   }
-  if (!imageToday && state !== "image") {
+  if (offCenter && !imageToday && state !== "image") {
     next.push({
       key: "walk",
       label: "上を向く時間をとる（パラレルウォーク／ピークステート）",

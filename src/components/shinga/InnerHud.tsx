@@ -272,8 +272,15 @@ function BalanceMeter({ balance, imageDays, realDays, lean, onTalk }: {
   const needImage = state === "real";   // 現実過多 → 空想を足す
   const needReal = state === "image";   // 空想過多 → 現実に落とす
 
+  // 真ん中（ゾーン／フロー）にいるなら、戻し方は出さない。
+  // いま整っている人に「これをやれ」と並べるのは、ただの雑音になる。
+  const offCenter = state === "image" || state === "real";
+  const fixes = offCenter ? (balance?.next ?? []) : [];
+
   return (
     <div className={`balance ${state}`}>
+      {/* 閉じているときは、この2つだけ。中身は「くわしく」を押したときに出す。
+          以前は下の中身が閉じる対象の外に置いてあり、閉じても出たままだった。 */}
       <button className="b-head" onClick={() => setOpen((v) => !v)}>
         <span className="b-status">{status}</span>
         <span className="b-toggle">{open ? "▲ 閉じる" : "▼ くわしく"}</span>
@@ -288,70 +295,54 @@ function BalanceMeter({ balance, imageDays, realDays, lean, onTalk }: {
         </span>
         <span className="b-side right">現実 🔨</span>
       </div>
-      <div className="b-legend"><span className="dot zone" />中央＝ゾーン<span className="dot flow" />その外側＝フロー</div>
 
-      {/* きょう、理想と現実がつながったか。ここが仕組みの心臓 */}
-      {balance && (
-        <div className={`b-today ${linked ? "is-linked" : ""}`}>
-          {linked ? (
-            <>
-              <b>✓ 今日、理想を現実に合わせた</b>
-              <span>だから真ん中。予定がずれても、1つ合わせれば戻ってこられる。</span>
-            </>
-          ) : (
-            <>
-              <b>今日はまだ、理想を現実に合わせていない</b>
-              <span>1つでいい。合わせたら、その日は真ん中に戻るよ。</span>
-            </>
+      {open && (
+        <>
+          <div className="b-legend"><span className="dot zone" />中央＝ゾーン<span className="dot flow" />その外側＝フロー</div>
+          <div className="b-why">{why}</div>
+
+          {/* きょう、理想と現実がつながったか */}
+          {balance && (
+            <div className={`b-today ${linked ? "is-linked" : ""}`}>
+              {linked ? (
+                <>
+                  <b>✓ 今日、理想を現実に合わせた</b>
+                  <span>だから真ん中。予定がずれても、1つ合わせれば戻ってこられる。</span>
+                </>
+              ) : (
+                <>
+                  <b>今日はまだ、理想を現実に合わせていない</b>
+                  <span>1つでいい。合わせたら、その日は真ん中に戻るよ。</span>
+                </>
+              )}
+            </div>
           )}
-        </div>
-      )}
 
-      {/* 当てものにしない。何をすれば戻るのかを具体で出す */}
-      {balance && balance.next.length > 0 && (
-        <ul className="b-next">
-          {balance.next.map((n) => (
-            <li key={n.key}><b>{n.label}</b><span>{n.how}</span></li>
-          ))}
-        </ul>
-      )}
+          {/* 真ん中から外れているときだけ、具体策を出す */}
+          {fixes.length > 0 && (
+            <ul className="b-next">
+              {fixes.map((n) => (
+                <li key={n.key}><b>{n.label}</b><span>{n.how}</span></li>
+              ))}
+            </ul>
+          )}
 
-      {/* 対話から見つけた癖と、真ん中へ戻す一言（回数では見えない状態） */}
-      {lean && lean.lean !== "zone" && lean.message && (
-        <div className="b-read">
-          <div className="br-pattern">👀 {lean.pattern}</div>
-          <div className="br-msg">{lean.message}</div>
-        </div>
-      )}
+          {/* 対話から見つけた癖と、真ん中へ戻す一言 */}
+          {lean && lean.lean !== "zone" && lean.message && (
+            <div className="b-read">
+              <div className="br-pattern">👀 {lean.pattern}</div>
+              <div className="br-msg">{lean.message}</div>
+            </div>
+          )}
 
-      {/* 言いっぱなしにしない。「じゃあどうする？」を一緒に決める場所へ */}
-      {state !== "neutral" && state !== "zone" && onTalk && (
-        <button className="b-talk" onClick={onTalk}>
-          💬 どうすれば真ん中に戻る？ 話しながら決める
-        </button>
-      )}
-
-      {!open ? null : (
-      <>
-      <div className="b-why">{why}</div>
-
-      {/* 真ん中に戻す調整方法（効く方を強調） */}
-      <div className="b-fix">
-        <div className="b-fix-title">🎯 ど真ん中（ゾーン）に整えるには</div>
-        <div className={`b-fix-row ${needImage ? "is-hot" : ""}`}>
-          <b>🔮 空想を足す</b>：パラレルウォークで理想を思いっきり描く<span className="arr">→ 針が左へ</span>
-        </div>
-        <div className={`b-fix-row ${needReal ? "is-hot" : ""}`}>
-          <b>🔨 現実に落とす</b>：ホームの<b>ハイヤークエスト</b>を1個やって<b>✓（できた）</b>を付ける<span className="arr">→ 針が右へ</span>
-        </div>
-        <div className="b-fix-note">
-          ＝ 空想したら、その日のうちに小さく1個やって✓。これを続けると、ゾーンに居つづけられる。<br />
-          <b>針が右（現実）に寄るのは</b>、パラレルウォークをしない日が続いて<b>✓だけを重ねたとき</b>。
-          そのときは✓を減らすんじゃなく<b>パラレルウォークで空想を足す</b>。
-          こなすだけの毎日にならないよう、理想を見る時間を戻すのが正解だよ。
-        </div>
-      </div>
-      </>
+          {/* 言いっぱなしにしない。「じゃあどうする？」を一緒に決める場所へ */}
+          {state !== "neutral" && onTalk && (
+            <button className="b-talk" onClick={onTalk}>
+              {offCenter ? "💬 どうすれば真ん中に戻る？ 話しながら決める"
+                         : "💬 この流れを保つには？ 話しながら決める"}
+            </button>
+          )}
+        </>
       )}
     </div>
   );

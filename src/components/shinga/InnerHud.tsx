@@ -14,6 +14,14 @@ type LevelAction = { key: string; label: string; per: number; days: number; earn
 type Level = { level: number; max: number; actions: LevelAction[] };
 // 対話の中身から読み取った偏り（回数では見えない"状態"）
 type Lean = { lean: "image" | "real" | "zone"; strength: number; pattern: string; message: string };
+// 針の位置は「実際にやったこと」で決める（AIの所見は言葉にだけ使う）
+type BalanceNext = { key: string; label: string; how: string };
+type BalanceSide = { days: number; today: number; items: string[] };
+type Balance = {
+  pos: number; state: "zone" | "flow" | "image" | "real" | "neutral";
+  linkedToday: boolean; linkedCount: number;
+  image: BalanceSide; real: BalanceSide; next: BalanceNext[];
+};
 
 export function InnerHud({ guideName, onTalkBalance }: {
   guideName: string;
@@ -24,13 +32,15 @@ export function InnerHud({ guideName, onTalkBalance }: {
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
   const [level, setLevel] = useState<Level | null>(null);
   const [lean, setLean] = useState<Lean | null>(null);
+  const [balance, setBalance] = useState<Balance | null>(null);
   const [ready, setReady] = useState(false);
   // ✓を付けた瞬間に出す「効いたよ」の合図（言われないと気づかない問題への答え）
   const [burst, setBurst] = useState<string | null>(null);
   const burstTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function apply(d: { grounding?: Grounding; quest?: Quest; level?: Level; lean?: Lean | null }) {
+  function apply(d: { grounding?: Grounding; balance?: Balance; quest?: Quest; level?: Level; lean?: Lean | null }) {
     if (d.grounding) setG(d.grounding);
+    if (d.balance) setBalance(d.balance);
     if (d.quest) setQuest(d.quest);
     if (d.level) setLevel(d.level);
     if (d.lean !== undefined) setLean(d.lean ?? null);
@@ -75,7 +85,7 @@ export function InnerHud({ guideName, onTalkBalance }: {
       {level && level.level < level.max && <LevelBar level={level} />}
 
       {/* 空想↔現実のバランス（中央＝フロー） */}
-      <BalanceMeter imageDays={g.imageDays} realDays={g.realDays} lean={lean} onTalk={onTalkBalance} />
+      <BalanceMeter balance={balance} imageDays={g.imageDays} realDays={g.realDays} lean={lean} onTalk={onTalkBalance} />
       {burst && <div className="hud-burst">{burst}</div>}
 
       {/* ハイヤークエスト＝未来から降りてきたクエストと同じもの。
@@ -218,30 +228,33 @@ function LevelBar({ level }: { level: Level }) {
  * 空想↔現実のバランス。%ではなく"どっちに寄ってるか"。中央＝フロー（空想を現実に落とし込めている＝最適）。
  * 現実に寄りすぎ＝やることに追われて未来が見えてない。空想に寄りすぎ＝上に浮いて地に足がついてない。
  */
-function BalanceMeter({ imageDays, realDays, lean, onTalk }: {
-  imageDays: number; realDays: number; lean?: Lean | null; onTalk?: () => void;
+function BalanceMeter({ balance, imageDays, realDays, lean, onTalk }: {
+  balance?: Balance | null; imageDays: number; realDays: number; lean?: Lean | null; onTalk?: () => void;
 }) {
   const [open, setOpen] = useState(false); // 説明はふだん畳んでおく（うるさくしない）
-  const total = imageDays + realDays;
-  const diff = realDays - imageDays; // 正＝現実寄り / 負＝空想寄り
-  const byCount = total === 0 ? 50 : Math.max(8, Math.min(92, 50 + (diff / total) * 42));
-  // 対話から読み取った偏りを重ねる（回数では見えない"状態"の方を強めに効かせる）
-  const byTalk = lean
-    ? lean.lean === "real" ? 50 + (lean.strength / 100) * 42
-      : lean.lean === "image" ? 50 - (lean.strength / 100) * 42
-      : 50
-    : null;
-  // 対話がはっきり偏りを示しているときは、回数と食い違っても対話を信じる。
-  // （例：✓は毎日あるのに、話しているのは不安ばかり ＝ 実際は空想寄り。
-  //   ここで平均すると打ち消し合って「整っている」に見えてしまう）
-  const talkStrong = !!lean && lean.lean !== "zone" && lean.strength >= 50;
-  const pos = byTalk == null ? byCount
-    : talkStrong ? Math.max(8, Math.min(92, byTalk))
-    : Math.max(8, Math.min(92, byCount * 0.4 + byTalk * 0.6));
-  const off = Math.abs(pos - 50); // 中央からのズレ
-  const state = (total === 0 && !lean) ? "neutral" : off <= 9 ? "zone" : off <= 22 ? "flow" : pos > 50 ? "real" : "image";
 
-  const status =
+  /**
+   * 針の位置は、サーバが「実際にやったこと」から決めた値をそのまま使う。
+   *
+   * 以前はここでAIの所見（lean）を強く効かせていた。その結果、
+   * パラレルウォークをやるほど"理想の話"が増えて「空想寄り」と判定され、
+   * **ワークをやるほど針が空想側へ振れる**という逆転が起きていた。
+   * AIの言葉は下の吹き出しにだけ使い、位置には触らせない。
+   */
+  const total = imageDays + realDays;
+  const fallbackPos = total === 0 ? 50
+    : Math.max(8, Math.min(92, 50 + ((realDays - imageDays) / total) * 42));
+  const pos = balance ? balance.pos : fallbackPos;
+  const state: "zone" | "flow" | "image" | "real" | "neutral" = balance
+    ? balance.state
+    : total === 0 ? "neutral"
+    : Math.abs(fallbackPos - 50) <= 9 ? "zone"
+    : Math.abs(fallbackPos - 50) <= 22 ? "flow"
+    : fallbackPos > 50 ? "real" : "image";
+  const linked = !!balance?.linkedToday;
+
+  const status = linked ? `🟢 今日、理想を現実に合わせた（${balance!.linkedCount}）`
+    :
     state === "neutral" ? "まだ静か"
     : state === "zone" ? "🟢 いま“ゾーン”にいます"
     : state === "flow" ? "🟢 いま“フロー”にいます"
@@ -276,6 +289,32 @@ function BalanceMeter({ imageDays, realDays, lean, onTalk }: {
         <span className="b-side right">現実 🔨</span>
       </div>
       <div className="b-legend"><span className="dot zone" />中央＝ゾーン<span className="dot flow" />その外側＝フロー</div>
+
+      {/* きょう、理想と現実がつながったか。ここが仕組みの心臓 */}
+      {balance && (
+        <div className={`b-today ${linked ? "is-linked" : ""}`}>
+          {linked ? (
+            <>
+              <b>✓ 今日、理想を現実に合わせた</b>
+              <span>だから真ん中。予定がずれても、1つ合わせれば戻ってこられる。</span>
+            </>
+          ) : (
+            <>
+              <b>今日はまだ、理想を現実に合わせていない</b>
+              <span>1つでいい。合わせたら、その日は真ん中に戻るよ。</span>
+            </>
+          )}
+        </div>
+      )}
+
+      {/* 当てものにしない。何をすれば戻るのかを具体で出す */}
+      {balance && balance.next.length > 0 && (
+        <ul className="b-next">
+          {balance.next.map((n) => (
+            <li key={n.key}><b>{n.label}</b><span>{n.how}</span></li>
+          ))}
+        </ul>
+      )}
 
       {/* 対話から見つけた癖と、真ん中へ戻す一言（回数では見えない状態） */}
       {lean && lean.lean !== "zone" && lean.message && (

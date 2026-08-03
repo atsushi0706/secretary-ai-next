@@ -347,3 +347,18 @@ create table if not exists public.today_manuals (
   primary key (user_id, date)
 );
 alter table public.today_manuals enable row level security;
+
+-- ═══ ⑩ 現実で終わらせたこと（メーターの「現実」側の材料） ═══
+-- これが無かったので、リアルバースで日常タスクをこなしてもメーターに反映されなかった。
+-- aligned = 理想（クエスト）から生まれたタスクを終わらせた＝「今日つないだ」
+create table if not exists public.real_actions (
+  id          bigserial primary key,
+  user_id     text not null,
+  date        text not null,              -- JSTの日付 YYYY-MM-DD
+  kind        text not null,              -- task / quest / card
+  title       text,
+  aligned     boolean not null default false,
+  created_at  timestamptz not null default now()
+);
+create index if not exists real_actions_user_idx on public.real_actions (user_id, date desc);
+alter table public.real_actions enable row level security;

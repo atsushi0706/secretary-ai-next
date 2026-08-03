@@ -4789,3 +4789,25 @@ body:has(.realverse-bg) { background: transparent; }
 
 .wt-axis-note { margin-top: 2px; font-size: .6rem; line-height: 1.85; color: var(--singa-ink-soft); opacity: .82; }
 .wt-axis-note b { color: var(--singa-gold); }
+
+/* ── バランスメーター：今日つないだか／どうすれば戻るか ── */
+.b-today {
+  display: flex; flex-direction: column; gap: 3px;
+  margin-top: 10px; padding: 10px 12px; border-radius: 12px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.12);
+}
+.b-today b { font-size: .78rem; color: var(--singa-ink); }
+.b-today span { font-size: .66rem; line-height: 1.7; color: var(--singa-ink-soft); }
+.b-today.is-linked {
+  background: rgba(140,210,160,.12); border-color: rgba(140,210,160,.45);
+}
+.b-today.is-linked b { color: #8fd0a0; }
+
+.b-next { list-style: none; margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+.b-next li {
+  padding: 9px 12px; border-radius: 11px;
+  background: rgba(238,214,155,.07); border: 1px solid rgba(238,214,155,.28);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.b-next b { font-size: .74rem; color: var(--singa-gold); }
+.b-next span { font-size: .64rem; line-height: 1.75; color: var(--singa-ink-soft); }

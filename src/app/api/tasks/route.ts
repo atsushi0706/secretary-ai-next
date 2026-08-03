@@ -54,6 +54,23 @@ export async function POST(req: Request) {
     }
     if (action === "complete") {
       await completeTask(userId, body.tasklistId, body.taskId);
+      // 「現実で終わらせたこと」として残す。
+      // これが無いせいで、日常のタスクをいくらこなしてもメーターから見えなかった。
+      // 理想（クエスト）から生まれたタスクなら aligned=true ＝ 今日つないだ、として扱う。
+      try {
+        const { recordRealAction } = await import("@/lib/balance");
+        const { supabaseAdmin } = await import("@/lib/supabase");
+        let aligned = false;
+        try {
+          const { data } = await supabaseAdmin().from("task_links")
+            .select("source_type, source_quest_id")
+            .eq("user_id", userId).eq("google_task_id", String(body.taskId)).maybeSingle();
+          aligned = !!data && (data.source_type === "quest" || !!data.source_quest_id);
+        } catch { /* 出自が分からなくても、完了そのものは残す */ }
+        await recordRealAction(userId, { kind: "task", title: body.title, aligned });
+        // メーターの所見は作り直す（✓の直後に画面が動くように）
+        void import("@/lib/lean").then((m) => m.refreshLean(userId)).catch(() => {});
+      } catch { /* 記録に失敗しても完了は成功 */ }
       return NextResponse.json({ ok: true });
     }
     if (action === "delete") {

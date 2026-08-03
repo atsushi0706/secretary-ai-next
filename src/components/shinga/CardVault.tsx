@@ -9,6 +9,7 @@
  * 「集まっている」ことが一目で分かる棚にした。
  */
 import { useEffect, useMemo, useState } from "react";
+import { CardArt } from "./CardArt";
 
 type Card = {
   key: string;
@@ -127,7 +128,11 @@ export function CardVault({ guideName, avatarUrl, onBack }: {
                       className={`cv-item r-${c.rarity} ${open === c.key ? "is-open" : ""}`}
                       onClick={() => setOpen(open === c.key ? null : c.key)}
                     >
-                      <span className="cv-rarity">{RARITY_LABEL[c.rarity] ?? "銅"}</span>
+                      <span className="cv-face">
+                        {/* 柄はカードの名前から決まる。同じカードなら必ず同じ紋章が出る */}
+                        <CardArt seed={`${c.key}${c.title}`} rarity={c.rarity} size={open === c.key ? 132 : 76} />
+                        <span className="cv-rarity">{RARITY_LABEL[c.rarity] ?? "銅"}</span>
+                      </span>
                       <span className="cv-title">{c.title}</span>
                       {open === c.key && (
                         <>

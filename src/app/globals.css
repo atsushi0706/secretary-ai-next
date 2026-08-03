@@ -4894,3 +4894,15 @@ body:has(.realverse-bg) { background: transparent; }
 .cv-body { font-size: .74rem; line-height: 1.9; color: var(--singa-ink-soft); margin-top: 3px; }
 .cv-src { font-size: .6rem; color: var(--singa-gold); opacity: .8; }
 .cv-note { margin-top: 10px; font-size: .64rem; text-align: center; color: var(--singa-ink-soft); }
+
+/* ── カードの柄（紋章）── */
+.cv-face { position: relative; display: block; align-self: center; }
+.cv-face svg { border-radius: 12px; }
+.cv-item .cv-rarity { position: absolute; top: 5px; left: 5px; }
+.cv-item { align-items: stretch; }
+.cv-item .cv-title { text-align: center; margin-top: 6px; }
+.cv-item.is-open .cv-body, .cv-item.is-open .cv-src { text-align: center; }
+
+/* ホームの棚（小さい紋章を左に添える） */
+.aw-card .c-top { display: flex; align-items: center; gap: 8px; }
+.aw-card .c-art { flex-shrink: 0; border-radius: 9px; }

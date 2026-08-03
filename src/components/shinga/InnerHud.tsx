@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { CardArt } from "./CardArt";
 
 /**
  * インナーワールドのゲームHUD。
@@ -172,6 +173,7 @@ function CardShelf() {
           {cards.map((c) => (
             <div key={c.key} className={`aw-card r-${c.rarity}`}>
               <div className="c-top">
+                <CardArt seed={`${c.key}${c.title}`} rarity={c.rarity} size={44} className="c-art" />
                 <span className="c-rar">{SHELF_RARITY[c.rarity] ?? "銅"}</span>
                 <span className="c-title">{c.title}</span>
               </div>

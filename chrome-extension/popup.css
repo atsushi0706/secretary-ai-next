@@ -132,3 +132,49 @@ button:hover { opacity: 0.9; }
   width: 100%; margin-top: 6px;
 }
 .pomo-actions .btn-secondary { width: auto; margin-top: 0; flex: 0 0 auto; }
+
+/* ── いま何をする時間か（自分で書く一言） ── */
+.now-row { display: flex; gap: 6px; align-items: center; }
+.now-row input {
+  flex: 1; min-width: 0; padding: 8px 10px; font-size: 13px;
+  border: 1px solid #d8d3ea; border-radius: 8px; outline: none;
+}
+.now-row input:focus { border-color: #7b61c9; }
+.btn-clear-inline {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px;
+  border: 1px solid #e2dff0; background: #fff; color: #888; cursor: pointer;
+}
+.hint { margin-top: 6px; font-size: 11px; line-height: 1.5; color: #777; }
+.sub-label { margin: 10px 0 5px; font-size: 11px; color: #666; }
+
+/* ── タイマーのモード切り替え ── */
+.mode-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
+.mode-tab {
+  flex: 1; padding: 8px 6px; font-size: 12px; cursor: pointer;
+  border: 1px solid #ddd8ee; border-radius: 999px; background: #fff; color: #666;
+}
+.mode-tab.on { background: #7b61c9; border-color: #7b61c9; color: #fff; font-weight: 700; }
+.pane { display: none; }
+
+/* ── モンスター（前に退治したもの） ── */
+.monsters { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 6px; }
+.monster {
+  padding: 5px 10px; font-size: 11px; cursor: pointer;
+  border: 1px solid #e0d8f5; border-radius: 999px; background: #f8f6ff; color: #5b4a90;
+}
+.monster:hover { background: #efe9ff; }
+
+/* ── 時間の選択 ── */
+.mins { display: flex; gap: 5px; align-items: center; margin-bottom: 10px; }
+.min-btn {
+  flex: 1; padding: 7px 4px; font-size: 12px; cursor: pointer;
+  border: 1px solid #ddd8ee; border-radius: 8px; background: #fff; color: #555;
+}
+.min-btn:hover { background: #f3efff; border-color: #7b61c9; }
+.mins input { width: 52px; padding: 6px; font-size: 12px; border: 1px solid #d8d3ea; border-radius: 8px; }
+
+#questName {
+  width: 100%; padding: 8px 10px; font-size: 13px; box-sizing: border-box;
+  border: 1px solid #d8d3ea; border-radius: 8px; outline: none;
+}
+#questName:focus { border-color: #7b61c9; }

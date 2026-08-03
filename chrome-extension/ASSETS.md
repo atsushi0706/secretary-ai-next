@@ -57,7 +57,7 @@ copy icon-128-128x128.png ..\icons\icon128.png
 
 ```
 screenshot-1-dashboard.png
-screenshot-2-sidepanel.png
+screenshot-2-quest.png
 screenshot-3-floating-timer.png
 screenshot-4-blocked.png
 screenshot-5-settings.png

@@ -14,9 +14,15 @@
     </div>
   </div>
 
-  <button id="openSidePanel" class="btn-primary" style="width:100%;margin-bottom:10px;">
-    📌 サイドパネルを開く（秘書UI 常駐）
-  </button>
+  <!-- いま何をする時間か。カレンダーとは繋がない。自分で一言書く -->
+  <section class="card">
+    <div class="row-label">✎ いま、何をする時間？</div>
+    <div class="now-row">
+      <input type="text" id="nowLabel" placeholder="例：メルマガを書く" maxlength="40" />
+      <button id="clearNow" class="btn-clear-inline" title="消す">×</button>
+    </div>
+    <div class="hint">ここに書いた一言が、全部のタブのカードに出る。</div>
+  </section>
 
   <section class="card">
     <label class="toggle-row">
@@ -24,24 +30,50 @@
       <input type="checkbox" id="focusToggle" class="toggle" />
     </label>
     <div class="focus-status" id="focusStatus">OFF</div>
+    <div class="hint">ONの間は、タブ上限とサイトブロックが効く。</div>
+  </section>
+
+  <!-- タイマーの選び方。勝手に始まるのは強制モードのときだけ -->
+  <section class="card">
+    <div class="row-label">⏱ タイマーの選び方</div>
+    <div class="mode-tabs">
+      <button class="mode-tab" data-mode="quest">⚔ 自分で決める</button>
+      <button class="mode-tab" data-mode="force">🍅 強制モード</button>
+    </div>
+
+    <!-- ① 自分で決めてモンスターを退治する -->
+    <div id="questPane" class="pane">
+      <div class="sub-label">何を退治する？</div>
+      <input type="text" id="questName" placeholder="例：請求書を送る" maxlength="40" />
+      <div id="monsterList" class="monsters"></div>
+      <div class="sub-label">どれくらい？</div>
+      <div class="mins">
+        <button class="min-btn" data-min="5">5分</button>
+        <button class="min-btn" data-min="10">10分</button>
+        <button class="min-btn" data-min="30">30分</button>
+        <button class="min-btn" data-min="60">1時間</button>
+        <input type="number" id="questMin" min="1" max="180" />
+      </div>
+      <button id="startQuest" class="btn-primary" style="width:100%;">⚔ 退治をはじめる</button>
+      <div class="hint">終わったら止まる。勝手に次は始まらない。</div>
+    </div>
+
+    <!-- ② 強制モード（集中モードONで自動で回りつづける） -->
+    <div id="forcePane" class="pane">
+      <div class="hint" style="margin-bottom:8px;">
+        集中モードをONにすると、自動でポモドーロが回りつづける。自分で止めるまで終わらない。
+      </div>
+      <div class="row"><span>🍅 集中(分)</span><input type="number" id="pomoWork" min="5" max="90" /></div>
+      <div class="row"><span>✋ 休む準備(秒)</span><input type="number" id="pomoPrep" min="0" max="120" /></div>
+      <div class="row"><span>☕ 休憩(分)</span><input type="number" id="pomoBreak" min="1" max="30" /></div>
+      <button id="startPomo" class="btn-primary" style="width:100%;">▶ いま始める</button>
+    </div>
   </section>
 
   <section class="card">
     <div class="row">
       <span>📑 タブ上限</span>
       <input type="number" id="tabLimit" min="2" max="20" />
-    </div>
-    <div class="row">
-      <span>🍅 集中(分)</span>
-      <input type="number" id="pomoWork" min="5" max="90" />
-    </div>
-    <div class="row">
-      <span>✋ 休む準備(秒)</span>
-      <input type="number" id="pomoPrep" min="0" max="120" />
-    </div>
-    <div class="row">
-      <span>☕ 休憩(分)</span>
-      <input type="number" id="pomoBreak" min="1" max="30" />
     </div>
     <button id="saveSettings" class="btn-secondary">設定を保存</button>
   </section>
@@ -50,16 +82,15 @@
     <div class="pomo-state" id="pomoState">待機中</div>
     <div class="pomo-timer" id="pomoTimer">--:--</div>
     <div class="pomo-actions">
-      <button id="startPomo" class="btn-primary">▶ 集中スタート</button>
-      <button id="stopPomo" class="btn-secondary">停止</button>
+      <button id="stopPomo" class="btn-secondary" style="width:100%;">■ やめる</button>
     </div>
     <div class="focus-total">
-      今日の集中合計: <span id="todayFocus">0分</span>
+      今日の集中合計: <span id="todayFocus">0分</span>　／　倒した数: <span id="todayDefeated">0</span>
     </div>
   </section>
 
-  <section class="card">
-    <div class="row-label">⏰ 今日の時間割（タブまたぎ表示）</div>
+  <details class="card">
+    <summary class="row-label" style="cursor:pointer;">⏰ 時間割で出したいとき（任意）</summary>
     <div style="font-size:11px;color:#666;margin-bottom:6px;line-height:1.4;">
       1行1スロット。形式: <code>09:00-10:00 タスク名</code> または <code>09:00 タスク名</code>
     </div>
@@ -68,7 +99,7 @@
     <button id="saveSchedule" class="btn-secondary">時間割を保存</button>
     <button id="clearSchedule" class="btn-clear">今日の時間割をクリア</button>
     <div id="schedulePreview" class="schedule-preview"></div>
-  </section>
+  </details>
 
   <section class="card">
     <div class="row-label">🚫 ブロックリスト（1行1ドメイン）</div>

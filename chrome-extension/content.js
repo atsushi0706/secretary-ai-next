@@ -249,14 +249,16 @@
     }
     lastPomoState = s.pomoState;
 
-    const pomoRunning = s.pomoState === "work" || s.pomoState === "prep" || s.pomoState === "break";
+    const questRunning = s.pomoState === "quest";
+    const pomoRunning = questRunning || s.pomoState === "work" || s.pomoState === "prep" || s.pomoState === "break";
     const slots = parseSchedule(s.scheduleText);
     const cur = currentSlot(slots);
     const nxt = nextSlot(slots);
     const hasSchedule = !!(s.scheduleText && s.scheduleText.trim());
+    const nowLabel = (s.nowLabel || "").trim();
 
-    // ポモドーロも時間割も何もない → 完全に消す
-    if (!pomoRunning && !hasSchedule) {
+    // タイマーも、いまの一言も、時間割も無い → 完全に消す
+    if (!pomoRunning && !hasSchedule && !nowLabel) {
       removeBadge();
       if (pipWindow) { try { pipWindow.close(); } catch {} pipWindow = null; }
       return;
@@ -271,7 +273,11 @@
 
     // ─ いま欄: 時間割があれば常に何か表示 ─
     const nowEl = badge.querySelector(".ktb-now");
-    if (cur) {
+    if (nowLabel) {
+      // 自分で書いた「いま何をする時間か」。これがいちばん強い
+      nowEl.innerHTML = `<span class="ktb-now-label">いま</span> ${escapeHtml(nowLabel)}`;
+      nowEl.style.display = "";
+    } else if (cur) {
       nowEl.innerHTML = `<span class="ktb-now-label">いま</span> ${escapeHtml(cur.task)} <span class="ktb-now-time">〜${fmtMinHHMM(cur.endMin)}</span>`;
       nowEl.style.display = "";
     } else if (nxt) {
@@ -282,7 +288,7 @@
       nowEl.style.display = "";
     } else if (pomoRunning) {
       // ポモドーロは動いてるが時間割未設定 → 軽く告知
-      nowEl.innerHTML = `<span class="ktb-now-label">⏰</span> 時間割未設定 (拡張から設定)`;
+      nowEl.innerHTML = `<span class="ktb-now-label">✎</span> いま何をする時間か、拡張から一言書ける`;
       nowEl.style.display = "";
     } else {
       nowEl.style.display = "none";
@@ -294,6 +300,7 @@
     if (pomoRunning) {
       const left = Math.max(0, Math.ceil((s.pomoEndAt - Date.now()) / 1000));
       const stateLabel =
+        s.pomoState === "quest" ? `⚔ ${s.questName || "退治"}中` :
         s.pomoState === "work" ? "🍅 集中中" :
         s.pomoState === "prep" ? "✋ 休む準備" :
         "☕ 休憩中";
@@ -301,13 +308,14 @@
       stateEl.style.display = "";
       timeEl.textContent = fmt(left);
       timeEl.style.display = "";
+      badge.classList.toggle("quest", s.pomoState === "quest");
       badge.classList.toggle("work", s.pomoState === "work");
       badge.classList.toggle("prep", s.pomoState === "prep");
       badge.classList.toggle("break", s.pomoState === "break");
     } else {
       stateEl.style.display = "none";
       timeEl.style.display = "none";
-      badge.classList.remove("work", "prep", "break");
+      badge.classList.remove("quest", "work", "prep", "break");
     }
 
     // ─ PiP も更新 ─
@@ -318,12 +326,14 @@
         const pipNow = root.querySelector(".kiyose-pip-now");
         const pipState = root.querySelector(".kiyose-pip-state");
         const pipTime = root.querySelector(".kiyose-pip-time");
-        if (cur) pipNow.textContent = `いま: ${cur.task}（〜${fmtMinHHMM(cur.endMin)}）`;
+        if (nowLabel) pipNow.textContent = `いま: ${nowLabel}`;
+        else if (cur) pipNow.textContent = `いま: ${cur.task}（〜${fmtMinHHMM(cur.endMin)}）`;
         else if (nxt) pipNow.textContent = `次: ${nxt.task}（${fmtMinHHMM(nxt.startMin)}〜）`;
         else pipNow.textContent = "";
         if (pomoRunning) {
           const left = Math.max(0, Math.ceil((s.pomoEndAt - Date.now()) / 1000));
           pipState.textContent =
+            s.pomoState === "quest" ? `⚔ ${s.questName || "退治"}中` :
             s.pomoState === "work" ? "🍅 集中中" :
             s.pomoState === "prep" ? "✋ 休む準備" :
             "☕ 休憩中";

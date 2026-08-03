@@ -89,6 +89,31 @@ function avatarSrcFromState(s) {
   return "icons/icon128.png";
 }
 
+/** モードの見た目を切り替える（勝手にタイマーが始まるのは force のときだけ） */
+function renderMode(mode) {
+  document.querySelectorAll(".mode-tab").forEach((b) => {
+    b.classList.toggle("on", b.dataset.mode === mode);
+  });
+  // CSS で .pane { display:none } にしてあるので、"" に戻すと消えたままになる。必ず block を入れる
+  $("questPane").style.display = mode === "quest" ? "block" : "none";
+  $("forcePane").style.display = mode === "force" ? "block" : "none";
+}
+
+/** 前に退治したモンスターを、1タップで選べるように並べる */
+function renderMonsters(list) {
+  const box = $("monsterList");
+  if (!box) return;
+  box.innerHTML = "";
+  for (const name of list) {
+    const b = document.createElement("button");
+    b.className = "monster";
+    b.textContent = name;
+    b.title = "これを退治する";
+    b.addEventListener("click", () => { $("questName").value = name; });
+    box.appendChild(b);
+  }
+}
+
 async function render() {
   const s = await send("getState");
   if (!s) return;
@@ -102,6 +127,14 @@ async function render() {
   $("focusToggle").checked = s.focusOn;
   $("focusStatus").textContent = s.focusOn ? "🎯 集中モード ON" : "OFF";
   $("focusStatus").classList.toggle("on", s.focusOn);
+
+  // いまの一言（自分で書く。カードに出る）
+  if (document.activeElement !== $("nowLabel")) $("nowLabel").value = s.nowLabel || "";
+
+  // タイマーのモード
+  renderMode(s.timerMode || "quest");
+  $("questMin").value = s.questMin || 30;
+  renderMonsters(s.monsters || []);
 
   // 設定
   $("tabLimit").value = s.tabLimit;
@@ -133,8 +166,13 @@ async function render() {
     }
   }
 
+  // 倒した数
+  $("todayDefeated").textContent = String(s.todayDefeated || 0);
+
   // ポモドーロ状態
-  if (s.pomoState === "work") {
+  if (s.pomoState === "quest") {
+    $("pomoState").textContent = `⚔ ${s.questName || "退治"}中`;
+  } else if (s.pomoState === "work") {
     $("pomoState").textContent = "🍅 集中タイム";
   } else if (s.pomoState === "prep") {
     $("pomoState").textContent = "✋ 休む準備";
@@ -168,7 +206,8 @@ function startTicker() {
     const s = await send("getState");
     if (!s) return;
     updatePomoTimer(s);
-    if (s.pomoState === "work") $("pomoState").textContent = "🍅 集中タイム";
+    if (s.pomoState === "quest") $("pomoState").textContent = `⚔ ${s.questName || "退治"}中`;
+    else if (s.pomoState === "work") $("pomoState").textContent = "🍅 集中タイム";
     else if (s.pomoState === "prep") $("pomoState").textContent = "✋ 休む準備";
     else if (s.pomoState === "break") $("pomoState").textContent = "☕ 休憩タイム";
     else $("pomoState").textContent = "待機中";
@@ -230,6 +269,46 @@ document.addEventListener("DOMContentLoaded", async () => {
     await render();
   });
 
+  // いまの一言（書いたら全タブのカードに出る）
+  let nowTimer = null;
+  $("nowLabel").addEventListener("input", () => {
+    if (nowTimer) clearTimeout(nowTimer);
+    nowTimer = setTimeout(async () => {
+      await send("updateSettings", { patch: { nowLabel: $("nowLabel").value } });
+    }, 500);
+  });
+  $("clearNow").addEventListener("click", async () => {
+    $("nowLabel").value = "";
+    await send("updateSettings", { patch: { nowLabel: "" } });
+    await render();
+  });
+
+  // モードの切り替え
+  document.querySelectorAll(".mode-tab").forEach((b) => {
+    b.addEventListener("click", async () => {
+      const mode = b.dataset.mode;
+      renderMode(mode);
+      await send("updateSettings", { patch: { timerMode: mode } });
+    });
+  });
+
+  // 時間のボタン
+  document.querySelectorAll(".min-btn").forEach((b) => {
+    b.addEventListener("click", () => { $("questMin").value = b.dataset.min; });
+  });
+
+  // モンスター退治を始める
+  $("startQuest").addEventListener("click", async () => {
+    const name = $("questName").value.trim();
+    if (!name) { $("questName").focus(); return; }
+    await send("startQuest", { name, minutes: parseInt($("questMin").value, 10) || 30 });
+    $("questName").value = "";
+    await render();
+  });
+  $("questName").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") $("startQuest").click();
+  });
+
   $("startPomo").addEventListener("click", async () => {
     await send("startPomo");
     await render();
@@ -240,14 +319,4 @@ document.addEventListener("DOMContentLoaded", async () => {
     await render();
   });
 
-  $("openSidePanel").addEventListener("click", async () => {
-    // sidePanel.open() はユーザー操作起点でしか呼べないので popup 側で直接実行
-    try {
-      const win = await chrome.windows.getCurrent();
-      await chrome.sidePanel.open({ windowId: win.id });
-      window.close();
-    } catch (e) {
-      alert("サイドパネルを開けませんでした: " + (e?.message ?? String(e)) + "\n(Chrome 114 以降が必要)");
-    }
-  });
 });

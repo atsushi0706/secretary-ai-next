@@ -28,6 +28,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     Google({
       clientId: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+      // なりすまし対策を明示する。
+      // Google Cloud の「安全なフローの使用」で
+      //   ・state パラメータを使用していません
+      // と警告が出るため、既定任せにせず、ここで必ず付けると宣言しておく。
+      //   state … 認可リクエストとコールバックが同一人物のものかを照合する（CSRF対策）
+      //   pkce  … 認可コードを横取りされても交換できないようにする
+      checks: ["pkce", "state"],
       authorization: {
         params: {
           scope: SCOPES,

@@ -2375,7 +2375,7 @@ body:has(.realverse-bg) { background: transparent; }
 .zone-intro {
   position: absolute; inset: 0; z-index: 60; overflow: hidden; cursor: pointer;
   background: #05040a; display: flex; align-items: center; justify-content: center;
-  animation: zi-fadeout .45s ease 2.15s forwards; /* React側の解除(2.6s)に合わせて先にフェード */
+  animation: zi-fadeout .45s ease 4.75s forwards; /* React側の解除(5.2s)に合わせて先にフェード */
 }
 @keyframes zi-fadeout { to { opacity: 0; } }
 /* 背景が「フュン」とズームインしながらピントが合う */
@@ -4906,3 +4906,89 @@ body:has(.realverse-bg) { background: transparent; }
 /* ホームの棚（小さい紋章を左に添える） */
 .aw-card .c-top { display: flex; align-items: center; gap: 8px; }
 .aw-card .c-art { flex-shrink: 0; border-radius: 9px; }
+
+/* ── ゾーン突入：世界観の3行（名前のあとに、そっと出る） ── */
+.zone-intro .zi-intro {
+  display: flex; flex-direction: column; align-items: center; gap: 7px;
+  margin-top: 14px; padding: 0 26px; max-width: 560px; text-align: center;
+}
+.zone-intro .zi-poem,
+.zone-intro .zi-what,
+.zone-intro .zi-why {
+  opacity: 0;
+  animation: zi-line-in .9s cubic-bezier(.15,.8,.25,1) forwards;
+  text-shadow: 0 2px 14px rgba(0,0,0,.95);
+}
+@keyframes zi-line-in {
+  from { opacity: 0; transform: translateY(10px); filter: blur(5px); }
+  to   { opacity: 1; transform: none; filter: blur(0); }
+}
+/* 情景 → 何をするか → 何のためか、の順に1行ずつ灯る */
+.zone-intro .zi-poem {
+  animation-delay: 1.5s;
+  font-family: Georgia, "Yu Mincho", "游明朝", serif;
+  font-size: .96rem; line-height: 1.9; color: #f0e6d2; letter-spacing: .03em;
+}
+.zone-intro .zi-what {
+  animation-delay: 2.4s;
+  font-size: .92rem; font-weight: 700; line-height: 1.8; color: var(--singa-gold);
+}
+.zone-intro .zi-why {
+  animation-delay: 3.2s;
+  font-size: .76rem; line-height: 1.85; color: rgba(240,230,210,.72);
+}
+.zone-intro .zi-why::before {
+  content: ""; display: block; width: 40px; height: 1px; margin: 9px auto 8px;
+  background: linear-gradient(90deg, transparent, rgba(238,214,155,.55), transparent);
+}
+@media (max-width: 480px) {
+  .zone-intro .zi-intro { padding: 0 18px; }
+  .zone-intro .zi-poem { font-size: .86rem; }
+  .zone-intro .zi-what { font-size: .84rem; }
+  .zone-intro .zi-why  { font-size: .7rem; }
+}
+
+/* ══════════════════════════════════════════════════════════
+   チャットの流れに置くカード（スタンプのように、その瞬間に残る）
+   ══════════════════════════════════════════════════════════ */
+.cc {
+  --cc: #e0bd72;
+  margin: 2px 0; padding: 11px 13px; border-radius: 15px; max-width: 340px;
+  background:
+    radial-gradient(circle at 20% 0%, color-mix(in srgb, var(--cc) 20%, transparent), transparent 62%),
+    linear-gradient(165deg, rgba(30,24,42,.96), rgba(14,10,20,.97));
+  border: 1px solid color-mix(in srgb, var(--cc) 45%, transparent);
+  box-shadow: 0 8px 26px rgba(0,0,0,.45);
+  animation: cc-in .45s cubic-bezier(.2,.8,.3,1) both;
+}
+@keyframes cc-in {
+  from { opacity: 0; transform: translateY(10px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+.cc-head { display: flex; align-items: baseline; gap: 8px; margin-bottom: 8px; }
+.cc-kicker {
+  font-size: .58rem; letter-spacing: .12em; padding: 3px 9px; border-radius: 999px;
+  color: #1a1208; background: linear-gradient(160deg, color-mix(in srgb, var(--cc) 70%, #fff), var(--cc));
+  font-weight: 700; white-space: nowrap;
+}
+.cc-at { margin-left: auto; font-size: .58rem; color: var(--singa-ink-soft); opacity: .7; }
+.cc-body { display: flex; align-items: flex-start; gap: 10px; }
+.cc-emblem {
+  flex-shrink: 0; width: 46px; height: 46px; border-radius: 12px; display: grid; place-items: center;
+  font-size: 1.4rem;
+  background: radial-gradient(circle at 50% 35%, color-mix(in srgb, var(--cc) 26%, transparent), rgba(10,8,14,.9) 70%);
+  border: 1px solid color-mix(in srgb, var(--cc) 45%, transparent);
+}
+.cc-art { flex-shrink: 0; border-radius: 11px; }
+.cc-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.cc-text b { font-size: .82rem; line-height: 1.5; color: var(--singa-ink); }
+.cc-text span { font-size: .7rem; line-height: 1.8; color: var(--singa-ink-soft); }
+.cc-text em { font-style: normal; font-size: .6rem; color: var(--cc); opacity: .85; }
+
+/* 種類ごとの差し色 */
+.cc.is-light { --cc: #eed69b; box-shadow: 0 8px 26px rgba(0,0,0,.45), 0 0 26px rgba(238,214,155,.22); }
+.cc.is-guardian { box-shadow: 0 8px 26px rgba(0,0,0,.45), 0 0 24px color-mix(in srgb, var(--cc) 30%, transparent); }
+.cc.is-draw { --cc: #b48cff; }
+.cc.is-skill.r-gold { --cc: #eed69b; }
+.cc.is-skill.r-silver { --cc: #c9d4e2; }
+.cc.is-skill.r-bronze { --cc: #cfa276; }

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { PLACES, type PlaceKey } from "@/lib/places";
 import { MODES, MODE_OPENERS, type ModeKey } from "@/lib/modes";
+import { introOf } from "@/lib/mode-intro";
 import { VoiceBar } from "./VoiceBar";
 import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
@@ -19,6 +20,7 @@ import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type
 import { ShadowGate, ShadowProgress, ShadowCardReveal, BeastReveal, type ShadowSafety } from "./ShadowMirror";
 import { TodayManual } from "./TodayManual";
 import { CardVault } from "./CardVault";
+import { ChatCard, encodeChatCard, decodeChatCard } from "./ChatCard";
 import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
 import { BroadcastStudio } from "./BroadcastStudio";
 import { ManualScreen } from "./ManualScreen";
@@ -605,7 +607,8 @@ export function ShingaWorld({
     if (!resume) {
       setEntering(m);
       if (enterFxTimer.current) clearTimeout(enterFxTimer.current);
-      enterFxTimer.current = setTimeout(() => setEntering(null), 2600);
+      // 世界観の3行を読み切れるだけの間を置く（読みたくない人はタップで飛ばせる）
+      enterFxTimer.current = setTimeout(() => setEntering(null), 5200);
     }
     emotionDoneRef.current = false; // 新しいセッション＝気分メーター・呼吸は一度だけ許可
     breathDoneRef.current = false;
@@ -729,7 +732,18 @@ export function ShingaWorld({
         } else if (name === "parts_step") {
           // 内なる子の神殿：段階が進むと、前に出る姿が守り手→内なる子へ変わる
           const s = Number(data?.step);
-          if (Number.isFinite(s)) setPartsStep(Math.max(1, Math.min(8, s)) as PartsStep);
+          if (Number.isFinite(s)) {
+            const step = Math.max(1, Math.min(9, s)) as PartsStep;
+            setPartsStep(step);
+            // 内なる子に出会う段階（5）で、一度だけ絵を見せて、チャットにも残す。
+            // ここが今まで一度も呼ばれておらず、出会いの演出が出ていなかった。
+            const color = partColorRef.current;
+            if (step >= 5 && color && !childShownRef.current) {
+              childShownRef.current = true;
+              setChildReveal(color);
+              dropCard({ t: "child", color });
+            }
+          }
         } else if (name === "shadow_step") {
           const s2 = Number(data?.step);
           if (Number.isFinite(s2)) setShadowStep(Math.max(1, Math.min(9, s2)));
@@ -738,12 +752,19 @@ export function ShingaWorld({
           // 初回と、見立て直しで別の幻獣に変わったときだけカード演出を出す
           if (data?.pair) {
             const next = data.pair as ShadowPairId;
-            if (shadowPairRef.current !== next) setBeastReveal(next);
+            if (shadowPairRef.current !== next) {
+              setBeastReveal(next);
+              dropCard({ t: "beast", pair: next });   // 会話の流れにも残す
+            }
             shadowPairRef.current = next;
           }
         } else if (name === "shadow_card") {
           // 光の回収が完了。カードの演出を出す
-          if (data?.card) { setShadowCard(data.card as ShadowCard); setShadowStep(9); }
+          if (data?.card) {
+            const c = data.card as ShadowCard;
+            setShadowCard(c); setShadowStep(9);
+            dropCard({ t: "light", pair: c.pairId, own: c.ownership });
+          }
         } else if (name === "guardian") {
           // 守り手が解き放たれた。進化演出を出す（色が未確定だったならここで確定）
           const ev = data as GuardianEvent;
@@ -751,6 +772,7 @@ export function ShingaWorld({
           setPartColor(ev.color);
           setPartsStep(8);
           setGuardianEv(ev);
+          dropCard({ t: "guardian", color: ev.color, from: ev.from });
         } else if (name === "move") {
           // AIが場所を動かすときも、前のワークの持ち物は置いていく（進行帯の混入を防ぐ）
           resetWorkState();
@@ -763,6 +785,8 @@ export function ShingaWorld({
             setMessages((prev) => [...prev,
               { role: "assistant", content: `[[quests]]${qs.map((q) => q.title).join("／")}` }]);
           }
+        } else if (name === "skill") {
+          dropCard({ t: "skill", title: String(data?.title ?? ""), body: data?.body, rarity: data?.rarity ?? "gold" });
         } else if (name === "care") {
           setMessages((prev) => [...prev, { role: "assistant", content: `[[care]]${data?.text ?? ""}` }]);
         } else if (name === "hero") {
@@ -866,6 +890,15 @@ export function ShingaWorld({
   }
 
   // ワーク後チェック：選んだ → 記録して閉じる（何のあとかも残す＝経過で見える）
+  /**
+   * 出来事が起きたその瞬間に、チャットの流れへカードを1枚置く。
+   * 画面いっぱいの演出は閉じたら消えてしまい、
+   * 後から見ても「いつ何が出たのか」が分からなくなるため。
+   */
+  function dropCard(d: Parameters<typeof encodeChatCard>[0]) {
+    setMessages((prev) => [...prev, { role: "assistant", content: encodeChatCard(d) }]);
+  }
+
   function pickAfterCheck(n: number) {
     setAfterPicked(n);
     fetch("/api/emotions", {
@@ -957,6 +990,7 @@ export function ShingaWorld({
           work={runWork} deck={drawStep.deck} lead={drawStep.lead}
           onDone={(card: OwnCard) => {
             setDrawStep(null);
+            dropCard({ t: "draw", name: card.name, meaning: card.meaning });
             advanceCustom(`（カード「${card.name}」を引いた。意味：${card.meaning}）`);
           }}
         />
@@ -1238,7 +1272,12 @@ export function ShingaWorld({
                   )}
                   <div className="singa-line-body">
                   {m.role === "assistant" && !m.content.startsWith("[[") && <span className="who">{guideName}</span>}
-                  {m.content.startsWith("[[quests]]") ? (
+                  {m.content.startsWith("[[card]]") ? (
+                    (() => {
+                      const d = decodeChatCard(m.content);
+                      return d ? <ChatCard data={d} /> : null;
+                    })()
+                  ) : m.content.startsWith("[[quests]]") ? (
                     <div className="chip-quest">✓ クエストに置いたよ：{m.content.slice(10)}</div>
                   ) : m.content.startsWith("[[care]]") ? (
                     <div className="care-card">{m.content.slice(8)}</div>
@@ -1317,6 +1356,19 @@ export function ShingaWorld({
             <span className="zi-en">{MODES[entering].en}</span>
             <span className="zi-ja">{MODES[entering].label}</span>
             <span className="zi-line" />
+            {/* 名前だけ出しても、初めての人には何も伝わらない。
+                説明書にせず、3行だけ置いて世界に入ってもらう */}
+            {(() => {
+              const intro = introOf(entering);
+              if (!intro) return null;
+              return (
+                <span className="zi-intro">
+                  <span className="zi-poem">{intro.poem}</span>
+                  <span className="zi-what">{intro.what}</span>
+                  <span className="zi-why">{intro.why}</span>
+                </span>
+              );
+            })()}
           </div>
           <span className="zi-skip">タップでスキップ</span>
         </div>

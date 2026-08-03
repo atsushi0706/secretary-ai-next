@@ -17,7 +17,7 @@ import { PARTS, PART_COLORS, STEP_LABEL, type PartColor, type PartFace, type Par
  * onError だけだと、ハイドレーション前に読み込み失敗した画像を取りこぼすので、
  * マウント時にも「読み終わっているのに幅が0＝失敗」を見て判定する。
  */
-function PartArt({ face, color, size = 120, glow = false, full = false }: {
+export function PartArt({ face, color, size = 120, glow = false, full = false }: {
   face: PartFace; color: PartColor; size?: number; glow?: boolean;
   /** true なら説明つきのカード全体、false なら顔だけの正方形 */
   full?: boolean;

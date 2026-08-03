@@ -334,9 +334,9 @@ const MY_TOOLS: Array<{ name: string; url: string; emoji: string; note?: string 
   },
   {
     emoji: "🧵",
-    name: "Threads 自動投稿ツール",
-    url: "https://threads-writer-tool-syntch8scd4xvhp3szyqqp.streamlit.app/",
-    note: "Threads 向け5投稿一括生成",
+    name: "アフィリエイト note＋Threads 生成",
+    url: "https://affi-note-threads.vercel.app",
+    note: "LP全文を貼るだけ。note記事とThreads投稿を一括生成",
   },
   {
     emoji: "🌑",

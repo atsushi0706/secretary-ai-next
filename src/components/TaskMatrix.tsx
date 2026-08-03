@@ -85,15 +85,31 @@ function monthEndStr(): string {
   return fmt(new Date(d.getFullYear(), d.getMonth() + 1, 0));
 }
 
-// due の日付から、今日/今週/今月/来月以降 に振り分ける（due なしはサーバの window を尊重）
+/**
+ * due の日付から、今日/今週/今月/来月以降 に振り分ける（due なしはサーバの window を尊重）。
+ *
+ * 【落とし穴】due は Google から "2026-08-03T00:00:00.000Z" の形で返ってくる。
+ * これを "2026-08-03" と文字列比較すると、頭10桁が同じでも**長いほうが後ろ**に並ぶので
+ * `due <= today` が false になる。つまり **今日が期限のタスクが必ず今日枠から外れて
+ * 今週に落ちていた**（昨日以前だけが今日枠に出るので、気づきにくい壊れ方だった）。
+ * 比較の前に必ず10桁へ揃える。
+ */
+function dueDay(due: string | null | undefined): string {
+  return String(due ?? "").slice(0, 10);
+}
 function classifyWindow(t: Task): Win3 {
-  const due = t.due;
+  const due = dueDay(t.due);
   if (!due) return WIN_ORDER.includes(t.window) ? t.window : "this_week";
   const today = todayDateStr();
   if (due <= today) return "today";
   if (due <= weekEndStr()) return "this_week";
   if (due <= monthEndStr()) return "this_month";
   return "next_month";
+}
+/** 期限がもう過ぎているか（今日枠に混ざるので、見て分かるようにする） */
+function isOverdue(t: Task): boolean {
+  const d = dueDay(t.due);
+  return !!d && d < todayDateStr();
 }
 
 function seenKey(date: string, winKey: Win3): string {
@@ -171,8 +187,8 @@ export function TaskMatrix({
     groups[k].sort((a, b) => {
       const ds = priorityScore(b) - priorityScore(a);
       if (ds !== 0) return ds;
-      const da = a.due ?? "9999-12-31";
-      const db = b.due ?? "9999-12-31";
+      const da = dueDay(a.due) || "9999-12-31";
+      const db = dueDay(b.due) || "9999-12-31";
       return da.localeCompare(db);
     });
   }
@@ -506,7 +522,7 @@ function TaskRow({
           </span>
           {task.due && (
             <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
-              〆{task.due.slice(5, 10)}
+              〆{task.due.slice(5, 10)}{isOverdue(task) ? "（期限すぎ）" : ""}
             </span>
           )}
           {questId && (

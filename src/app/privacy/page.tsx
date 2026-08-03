@@ -102,14 +102,31 @@ export default function PrivacyPage() {
           URL 情報を外部に送信することはありません。
         </p>
 
-        <h2 className="text-xl font-bold text-purple-700 mt-8 mb-3">8. データの削除</h2>
-        <p>
-          拡張機能のアンインストールにより、ブラウザ内に保存されたデータはすべて削除されます。
-          秘書AI Web アプリの会話履歴・タスク等を削除したい場合は、お問い合わせください。
-        </p>
+        <h2 className="text-xl font-bold text-purple-700 mt-8 mb-3">8. 連携の解除とデータの削除</h2>
+        <ul className="list-disc list-inside space-y-2 mt-2">
+          <li>
+            <strong>Google 連携の解除</strong>：
+            <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer"
+               className="text-purple-700 underline">Google アカウントの「サードパーティ製アプリとサービス」</a>
+            から、いつでも本サービスのアクセス権を取り消せます。取り消した後は、カレンダー・タスクへ一切アクセスできなくなります。
+          </li>
+          <li>
+            <strong>アプリ内データの削除</strong>：アプリの
+            <Link href="/reset" className="text-purple-700 underline">リセット</Link>
+            から、保存された会話・記録を削除できます。全件の削除をご希望の場合は、下記の連絡先までご連絡いただければ対応します。
+          </li>
+          <li>
+            <strong>拡張機能のデータ削除</strong>：拡張機能をアンインストールすると、
+            ブラウザ内（chrome.storage.local）に保存されたデータはすべて削除されます。
+          </li>
+        </ul>
 
         <h2 className="text-xl font-bold text-purple-700 mt-8 mb-3">9. お問い合わせ</h2>
-        <p>本ポリシーに関するご質問・不具合報告は、提供元（運営者）までご連絡ください。</p>
+        <p>
+          本ポリシーに関するご質問、データ削除のご依頼、不具合のご報告は、
+          <a href="mailto:affection.alice@gmail.com" className="text-purple-700 underline">affection.alice@gmail.com</a>
+          までご連絡ください。
+        </p>
 
         <div className="text-center mt-12">
           <Link href="/welcome" className="text-sm text-purple-700 underline">← トップへ戻る</Link>

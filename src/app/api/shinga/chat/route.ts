@@ -143,6 +143,35 @@ export async function POST(req: Request) {
           ].join("\n");
         }
 
+        // アカシックは「引いていい場所」。過去のワークで本人が言ったことを渡す。
+        // 個別のワーク（ウォールブレイク等）には渡さない——言っていないことが混ざる事故になるため。
+        let pastCtx = "";
+        if (mode === "akashic" && !greet) {
+          try {
+            const { listWalkLogs } = await import("@/lib/shinga");
+            const supa = (await import("@/lib/supabase")).supabaseAdmin();
+            const since = jstDateStr(new Date(Date.now() - 21 * 86400000));
+            const [walks, said] = await Promise.all([
+              listWalkLogs(userId, 4).catch(() => []),
+              supa.from("shinga_conversations")
+                .select("date, place, content").eq("user_id", userId).eq("role", "user")
+                .gte("date", since).neq("date", today)
+                .order("created_at", { ascending: false }).limit(14)
+                .then((r) => r.data ?? [], () => []),
+            ]);
+            const lines = [
+              ...walks.map((w: any) => `- ${w.date} パラレルウォークで：${String(w.summary ?? "").slice(0, 160)}`),
+              ...(said as any[]).map((m) => `- ${m.date} ${MODES[m.place as ModeKey]?.label ?? "会話"}で：${String(m.content ?? "").slice(0, 110)}`),
+            ];
+            if (lines.length) {
+              pastCtx = [
+                "# これまでに本人が話したこと（引いていい。ただしここに無いことは言わない）",
+                ...lines.slice(0, 16),
+              ].join("\n");
+            }
+          } catch { /* 引けなくても会話は進む */ }
+        }
+
         // いまの進行状況（画面に出ている段階）。これが無いとAIは自分がどこまで進めたか分からず、
         // 同じ質問を繰り返して「1/9のまま堂々巡り」になる。
         let progressCtx = "";
@@ -425,6 +454,11 @@ export async function POST(req: Request) {
           .replace(/<shadow_step>[\s\S]*?<\/shadow_step>/g, "")
           .replace(/<shadow_pick>[\s\S]*?<\/shadow_pick>/g, "")
           .replace(/<shadow_light>[\s\S]*?<\/shadow_light>/g, "")
+          // 最後の網：AIがタグ名を書き間違えても、本文には絶対に出さない。
+          // 実際 <hero_delta> を <q-delta> と書いて、JSONごと画面に出たことがある。
+          // 日本語の文章に <英小文字_-> の組は出てこないので、まとめて落とす。
+          .replace(/<([a-z][a-z0-9_-]{1,22})>[\s\S]*?<\/>/g, "")
+          .replace(/<[a-z][a-z0-9_-]{1,22}\s*\/?>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える

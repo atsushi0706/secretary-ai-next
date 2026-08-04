@@ -78,6 +78,28 @@ export async function todaysProgress(userId: string): Promise<ReplayProgress> {
   return { moved: moved.slice(0, 8), inward: inward.slice(0, 5), movedCount: moved.length };
 }
 
+/**
+ * 今日、各ワークで本人が言ったこと。
+ * 振り返りは「引いていい場所」なので、ここは渡す。
+ * （個別のワークには渡さない。言っていないことが混ざる事故になるため）
+ */
+async function todaysWorks(userId: string): Promise<string> {
+  try {
+    const supa = supabaseAdmin();
+    const today = jstDateStr();
+    const { data } = await supa.from("shinga_conversations")
+      .select("place, content").eq("user_id", userId).eq("role", "user").eq("date", today)
+      .order("created_at", { ascending: true }).limit(24);
+    const rows2 = (data ?? []) as any[];
+    if (!rows2.length) return "";
+    const label: Record<string, string> = {
+      walk: "パラレルウォーク", peak: "ピークステート", akashic: "アカシック",
+      deep: "内側のワーク", higher: "ハイヤークエスト", map: "自由な会話",
+    };
+    return rows2.map((r) => `- ${label[r.place] ?? "ワーク"}で：${String(r.content ?? "").slice(0, 110)}`).join("\n");
+  } catch { return ""; }
+}
+
 /** 今日の流れ（十二運の季節）。用語は外に出さず、意味づけの材料としてだけ使う */
 async function todaysSeason(userId: string): Promise<string> {
   try {
@@ -97,10 +119,11 @@ export async function buildReplay(userId: string, saidToday: string): Promise<Re
   const now = jstNow();
   const date = jstDateStr();
   const weekday = WD[now.getDay()];
-  const [progress, season, s] = await Promise.all([
+  const [progress, season, s, works] = await Promise.all([
     todaysProgress(userId),
     todaysSeason(userId),
     getUserSettings(userId).catch(() => null) as Promise<any>,
+    todaysWorks(userId),
   ]);
   const who = s?.user_call_name || "きみ";
 
@@ -129,12 +152,15 @@ export async function buildReplay(userId: string, saidToday: string): Promise<Re
 # 出す形（JSONだけ。前後に何も書かない）
 {
   "received": "今日の話を受ける一言（20字以内。『オッケー、受け取った』程度の軽さ）",
-  "meaning": "今日の意味を1つ（50〜80字）。進んだ日はその進みを指す。動かなかった日は"内に向く時期だった"方向で",
+  "meaning": "今日の意味を1つ（50〜80字）。進んだ日はその進みを指す。動かなかった日は「内に向く時期だった」方向で",
   "tomorrow": ["明日の朝いちにやること（20字以内）", "…最大3つ"]
 }
 
-# 今日 ${who} が話したこと
+# 今日 ${who} が話したこと（振り返りの画面で書いたもの）
 ${saidToday.slice(0, 1200) || "（まだ何も話していない）"}
+
+# 今日、ワークの中で ${who} が言ったこと（ここは引いていい。ただし無いことは言わない）
+${works || "（今日はワークをしていない）"}
 
 # 今日の記録（事実。ここにあることだけが本当に起きたこと）
 - 前に進んだこと（${progress.movedCount}件）：${progress.moved.join(" / ") || "なし"}

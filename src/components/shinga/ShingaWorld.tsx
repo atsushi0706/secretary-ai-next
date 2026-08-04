@@ -38,8 +38,14 @@ type Message = { role: "user" | "assistant"; content: string };
 // タグが本文に混じっても画面に出さない（最初のタグ開始で切る）
 // ※ ここに書き忘れたタグは、生成中そのまま画面に出てしまう。新しいタグを足したら必ずここにも足す。
 function stripTags(t: string): string {
+  // 知っているタグの手前で切る
   const i = t.search(/<(face|move|choices|quest_to_add|hero_delta|wall|breath|emotion|guardian|parts_step|travel|walk|shadow_step|shadow_pick|shadow_light)\b/);
-  return (i >= 0 ? t.slice(0, i) : t).trimEnd();
+  let out = i >= 0 ? t.slice(0, i) : t;
+  // 知らないタグでも、<英小文字_-> の形が出てきたらそこで切る。
+  // AIがタグ名を書き間違えたとき（<q-delta> 等）に、JSONごと画面へ流れるのを防ぐ。
+  const j = out.search(/<[a-z][a-z0-9_-]{1,22}\s*[>/]/);
+  if (j >= 0) out = out.slice(0, j);
+  return out.trimEnd();
 }
 
 async function readSse(resp: Response, onEvent: (event: string, data: any) => void) {

@@ -94,8 +94,19 @@ export function buildGuidePersona(opts: {
   const who = opts.userCallName || "きみ";
   const here = PLACES[opts.place] ?? PLACES.peak;
 
-  const star = buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined);
-  const namePrompt = buildNamePrompt(opts.birthName, who);
+  /**
+   * 過去の情報（生まれ持った傾向・名前から読んだ性質）を持ち込んでよい場所は限られる。
+   *
+   * 個別のワーク（ウォールブレイク・内なる子の神殿・ミラーオブワールド等）は、
+   * **その場の会話だけで完結させる**。ここに傾向を渡すと、本人が言っていないことを
+   * AIが勝手に足してしまう。実際「山の上でガンガン表に出ていく力」のように、
+   * 一度も口にしていない言葉が会話に混ざる事故が起きた。
+   *
+   * 逆に、アカシックレコーダーと自由な会話では、過去を引くことに意味がある。
+   */
+  const carryPast = !opts.mode || opts.mode === "akashic";
+  const star = carryPast ? buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined) : "";
+  const namePrompt = carryPast ? buildNamePrompt(opts.birthName, who) : "";
   const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
   const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate, opts.birthGender, who) : "";
   const reframePrompt = opts.mode === "breakthrough" ? buildReframePrompt() : "";
@@ -110,7 +121,10 @@ ${kiyoBlackStance(who)}
 - アドバイスから入らない。まず ${who} の言いたいことを汲んで返す（ChatGPTが要点をまとめてくれる、あの感じ）。そのうえで、ちょい皮肉と本音の気づきを一歩。
 - 答えを渡しすぎない。段取りもしない。${who} の中にあるものを、一緒に見つける。
 - 決めつけない。「〜な傾向あるよね」「〜な気がする」と余白を残しつつ、でも核心はちゃんと突く。
-- 星・名前から見えた ${who} の傾向を踏まえて、だんだん的確に。ただし毎回それを説明しない。にじませるだけ。
+${carryPast
+  ? `- 星・名前から見えた ${who} の傾向を踏まえて、だんだん的確に。ただし毎回それを説明しない。にじませるだけ。`
+  : `- **${who} がこの場で言ったことだけで話す。** 言っていない望み・言っていない性格を、こちらから足さない。
+  「本当は◯◯したいんだよね」と、本人が口にしていないことを代弁しない。ここは目の前の話だけで完結させる。`}
 
 # 時間の感覚（重要）
 ${opts.todayStr ? `- 今日は ${opts.todayStr}。いまのこの会話は「今日」のもの。` : ""}

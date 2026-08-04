@@ -1,7 +1,10 @@
 /**
- * 全データの書き出し。
- * 管理者（ADMIN_USER_IDS に登録された Google sub）だけが使える。
- * 自分の分だけなら ?mine=1 で、ログインしていれば誰でも取り出せる。
+ * データの書き出し。**管理者だけ**が使える。
+ *
+ * 以前は ?mine=1 を付ければ、ログインしている人なら誰でも自分の分を落とせた。
+ * だが、この世界に書くのは内側のことで、
+ * 「持ち出せる」こと自体を配りたくない（淳くんの判断）。
+ * 全員分も自分の分も、管理者以外は取り出せない。
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
@@ -22,11 +25,9 @@ export async function GET(req: Request) {
   const userId = (session?.user as any)?.id;
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
-  if (!mine && !isAdmin(userId)) {
-    return NextResponse.json(
-      { error: "全員分の書き出しは管理者だけです。自分の分は ?mine=1 で取り出せます。" },
-      { status: 403 },
-    );
+  // 自分の分（?mine=1）であっても、管理者以外は通さない
+  if (!isAdmin(userId)) {
+    return NextResponse.json({ error: "この機能は管理者だけです。" }, { status: 403 });
   }
 
   try {

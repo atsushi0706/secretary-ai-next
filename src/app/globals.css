@@ -5443,3 +5443,12 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .72rem; font-weight: 700; text-decoration: none;
   color: #221b10; background: linear-gradient(160deg,#eed69b,#d9b463);
 }
+
+/* 初期設定のやり直し：体験モードとは色を変えて、取り違えないように */
+.ob-preview.is-again { border-color: rgba(238,214,155,.5); background: rgba(238,214,155,.12); }
+/* すでに鍵が入っている人への一言 */
+.ob-have {
+  margin: 0 0 14px; padding: 11px 13px; border-radius: 12px;
+  font-size: .82rem; line-height: 1.8;
+  color: #d9edc8; background: rgba(140,200,120,.12); border: 1px solid rgba(140,200,120,.3);
+}

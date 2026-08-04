@@ -323,6 +323,17 @@ export default function GuidePage() {
         </p>
       </section>
 
+      {/* 名前・生年月日・APIキーを入れ直したい人の行き先。
+          いま入っている内容がそのまま出るので、消えることはない。 */}
+      <section className="gd-sec">
+        <h2 className="gd-h2">はじめの設定を、入れ直したいとき</h2>
+        <p className="gd-txt">
+          呼ばれたい名前・生年月日・APIキーは、あとからいつでも入れ直せます。<br />
+          <b>いま入っている内容がそのまま出てくる</b>ので、変えたいところだけ書き換えてください。
+        </p>
+        <Link href="/onboarding?again=1" className="gd-btn">✏️ はじめの設定をやり直す</Link>
+      </section>
+
       <footer className="gd-foot">
         <Link href="/settings" className="gd-btn">⚙️ 設定ページへ</Link>
         <Link href="/shinga" className="gd-btn is-ghost">🔑 インナーワールドへ</Link>

@@ -1723,11 +1723,12 @@ function Home({
           <button className="iw-report is-weekly" onClick={onWeekly}>🧰 タイムトラベルボックス</button>
           <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
           <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
-          {/* はじめの説明書。一度読んだら見つからなくなるので、いつでも読み返せる場所に置く。
-              見るだけ（?preview=1）なので、いま入っている設定は書き換わらない。 */}
+          {/* 使い方の説明書。作ってはあったのに、どこからも開けなかった。
+              ここは「読むところ」なので、設定の入力欄ではなく説明書そのものへ行く。
+              （初期設定のやり直しは、その説明書の中から入れる） */}
           <button className="iw-report is-guide"
-            onClick={() => { try { window.location.href = "/onboarding?preview=1"; } catch { /* ignore */ } }}>
-            📘 はじめの説明書
+            onClick={() => { try { window.location.href = "/guide"; } catch { /* ignore */ } }}>
+            📘 使い方の説明書
           </button>
           {/* 発信スタジオは、まだ親アカウントだけ */}
           {isAdmin && <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>}

@@ -23,6 +23,14 @@ function OnboardingInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const preview = sp.get("preview") === "1";
+  /**
+   * ?again=1 ＝ 本人が自分で開いた「初期設定のやり直し」。
+   *
+   * ここを用意していなかったせいで、設定を見直したいだけの人に
+   * 「体験モード：何も保存されません」の空っぽの画面を出してしまっていた。
+   * やり直しでは、**いま入っている内容をそのまま出して、書き換えたら保存する。**
+   */
+  const again = sp.get("again") === "1";
 
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
@@ -31,6 +39,7 @@ function OnboardingInner() {
   const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [hasKey, setHasKey] = useState(false);   // 鍵はもう入っているか（やり直しのとき、貼り直しを強要しない）
   const [ready, setReady] = useState(preview);
 
   useEffect(() => {
@@ -39,11 +48,13 @@ function OnboardingInner() {
       if (s.user_call_name) setName(s.user_call_name);
       if (s.birth_date) setBirth(String(s.birth_date).slice(0, 10));
       if (s.birth_gender === "male" || s.birth_gender === "female") setGender(s.birth_gender);
-      // 全部そろっている人は、ここに留める意味がない
-      if (s.user_call_name && s.birth_date && s.gemini_api_key_set) router.replace("/");
+      setHasKey(!!s.gemini_api_key_set);
+      // 全部そろっている人を初回の案内に留める意味はない。
+      // ただし本人が「やり直す」と決めて来たときは、追い出さない。
+      if (!again && s.user_call_name && s.birth_date && s.gemini_api_key_set) router.replace("/");
       else setReady(true);
     }).catch(() => setReady(true));
-  }, [router, preview]);
+  }, [router, preview, again]);
 
   async function save(body: any) {
     if (preview) return true;        // 体験モードでは何も書き込まない
@@ -64,8 +75,9 @@ function OnboardingInner() {
         await save({ user_call_name: name.trim(), birth_date: birth, birth_gender: gender || null });
       }
       if (step === 4) {
-        if (!key.trim()) throw new Error("APIキーを貼り付けてください");
-        await save({ gemini_api_key: key.trim() });
+        // すでに鍵が入っている人に、貼り直しを強要しない（空のまま進めば、今の鍵が残る）
+        if (!key.trim() && !hasKey) throw new Error("APIキーを貼り付けてください");
+        if (key.trim()) await save({ gemini_api_key: key.trim() });
       }
       if (step < TOTAL) setStep(step + 1);
       else router.replace(preview ? "/onboarding?preview=1" : "/");
@@ -82,6 +94,12 @@ function OnboardingInner() {
         <div className="ob-preview">
           👀 体験モード：<b>何も保存されません</b>。初めての人にどう見えるかを確かめるための画面です。
           {/* 読み終わったら戻れないと、ここで行き止まりになる */}
+          <a className="ob-exit" href="/">← 世界にもどる</a>
+        </div>
+      )}
+      {again && (
+        <div className="ob-preview is-again">
+          ✏️ 初期設定のやり直し：<b>いま入っている内容が出ています</b>。書き換えたところだけ保存されます。
           <a className="ob-exit" href="/">← 世界にもどる</a>
         </div>
       )}
@@ -176,6 +194,13 @@ function OnboardingInner() {
           <section className="ob-card">
             <div className="ob-kicker">STEP 2 / 2</div>
             <h1>鍵を取ってくる</h1>
+            {/* もう入っている人に、貼り直しを求めない */}
+            {hasKey && (
+              <div className="ob-have">
+                ✅ 鍵はもう入っています。<b>このまま進んで大丈夫</b>です。<br />
+                取り替えたいときだけ、新しいものを下に貼ってください。
+              </div>
+            )}
             <ol className="ob-steps">
               <li>
                 <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="ob-link">
@@ -189,7 +214,7 @@ function OnboardingInner() {
               <li>下に貼り付ける</li>
             </ol>
             <input className="ob-input is-key" value={key} onChange={(e) => setKey(e.target.value)}
-              placeholder="AIza… で始まる文字列を貼り付け" spellCheck={false} />
+              placeholder={hasKey ? "取り替えるときだけ、新しい鍵を貼り付け" : "AIza… で始まる文字列を貼り付け"} spellCheck={false} />
             <p className="ob-hint">
               鍵は暗号化して保存され、あなたの応答生成にしか使いません。他の人には見えません。
             </p>
@@ -228,7 +253,7 @@ function OnboardingInner() {
             : step === 1 ? "はじめる →"
             : step === 2 ? "これで進む →"
             : step === 3 ? "鍵を取りにいく →"
-            : step === 4 ? "この鍵で始める →"
+            : step === 4 ? (hasKey && !key.trim() ? "このまま進む →" : "この鍵で始める →")
             : preview ? "体験おわり（最初に戻る）" : "世界に入る →"}
         </button>
 

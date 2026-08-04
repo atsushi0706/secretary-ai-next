@@ -246,7 +246,29 @@ function OnboardingInner() {
         {step === 5 && (
           <section className="ob-card">
             <div className="ob-kicker">READY</div>
-            <h1>1日の流れ</h1>
+            <h1>いちばん最初に、これを決める</h1>
+
+            {/* ここが出発点。この設定が無いと、全部のワークが「なんとなく」で終わる。
+                流れの説明より先に置く。 */}
+            <div className="ob-hero">
+              <div className="ob-hero-t">🦸 主人公 ——「何者として生きるか」</div>
+              <p className="ob-hero-l">
+                このアプリは、ワークをこなす場所ではありません。<br />
+                <b>決めた自分に、なっていくための場所</b>です。だから最初に、4つだけ決めます。
+              </p>
+              <div className="ob-hero-q">
+                <div><span>①</span><b>増やしたい世界</b>　この世界に、もっとあってほしいもの</div>
+                <div><span>②</span><b>減らしたい世界</b>　いま感じている違和感</div>
+                <div><span>③</span><b>その世界に必要な人</b>　そこにいるのは、どんな人か</div>
+                <div><span>④</span><b>私は「〜として生きる」</b>　その人を、自分の言葉で</div>
+              </div>
+              <p className="ob-hero-n">
+                地図の <b>🦸 主人公</b> から、いつでも書けます。書き直しても大丈夫。<br />
+                <b>全部のワークは、ここへ戻ってきます。</b>
+              </p>
+            </div>
+
+            <h2 className="ob-h2">そのあとの、1日の流れ</h2>
             <p className="ob-lead">迷ったら、この順でどうぞ。</p>
             <div className="ob-flow">
               <div className="ob-flow-row"><span className="n">朝</span>
@@ -258,7 +280,13 @@ function OnboardingInner() {
               <div className="ob-flow-row"><span className="n">落とす</span>
                 <div><b>今日1ミリ</b><span>ワークの終わりに「今日1つだけ入れること」を決める。それが今日の一手になります。</span></div></div>
               <div className="ob-flow-row"><span className="n">夜</span>
-                <div><b>1日の振り返り</b><span>今日を置いて、明日の感情を決めて閉じる。20時に通知が届きます。</span></div></div>
+                <div><b>ワールドリプレイ</b><span>今日を置いて、明日やることを3つまで決めて閉じる。夜に通知が届きます。</span></div></div>
+            </div>
+            <div className="ob-flow" style={{ marginTop: 14 }}>
+              <div className="ob-flow-row"><span className="n">週1</span>
+                <div><b>レベルチェック</b><span>相棒が暮らしの様子を聞きます。答えるだけ。数字は選ばなくて大丈夫。</span></div></div>
+              <div className="ob-flow-row"><span className="n">貯まる</span>
+                <div><b>カード保管庫 ／ タイムトラベルボックス</b><span>手に入れた力と、週のふりかえりが残っていきます。</span></div></div>
             </div>
             <p className="ob-note">
               あとは自由です。気が向いたワークから触ってみてください。<br />

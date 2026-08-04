@@ -1730,7 +1730,9 @@ function Home({
                 title={`夜（${REFLECT_FROM_HOUR}時）に通知でお知らせするよ。先に開いてもいい`}>
                 🌙 ワールドリプレイ<span className="rp-when">夜{REFLECT_FROM_HOUR}時に通知</span>
               </button>}
-          <button className="iw-report is-hero" onClick={onHero}>🏅 レベルチェック（週1）</button>
+          {/* この画面は「何者として生きるか」を決める場所。週1のレベルチェックはその中にある。
+              「レベルチェック」だけの名前にしたら、いちばん大事なものが名前から消えてしまった。 */}
+          <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（何者として生きるか）</button>
           <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>
         </div>
         <div className="iw-reflect-row is-shelf">

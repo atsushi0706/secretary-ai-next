@@ -5487,3 +5487,23 @@ body:has(.realverse-bg) { background: transparent; }
   background: linear-gradient(160deg,#ff7a6a,#e04a5f);
   box-shadow: 0 2px 8px rgba(0,0,0,.45);
 }
+
+/* 初回の説明書：いちばん最初に決めること（主人公） */
+.ob-hero {
+  margin: 6px 0 22px; padding: 20px 20px 18px; border-radius: 16px;
+  background: linear-gradient(160deg, rgba(238,214,155,.14), rgba(238,214,155,.05));
+  border: 1px solid rgba(238,214,155,.42);
+}
+.ob-hero-t { font-size: .98rem; font-weight: 900; color: #f0d08a; margin-bottom: 10px; }
+.ob-hero-l { font-size: .84rem; line-height: 1.9; color: #e6dcc6; }
+.ob-hero-q { margin: 14px 0 12px; display: flex; flex-direction: column; gap: 8px; }
+.ob-hero-q div { display: flex; gap: 10px; font-size: .82rem; line-height: 1.7; color: #efe6d2; }
+.ob-hero-q span { flex: 0 0 auto; color: #e0bd72; font-weight: 900; }
+.ob-hero-q b { color: #fff; }
+.ob-hero-n { font-size: .76rem; line-height: 1.85; color: rgba(240,230,210,.8); }
+.ob-h2 {
+  margin: 22px 0 6px; font-size: 1rem; font-weight: 900; color: #f0d08a;
+  font-family: Georgia, "Yu Mincho", "游明朝", serif;
+}
+/* 説明書の「できること」で、出発点だけ目立たせる */
+.gd-feat .gf.is-first { border-color: rgba(238,214,155,.55); background: rgba(238,214,155,.08); }

@@ -297,6 +297,9 @@ export default function GuidePage() {
       <section className="gd-sec">
         <h2><span className="gd-num">5</span>できること（ざっと）</h2>
         <div className="gd-feat">
+          <div className="gf is-first"><b>🦸 主人公（何者として生きるか）</b><span>
+            <b>ここが出発点。</b>増やしたい世界／減らしたい世界／その世界に必要な人／
+            そして「私は〜として生きる」を決める。全部のワークは、ここへ戻ってくる。</span></div>
           <div className="gf"><b>🧭 リアルバース</b><span>予定とタスク。今日の時間割を組む。話しかけるだけで登録できる。</span></div>
           <div className="gf"><b>✨ ピークステート</b><span>理想が叶っている状態に<b>先になる</b>。呼吸で整えるところから。</span></div>
           <div className="gf"><b>🚶 パラレルウォーク</b><span>理想の世界を歩いて言葉にする。話すほど景色が開けていく。</span></div>
@@ -304,6 +307,10 @@ export default function GuidePage() {
           <div className="gf"><b>🜂 内なる子の神殿</b><span>守り手の奥にいる子に会い、癒して取り込む。守り手は才能になる。</span></div>
           <div className="gf"><b>🚀 パラレルトラベル</b><span>「それがあるとどうなる？」で視野を上げる。宇宙まで引いていく。</span></div>
           <div className="gf"><b>📖 自分の取扱説明書</b><span>生年月日×16問。強み・つまずき・向かう方向を長文で。</span></div>
+          <div className="gf"><b>🏅 レベルチェック（週1）</b><span>週に1回、相棒が暮らしの様子を聞く。答えるだけで、いまの位置が分かる。</span></div>
+          <div className="gf"><b>🃏 カード保管庫</b><span>ワークで手に入れた力が、カードになって残る。柄はひとつずつ違う。</span></div>
+          <div className="gf"><b>🧰 タイムトラベルボックス</b><span>週のふりかえりが貯まる宝箱。何に悩んで、どう見直したかまで残る。</span></div>
+          <div className="gf"><b>🌙 ワールドリプレイ</b><span>夜、今日を置いて、明日やることを3つまで決めて閉じる。</span></div>
           <div className="gf"><b>📣 発信スタジオ</b><span>ワークの体験を、フォロワーに役立つカルーセル投稿に変換する。</span></div>
         </div>
       </section>

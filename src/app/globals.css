@@ -320,6 +320,10 @@ body:has(.realverse-bg) { background: transparent; }
 
 /* ── シンガワールド: 宝の地図の上で、案内役と話す ── */
 .singa-stage {
+  /* この枠の高さを、中の画面にも伝える。
+     中の画面が 100dvh を上限にしていると、枠(82vh)からはみ出したぶんが
+     overflow:hidden で切り落とされ、一番下のボタンに手が届かなくなる。 */
+  --stage-h: min(82vh, 780px);
   --singa-ink: #f4e7c8;
   --singa-ink-soft: rgba(244, 231, 200, .78);
   --singa-gold: #e0bd72;
@@ -739,7 +743,7 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-state-fab .label { font-size: .66rem; letter-spacing: .06em; }
 
 @media (max-width: 700px) {
-  .singa-stage { height: min(86vh, 720px); }
+  .singa-stage { height: min(86vh, 720px); --stage-h: min(86vh, 720px); }
   .singa-avatar { width: 92px; height: 92px; left: 10px; bottom: 66px; }
   .singa-line { max-width: 82%; }
   .singa-panel-wrap {
@@ -2387,8 +2391,8 @@ body:has(.realverse-bg) { background: transparent; }
 }
 @keyframes zi-zoom {
   0%   { transform: scale(1.5); filter: blur(16px) brightness(.35); }
-  55%  { filter: blur(2px) brightness(.78); }
-  100% { transform: scale(1.02); filter: blur(0) brightness(.72); }
+  55%  { filter: blur(2px) brightness(.86); }
+  100% { transform: scale(1.02); filter: blur(0) brightness(.94); }
 }
 /* うっすらビネット＋光の帯が一度走る */
 .zone-intro .zi-veil { position: absolute; inset: 0;
@@ -2406,13 +2410,15 @@ body:has(.realverse-bg) { background: transparent; }
      四角い箱にすると演出が台無しになるので、外へ向けて溶ける楕円にする。 */
   max-width: min(620px, 92%); padding: 30px 26px 34px; border-radius: 26px; }
 .zone-intro .zi-title::before {
-  content: ""; position: absolute; inset: -12% -14%; z-index: -1; border-radius: 50%;
+  content: ""; position: absolute; inset: -16% -16%; z-index: -1; border-radius: 50%;
   background: radial-gradient(closest-side,
-    rgba(3,2,7,.9) 0%, rgba(3,2,7,.84) 52%, rgba(3,2,7,.55) 78%, rgba(3,2,7,0) 100%);
+    rgba(3,2,7,.92) 0%, rgba(3,2,7,.88) 62%, rgba(3,2,7,.62) 84%, rgba(3,2,7,0) 100%);
   /* 絵が明るくて細かい場所（神殿・鏡など）は、黒を重ねるだけでは足りない。
      後ろそのものをぼかして暗くする。まわりは素通しなので、絵は残る。 */
-  backdrop-filter: blur(7px) brightness(.4) saturate(.85);
-  -webkit-backdrop-filter: blur(7px) brightness(.4) saturate(.85);
+  /* 絵は暗くしない（明るい絵はそのまま美しく見せる）。
+     文字の下だけ、後ろをぼかして落とす。まわりは素通しなので世界観は残る。 */
+  backdrop-filter: blur(9px) brightness(.34) saturate(.9);
+  -webkit-backdrop-filter: blur(9px) brightness(.34) saturate(.9);
 }
 @keyframes zi-title-in { 0% { opacity: 0; transform: translateY(18px); letter-spacing: .6em; filter: blur(6px); }
   100% { opacity: 1; transform: none; letter-spacing: normal; filter: blur(0); } }
@@ -2764,7 +2770,7 @@ body:has(.realverse-bg) { background: transparent; }
 .pt-gate {
   position: relative; z-index: 3;
   max-width: 860px; margin: 0 auto; padding: 18px 16px 22px;
-  overflow-y: auto; max-height: calc(100dvh - 150px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 150px);
   /* 背景の絵が濃いので、神殿全体に暗幕を敷いて文字を読ませる */
   background: linear-gradient(180deg, rgba(10,8,14,.9) 0%, rgba(10,8,14,.82) 55%, rgba(10,8,14,.9) 100%);
   border-radius: 20px;
@@ -2949,7 +2955,7 @@ body:has(.realverse-bg) { background: transparent; }
 }
 @keyframes gr-fade { from { opacity: 0; } to { opacity: 1; } }
 .gr-card {
-  width: min(460px, 100%); max-height: calc(100dvh - 36px); overflow-y: auto;
+  width: min(460px, 100%); max-height: calc(var(--stage-h, 100dvh) - 36px); overflow-y: auto;
   padding: 22px 22px 20px; border-radius: 22px; text-align: center;
   background: linear-gradient(170deg, rgba(30,24,38,.96), rgba(14,11,18,.98));
   border: 1px solid color-mix(in srgb, var(--pc) 55%, transparent);
@@ -3021,7 +3027,7 @@ body:has(.realverse-bg) { background: transparent; }
 .bc-screen {
   position: relative; z-index: 3;
   max-width: 900px; margin: 0 auto; padding: 14px 16px 40px;
-  overflow-y: auto; max-height: calc(100dvh - 20px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 20px);
   background: linear-gradient(180deg, rgba(10,8,14,.92), rgba(10,8,14,.86));
   border-radius: 20px; border: 1px solid rgba(238,214,155,.16);
 }
@@ -3319,7 +3325,7 @@ body:has(.realverse-bg) { background: transparent; }
   backdrop-filter: blur(6px); animation: gr-fade .35s ease both;
 }
 .cr-card {
-  width: min(460px, 100%); max-height: calc(100dvh - 36px); overflow-y: auto;
+  width: min(460px, 100%); max-height: calc(var(--stage-h, 100dvh) - 36px); overflow-y: auto;
   padding: 22px 20px 20px; border-radius: 22px; text-align: center;
   background: linear-gradient(170deg, rgba(28,22,36,.96), rgba(13,10,18,.98));
   border: 1px solid color-mix(in srgb, var(--pc) 50%, transparent);
@@ -3361,7 +3367,7 @@ body:has(.realverse-bg) { background: transparent; }
 .pi-screen {
   position: relative; z-index: 4;
   max-width: 520px; margin: 0 auto; padding: 18px 20px 24px;
-  overflow-y: auto; max-height: calc(100dvh - 120px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 120px);
   text-align: center;
   /* 背景の神殿が濃いので、文字が沈まないよう暗幕を敷く */
   background: linear-gradient(180deg, rgba(9,7,13,.9) 0%, rgba(9,7,13,.84) 60%, rgba(9,7,13,.92) 100%);
@@ -3982,7 +3988,7 @@ body:has(.realverse-bg) { background: transparent; }
 .wm-screen {
   position: relative; z-index: 3;
   max-width: 640px; margin: 0 auto; padding: 14px 18px 40px;
-  overflow-y: auto; max-height: calc(100dvh - 20px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 20px);
   background: linear-gradient(180deg, rgba(10,8,14,.93), rgba(10,8,14,.88));
   border-radius: 20px; border: 1px solid rgba(238,214,155,.16);
 }
@@ -4255,7 +4261,7 @@ body:has(.realverse-bg) { background: transparent; }
 .wt-screen {
   position: relative; z-index: 3;
   max-width: 620px; margin: 0 auto; padding: 14px 16px 40px;
-  overflow-y: auto; max-height: calc(100dvh - 20px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 20px);
 }
 .wt-card {
   padding: 16px; border-radius: 20px;
@@ -4419,7 +4425,7 @@ body:has(.realverse-bg) { background: transparent; }
 .sm-gate {
   position: relative; z-index: 3;
   max-width: 860px; margin: 0 auto; padding: 18px 16px 22px;
-  overflow-y: auto; max-height: calc(100dvh - 150px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 150px);
   background: linear-gradient(180deg, rgba(10,8,14,.92) 0%, rgba(14,10,20,.85) 55%, rgba(10,8,14,.92) 100%);
   border-radius: 20px; border: 1px solid rgba(238,214,155,.16);
   backdrop-filter: blur(3px);
@@ -4682,7 +4688,7 @@ body:has(.realverse-bg) { background: transparent; }
 .tm-wrap {
   position: relative; z-index: 3;
   max-width: 620px; margin: 0 auto; padding: 10px 14px 26px;
-  overflow-y: auto; max-height: calc(100dvh - 150px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 150px);
 }
 
 /* 届くまで：光の粒がひとつ、ゆっくり脈打つ */
@@ -4864,7 +4870,7 @@ body:has(.realverse-bg) { background: transparent; }
 .cv-screen {
   position: relative; z-index: 3;
   max-width: 680px; margin: 0 auto; padding: 14px 16px 40px;
-  overflow-y: auto; max-height: calc(100dvh - 20px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 20px);
 }
 .cv-card {
   padding: 16px; border-radius: 20px;
@@ -4956,7 +4962,7 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .zone-intro .zi-why {
   animation-delay: 3.2s;
-  font-size: .76rem; line-height: 1.85; color: rgba(243,235,218,.88);
+  font-size: .8rem; line-height: 1.85; color: rgba(248,242,230,.96);
 }
 .zone-intro .zi-why::before {
   content: ""; display: block; width: 40px; height: 1px; margin: 9px auto 8px;
@@ -5263,7 +5269,7 @@ body:has(.realverse-bg) { background: transparent; }
 .tt-screen {
   position: relative; z-index: 3;
   max-width: 640px; margin: 0 auto; padding: 14px 16px 40px;
-  overflow-y: auto; max-height: calc(100dvh - 20px);
+  overflow-y: auto; max-height: calc(var(--stage-h, 100dvh) - 20px);
 }
 .tt-card {
   padding: 16px; border-radius: 20px;
@@ -5507,3 +5513,50 @@ body:has(.realverse-bg) { background: transparent; }
 }
 /* 説明書の「できること」で、出発点だけ目立たせる */
 .gd-feat .gf.is-first { border-color: rgba(238,214,155,.55); background: rgba(238,214,155,.08); }
+
+/* 「これ、クエストに置いとく？」の確認カード
+   会話の吹き出しに混ぜると見落とすので、独立して、これだけを出す */
+.quest-offer {
+  margin: 12px auto; width: min(420px, 94%); padding: 16px 18px 14px;
+  border-radius: 16px; text-align: center;
+  background: linear-gradient(160deg, rgba(30,24,14,.96), rgba(20,16,11,.96));
+  border: 1px solid rgba(232,193,90,.6);
+  box-shadow: 0 10px 34px rgba(0,0,0,.55), 0 0 26px rgba(232,193,90,.18);
+  animation: qo-in .35s cubic-bezier(.1,.9,.2,1);
+}
+@keyframes qo-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
+.quest-offer .qo-head { font-size: .78rem; font-weight: 800; color: var(--singa-gold); margin-bottom: 10px; }
+.quest-offer .qo-title {
+  font-size: .95rem; font-weight: 700; line-height: 1.7; color: var(--singa-ink);
+  padding: 12px 12px; border-radius: 12px; margin-bottom: 14px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(232,189,114,.22);
+}
+.quest-offer .qo-btns { display: flex; gap: 10px; }
+.quest-offer button {
+  flex: 1; padding: 11px 0; border-radius: 999px; font-size: .84rem; font-weight: 800;
+  border: 1px solid transparent; transition: transform .12s ease;
+}
+.quest-offer button:active { transform: scale(.97); }
+.quest-offer .qo-yes { color: #221b10; background: linear-gradient(160deg,#eed69b,#d9b463); }
+.quest-offer .qo-no { color: var(--singa-ink-soft); background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.16); }
+.quest-offer button:disabled { opacity: .5; }
+
+/* じぶんワーク：何ができる場所なのかの説明 */
+.wm-about {
+  margin: 0 0 16px; padding: 15px 16px; border-radius: 14px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(238,214,155,.28);
+}
+.wm-about-t { font-size: .82rem; font-weight: 900; color: var(--singa-gold); margin-bottom: 8px; }
+.wm-about p { font-size: .78rem; line-height: 1.9; color: var(--singa-ink-soft); }
+.wm-about p b { color: var(--singa-ink); }
+.wm-about-l { margin: 11px 0 9px; display: flex; flex-direction: column; gap: 6px; }
+.wm-about-l div { display: flex; gap: 8px; font-size: .76rem; line-height: 1.7; color: var(--singa-ink); }
+.wm-about-l span { flex: 0 0 auto; color: var(--singa-gold); font-weight: 900; }
+.wm-about-n { font-size: .7rem !important; opacity: .8; }
+/* 白紙から組む */
+.wm-blank {
+  width: 100%; margin-top: 10px; padding: 12px 0; border-radius: 999px;
+  font-size: .82rem; font-weight: 800; color: var(--singa-ink);
+  background: rgba(255,255,255,.06); border: 1px dashed rgba(238,214,155,.45);
+}
+.wm-blank:disabled { opacity: .5; }

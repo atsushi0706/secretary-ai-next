@@ -251,9 +251,10 @@ export async function POST(req: Request) {
         // 実書き込みの掟（AIが「入れておいた」と言ったのに実体が無い、を絶対に起こさない）
         const honestyCtx = [
           "# 実行の掟（最重要）",
-          "- 「クエストに置いておく」「追加しておく」と言うときは、**同じ返事の最後に必ず** <quest_to_add>[{\"title\":\"...\"}]</quest_to_add> を付ける。",
-          "- タグを付けずに「置いた」「入れた」と言うのは嘘になる。絶対に禁止。",
-          "- タグが出せない状況なら「いまは置けなかった」と正直に言う。",
+          "- クエストは、**こちらで勝手に置かない**。置くかどうかは本人が決める。",
+          "- 「置いた」「入れておいた」と**言い切らない**。実際に置くのは本人が選んだあとなので、嘘になる。",
+          "- 置いたほうがよさそうなことが出てきたら、**同じ返事の最後に** <quest_to_add>[{\"title\":\"20字以内の行動\"}]</quest_to_add> を付ける。",
+          "  画面が「これ、クエストに置いとく？」と本人に聞いてくれる。**本文では聞かなくていい**（二重に聞くことになる）。",
         ].join("\n");
 
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
@@ -422,7 +423,15 @@ export async function POST(req: Request) {
         }
 
         // クエスト
-        const addedQuests: Array<{ id: string; title: string }> = [];
+        /**
+         * クエストは、**勝手に置かない**。
+         *
+         * 以前はタグが出た瞬間に登録していた。だが本人は頼んでいないのに
+         * 「✓ クエストに置いたよ」とだけ出て、会話の流れにも埋もれていた。
+         * ここでは候補を返すだけにして、画面が「置いとく？」と1件ずつ聞く。
+         * 置くと決まったときに、はじめて作る（/api/shinga/quest）。
+         */
+        const offerQuests: Array<{ title: string; body: string }> = [];
         const questMatch = full.match(/<quest_to_add>([\s\S]*?)<\/quest_to_add>/);
         if (questMatch) {
           try {
@@ -430,12 +439,9 @@ export async function POST(req: Request) {
             for (const c of cands.slice(0, 2)) {
               const title = String(c?.title ?? "").trim();
               if (!title) continue;
-              const q = await createQuest(userId, { title, body: String(c?.body ?? ""), category: "life" });
-              addedQuests.push({ id: q.id, title: q.title });
+              offerQuests.push({ title, body: String(c?.body ?? "") });
             }
-          } catch (e) {
-            if (!isMissingTable(e)) console.error("[shinga/chat] createQuest failed:", e);
-          }
+          } catch { /* 読めなくても会話は進む */ }
         }
 
         // 「クエストに置いた」と**言い切った**のにタグが無い場合だけ、発言から拾って本当に置く。
@@ -465,8 +471,8 @@ export async function POST(req: Request) {
               for (const c of arr.slice(0, 2)) {
                 const title = String(c?.title ?? "").trim();
                 if (!title) continue;
-                const q = await createQuest(userId, { title, body: String(c?.body ?? ""), category: "life" });
-                addedQuests.push({ id: q.id, title: q.title });
+                // ここも作らない。画面が「置いとく？」と聞く
+                offerQuests.push({ title, body: String(c?.body ?? "") });
               }
             }
           } catch { /* 拾えなければ、下の掟の強化に任せる */ }
@@ -656,7 +662,7 @@ ${talked}`,
 
         if (choices) send("choices", { choices });
         if (moveTo) send("move", { place: moveTo });
-        if (addedQuests.length > 0) send("quests", { quests: addedQuests });
+        if (offerQuests.length > 0) send("quest_offer", { quests: offerQuests });
         if (heroChanges.length > 0) send("hero", { changes: heroChanges });
 
         if (clean) {
@@ -667,7 +673,7 @@ ${talked}`,
           send("debug", {
             stage: "output",
             raw: full,
-            extracted: { face, move: moveTo, choices, wantEmotion, wantBreath, addedQuests, heroChanges },
+            extracted: { face, move: moveTo, choices, wantEmotion, wantBreath, offerQuests, heroChanges },
           });
         }
         send("done", { ok: true });

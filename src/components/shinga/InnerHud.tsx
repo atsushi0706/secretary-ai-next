@@ -8,6 +8,8 @@ import { useEffect, useRef, useState } from "react";
  * - 今日のナゾ（最大3・1つ解けば今日クリア）。
  */
 type Grounding = { imageDays: number; realDays: number };
+type LevelAction = { key: string; label: string; per: number; days: number; earnedToday: boolean };
+type Level = { level: number; max: number; actions: LevelAction[] };
 type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
 // 対話の中身から読み取った偏り（回数では見えない"状態"）
@@ -28,6 +30,7 @@ export function InnerHud({ guideName, onTalkBalance }: {
 }) {
   const [g, setG] = useState<Grounding>({ imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
+  const [level, setLevel] = useState<Level | null>(null);
   const [lean, setLean] = useState<Lean | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [ready, setReady] = useState(false);
@@ -35,8 +38,9 @@ export function InnerHud({ guideName, onTalkBalance }: {
   const [burst, setBurst] = useState<string | null>(null);
   const burstTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function apply(d: { grounding?: Grounding; balance?: Balance; quest?: Quest; lean?: Lean | null }) {
+  function apply(d: { grounding?: Grounding; balance?: Balance; quest?: Quest; level?: Level; lean?: Lean | null }) {
     if (d.grounding) setG(d.grounding);
+    if (d.level) setLevel(d.level);
     if (d.balance) setBalance(d.balance);
     if (d.quest) setQuest(d.quest);
     if (d.lean !== undefined) setLean(d.lean ?? null);
@@ -77,6 +81,10 @@ export function InnerHud({ guideName, onTalkBalance }: {
 
   return (
     <div className="ihud">
+      {/* 冒険者レベル。100に届いたら枠ごと消える（トロフィーが相棒の隣に付く）。
+          何かやるたびに +1 されるので、動いたことが目に見える。 */}
+      {level && level.level < level.max && <LevelBar level={level} />}
+
       {/* 空想↔現実のバランス（中央＝フロー） */}
       <BalanceMeter balance={balance} imageDays={g.imageDays} realDays={g.realDays} lean={lean} onTalk={onTalkBalance} />
       {burst && <div className="hud-burst">{burst}</div>}
@@ -117,6 +125,43 @@ export function InnerHud({ guideName, onTalkBalance }: {
       </div>
       )}
 
+    </div>
+  );
+}
+
+/**
+ * 冒険者レベル（0〜100）。
+ * 何をやっても +1、何もしない日は -1。だから「動いた／動かなかった」がそのまま出る。
+ * 100 に届くと、この枠は消えてトロフィーになる。
+ */
+function LevelBar({ level }: { level: Level }) {
+  const [open, setOpen] = useState(false);
+  const pct = Math.max(0, Math.min(100, (level.level / (level.max || 100)) * 100));
+  const gotToday = level.actions.filter((a) => a.earnedToday).length;
+  return (
+    <div className="ihud-level">
+      <button className="lv-head" onClick={() => setOpen((v) => !v)}>
+        <span className="lv-label">🌱 冒険者レベル</span>
+        <span className="lv-num">{level.level}<span className="lv-max">/{level.max}</span></span>
+        <span className="lv-toggle">{open ? "▲ 閉じる" : "▼ 上げ方"}</span>
+      </button>
+      <div className="lv-track"><span className="lv-fill" style={{ width: `${pct}%` }} /></div>
+      {gotToday > 0 && <div className="lv-today">今日 ＋{gotToday}</div>}
+      {open && (
+        <ul className="lv-actions">
+          {level.actions.map((a) => (
+            <li key={a.key} className={a.earnedToday ? "got" : ""}>
+              <span className="a-label">{a.label}</span>
+              <span className="a-per">＋{a.per}</span>
+              <span className="a-state">{a.earnedToday ? "今日ぶんは入った ✓" : "やると上がる"}</span>
+            </li>
+          ))}
+          <li className="lv-note">
+            ※ <b>何をやっても ＋1</b>。1日に3つやれば ＋3。何もしなかった日だけ −1。
+            100 に届くと「人生の冒険者」のトロフィーが付くよ。
+          </li>
+        </ul>
+      )}
     </div>
   );
 }

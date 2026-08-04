@@ -152,6 +152,24 @@ export function WorkMaker({ initial, onSaved, onBack }: {
           </p>
         </div>
 
+        {/* 何ができる場所なのか、先に渡す。無いまま置かれても手が動かない */}
+        <div className="wm-about">
+          <div className="wm-about-t">これは、何をするところ？</div>
+          <p>
+            <b>自分専用のワークを作って、地図に置ける</b>ところです。<br />
+            作ると、地図に扉が増えます。押すと、決めた順に相棒が問いかけてくれます。
+          </p>
+          <div className="wm-about-l">
+            <div><span>①</span>どんな時間にしたいかを、ひとこと決める</div>
+            <div><span>②</span>問いかけと、カードを引くところを並べる</div>
+            <div><span>③</span>保存すると、地図に扉ができる</div>
+            <div><span>④</span>いつでも入って、何度でもできる</div>
+          </div>
+          <p className="wm-about-n">
+            作ったあとも、扉を長押し（右クリック）で書き直せます。消すのも自由です。
+          </p>
+        </div>
+
         <div className="wm-seeds">
           {SEEDS.map((sd) => (
             <button key={sd.text} className={`wm-seed ${purpose === sd.text ? "on" : ""}`}
@@ -171,6 +189,22 @@ export function WorkMaker({ initial, onSaved, onBack }: {
           {busy ? "✧ 編んでいます…" : "✨ 儀式の型をつくってもらう"}
         </button>
         <p className="wm-note">できた型は、あとから自由に組み替えられるよ。</p>
+
+        {/* 型をもらわず、まっさらから自分で組みたい人のために */}
+        <button className="wm-blank" disabled={busy}
+          onClick={() => {
+            setWork({
+              name: "", emoji: "🌟", purpose: purpose.trim(),
+              intro: "", closing: "",
+              steps: [{ kind: "q", q: "" }],   // 空の問いを1つだけ置いて始める
+              cards: [],
+            });
+            setErr("");
+            setPhase("edit");
+          }}>
+          📄 白紙から、自分で組む
+        </button>
+        <p className="wm-note">問いも順番も、ぜんぶ自分で決めたいときはこちら。</p>
       </div>
     );
   }

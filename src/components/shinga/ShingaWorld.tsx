@@ -126,6 +126,9 @@ export function ShingaWorld({
   const [choices, setChoices] = useState<Choice[] | null>(null);
   const [widget, setWidget] = useState<"emotion" | "breath" | null>(null);
   const [wallStage, setWallStage] = useState(1); // ウォールブレイク：扉の開き具合(1=閉〜5=全開)
+  // 「これ、クエストに置いとく？」の確認カード（置くのは本人が決める）
+  const [questOffer, setQuestOffer] = useState<{ title: string; body?: string } | null>(null);
+  const [questSaving, setQuestSaving] = useState(false);
   const [wallDug, setWallDug] = useState(0);    // ウォールブレイク：陰の側から掘り出せた個数（7個で次の段階へ）
   const [travelStage, setTravelStage] = useState(1); // パラレルトラベル：高度(1=目の前 〜 10=すべてがつながる)
   const [walkStage, setWalkStage] = useState(1);     // パラレルウォーク：どこまで歩いたか(1=門 〜 10=理想郷)
@@ -491,6 +494,7 @@ export function ShingaWorld({
    * 入口（enter / enterFree / enterCustom / AIの<move>）は必ずここを通す。
    */
   function resetWorkState() {
+    setQuestOffer(null);   // 前のワークの「置いとく？」を持ち越さない
     runWorkRef.current = null; setRunWork(null); setDrawStep(null);
     setChoices(null); setWidget(null); setEmoPick(null);
     setPartsGate(false); setPartsIntro(null);
@@ -802,13 +806,11 @@ export function ShingaWorld({
           resetWorkState();
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
-        } else if (name === "quests") {
-          // 本当に書き込まれたものだけをチップで見せる（言いっぱなし防止の見える化）
-          const qs = (data?.quests as { title: string }[]) ?? [];
-          if (qs.length) {
-            setMessages((prev) => [...prev,
-              { role: "assistant", content: `[[quests]]${qs.map((q) => q.title).join("／")}` }]);
-          }
+        } else if (name === "quest_offer") {
+          // 勝手に置かない。「これ、置いとく？」と1件ずつ聞く。
+          // 会話の吹き出しの中に混ぜると見落とすので、独立したカードで出す。
+          const qs = (data?.quests as { title: string; body?: string }[]) ?? [];
+          if (qs.length) setQuestOffer(qs[0]);
         } else if (name === "skill") {
           dropCard({ t: "skill", title: String(data?.title ?? ""), body: data?.body, rarity: data?.rarity ?? "gold" });
         } else if (name === "care") {
@@ -1332,6 +1334,46 @@ export function ShingaWorld({
                     {c.label}
                   </button>
                 ))}
+              </div>
+            )}
+
+            {/* 「これ、クエストに置いとく？」
+                会話の吹き出しに混ぜると見落とすので、独立したカードで、これだけを出す。 */}
+            {questOffer && (
+              <div className="quest-offer">
+                <div className="qo-head">🔨 これ、クエストに置いとく？</div>
+                <div className="qo-title">{questOffer.title}</div>
+                <div className="qo-btns">
+                  <button className="qo-yes" disabled={questSaving}
+                    onClick={async () => {
+                      setQuestSaving(true);
+                      try {
+                        const r = await fetch("/api/shinga/quest", {
+                          method: "POST", headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(questOffer),
+                        });
+                        const d = await r.json();
+                        if (r.ok) {
+                          setMessages((prev) => [...prev,
+                            { role: "assistant", content: `[[quests]]${questOffer.title}` }]);
+                        } else {
+                          setMessages((prev) => [...prev,
+                            { role: "assistant", content: `[[care]]置けなかった：${d?.error ?? "もう一度ためして"}` }]);
+                        }
+                      } catch {
+                        setMessages((prev) => [...prev,
+                          { role: "assistant", content: "[[care]]置けなかった。もう一度ためしてみて" }]);
+                      } finally {
+                        setQuestSaving(false);
+                        setQuestOffer(null);
+                      }
+                    }}>
+                    {questSaving ? "置いています…" : "置く"}
+                  </button>
+                  <button className="qo-no" disabled={questSaving} onClick={() => setQuestOffer(null)}>
+                    やめとく
+                  </button>
+                </div>
               </div>
             )}
 

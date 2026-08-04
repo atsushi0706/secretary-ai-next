@@ -203,8 +203,10 @@ chrome.alarms.onAlarm.addListener(async (alarm) => {
     chrome.alarms.create("pomo", { when: endAt });
     notify("☕ 休憩タイム", `${s.pomoBreakMin}分。深呼吸・伸び・水分。`);
   } else if (s.pomoState === "break") {
-    // 休憩完了 → 自動で次の集中へ（focusOn のときのみループ。OFFなら停止）
-    if (s.focusOn) {
+    // 休憩完了 → 自動で次の集中へ。
+    // ただし**強制モードのときだけ**。クエストモードに切り替えたのに、
+    // 前に仕掛けたタイマーが残っていて勝手に再開する、という事故を防ぐ。
+    if (s.focusOn && s.timerMode === "force") {
       const endAt = Date.now() + s.pomoWorkMin * 60 * 1000;
       await setState({ pomoState: "work", pomoEndAt: endAt });
       chrome.alarms.create("pomo", { when: endAt });
@@ -257,6 +259,15 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       sendResponse(await getState());
     } else if (msg.type === "updateSettings") {
       const patch = msg.patch || {};
+      // 「自分で決める」へ切り替えたら、走っている強制モードのループは止める。
+      // 残っていると、切り替えたあとも勝手に次が始まってしまう
+      if (patch.timerMode === "quest") {
+        const cur0 = await getState();
+        if (cur0.pomoState === "work" || cur0.pomoState === "prep" || cur0.pomoState === "break") {
+          await stopPomo();
+          notify("⏹ 強制モードを止めたよ", "ここからは、自分で決めて始めてね。");
+        }
+      }
       // scheduleText を変更したら、保存日付も今日にする
       if (Object.prototype.hasOwnProperty.call(patch, "scheduleText")) {
         patch.scheduleDate = todayStr();

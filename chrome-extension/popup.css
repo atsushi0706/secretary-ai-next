@@ -178,3 +178,17 @@ button:hover { opacity: 0.9; }
   border: 1px solid #d8d3ea; border-radius: 8px; outline: none;
 }
 #questName:focus { border-color: #7b61c9; }
+
+/* 入れ替えが終わっていないときの案内（黙って壊れないように） */
+.broken {
+  display: flex; flex-direction: column; gap: 4px;
+  margin: 0 0 10px; padding: 10px 12px; border-radius: 10px;
+  background: #fff4f4; border: 1px solid #f0c0c0; color: #a33;
+  font-size: 11px; line-height: 1.6;
+}
+.broken b { font-size: 12px; }
+.broken .d { color: #b88; font-size: 10px; word-break: break-all; }
+
+/* いま入っている版 */
+.ver { font-size: 10px; color: #aaa; margin-left: 4px; }
+.ver.old { color: #c33; font-weight: 700; }

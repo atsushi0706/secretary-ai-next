@@ -10,10 +10,48 @@ function fmtTime(sec) {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
+/**
+ * 裏側（background）へ用件を送る。
+ *
+ * ここが返事を返さないと、ボタンを押しても何も起きない——という
+ * いちばん分かりにくい壊れ方になる。だから返事が無いことを検知して、画面に出す。
+ * （拡張を入れ替えたのに裏側が古いままのとき、これが起きる）
+ */
 async function send(type, extra = {}) {
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ type, ...extra }, (res) => resolve(res));
+    try {
+      chrome.runtime.sendMessage({ type, ...extra }, (res) => {
+        if (chrome.runtime.lastError || res === undefined) {
+          showBroken(chrome.runtime.lastError?.message || `「${type}」に裏側が応えませんでした`);
+          resolve(null);
+          return;
+        }
+        hideBroken();
+        resolve(res);
+      });
+    } catch (e) {
+      showBroken(String(e?.message ?? e));
+      resolve(null);
+    }
   });
+}
+
+/** 裏側が古い／落ちているときに出す案内。直し方まで書く */
+function showBroken(detail) {
+  let el = document.getElementById("brokenBar");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "brokenBar";
+    el.className = "broken";
+    document.body.prepend(el);
+  }
+  el.innerHTML = `<b>⚠ 拡張機能の入れ替えが終わっていません</b>`
+    + `<span>chrome://extensions を開いて、この拡張の<b>「更新」ボタン（円の矢印）</b>を押してから、`
+    + `もう一度開いてください。</span><span class="d">${detail}</span>`;
+}
+function hideBroken() {
+  const el = document.getElementById("brokenBar");
+  if (el) el.remove();
 }
 
 function parseSchedule(text) {
@@ -183,6 +221,14 @@ async function render() {
   }
   updatePomoTimer(s);
 
+  // いま動いている版。入れ替えができているかを、見れば分かるようにする
+  const vEl = document.getElementById("verTag");
+  if (vEl) {
+    const v = chrome.runtime.getManifest().version;
+    vEl.textContent = `v${v}`;
+    vEl.classList.toggle("old", !s.timerMode);   // 古い裏側には timerMode が無い
+  }
+
   // 累積
   const min = Math.floor((s.todayFocusSec || 0) / 60);
   const h = Math.floor(min / 60);
@@ -301,8 +347,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("startQuest").addEventListener("click", async () => {
     const name = $("questName").value.trim();
     if (!name) { $("questName").focus(); return; }
-    await send("startQuest", { name, minutes: parseInt($("questMin").value, 10) || 30 });
-    $("questName").value = "";
+    const btn = $("startQuest");
+    const label = btn.textContent;
+    btn.disabled = true; btn.textContent = "はじめてる…";
+    const res = await send("startQuest", { name, minutes: parseInt($("questMin").value, 10) || 30 });
+    btn.disabled = false; btn.textContent = label;
+    // 本当に始まったときだけ入力を消す。始まっていないのに消すと、書き直しになる
+    if (res && res.pomoState === "quest") {
+      $("questName").value = "";
+    } else if (res) {
+      showBroken("退治を始められませんでした（裏側の状態が変わっていません）");
+    }
     await render();
   });
   $("questName").addEventListener("keydown", (e) => {

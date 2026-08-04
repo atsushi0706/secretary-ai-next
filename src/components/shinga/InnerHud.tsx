@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { CardArt } from "./CardArt";
 
 /**
  * インナーワールドのゲームHUD。
@@ -11,8 +10,6 @@ import { CardArt } from "./CardArt";
 type Grounding = { imageDays: number; realDays: number };
 type QuestItem = { text: string; done: boolean };
 type Quest = { date: string; items: QuestItem[]; percent: number };
-type LevelAction = { key: string; label: string; per: number; days: number; earnedToday: boolean };
-type Level = { level: number; max: number; actions: LevelAction[] };
 // 対話の中身から読み取った偏り（回数では見えない"状態"）
 type Lean = { lean: "image" | "real" | "zone"; strength: number; pattern: string; message: string };
 // 針の位置は「実際にやったこと」で決める（AIの所見は言葉にだけ使う）
@@ -31,7 +28,6 @@ export function InnerHud({ guideName, onTalkBalance }: {
 }) {
   const [g, setG] = useState<Grounding>({ imageDays: 0, realDays: 0 });
   const [quest, setQuest] = useState<Quest>({ date: "", items: [], percent: 0 });
-  const [level, setLevel] = useState<Level | null>(null);
   const [lean, setLean] = useState<Lean | null>(null);
   const [balance, setBalance] = useState<Balance | null>(null);
   const [ready, setReady] = useState(false);
@@ -39,11 +35,10 @@ export function InnerHud({ guideName, onTalkBalance }: {
   const [burst, setBurst] = useState<string | null>(null);
   const burstTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  function apply(d: { grounding?: Grounding; balance?: Balance; quest?: Quest; level?: Level; lean?: Lean | null }) {
+  function apply(d: { grounding?: Grounding; balance?: Balance; quest?: Quest; lean?: Lean | null }) {
     if (d.grounding) setG(d.grounding);
     if (d.balance) setBalance(d.balance);
     if (d.quest) setQuest(d.quest);
-    if (d.level) setLevel(d.level);
     if (d.lean !== undefined) setLean(d.lean ?? null);
   }
 
@@ -82,26 +77,12 @@ export function InnerHud({ guideName, onTalkBalance }: {
 
   return (
     <div className="ihud">
-      {/* レベル。100%に到達したら枠ごと消す（称号バッジは清瀬リンクの隣に付く） */}
-      {level && level.level < level.max && <LevelBar level={level} />}
-
       {/* 空想↔現実のバランス（中央＝フロー） */}
       <BalanceMeter balance={balance} imageDays={g.imageDays} realDays={g.realDays} lean={lean} onTalk={onTalkBalance} />
       {burst && <div className="hud-burst">{burst}</div>}
 
       {/* ハイヤークエスト＝未来から降りてきたクエストと同じもの。
           まだ決まっていない日も「どこにあるか」が分かるよう、場所だけは常に見せる。 */}
-      {quest.items.length === 0 && (
-        <div className="ihud-quest is-empty">
-          <div className="q-head">
-            <span className="q-title">🔨 ハイヤークエスト</span>
-            <span className="q-badge">受け取り待ち</span>
-          </div>
-          <p className="q-lead">
-            上の<b>「🎴 未来からのクエストが届いてる」</b>を開いて受け取ると、ここに「今日の一手」が入るよ。
-          </p>
-        </div>
-      )}
       {quest.items.length > 0 && (
       <div className={`ihud-quest ${solvedToday ? "is-solved" : ""}`}>
         <div className="q-head">
@@ -136,92 +117,6 @@ export function InnerHud({ guideName, onTalkBalance }: {
       </div>
       )}
 
-      {/* 集めたスキルカード。旅の戦利品はいちばん最初の画面で見られるように */}
-      <CardShelf />
-    </div>
-  );
-}
-
-/**
- * スキルカード棚（ホーム用のコンパクト版）。
- * ワークでブロックを壊すと手に入るカードを、最初の画面でいつでも眺められる。
- * ふだんは1行（枚数だけ）。タップで開く。0枚のときは何も出さない。
- */
-type ShelfCard = { key: string; title: string; body: string; rarity: "bronze" | "silver" | "gold"; source: string; date: string };
-const SHELF_RARITY: Record<string, string> = { gold: "金", silver: "銀", bronze: "銅" };
-
-function CardShelf() {
-  const [cards, setCards] = useState<ShelfCard[]>([]);
-  const [open, setOpen] = useState(false);
-
-  useEffect(() => {
-    fetch("/api/awaken").then((r) => r.json()).then((d) => {
-      setCards(Array.isArray(d.cards) ? d.cards : []);
-    }).catch(() => {});
-  }, []);
-
-  if (cards.length === 0) return null;
-
-  return (
-    <div className="ihud-cards">
-      <button className="ic-head" onClick={() => setOpen((v) => !v)}>
-        <span className="ic-title">🃏 スキルカード <span className="ic-count">{cards.length}枚</span></span>
-        <span className="ic-toggle">{open ? "▲ 閉じる" : "▼ 見る"}</span>
-      </button>
-      {open && (
-        <div className="aw-cardlist">
-          {cards.map((c) => (
-            <div key={c.key} className={`aw-card r-${c.rarity}`}>
-              <div className="c-top">
-                <CardArt seed={`${c.key}${c.title}`} rarity={c.rarity} size={44} className="c-art" />
-                <span className="c-rar">{SHELF_RARITY[c.rarity] ?? "銅"}</span>
-                <span className="c-title">{c.title}</span>
-              </div>
-              <div className="c-body">{c.body}</div>
-              <div className="c-src">{c.source}・{c.date}</div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-/**
- * レベル（旅の進捗）。累積で 0→100。何をすると上がるかを常に明示する。
- * 下がらない。100＝ひと区切り（到達）。
- */
-function LevelBar({ level }: { level: Level }) {
-  const [open, setOpen] = useState(false);
-  const pct = Math.max(0, Math.min(100, (level.level / (level.max || 100)) * 100));
-  const done = level.level >= level.max;
-  return (
-    <div className={`ihud-level ${done ? "is-max" : ""}`}>
-      <button className="lv-head" onClick={() => setOpen((v) => !v)}>
-        {done ? (
-          <span className="lv-label lv-title">🏆 人生の冒険者</span>
-        ) : (
-          <>
-            <span className="lv-label">🌱 インナーワールドレベル</span>
-            <span className="lv-num">{level.level}<span className="lv-max">%</span></span>
-          </>
-        )}
-        <span className="lv-toggle">{open ? "▲ 閉じる" : "▼ 上げ方"}</span>
-      </button>
-      <div className="lv-track"><span className="lv-fill" style={{ width: `${pct}%` }} /></div>
-      {done && <div className="lv-maxmsg">100%到達。「人生の冒険者」の称号を授かった🏆</div>}
-      {open && (
-        <ul className="lv-actions">
-          {level.actions.map((a) => (
-            <li key={a.key} className={a.earnedToday ? "got" : ""}>
-              <span className="a-label">{a.label}</span>
-              <span className="a-per">＋{a.per}%</span>
-              <span className="a-state">{a.earnedToday ? "今日は反映ずみ ✓" : "今日やると上がる"}</span>
-            </li>
-          ))}
-          <li className="lv-note">※ 50%スタート。やった日はぐんと上がり、何もしない日は −2%とゆるやかに下がる。続けていれば100%を保てるよ。</li>
-        </ul>
-      )}
     </div>
   );
 }

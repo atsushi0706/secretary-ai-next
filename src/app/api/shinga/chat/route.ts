@@ -62,6 +62,8 @@ export async function POST(req: Request) {
     travelStage: Number.isFinite(Number(body.travelStage)) ? Number(body.travelStage) : null,
     wallStage: Number.isFinite(Number(body.wallStage)) ? Number(body.wallStage) : null,
     shadowStep: Number.isFinite(Number(body.shadowStep)) ? Number(body.shadowStep) : null,
+    /** ウォールブレイクで、陰の側から掘り出せた個数（7個貯まるまで次の段階へ行かせない） */
+    wallDug: Number.isFinite(Number(body.wallDug)) ? Number(body.wallDug) : 0,
   };
   // ミラーオブワールド：画面のゲートで選ばれた安全度と、選択ずみの幻獣
   const { isShadowPairId, shadowPair } = await import("@/lib/shadow");
@@ -107,6 +109,8 @@ export async function POST(req: Request) {
               mode,
               todayStr: today,
               hero,
+              // 段階制のワークは、いま立っている段階の指示だけを渡す（先を見せない）
+              stage: mode === "breakthrough" ? (progress.wallStage ?? 1) : null,
             });
 
         // 会話履歴は「今日ぶんだけ」に絞る（何日も前の話が混ざって時間軸が壊れるのを防ぐ）。
@@ -190,8 +194,13 @@ export async function POST(req: Request) {
           if (mode === "travel" && progress.travelStage) {
             lines.push(`- パラレルトラベル：いまの高度 ${progress.travelStage}/10。話が広がったら必ず上げる。`);
           }
-          if (mode === "breakthrough" && progress.wallStage) {
-            lines.push(`- ウォールブレイク：扉はいま ${progress.wallStage}/5。ほどけてきたら必ず上げる。`);
+          if (mode === "breakthrough") {
+            const st = progress.wallStage ?? 1;
+            lines.push(`- ウォールブレイク：いま【${st}】の段階。渡されているのは**この段階の指示だけ**。先の段階のことはやらない。`);
+            if (st === 2) {
+              lines.push(`  陰の側から掘り出せたのは、いま **${progress.wallDug}個**。7個に届くまでは <wall>2</wall> のまま、次の問いを1つ投げる。`);
+              lines.push(`  返事の最後に <wall_dug>個数</wall_dug> を必ず付ける。`);
+            }
           }
           if (mode === "shadow") {
             if (progress.shadowStep) {
@@ -314,6 +323,25 @@ export async function POST(req: Request) {
         let wallStage: number | null = null;
         const wallMatch = full.match(/<wall>\s*([1-5])\s*<\/wall>/);
         if (wallMatch) wallStage = Number(wallMatch[1]);
+
+        // 陰の側から掘り出せた個数。AIが自己申告する
+        let wallDug = progress.wallDug || 0;
+        const dugMatch = full.match(/<wall_dug>\s*(\d{1,2})\s*<\/wall_dug>/);
+        if (dugMatch) wallDug = Math.max(wallDug, Math.min(20, Number(dugMatch[1])));
+
+        /**
+         * 段階の進みは、こちらで止める。
+         *
+         * 「7個掘るまで進むな」と書いてもAIは守りきれない。守れなかった瞬間に
+         * ワークそのものが成立しなくなるので、**サーバ側で押し戻す**。
+         *  ・一度に2段階以上は進めない
+         *  ・陰掘り(2)から抜けるには、掘り出しが7個以上ないといけない
+         */
+        if (mode === "breakthrough" && wallStage != null) {
+          const from = progress.wallStage ?? 1;
+          if (wallStage > from + 1) wallStage = from + 1;          // 飛ばさせない
+          if (from === 2 && wallStage > 2 && wallDug < 7) wallStage = 2; // 掘りきるまで出さない
+        }
 
         // パラレルウォーク：理想の解像度＝どこまで歩いたか（1=入口 … 10=理想郷）
         let walkStage: number | null = null;
@@ -447,6 +475,7 @@ export async function POST(req: Request) {
           .replace(/<emotion\s*\/?>/g, "")
           .replace(/<breath\s*\/?>/g, "")
           .replace(/<wall>[\s\S]*?<\/wall>/g, "")
+          .replace(/<wall_dug>[\s\S]*?<\/wall_dug>/g, "")
           .replace(/<parts_step>[\s\S]*?<\/parts_step>/g, "")
           .replace(/<guardian>[\s\S]*?<\/guardian>/g, "")
           .replace(/<travel>[\s\S]*?<\/travel>/g, "")
@@ -468,7 +497,7 @@ export async function POST(req: Request) {
         if (face) send("face", { face });
         if (wantEmotion) send("emotion", {});
         if (wantBreath) send("breath", {});
-        if (wallStage) send("wall", { stage: wallStage });
+        if (wallStage) send("wall", { stage: wallStage, dug: wallDug });
         if (partsStep) send("parts_step", { step: partsStep });
         if (travelStage) send("travel", { stage: travelStage });
         if (walkStage) send("walk", { stage: walkStage });

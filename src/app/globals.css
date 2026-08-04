@@ -5293,3 +5293,139 @@ body:has(.realverse-bg) { background: transparent; }
 .tt-cardchip span { font-size: .58rem; line-height: 1.4; text-align: center; color: var(--singa-ink-soft); }
 .tt-letter { font-size: .78rem; line-height: 2; color: var(--singa-ink); white-space: pre-wrap; }
 .tt-note { margin-top: 14px; font-size: .64rem; text-align: center; color: var(--singa-ink-soft); }
+
+/* ────────────────────────────────────────────────
+   地図の下の棚（PCでの散らかりを直す）
+
+   PCでは幅いっぱいにボタンが散って、背景の地図の文字と重なって読めなかった。
+   ・棚全体を地図と同じ幅に収める
+   ・毎日ひらくもの（上段）と、ときどき見る棚（下段）を分ける
+   ・下段は幅の揃ったグリッドにして、行が凸凹しないようにする
+   ──────────────────────────────────────────────── */
+.iw-shelf {
+  width: min(760px, 100%);
+  margin: 12px auto 0;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.iw-shelf .iw-reflect-row { margin-top: 0; }
+
+/* 上段：毎日ひらくもの。少し大きく、目に入る位置に */
+.iw-reflect-row.is-daily {
+  display: flex; flex-wrap: wrap; gap: 8px; justify-content: center;
+}
+.iw-reflect-row.is-daily .iw-report {
+  margin: 0; padding: 11px 20px; font-size: .82rem;
+}
+
+/* 下段：記録の棚。幅を揃えて並べる（PCで凸凹しない） */
+.iw-reflect-row.is-shelf {
+  /* 5つが1行に収まる幅（760 − 隙間32 = 728 → 145 ずつ）。
+     148 にすると最後の1つだけが次の行に落ちて、ぶら下がって見えた。 */
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(138px, 1fr));
+  gap: 8px; justify-content: center;
+}
+.iw-reflect-row.is-shelf .iw-report {
+  margin: 0; width: 100%; text-align: center;
+  padding: 9px 10px; font-size: .74rem;
+  /* 名前は削らない。「タイムトラベル…」のように切れると、何の場所か分からなくなる。
+     入りきらないものは2行にして、高さだけ揃える。 */
+  white-space: normal; line-height: 1.35;
+  display: flex; align-items: center; justify-content: center; min-height: 44px;
+}
+
+/* ワールドリプレイ：夜まではまだ、と分かる見た目。でも名前は隠さない */
+.iw-report.is-night.is-soon { opacity: .78; border-style: dashed; }
+.iw-report .rp-when {
+  display: inline-block; margin-left: 8px; padding: 2px 8px;
+  border-radius: 999px; font-size: .62rem; font-weight: 700;
+  color: #cdd6f5; background: rgba(120,140,220,.22);
+}
+
+@media (max-width: 700px) {
+  .iw-shelf { gap: 6px; margin-top: 10px; }
+  .iw-reflect-row.is-daily .iw-report { padding: 10px 14px; font-size: .76rem; }
+  .iw-reflect-row.is-shelf { grid-template-columns: repeat(2, 1fr); gap: 6px; }
+  .iw-reflect-row.is-shelf .iw-report { font-size: .68rem; padding: 9px 6px; }
+}
+
+/* ────────────────────────────────────────────────
+   タイムトラベルボックス：積み上がり＋スキルカード
+   ──────────────────────────────────────────────── */
+.tt-counts { margin: 4px 0 14px; }
+.tt-count-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(92px, 1fr));
+  gap: 8px; margin-top: 8px;
+}
+.tt-count {
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 10px 6px; border-radius: 12px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(232,189,114,.18);
+}
+.tt-count b { font-size: 1.3rem; color: var(--singa-gold); font-weight: 800; line-height: 1.1; }
+.tt-count span { font-size: .62rem; color: var(--singa-ink-soft); text-align: center; line-height: 1.4; }
+
+.tt-vault { margin-bottom: 16px; }
+.tt-vault-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 14px; border-radius: 12px;
+  font-size: .78rem; font-weight: 700; color: var(--singa-ink);
+  background: rgba(255,255,255,.05); border: 1px solid rgba(232,189,114,.22);
+}
+.tt-vault-head b { color: var(--singa-gold); }
+.tt-weekhead { margin-top: 4px; }
+
+/* ────────────────────────────────────────────────
+   レベルチェック（週1・会話でうめる）
+   ──────────────────────────────────────────────── */
+.hchk { display: flex; flex-direction: column; gap: 12px; }
+.hchk-lead { display: flex; flex-direction: column; gap: 3px; }
+.hchk-lead b { font-size: .9rem; color: var(--singa-gold); }
+.hchk-lead span { font-size: .74rem; color: var(--singa-ink-soft); }
+
+.hchk-log {
+  display: flex; flex-direction: column; gap: 8px;
+  max-height: 42vh; overflow-y: auto; padding: 4px 2px;
+}
+.hchk-line { display: flex; }
+.hchk-line span {
+  max-width: 86%; padding: 10px 13px; border-radius: 14px;
+  font-size: .84rem; line-height: 1.8; white-space: pre-wrap;
+}
+.hchk-line.is-assistant span {
+  background: rgba(255,255,255,.07); border: 1px solid rgba(232,189,114,.2);
+  color: var(--singa-ink); border-top-left-radius: 4px;
+}
+.hchk-line.is-user { justify-content: flex-end; }
+.hchk-line.is-user span {
+  background: linear-gradient(160deg, rgba(232,214,155,.9), rgba(201,165,94,.9));
+  color: #221b10; font-weight: 600; border-top-right-radius: 4px;
+}
+.hchk-line.is-wait span { opacity: .6; letter-spacing: .3em; }
+
+/* 話しながら埋まっていくチェック項目。数字は出さない */
+.hchk-fill {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 12px; border-radius: 12px;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(232,189,114,.16);
+}
+.hchk-item { display: flex; align-items: baseline; gap: 8px; font-size: .74rem; opacity: .5; }
+.hchk-item.is-on { opacity: 1; }
+.hchk-item .ci-mark { color: var(--singa-gold); font-weight: 700; }
+.hchk-item .ci-label { font-weight: 700; color: var(--singa-ink); }
+.hchk-item .ci-why { color: var(--singa-ink-soft); font-size: .68rem; }
+
+.hchk-input { display: flex; gap: 8px; align-items: flex-end; }
+.hchk-input textarea {
+  /* min-width:0 が無いと、textarea が縮まずに送るボタンを画面の外へ押し出す */
+  flex: 1 1 auto; min-width: 0;
+  padding: 10px 12px; border-radius: 12px; resize: vertical;
+  font-size: .85rem; line-height: 1.7; color: var(--singa-ink);
+  background: rgba(255,255,255,.06); border: 1px solid rgba(232,189,114,.25);
+}
+.hchk-input .hero-btn { margin: 0; flex: 0 0 auto; width: auto; padding: 11px 18px; }
+.hchk-done { text-align: center; }
+.hchk-done p { font-size: .82rem; color: var(--singa-ink-soft); margin-bottom: 8px; }
+
+.hero-check-cta { margin-top: 14px; text-align: center; }
+.hcc-lead { font-size: .8rem; line-height: 1.9; color: var(--singa-ink-soft); margin-bottom: 10px; }
+.hcc-lead b { color: var(--singa-ink); }

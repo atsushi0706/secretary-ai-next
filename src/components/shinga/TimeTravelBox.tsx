@@ -21,6 +21,9 @@ import { CardArt } from "./CardArt";
 type Facets = { progressed: string[]; struggled: string; reframed: string; gained: string[] };
 type Weekly = { id: string; week_start: string; body: string; facets?: Facets | null };
 type Card = { key: string; title: string; body: string; rarity: "bronze" | "silver" | "gold"; source: string; date: string };
+type Count = { key: string; label: string; n: number };
+
+const RARITY: Record<string, string> = { gold: "金", silver: "銀", bronze: "銅" };
 
 const md = (s: string) => s.slice(5).replace("-", "/");
 const weekEnd = (start: string) => {
@@ -34,16 +37,20 @@ export function TimeTravelBox({ guideName, avatarUrl, onBack }: {
 }) {
   const [weeks, setWeeks] = useState<Weekly[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
+  const [counts, setCounts] = useState<Count[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState<string | null>(null);
+  const [openCards, setOpenCards] = useState(false);
 
   useEffect(() => {
     Promise.all([
       fetch("/api/weekly").then((r) => r.json()).catch(() => ({})),
       fetch("/api/awaken").then((r) => r.json()).catch(() => ({})),
-    ]).then(([w, a]) => {
+      fetch("/api/treasure").then((r) => r.json()).catch(() => ({})),
+    ]).then(([w, a, t]) => {
       setWeeks(Array.isArray(w?.reports) ? w.reports : []);
       setCards(Array.isArray(a?.cards) ? a.cards : []);
+      setCounts(Array.isArray(t?.counts) ? t.counts : []);
     }).finally(() => setLoading(false));
   }, []);
 
@@ -85,21 +92,57 @@ export function TimeTravelBox({ guideName, avatarUrl, onBack }: {
 
         {loading && <div className="rep-loading">箱をあけている…</div>}
 
+        {/* ① これまで何回やってきたか。積み上がりが目で見えるように */}
+        {!loading && counts.some((c) => c.n > 0) && (
+          <div className="tt-counts">
+            <div className="tt-sec-t">ここまでの積み上がり</div>
+            <div className="tt-count-grid">
+              {counts.filter((c) => c.n > 0).map((c) => (
+                <div key={c.key} className="tt-count">
+                  <b>{c.n}</b>
+                  <span>{c.label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ② 手に入れたスキルカード */}
+        {!loading && cards.length > 0 && (
+          <div className="tt-vault">
+            <button className="tt-vault-head" onClick={() => setOpenCards((v) => !v)}>
+              <span>🃏 スキルカード <b>{cards.length}</b>枚</span>
+              <span className="tt-chev">{openCards ? "▲ 閉じる" : "▼ 見る"}</span>
+            </button>
+            {openCards && (
+              <div className="aw-cardlist">
+                {cards.map((c) => (
+                  <div key={c.key} className={`aw-card r-${c.rarity}`}>
+                    <div className="c-top">
+                      <CardArt seed={`${c.key}${c.title}`} rarity={c.rarity} size={44} className="c-art" />
+                      <span className="c-rar">{RARITY[c.rarity] ?? "銅"}</span>
+                      <span className="c-title">{c.title}</span>
+                    </div>
+                    <div className="c-body">{c.body}</div>
+                    <div className="c-src">{c.source}・{c.date}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {!loading && weeks.length === 0 && (
           <p className="tt-empty">
-            まだ何も入っていないよ。<br />
-            毎週金曜に、その週のふりかえりがひとつ増えていく。<br />
+            週のふりかえりは、まだ入っていないよ。<br />
+            毎週金曜に、その週のものがひとつ増えていく。<br />
             続けるほど、この箱は重くなる。
           </p>
         )}
 
         {!loading && weeks.length > 0 && (
           <>
-            <div className="tt-stats">
-              <span><b>{weeks.length}</b>週ぶん</span>
-              <span><b>{cards.length}</b>枚のカード</span>
-              <span><b>{totalGained}</b>の気づき</span>
-            </div>
+            <div className="tt-sec-t tt-weekhead">週のふりかえり（{weeks.length}週ぶん・{totalGained}の気づき）</div>
 
             <div className="tt-line">
               {weeks.map((w, i) => {

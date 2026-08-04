@@ -89,6 +89,8 @@ export function buildGuidePersona(opts: {
   mode?: ModeKey;
   todayStr?: string | null;
   hero?: HeroRow | null;         // 主人公レベル（会話で増減させるため）
+  /** 段階制のワークで、いま立っている段階。この段階の指示だけを渡す */
+  stage?: number | null;
 }): string {
   const name = opts.guideName || "清瀬リンク";
   const who = opts.userCallName || "きみ";
@@ -107,7 +109,7 @@ export function buildGuidePersona(opts: {
   const carryPast = !opts.mode || opts.mode === "akashic";
   const star = carryPast ? buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined) : "";
   const namePrompt = carryPast ? buildNamePrompt(opts.birthName, who) : "";
-  const modePrompt = opts.mode ? buildModePrompt(opts.mode) : "";
+  const modePrompt = opts.mode ? buildModePrompt(opts.mode, opts.stage) : "";
   const cyclePrompt = opts.mode === "akashic" ? buildCyclePrompt(opts.birthDate, opts.birthGender, who) : "";
   const reframePrompt = opts.mode === "breakthrough" ? buildReframePrompt() : "";
   const heroPrompt = buildHeroLevelPrompt(opts.hero ?? null, who);

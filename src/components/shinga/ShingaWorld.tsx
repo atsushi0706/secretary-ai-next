@@ -127,6 +127,7 @@ export function ShingaWorld({
   const [choices, setChoices] = useState<Choice[] | null>(null);
   const [widget, setWidget] = useState<"emotion" | "breath" | null>(null);
   const [wallStage, setWallStage] = useState(1); // ウォールブレイク：扉の開き具合(1=閉〜5=全開)
+  const [wallDug, setWallDug] = useState(0);    // ウォールブレイク：陰の側から掘り出せた個数（7個で次の段階へ）
   const [travelStage, setTravelStage] = useState(1); // パラレルトラベル：高度(1=目の前 〜 10=すべてがつながる)
   const [walkStage, setWalkStage] = useState(1);     // パラレルウォーク：どこまで歩いたか(1=門 〜 10=理想郷)
   // 内なる子の神殿：入口(gate)で守り手を選ぶ → ワーク中は色と段階を持つ
@@ -628,7 +629,7 @@ export function ShingaWorld({
     // 別のワークから移ってきたら、resume でも数字は振り出しに戻す
     //（選択肢で「パラレルウォークへ」と移ったとき、前回の地点が残っていた）
     const fresh = !resume || m !== mode;
-    if (m === "breakthrough" && fresh) setWallStage(1); // 扉は固く閉じた状態から始める
+    if (m === "breakthrough" && fresh) { setWallStage(1); setWallDug(0); } // 扉は固く閉じた状態から始める
     if (m === "travel" && fresh) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
     if (m === "walk" && fresh) setWalkStage(1);         // 歩きは門のほとりから始まる
     if (!resume) setMessages([]);
@@ -703,6 +704,7 @@ export function ShingaWorld({
           walkStage: m === "walk" ? walkStage : undefined,
           travelStage: m === "travel" ? travelStage : undefined,
           wallStage: m === "breakthrough" ? wallStage : undefined,
+          wallDug: m === "breakthrough" ? wallDug : undefined,
           shadowStep: m === "shadow" ? shadowStep : undefined,
           shadowPair: m === "shadow" ? shadowPairRef.current ?? undefined : undefined,
           shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
@@ -734,6 +736,8 @@ export function ShingaWorld({
           // ウォールブレイク：壁が解けた度合いに応じて扉が開く（1〜5）
           const s = Number(data?.stage);
           if (Number.isFinite(s)) setWallStage(Math.max(1, Math.min(5, s)));
+          const d = Number(data?.dug);
+          if (Number.isFinite(d)) setWallDug((v) => Math.max(v, Math.min(20, d)));
         } else if (name === "walk") {
           // パラレルウォーク：理想がはっきりするほど、景色が開けていく
           const n = Number(data?.stage);
@@ -1698,19 +1702,30 @@ function Home({
         </button>
       </div>
 
-      {/* 主人公（レベル）＋ふりかえり */}
-      <div className="iw-reflect-row">
-        <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
-        <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
-        <button className="iw-report is-weekly" onClick={onWeekly}>🧰 タイムトラベルボックス</button>
-        <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
-        <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
-        <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>
-        {/* 1日の振り返りは夜だけ。夜になったらプッシュ通知で「開いたよ」と知らせる（それまでは鍵） */}
-        {new Date().getHours() >= REFLECT_FROM_HOUR
-          ? <button className="iw-report is-night" onClick={onDaily}>🌙 1日の振り返り</button>
-          : <button className="iw-report is-locked" disabled title={`夜（${REFLECT_FROM_HOUR}時）に通知でお知らせして開くよ`}>🔒 夜に通知で開く</button>}
-        <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
+      {/* 地図の下の棚。PCでは横に散らばって背景の文字と重なっていたので、
+          ・全体を地図の幅に合わせる
+          ・ワークの入口（毎日ひらくもの）と、記録の棚（ときどき見るもの）で行を分ける
+          という2つで整理してある。 */}
+      <div className="iw-shelf">
+        <div className="iw-reflect-row is-daily">
+          {/* ワールドリプレイ＝夜に今日を再生する場所。夜になったら通知で知らせる。
+              昼のうちは鍵。ただし**名前は出しておく**（名前が無いと「どこにあるの？」になる）。 */}
+          {new Date().getHours() >= REFLECT_FROM_HOUR
+            ? <button className="iw-report is-night" onClick={onDaily}>🌙 ワールドリプレイ（今日を振り返る）</button>
+            : <button className="iw-report is-night is-soon" onClick={onDaily}
+                title={`夜（${REFLECT_FROM_HOUR}時）に通知でお知らせするよ。先に開いてもいい`}>
+                🌙 ワールドリプレイ<span className="rp-when">夜{REFLECT_FROM_HOUR}時に通知</span>
+              </button>}
+          <button className="iw-report is-hero" onClick={onHero}>🏅 レベルチェック（週1）</button>
+          <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>
+        </div>
+        <div className="iw-reflect-row is-shelf">
+          <button className="iw-report is-weekly" onClick={onWeekly}>🧰 タイムトラベルボックス</button>
+          <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
+          <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
+          <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
+          <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
+        </div>
       </div>
     </div>
   );

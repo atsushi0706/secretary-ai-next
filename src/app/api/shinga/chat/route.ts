@@ -97,8 +97,15 @@ export async function POST(req: Request) {
               birthDate: settings?.birth_date,
               birthName: settings?.birth_name,
               todayStr: today,
-              // ここは専用人格なので MODES.walk.flow が渡らない。風景の指示だけ別に足す
-            }) + `\n\n${WALK_SCENERY_PROMPT}`
+            })
+              /**
+               * 専用人格なので、このワークの進め方は自動では付かない。
+               * 以前はここで風景の指示（WALK_SCENERY_PROMPT）しか足しておらず、
+               * modes.ts に書いた「奥の笑顔を見にいく」「他にはどんなのがある？」
+               * 「僕だったらそこで◯◯しちゃうけどな」といった返し方が、
+               * **一度もAIに届いていなかった**。ここで必ず渡す。
+               */
+              + `\n\n${MODES.walk.flow}\n\n${WALK_SCENERY_PROMPT}`
           : buildGuidePersona({
               guideName: settings?.secretary_name,
               userCallName: settings?.user_call_name,

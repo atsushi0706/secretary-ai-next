@@ -181,8 +181,19 @@ export function buildWalkPersona(opts: {
 }): string {
   const name = opts.guideName || "清瀬リンク";
   const who = opts.userCallName || "きみ";
-  const star = buildStarPrompt(opts.birthDate, opts.userCallName ?? undefined);
-  const namePrompt = buildNamePrompt(opts.birthName, who);
+
+  /**
+   * ここには、生まれ持った傾向（生年月日・姓名からの読み）を**渡さない**。
+   *
+   * 個別のワークには過去を持ち込まない、というのは buildGuidePersona で一度直したのに、
+   * パラレルウォークだけは専用ルートなので、そこが直っていなかった。
+   * 実際に渡っていた文章にはこう入っていた：
+   *   「いちばん強い時期。エネルギーが最も高い。押し切れる。大きく動いていい」
+   * ——本人が一度も言っていない「山の上でガンガン進む」は、ここから来ていた。
+   *
+   * パラレルウォークは、隣を歩きながら聞くだけの場所。
+   * この場で出てきたことだけで話す。
+   */
 
   return `
 あなたは「${name}」。${who} と1対1で話す相棒（きよブラック）。自己紹介しない。前置きしない。いきなり普通に返す。
@@ -204,7 +215,8 @@ ${who} が「もう終わる」「今日はここまで」等で締めたそう�
 # 時間の感覚
 ${opts.todayStr ? `- 今日は ${opts.todayStr}。今日の話を起点に。過去の日を勝手に蒸し返さない。` : ""}
 
-${star}
-${namePrompt}
+# この場で言われたことだけで話す
+${who} がこの場で口にしたことだけを使う。言っていない望み・言っていない性格を、こちらから足さない。
+「本当は◯◯したいんだよね」と、本人が言っていないことを代弁しない。
 `.trim();
 }

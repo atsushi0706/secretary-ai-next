@@ -2387,8 +2387,8 @@ body:has(.realverse-bg) { background: transparent; }
 }
 @keyframes zi-zoom {
   0%   { transform: scale(1.5); filter: blur(16px) brightness(.35); }
-  55%  { filter: blur(2px) brightness(.9); }
-  100% { transform: scale(1.02); filter: blur(0) brightness(1); }
+  55%  { filter: blur(2px) brightness(.78); }
+  100% { transform: scale(1.02); filter: blur(0) brightness(.72); }
 }
 /* うっすらビネット＋光の帯が一度走る */
 .zone-intro .zi-veil { position: absolute; inset: 0;
@@ -2399,7 +2399,21 @@ body:has(.realverse-bg) { background: transparent; }
 @keyframes zi-sweep { to { transform: translateX(130%); } }
 /* タイトル（英語→日本語、文字間が締まりながら出る） */
 .zone-intro .zi-title { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px;
-  opacity: 0; animation: zi-title-in .8s cubic-bezier(.15,.8,.25,1) .45s forwards; }
+  opacity: 0; animation: zi-title-in .8s cubic-bezier(.15,.8,.25,1) .45s forwards;
+  /* 文字の下に敷きを入れる。
+     背景は最後にピントが合って明るくなるので、中央に暗いところが無く、
+     絵の上に直接文字が乗って読めなくなっていた。影だけでは足りない。
+     四角い箱にすると演出が台無しになるので、外へ向けて溶ける楕円にする。 */
+  max-width: min(620px, 92%); padding: 30px 26px 34px; border-radius: 26px; }
+.zone-intro .zi-title::before {
+  content: ""; position: absolute; inset: -12% -14%; z-index: -1; border-radius: 50%;
+  background: radial-gradient(closest-side,
+    rgba(3,2,7,.9) 0%, rgba(3,2,7,.84) 52%, rgba(3,2,7,.55) 78%, rgba(3,2,7,0) 100%);
+  /* 絵が明るくて細かい場所（神殿・鏡など）は、黒を重ねるだけでは足りない。
+     後ろそのものをぼかして暗くする。まわりは素通しなので、絵は残る。 */
+  backdrop-filter: blur(7px) brightness(.4) saturate(.85);
+  -webkit-backdrop-filter: blur(7px) brightness(.4) saturate(.85);
+}
 @keyframes zi-title-in { 0% { opacity: 0; transform: translateY(18px); letter-spacing: .6em; filter: blur(6px); }
   100% { opacity: 1; transform: none; letter-spacing: normal; filter: blur(0); } }
 .zone-intro .zi-en { font-family: Georgia, "Times New Roman", serif; font-size: .8rem; letter-spacing: .42em; color: #eed69b;
@@ -4921,10 +4935,12 @@ body:has(.realverse-bg) { background: transparent; }
 .zone-intro .zi-what,
 .zone-intro .zi-why {
   opacity: 0;
-  animation: zi-line-in .9s cubic-bezier(.15,.8,.25,1) forwards;
-  text-shadow: 0 2px 14px rgba(0,0,0,.95);
+  /* 名前が zi-line-in だと、区切り線（width:0→180px）の指定を上書きしてしまう。
+     同じ名前のキーフレームは後に書いたほうが勝つので、線が伸びなくなっていた。 */
+  animation: zi-fade-up .9s cubic-bezier(.15,.8,.25,1) forwards;
+  text-shadow: 0 2px 10px rgba(0,0,0,.95), 0 0 30px rgba(0,0,0,.85);
 }
-@keyframes zi-line-in {
+@keyframes zi-fade-up {
   from { opacity: 0; transform: translateY(10px); filter: blur(5px); }
   to   { opacity: 1; transform: none; filter: blur(0); }
 }
@@ -4932,15 +4948,15 @@ body:has(.realverse-bg) { background: transparent; }
 .zone-intro .zi-poem {
   animation-delay: 1.5s;
   font-family: Georgia, "Yu Mincho", "游明朝", serif;
-  font-size: .96rem; line-height: 1.9; color: #f0e6d2; letter-spacing: .03em;
+  font-size: .96rem; line-height: 1.9; color: #f7efe0; letter-spacing: .03em;
 }
 .zone-intro .zi-what {
   animation-delay: 2.4s;
-  font-size: .92rem; font-weight: 700; line-height: 1.8; color: var(--singa-gold);
+  font-size: .92rem; font-weight: 700; line-height: 1.8; color: #f4d99a;
 }
 .zone-intro .zi-why {
   animation-delay: 3.2s;
-  font-size: .76rem; line-height: 1.85; color: rgba(240,230,210,.72);
+  font-size: .76rem; line-height: 1.85; color: rgba(243,235,218,.88);
 }
 .zone-intro .zi-why::before {
   content: ""; display: block; width: 40px; height: 1px; margin: 9px auto 8px;

@@ -39,7 +39,27 @@ export type AdminOverview = {
   totalUsers: number;
   users: AdminUser[];
   generatedAt: string;
+  /** 名前・メールが出ない原因になっている、足りない列 */
+  missingColumns: string[];
 };
+
+/**
+ * 名前とメールは、ログインのときに Google から受け取って user_settings に入れている。
+ * ただし列が無いときは、本体を壊さないように **黙って握りつぶす** 作りになっている。
+ * そのままだと「なぜか名前が出ない」だけが残って原因が分からないので、
+ * ここで列の有無を確かめて、画面に出せるようにする。
+ */
+async function probeColumns(): Promise<string[]> {
+  const supa = supabaseAdmin();
+  const missing: string[] = [];
+  for (const col of ["email", "display_name"]) {
+    try {
+      const { error } = await supa.from("user_settings").select(col).limit(1);
+      if (error) missing.push(col);
+    } catch { missing.push(col); }
+  }
+  return missing;
+}
 
 // user_id 列を持つテーブルから user_id と日付列を集計するためのヘルパ
 async function tally(
@@ -164,7 +184,11 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   // 最終アクティビティが新しい順
   users.sort((a, b) => (b.lastActive ?? "").localeCompare(a.lastActive ?? ""));
 
-  return { totalUsers: users.length, users, generatedAt: new Date().toISOString() };
+  return {
+    totalUsers: users.length, users,
+    generatedAt: new Date().toISOString(),
+    missingColumns: await probeColumns(),
+  };
 }
 
 /** そのユーザーの通知だけ解除（push購読を全削除＋ntfyトピックを消す）。データは残す。 */

@@ -9,7 +9,7 @@ type AdminUser = {
   createdAt: string | null; lastActive: string | null;
   counts: { shinga: number; walks: number; emotions: number; quests: number; talks: number; notifs: number };
 };
-type Overview = { totalUsers: number; users: AdminUser[]; generatedAt: string };
+type Overview = { totalUsers: number; users: AdminUser[]; generatedAt: string; missingColumns?: string[] };
 
 // ワークの鍵に出す一覧（key は ModeKey と同じ）
 const LOCKABLE: { key: string; label: string }[] = [
@@ -40,6 +40,15 @@ export default function AdminPage() {
   const [locked, setLocked] = useState<string[]>([]);
   const [lockMsg, setLockMsg] = useState("");
   const [lockBusy, setLockBusy] = useState(false);
+  /**
+   * ひとりずつ開ける機能（発信スタジオ）。
+   * 既定は全員に鍵。ここで「開ける」を押した人だけが使える。
+   * grants = { broadcast: [userId, ...] }
+   */
+  const [grants, setGrants] = useState<Record<string, string[]>>({});
+  const [grantBusy, setGrantBusy] = useState("");
+  const [grantMsg, setGrantMsg] = useState("");
+
   // 週刊レポートの承認待ち（OKを出すまで、本人には絶対に見えない）
   const [drafts, setDrafts] = useState<{ id: string; name: string; week_start: string; body: string }[]>([]);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
@@ -127,8 +136,28 @@ export default function AdminPage() {
     fetch("/api/admin/locks").then((r) => r.json()).then((d) => {
       if (Array.isArray(d?.locked)) setLocked(d.locked.map(String));
     }).catch(() => {});
+    fetch("/api/admin/grants").then((r) => r.json()).then((d) => {
+      if (d?.grants) setGrants(d.grants);
+    }).catch(() => {});
     loadDrafts();
   }, []);
+
+  /** 発信スタジオを、この人に開ける／閉める */
+  async function toggleGrant(feature: string, u: AdminUser, on: boolean) {
+    setGrantBusy(u.userId + feature); setGrantMsg("");
+    try {
+      const r = await fetch("/api/admin/grants", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature, userId: u.userId, on }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error ?? "変更できませんでした");
+      setGrants(j.grants ?? {});
+      setGrantMsg(`${u.name} の発信スタジオを${on ? "開けました" : "閉じました"}`);
+    } catch (e: any) {
+      setGrantMsg(String(e?.message ?? e));
+    } finally { setGrantBusy(""); }
+  }
 
   async function act(action: "disable-notify" | "delete", u: AdminUser) {
     if (action === "delete") {
@@ -218,6 +247,41 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* 名前が出ない原因を、画面ではっきり出す（黙って握りつぶさない） */}
+      {(data?.missingColumns?.length ?? 0) > 0 && (
+        <div className="border border-amber-300 bg-amber-50 rounded-xl p-4 mb-4">
+          <div className="text-sm font-bold text-amber-800">⚠ 名前とメールが出ません</div>
+          <p className="text-xs text-amber-900 mt-1 leading-relaxed">
+            ログインのときに Google から名前とメールを受け取っていますが、
+            保存先の列（<b>{data!.missingColumns!.join("・")}</b>）が
+            user_settings にありません。そのため保存できず、ここに出せていません。<br />
+            下のSQLを Supabase で1回実行すると、<b>次にその人がログインした時点から</b>名前が出ます。
+          </p>
+          <pre className="text-[11px] bg-white border rounded-lg p-2 mt-2 overflow-x-auto">{`alter table public.user_settings
+  add column if not exists email text,
+  add column if not exists display_name text;`}</pre>
+        </div>
+      )}
+
+      {/* 発信スタジオの開放状況（既定は全員に鍵） */}
+      <div className="border rounded-xl p-4 bg-white mb-4">
+        <div className="text-sm font-bold">📣 発信スタジオ（ひとりずつ開ける）</div>
+        <p className="text-xs text-gray-500 mt-1">
+          既定は<b>全員に鍵</b>。下の一覧で「開ける」を押した人だけに出ます。親アカウントは常に使えます。
+        </p>
+        <div className="text-xs text-gray-700 mt-2">
+          いま開いている人：<b>{(grants.broadcast ?? []).length}</b>人
+          {(grants.broadcast ?? []).length > 0 && (
+            <span className="text-gray-500">
+              {" "}（{(grants.broadcast ?? [])
+                .map((id) => data?.users.find((u) => u.userId === id)?.name ?? id.slice(0, 8) + "…")
+                .join("、")}）
+            </span>
+          )}
+        </div>
+        {grantMsg && <div className="text-xs text-emerald-700 mt-2">{grantMsg}</div>}
+      </div>
+
       {/* ワークの鍵：チェックを付けたワークは、管理者以外は開けなくなる */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
         <div className="flex items-center justify-between mb-2">
@@ -283,6 +347,25 @@ export default function AdminPage() {
                   <div className="text-[10px] text-gray-500">{label}</div>
                 </div>
               ))}
+            </div>
+
+            {/* ひとりずつ開ける機能。既定は鍵なので、押すまでこの人には出ない */}
+            <div className="flex items-center gap-2 mt-3">
+              {(() => {
+                const on = (grants.broadcast ?? []).includes(u.userId);
+                const busyNow = grantBusy === u.userId + "broadcast";
+                return (
+                  <button
+                    disabled={busyNow}
+                    onClick={() => toggleGrant("broadcast", u, !on)}
+                    className={`text-xs px-3 py-1.5 rounded-full border font-bold disabled:opacity-40 ${
+                      on ? "bg-emerald-50 border-emerald-300 text-emerald-700"
+                         : "bg-gray-50 border-gray-300 text-gray-500"}`}
+                  >
+                    {busyNow ? "…" : on ? "📣 発信スタジオ：開いている（押すと閉じる）" : "🔒 発信スタジオ：鍵（押すと開ける）"}
+                  </button>
+                );
+              })()}
             </div>
 
             <div className="flex items-center justify-between mt-3 text-[11px] text-gray-500">

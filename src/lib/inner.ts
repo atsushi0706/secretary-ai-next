@@ -55,7 +55,20 @@ export async function computeGrounding(userId: string): Promise<Grounding> {
 // ・何もしなかった日は -2%（下がり方はゆるやか）
 // ・0〜100 でクランプ
 const LEVEL_START = 50;   // 初期値
-const LEVEL_DECAY = 2;    // 何もしなかった日の減少（ゆるやか）
+/**
+ * やったこと1つにつき +1。**何をやってもプラス1**（淳くんの指定）。
+ *
+ * 前は「きもちチェック +2／パラレルウォーク +6／未来からのクエスト +10」のように
+ * 行動ごとに重みが違った。だが、どれがどれだけ効くのかは本人には分からないし、
+ * 重い行動をした日だけ跳ねるので、動きが読めない。全部そろえて 1 にする。
+ * （3つやった日は +3。やった数だけ上がる、という素直な作りにする）
+ */
+const LEVEL_PER = 1;
+/**
+ * 何もしなかった日の下がり幅。
+ * 上げ幅が 1 になったので、下げも 1 にそろえる（2 のままだと下がる一方になる）。
+ */
+const LEVEL_DECAY = 1;
 export type LevelAction = { key: string; label: string; per: number; days: number; earnedToday: boolean };
 export type LevelStatus = { level: number; max: number; actions: LevelAction[] };
 
@@ -87,12 +100,13 @@ export async function computeLevel(userId: string): Promise<LevelStatus> {
     if (items.some((it) => it?.done)) questDays.add(r.date);
   }
 
+  // 何をやっても +1。行動によって重みを変えない
   const defs: { key: string; label: string; per: number; set: Set<string> }[] = [
-    { key: "emotion", label: "きもちをチェックする", per: 2, set: emoDays },
-    { key: "letter", label: "未来からの手紙をひらく", per: 2, set: letterDays },
-    { key: "walk", label: "パラレルウォークをする", per: 6, set: walkDays },
-    { key: "quest", label: "理想を今日に1個おろす", per: 8, set: questDays },
-    { key: "card", label: "未来からのクエストに立ち向かう", per: 10, set: cardDays },
+    { key: "emotion", label: "きもちをチェックする", per: LEVEL_PER, set: emoDays },
+    { key: "letter", label: "未来からの手紙をひらく", per: LEVEL_PER, set: letterDays },
+    { key: "walk", label: "パラレルウォークをする", per: LEVEL_PER, set: walkDays },
+    { key: "quest", label: "理想を今日に1個おろす", per: LEVEL_PER, set: questDays },
+    { key: "card", label: "未来からのクエストに立ち向かう", per: LEVEL_PER, set: cardDays },
   ];
 
   // 最初にワークをした日から今日まで、1日ずつ「やった分だけ上げ／やらない日は少し下げ」を積む

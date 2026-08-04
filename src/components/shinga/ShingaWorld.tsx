@@ -156,8 +156,10 @@ export function ShingaWorld({
   const [oneMmDone, setOneMmDone] = useState<string | null>(null);
   // 鍵がかかっているワーク（親アカウントは常に空＝全部使える）
   const [lockedWorks, setLockedWorks] = useState<string[]>([]);
-  // 親アカウントか（まだ配っていない機能の出し分け）
+  // 親アカウントか（管理用の表示に使う）
   const [isAdmin, setIsAdmin] = useState(false);
+  // ひとりずつ開ける機能。**既定は鍵**。管理画面で開けた人だけ true になる
+  const [features, setFeatures] = useState<Record<string, boolean>>({});
   // アカシック：開いた最初に「今日のあなたの取扱説明書」を出す
   const [todayManual, setTodayManual] = useState(false);
   const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
@@ -390,6 +392,7 @@ export function ShingaWorld({
     fetch("/api/works").then((r) => r.json()).then((d) => {
       if (Array.isArray(d?.locked)) setLockedWorks(d.locked.map(String));
       setIsAdmin(!!d?.isAdmin);
+      if (d?.features && typeof d.features === "object") setFeatures(d.features);
     }).catch(() => {});
   }, []);
 
@@ -1158,6 +1161,7 @@ export function ShingaWorld({
           customWorks={customWorks}
           lockedWorks={lockedWorks}
           isAdmin={isAdmin}
+          features={features}
           onRunCustom={(w) => enterCustom(w)}
           onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
           onMake={() => { setEditWork(null); setMakerOpen(true); }}
@@ -1589,7 +1593,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false,
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {},
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1598,6 +1602,8 @@ function Home({
   onDaily: () => void;
   /** 親アカウントか（まだ配っていない機能を出し分ける） */
   isAdmin?: boolean;
+  /** ひとりずつ開ける機能。既定は鍵で、開けた人だけ true */
+  features?: Record<string, boolean>;
   onHero: () => void;
   /** カード保管庫（旅で手に入れた力） */
   onVault: () => void;
@@ -1730,8 +1736,9 @@ function Home({
             onClick={() => { try { window.location.href = "/guide"; } catch { /* ignore */ } }}>
             📘 使い方の説明書
           </button>
-          {/* 発信スタジオは、まだ親アカウントだけ */}
-          {isAdmin && <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>}
+          {/* 発信スタジオは、既定で鍵。管理画面で開けた人にだけ出す
+              （親アカウントは常に開いている） */}
+          {features.broadcast && <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>}
         </div>
       </div>
     </div>

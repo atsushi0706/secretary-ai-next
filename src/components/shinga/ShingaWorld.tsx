@@ -10,7 +10,6 @@ import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
-import { ReportScreen } from "./ReportScreen";
 import { DailyReflection } from "./DailyReflection";
 import { HeroScreen } from "./HeroScreen";
 import { InnerHud } from "./InnerHud";
@@ -157,6 +156,8 @@ export function ShingaWorld({
   const [oneMmDone, setOneMmDone] = useState<string | null>(null);
   // 鍵がかかっているワーク（親アカウントは常に空＝全部使える）
   const [lockedWorks, setLockedWorks] = useState<string[]>([]);
+  // 親アカウントか（まだ配っていない機能の出し分け）
+  const [isAdmin, setIsAdmin] = useState(false);
   // アカシック：開いた最初に「今日のあなたの取扱説明書」を出す
   const [todayManual, setTodayManual] = useState(false);
   const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
@@ -166,7 +167,6 @@ export function ShingaWorld({
   const [typing, setTyping] = useState(false);
   const [moving, setMoving] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
-  const [reportOpen, setReportOpen] = useState(false);
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);   // カード保管庫
@@ -389,6 +389,7 @@ export function ShingaWorld({
   useEffect(() => {
     fetch("/api/works").then((r) => r.json()).then((d) => {
       if (Array.isArray(d?.locked)) setLockedWorks(d.locked.map(String));
+      setIsAdmin(!!d?.isAdmin);
     }).catch(() => {});
   }, []);
 
@@ -934,7 +935,7 @@ export function ShingaWorld({
 
   // 背景の絵。ここ1か所で決める（ホーム／ウォールブレイクの扉／トラベルの高度／各ゾーン）
   const bgUrl =
-    view === "home" || reportOpen ? "/singa-map.jpg"
+    view === "home" ? "/singa-map.jpg"
     : mode === "breakthrough" ? `/wall-${wallStage}.png`
     : mode === "travel" ? `/travel-${travelStage}.jpg`
     : mode === "walk" ? `/walk-${walkStage}.jpg`
@@ -1136,8 +1137,6 @@ export function ShingaWorld({
         <ManualScreen guideName={guideName} onBack={() => setManualOpen(false)} />
       ) : weightOpen ? (
         <WeightPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeightOpen(false)} />
-      ) : reportOpen ? (
-        <ReportScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setReportOpen(false)} />
       ) : dailyOpen ? (
         <DailyReflection guideName={guideName} avatarUrl={faceSrc} onBack={() => setDailyOpen(false)} />
       ) : view === "home" ? (
@@ -1146,7 +1145,6 @@ export function ShingaWorld({
           avatarUrl={faceSrc}
           onPick={(m) => void enter(m)}
           onTalk={(t) => void enterFree(t)}
-          onReport={() => setReportOpen(true)}
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onVault={() => setVaultOpen(true)}
@@ -1159,6 +1157,7 @@ export function ShingaWorld({
           onWeight={() => setWeightOpen(true)}
           customWorks={customWorks}
           lockedWorks={lockedWorks}
+          isAdmin={isAdmin}
           onRunCustom={(w) => enterCustom(w)}
           onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
           onMake={() => { setEditWork(null); setMakerOpen(true); }}
@@ -1590,14 +1589,15 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [],
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false,
 }: {
   guideName: string;
   avatarUrl: string;
   onPick: (m: ModeKey) => void;
   onTalk: (text: string) => void;
-  onReport: () => void;
   onDaily: () => void;
+  /** 親アカウントか（まだ配っていない機能を出し分ける） */
+  isAdmin?: boolean;
   onHero: () => void;
   /** カード保管庫（旅で手に入れた力） */
   onVault: () => void;
@@ -1722,9 +1722,15 @@ function Home({
         <div className="iw-reflect-row is-shelf">
           <button className="iw-report is-weekly" onClick={onWeekly}>🧰 タイムトラベルボックス</button>
           <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
-          <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
           <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
-          <button className="iw-report" onClick={onReport}>🌱 この頃のわたし</button>
+          {/* はじめの説明書。一度読んだら見つからなくなるので、いつでも読み返せる場所に置く。
+              見るだけ（?preview=1）なので、いま入っている設定は書き換わらない。 */}
+          <button className="iw-report is-guide"
+            onClick={() => { try { window.location.href = "/onboarding?preview=1"; } catch { /* ignore */ } }}>
+            📘 はじめの説明書
+          </button>
+          {/* 発信スタジオは、まだ親アカウントだけ */}
+          {isAdmin && <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>}
         </div>
       </div>
     </div>

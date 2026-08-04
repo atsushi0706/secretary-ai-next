@@ -18,7 +18,7 @@
 import { supabaseAdmin } from "./supabase";
 import { complete } from "./ai";
 import { readStar } from "./star";
-import { computeLife, computeChart, NIKKAN_NATURE, GOGYO_MEANING } from "./sanmei";
+import { computeLife, computeChart, computeYears, NIKKAN_NATURE, GOGYO_MEANING } from "./sanmei";
 import { diagnoseSeimei } from "./seimei";
 import { getUserSettings } from "./supabase";
 import { jstDateStr } from "./google";
@@ -194,6 +194,28 @@ async function gatherBase(userId: string): Promise<Base> {
     }
   }
 
+  // ⑥ 年ごとの流れ。10年だけだと「で、来年は？」に答えられない。
+  //    ここも全部その人の生年月日から計算する（誰かの結果を写さない）。
+  if (birth) {
+    const years = computeYears(birth, undefined, 4);
+    if (years?.length) {
+      const rows = years.map((y) => {
+        const when = y.isThisYear ? "今年" : y.year === years[0].year + 1 ? "来年" : `${y.year}年`;
+        return `- ${when}（${y.year}年・${y.age}歳）：${y.theme.label}／${y.theme.meaning}
+  この年の流れ：${y.phase.label}（${y.phase.meaning}）
+  気をつけること：${y.theme.watch}`;
+      });
+      stageBlock = [
+        stageBlock,
+        "",
+        "## 年ごとの流れ（ここが一番聞かれるところ）",
+        ...rows,
+        "※ 「来年は◯◯と縁がある」のように、**年を名指しして具体的に**書く。",
+        "※ ただし、ここに書いていないことを付け足さない。占い・運勢という言葉も使わない。",
+      ].filter(Boolean).join("\n");
+    }
+  }
+
   const family = String(s?.birth_name ?? "").trim();
   if (family) {
     const parts = family.split(/[\s　]+/).filter(Boolean);
@@ -247,7 +269,9 @@ const SECTIONS_SPEC = `章立ては、この8つを必ずこの順で。見出�
    - 過去の10年が何だったかを一言で振り返る（「あの時期がしんどかったのは〜」と腑に落とす）
    - **いまの10年**が何をする時期かを、はっきり言い切る
    - **次の10年**に何が来るか、そこへ向けて今から何を仕込むか
-   450〜650字。年齢は必ず入れる。
+   - **今年・来年・再来年**を、年を名指しして具体的に書く
+     （「来年は知らない世界と縁ができる」のように、渡された材料のとおりに）
+   500〜750字。年齢と西暦は必ず入れる。
 7. 整える方向（今この時期に、何を減らし何を足すか。300〜420字）
 8. 向かう方向（この人が最終的にどこへ向かうと自然か。希望で終わる。280〜400字）`;
 

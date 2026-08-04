@@ -3124,7 +3124,12 @@ body:has(.realverse-bg) { background: transparent; }
 .mn-screen {
   position: relative; z-index: 3;
   max-width: 780px; margin: 0 auto; padding: 14px 18px 44px;
-  overflow-y: auto; max-height: calc(100dvh - 20px);
+  /* 画面の高さ(100dvh)を上限にしていたが、この画面が入る枠は 82vh しかなく、
+     はみ出したぶんが枠の overflow:hidden で切り落とされていた。
+     そのせいで一番下の「もう一度、16問から作り直す」に手が届かなかった。
+     枠の高さを上限にして、中身はこの中でスクロールさせる。 */
+  flex: 1 1 auto; min-height: 0;
+  overflow-y: auto; max-height: 100%;
   background: linear-gradient(180deg, rgba(10,8,14,.93), rgba(10,8,14,.88));
   border-radius: 20px; border: 1px solid rgba(238,214,155,.16);
 }
@@ -5429,3 +5434,12 @@ body:has(.realverse-bg) { background: transparent; }
 .hero-check-cta { margin-top: 14px; text-align: center; }
 .hcc-lead { font-size: .8rem; line-height: 1.9; color: var(--singa-ink-soft); margin-bottom: 10px; }
 .hcc-lead b { color: var(--singa-ink); }
+
+/* はじめの説明書への入口（棚） */
+.iw-report.is-guide { border-color: rgba(150,200,232,.45); }
+/* 体験モードから世界へ戻る道（行き止まりにしない） */
+.ob-exit {
+  margin-left: 10px; padding: 3px 10px; border-radius: 999px;
+  font-size: .72rem; font-weight: 700; text-decoration: none;
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#d9b463);
+}

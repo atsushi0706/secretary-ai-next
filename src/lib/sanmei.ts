@@ -314,3 +314,107 @@ export const GOGYO_MEANING: Record<string, { much: string; none: string }> = {
   金: { much: "決断力と鋭さ。切り分けるのが得意だが、当たりが強くなる", none: "断ることが苦手。線を引く練習が要る" },
   水: { much: "柔軟さと知性。流れに乗るが、留まるのが苦手", none: "溜め込みやすい。流す・出す習慣が効く" },
 };
+
+/* ══════════════════════════════════════════════════════════════
+   年ごとの流れ（年運）
+
+   これまでは「10年ごと」までしか出していなかった。
+   でも人が知りたいのは「来年どうなの？」という粒度で、
+   実際の鑑定でも「来年は◯◯と縁がある」という言い方をする。
+   その1年の干支を、その人の日干と突き合わせて出す。
+
+   ※ 誰かの結果を書き写すのではなく、**その人の生年月日から計算する**。
+     同じ年でも、人によって出るものは違う。
+   ※ ユーザーには体系名も星の名前も出さない。日常語だけ。
+   ══════════════════════════════════════════════════════════════ */
+
+/** その年に回ってくる働き（10種）。名前は出さず、起きやすいことだけを書く */
+export type YearTheme = {
+  /** 見せてよい見出し */
+  label: string;
+  /** その年に何が起きやすいか */
+  meaning: string;
+  /** その年に気をつけること */
+  watch: string;
+};
+
+const YEAR_THEMES: YearTheme[] = [
+  { label: "自分の軸を通す年", meaning: "人に合わせるより、自分の決めたことを押し通せる年。ひとりで決めて進むことに力が乗る。", watch: "頑固に見られやすい。説明を省くと孤立する" },
+  { label: "人と組む年", meaning: "同じ方向を向いた人と輪ができる年。仲間・チーム・共同の話が動く。", watch: "広げすぎて、誰の話か分からなくなる" },
+  { label: "楽しんで表現する年", meaning: "遊び・表現・味わうことに力が乗る年。作ったものが人に届きやすい。", watch: "楽なほうへ流れて、積み上げが止まる" },
+  { label: "感じたものを形にする年", meaning: "違和感や繊細な感覚が鋭くなる年。それを作品や言葉にすると効く。", watch: "感情が波立ちやすい。孤独を抱え込みやすい" },
+  { label: "人に与えて回る年", meaning: "誰かに渡すこと・面倒を見ることが増える年。信用が貯まる。", watch: "与えすぎて空になる。見返りを期待すると崩れる" },
+  { label: "積み上げて蓄える年", meaning: "こつこつ続けたものが形になる年。身近な人・家のことが整う。", watch: "守りに入りすぎて、外の変化を逃す" },
+  { label: "動いて実行する年", meaning: "考えるより動くほうが結果が出る年。体力・行動量が結果に直結する。", watch: "急ぎすぎて雑になる。衝突が起きやすい" },
+  { label: "役割と責任がつく年", meaning: "立場や肩書きが与えられる年。人からきちんと見られる。", watch: "背負いすぎる。見栄で判断すると重くなる" },
+  { label: "知らない世界と縁ができる年", meaning: "遠く・外国・まったく別の分野との縁が出てくる年。今までの枠を壊して、自分で確かめに行く動きが起きる。", watch: "動きすぎて足元が浮く。慣れた場所が窮屈に感じる" },
+  { label: "学び直して深める年", meaning: "腰を据えて学ぶ・整理する・伝える側に回る年。理解が一段深くなる。", watch: "考えるだけで動かない。頭で完結させてしまう" },
+];
+
+const GOGYO_ORDER = ["木", "火", "土", "金", "水"] as const;
+type Gogyo = typeof GOGYO_ORDER[number];
+/** 生じる関係：木→火→土→金→水→木 */
+const SEI_NEXT: Record<Gogyo, Gogyo> = { 木: "火", 火: "土", 土: "金", 金: "水", 水: "木" };
+/** 剋する関係：木→土→水→火→金→木 */
+const KOKU_NEXT: Record<Gogyo, Gogyo> = { 木: "土", 土: "水", 水: "火", 火: "金", 金: "木" };
+
+/**
+ * 日干（その人の本質）から見て、相手の干がどの働きになるか。
+ * 五行の関係（同じ／生む／生まれる／剋す／剋される）と、陰陽が同じかどうかで10種に分かれる。
+ */
+function themeIndex(nikkan: string, other: string): number {
+  const me = KAN_GOGYO[nikkan], you = KAN_GOGYO[other];
+  const same = INYO_KAN[nikkan] === INYO_KAN[other];
+  if (me === you) return same ? 0 : 1;              // 同じ：軸／組む
+  if (SEI_NEXT[me] === you) return same ? 2 : 3;    // 自分が生む：表現
+  if (KOKU_NEXT[me] === you) return same ? 4 : 5;   // 自分が剋す：与える／蓄える
+  if (KOKU_NEXT[you] === me) return same ? 6 : 7;   // 剋される：動く／役割
+  return same ? 8 : 9;                              // 生まれる：未知／学び
+}
+
+export type YearFlow = {
+  year: number;
+  /** その年の誕生日を迎えたあとの年齢 */
+  age: number;
+  /** その1年のエネルギーの段階 */
+  phase: { label: string; meaning: string };
+  /** その年に回ってくる働き */
+  theme: YearTheme;
+  isThisYear: boolean;
+};
+
+/**
+ * 今年から数年ぶんの流れを出す。
+ * @param birth "YYYY-MM-DD"
+ * @param at    基準日（省略時は今日）
+ * @param span  何年ぶん（既定4＝今年・来年・再来年・その次）
+ */
+export function computeYears(
+  birth: string | null | undefined,
+  at?: Date,
+  span = 4,
+): YearFlow[] | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(birth?.trim() ?? "");
+  if (!m) return null;
+  const by = Number(m[1]), bm = Number(m[2]), bd = Number(m[3]);
+  if (bm < 1 || bm > 12 || bd < 1 || bd > 31) return null;
+
+  const nikkan = dayStem(by, bm, bd);
+  const now = at ?? new Date();
+  const thisYear = now.getFullYear();
+
+  const out: YearFlow[] = [];
+  for (let i = 0; i < Math.max(1, Math.min(10, span)); i++) {
+    const y = thisYear + i;
+    const kan = yearStem(y);                              // その年の干（立春基準の年）
+    const shi = SHI[(((y - 4) % 12) + 12) % 12];           // その年の支
+    out.push({
+      year: y,
+      age: y - by,
+      phase: LIFE_PHASE[juniunIndex(nikkan, shi)],
+      theme: YEAR_THEMES[themeIndex(nikkan, kan)],
+      isThisYear: i === 0,
+    });
+  }
+  return out;
+}

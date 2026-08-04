@@ -81,6 +81,8 @@ function OnboardingInner() {
       {preview && (
         <div className="ob-preview">
           👀 体験モード：<b>何も保存されません</b>。初めての人にどう見えるかを確かめるための画面です。
+          {/* 読み終わったら戻れないと、ここで行き止まりになる */}
+          <a className="ob-exit" href="/">← 世界にもどる</a>
         </div>
       )}
 

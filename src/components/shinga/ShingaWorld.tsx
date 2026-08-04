@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { PLACES, type PlaceKey } from "@/lib/places";
-import { MODES, MODE_OPENERS, type ModeKey } from "@/lib/modes";
+import { MODES, MODE_OPENERS, type ModeKey, MODE_KEYS } from "@/lib/modes";
 import { introOf } from "@/lib/mode-intro";
 import { VoiceBar } from "./VoiceBar";
 import { PeakPanel } from "./PeakPanel";
@@ -19,6 +19,8 @@ import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type
 import { ShadowGate, ShadowProgress, ShadowCardReveal, BeastReveal, type ShadowSafety } from "./ShadowMirror";
 import { TodayManual } from "./TodayManual";
 import { CardVault } from "./CardVault";
+import { CrystalVault } from "./CrystalVault";
+import { Crystallize } from "./Crystallize";
 import { TimeTravelBox } from "./TimeTravelBox";
 import { ChatCard, encodeChatCard, decodeChatCard } from "./ChatCard";
 import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
@@ -129,6 +131,9 @@ export function ShingaWorld({
   // 「これ、クエストに置いとく？」の確認カード（置くのは本人が決める）
   const [questOffer, setQuestOffer] = useState<{ title: string; body?: string } | null>(null);
   const [questSaving, setQuestSaving] = useState(false);
+  // クリスタルルーム：まとめて名前をつける流れに入ったか
+  const [crystallizing, setCrystallizing] = useState(false);
+  const [vaultCrystalOpen, setVaultCrystalOpen] = useState(false);   // クリスタル保管庫
   const [wallDug, setWallDug] = useState(0);    // ウォールブレイク：陰の側から掘り出せた個数（7個で次の段階へ）
   const [travelStage, setTravelStage] = useState(1); // パラレルトラベル：高度(1=目の前 〜 10=すべてがつながる)
   const [walkStage, setWalkStage] = useState(1);     // パラレルウォーク：どこまで歩いたか(1=門 〜 10=理想郷)
@@ -495,6 +500,7 @@ export function ShingaWorld({
    */
   function resetWorkState() {
     setQuestOffer(null);   // 前のワークの「置いとく？」を持ち越さない
+    setCrystallizing(false);
     runWorkRef.current = null; setRunWork(null); setDrawStep(null);
     setChoices(null); setWidget(null); setEmoPick(null);
     setPartsGate(false); setPartsIntro(null);
@@ -716,6 +722,8 @@ export function ShingaWorld({
           travelStage: m === "travel" ? travelStage : undefined,
           wallStage: m === "breakthrough" ? wallStage : undefined,
           wallDug: m === "breakthrough" ? wallDug : undefined,
+          // 鍵が開いている部屋だけを渡す。押しても開かないボタンを出させないため
+          openWorks: MODE_KEYS.filter((k) => !lockedWorks.includes(k)),
           shadowStep: m === "shadow" ? shadowStep : undefined,
           shadowPair: m === "shadow" ? shadowPairRef.current ?? undefined : undefined,
           shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
@@ -806,6 +814,9 @@ export function ShingaWorld({
           resetWorkState();
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
+        } else if (name === "crystallize") {
+          // 形になった。まとめ→命名→保管庫、の流れへ
+          setCrystallizing(true);
         } else if (name === "quest_offer") {
           // 勝手に置かない。「これ、置いとく？」と1件ずつ聞く。
           // 会話の吹き出しの中に混ぜると見落とすので、独立したカードで出す。
@@ -949,6 +960,8 @@ export function ShingaWorld({
     : mode === "walk" ? `/walk-${walkStage}.jpg`
     // ミラーオブワールドは専用の絵（左＝いまの世界／右＝もう一つの世界／中央に鏡の環）
     : mode === "shadow" ? "/shadow-bg.jpg"
+    // クリスタルルームは、光の扉の絵（結晶化の入口）
+    : mode === "crystal" ? "/zone-breakthrough.jpg"
     : here.image;
   // 直前の絵を覚えておき、上に新しい絵をふわっと重ねて切り替える
   const [prevBg, setPrevBg] = useState<string | null>(null);
@@ -1133,6 +1146,8 @@ export function ShingaWorld({
         <TimeTravelBox guideName={guideName} avatarUrl={faceSrc}
           onOpened={() => setUnreadWeekly(0)}
           onBack={() => setWeeklyOpen(false)} />
+      ) : vaultCrystalOpen ? (
+        <CrystalVault guideName={guideName} avatarUrl={faceSrc} onBack={() => setVaultCrystalOpen(false)} />
       ) : vaultOpen ? (
         <CardVault guideName={guideName} avatarUrl={faceSrc} onBack={() => setVaultOpen(false)} />
       ) : castOpen ? (
@@ -1158,6 +1173,7 @@ export function ShingaWorld({
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onVault={() => setVaultOpen(true)}
+          onCrystalVault={() => setVaultCrystalOpen(true)}
           onWeekly={() => setWeeklyOpen(true)}
           onLetter={letter ? () => { setLetterDramatic(false); setPhase("letter"); } : undefined}
           onCard={card && !card.done ? () => setShowCard(true) : undefined}
@@ -1337,6 +1353,15 @@ export function ShingaWorld({
               </div>
             )}
 
+            {/* クリスタルルーム：形になったら、まとめ→命名→保管庫 */}
+            {crystallizing && (
+              <Crystallize
+                lines={messages.filter((m) => m.content && !m.content.startsWith("[["))}
+                onCancel={() => setCrystallizing(false)}
+                onDone={() => { setCrystallizing(false); void finishWork("crystal", messages); setView("home"); setMode(null); }}
+              />
+            )}
+
             {/* 「これ、クエストに置いとく？」
                 会話の吹き出しに混ぜると見落とすので、独立したカードで、これだけを出す。 */}
             {questOffer && (
@@ -1422,7 +1447,7 @@ export function ShingaWorld({
         <div className="zone-intro" onClick={skipZoneIntro} role="button" aria-label="スキップ">
           <div
             className="zi-bg"
-            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : entering === "walk" ? "/walk-1.jpg" : entering === "shadow" ? "/shadow-bg.jpg" : PLACES[MODES[entering].place].image})` }}
+            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : entering === "walk" ? "/walk-1.jpg" : entering === "shadow" ? "/shadow-bg.jpg" : entering === "crystal" ? "/zone-breakthrough.jpg" : PLACES[MODES[entering].place].image})` }}
           />
           <div className="zi-veil" />
           <div className="zi-title">
@@ -1556,6 +1581,7 @@ const DOORS: { key: ModeKey; emoji: string }[] = [
   { key: "akashic", emoji: "📖" },
 ];
 const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
+  { key: "crystal", emoji: "💎" },
   { key: "parts", emoji: "🜂" },
   { key: "shadow", emoji: "🪞" },
   { key: "breakthrough", emoji: "🗝" },
@@ -1641,7 +1667,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0,
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1657,6 +1683,8 @@ function Home({
   onHero: () => void;
   /** カード保管庫（旅で手に入れた力） */
   onVault: () => void;
+  /** クリスタル保管庫（形にしてきたものが並ぶ） */
+  onCrystalVault: () => void;
   /** タイムトラベルボックス（過去の歩みが残る箱） */
   onWeekly: () => void;
   onLetter?: () => void;
@@ -1784,6 +1812,7 @@ function Home({
             {unreadWeekly > 0 && <span className="new-dot">{unreadWeekly}</span>}
           </button>
           <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
+          <button className="iw-report is-crystal" onClick={onCrystalVault}>💎 クリスタル保管庫</button>
           <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
           {/* 使い方の説明書。作ってはあったのに、どこからも開けなかった。
               ここは「読むところ」なので、設定の入力欄ではなく説明書そのものへ行く。

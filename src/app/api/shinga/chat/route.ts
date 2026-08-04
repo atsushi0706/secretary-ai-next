@@ -65,6 +65,13 @@ export async function POST(req: Request) {
     /** ウォールブレイクで、陰の側から掘り出せた個数（7個貯まるまで次の段階へ行かせない） */
     wallDug: Number.isFinite(Number(body.wallDug)) ? Number(body.wallDug) : 0,
   };
+  /**
+   * この人にとって、いま開いている部屋。
+   * これを渡さないと、鍵のかかった部屋へ誘導してしまう
+   *（押しても開かないボタンを出す＝いちばん白ける）。
+   */
+  const openWorks: string[] = (Array.isArray(body.openWorks) ? body.openWorks : [])
+    .map(String).filter((k: string) => isModeKey(k));
   // ミラーオブワールド：画面のゲートで選ばれた安全度と、選択ずみの幻獣
   const { isShadowPairId, shadowPair } = await import("@/lib/shadow");
   const shadowSafety: "normal" | "boundary" = body.shadowSafety === "boundary" ? "boundary" : "normal";
@@ -248,6 +255,35 @@ export async function POST(req: Request) {
           ].filter(Boolean).join("\n");
         }
 
+        /**
+         * 別の部屋への誘導。
+         *
+         * 話しているうちに「これは、あの部屋のほうが向いている」ということが起きる。
+         * そのとき黙って続けるより、ボタンで渡してあげたほうが早い。
+         * ただし **開いている部屋にしか誘導しない**。
+         * 鍵のかかった部屋を出すと、押しても開かなくて白ける。
+         */
+        let guideCtx = "";
+        if (!greet && openWorks.length > 0) {
+          const open = openWorks.filter((k) => k !== mode);
+          if (open.length) {
+            guideCtx = [
+              "# 別の部屋へ渡すとき",
+              `- いま **この人に開いている部屋**：${open.map((k) => `${MODES[k as ModeKey].label}(${k})`).join(" / ")}`,
+              "- **ここに無い部屋は、名前も出さない。**（鍵がかかっていて、押しても開かない）",
+              "- 話の中で「これは、あの部屋のほうが向いてるな」と思ったときだけ、返事の最後に選択肢を付ける：",
+              '  <choices>[{"label":"いま行く？（〜の部屋へ）","mode":"crystal"}]</choices>',
+              "- 出すのは**1つだけ**。毎回出さない。話の流れが自然にそこへ向いたときだけ。",
+              "- 押し付けない。「まだここにいたいなら、そのままでいいよ」の空気で添える。",
+              "- いまの部屋でやることが残っているなら、先にそれを言う。",
+              "  例：「もうちょっとだけ、この理想に浸ってからでもいいけど——」",
+              open.includes("crystal")
+                ? "- **具体的な案が欲しそう／形にしたそう**なときは、クリスタルルーム(crystal)へ。ここは壁打ちの部屋。"
+                : "",
+            ].filter(Boolean).join("\n");
+          }
+        }
+
         // 実書き込みの掟（AIが「入れておいた」と言ったのに実体が無い、を絶対に起こさない）
         const honestyCtx = [
           "# 実行の掟（最重要）",
@@ -258,7 +294,7 @@ export async function POST(req: Request) {
         ].join("\n");
 
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
-        const systemBase = [system, honestyCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
+        const systemBase = [system, honestyCtx, guideCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
         const systemFull = mode !== "parts" ? systemBase : [
           systemBase,
           partColor
@@ -328,6 +364,9 @@ export async function POST(req: Request) {
 
         // ウォールブレイク：壁（無理）が解けていく度合いを扉の開き具合で見せる。
         // 1=固く閉じた扉 … 5=全開（谷が見える）。回数ではなく、AIが今の状態を判定して出す。
+        // クリスタルルーム：形になったら、まとめと命名の流れへ
+        const wantCrystallize = /<crystallize\s*\/?>/.test(full);
+
         let wallStage: number | null = null;
         const wallMatch = full.match(/<wall>\s*([1-5])\s*<\/wall>/);
         if (wallMatch) wallStage = Number(wallMatch[1]);
@@ -489,6 +528,7 @@ export async function POST(req: Request) {
           .replace(/<breath\s*\/?>/g, "")
           .replace(/<wall>[\s\S]*?<\/wall>/g, "")
           .replace(/<wall_dug>[\s\S]*?<\/wall_dug>/g, "")
+          .replace(/<crystallize\s*\/?>/g, "")
           .replace(/<parts_step>[\s\S]*?<\/parts_step>/g, "")
           .replace(/<guardian>[\s\S]*?<\/guardian>/g, "")
           .replace(/<travel>[\s\S]*?<\/travel>/g, "")
@@ -511,6 +551,7 @@ export async function POST(req: Request) {
         if (wantEmotion) send("emotion", {});
         if (wantBreath) send("breath", {});
         if (wallStage) send("wall", { stage: wallStage, dug: wallDug });
+        if (wantCrystallize) send("crystallize", {});
         if (partsStep) send("parts_step", { step: partsStep });
         if (travelStage) send("travel", { stage: travelStage });
         if (walkStage) send("walk", { stage: walkStage });

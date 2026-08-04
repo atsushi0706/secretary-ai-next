@@ -20,6 +20,7 @@ import { complete } from "./ai";
 import { readStar } from "./star";
 import { computeLife, computeChart, computeYears, NIKKAN_NATURE, GOGYO_MEANING } from "./sanmei";
 import { diagnoseSeimei } from "./seimei";
+import { splitFullName } from "./name";
 import { getUserSettings } from "./supabase";
 import { jstDateStr } from "./google";
 import {
@@ -216,14 +217,12 @@ async function gatherBase(userId: string): Promise<Base> {
     }
   }
 
-  const family = String(s?.birth_name ?? "").trim();
-  if (family) {
-    const parts = family.split(/[\s　]+/).filter(Boolean);
-    const fam = parts.length >= 2 ? parts[0] : parts[0] ?? "";
-    const giv = parts.length >= 2 ? parts.slice(1).join("") : "";
-    if (fam && giv) {
+  // 分け方は1か所（lib/name.ts）に寄せる
+  const sp = splitFullName(s?.birth_name);
+  {
+    if (sp.ok) {
       try {
-        const r = diagnoseSeimei(fam, giv);
+        const r = diagnoseSeimei(sp.family, sp.given);
         const clean = (t: string) => String(t ?? "").replace(/^【[^】]*】/, "").trim();
         nameBlock = [
           `- 名前が帯びている働き（内側の性質）：${clean(r.jinkakuMeaning)}`,

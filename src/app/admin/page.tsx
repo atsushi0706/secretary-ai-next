@@ -386,7 +386,12 @@ export default function AdminPage() {
           <div key={u.userId} className="border rounded-xl p-4 bg-white">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
-                <div className="font-bold text-sm truncate">{u.name}</div>
+                <div className="font-bold text-sm truncate">
+                  {u.name}
+                  {u.callName && u.callName !== u.name && (
+                    <span className="ml-2 font-normal text-xs text-gray-500">（{u.callName}）</span>
+                  )}
+                </div>
                 <div className="text-xs text-gray-500 truncate">
                   {u.email ?? (u.authExpired ? "（連携切れ・本人の再ログインで表示）" : "（メール未取得）")}
                 </div>

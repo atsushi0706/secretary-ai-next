@@ -60,20 +60,38 @@ export async function todaysProgress(userId: string): Promise<ReplayProgress> {
     rows(supa.from("skill_cards").select("title").eq("user_id", userId).eq("date", today)),
   ]);
 
+  /**
+   * 中身が無い記録は、行に出さない。
+   * 「やること：」だけが並ぶ画面になっていた（題名が空のまま保存された記録があると起きる）。
+   * 空白だけのものも同じ扱いにする。数えるのも同様で、空の行は「進んだこと」に入れない。
+   */
+  const label = (t: unknown) => String(t ?? "").trim().slice(0, 40);
+
   const moved: string[] = [];
   for (const q of hq) {
     for (const it of (Array.isArray(q.items) ? q.items : [])) {
-      if (it?.done && it?.text) moved.push(`今日の一手：${String(it.text).slice(0, 40)}`);
+      const text = label(it?.text);
+      if (it?.done && text) moved.push(`今日の一手：${text}`);
     }
   }
-  for (const c of cards) if (c?.done) moved.push(`未来からのクエスト：${String(c.title ?? "").slice(0, 40)}`);
-  for (const a of acts) moved.push(`${a.aligned ? "理想からのタスク" : "やること"}：${String(a.title ?? "").slice(0, 40)}`);
+  for (const c of cards) {
+    const title = label(c?.title);
+    if (c?.done && title) moved.push(`未来からのクエスト：${title}`);
+  }
+  for (const a of acts) {
+    const title = label(a?.title);
+    if (!title) continue;
+    moved.push(`${a.aligned ? "理想からのタスク" : "やること"}：${title}`);
+  }
 
   const inward: string[] = [];
   if (walks.length) inward.push("パラレルウォークで、望む世界を歩いた");
   if (emo.length) inward.push(`状態を${emo.length}回みつめた`);
   for (const g of guards) inward.push("守り手をひとつ解き放った");
-  for (const s of skills) inward.push(`力を手に入れた：${String(s.title ?? "").slice(0, 30)}`);
+  for (const s of skills) {
+    const title = label(s?.title);
+    if (title) inward.push(`力を手に入れた：${title}`);
+  }
 
   return { moved: moved.slice(0, 8), inward: inward.slice(0, 5), movedCount: moved.length };
 }

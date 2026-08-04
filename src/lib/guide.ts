@@ -9,6 +9,7 @@ import { placesForPrompt, PLACES, type PlaceKey } from "./places";
 import { buildStarPrompt, computeCycles } from "./star";
 import { buildModePrompt, type ModeKey } from "./modes";
 import { diagnoseSeimei } from "./seimei";
+import { splitFullName } from "./name";
 import { buildReframePrompt } from "./reframe";
 import { computeLife } from "./sanmei";
 import { buildHeroLevelPrompt, type HeroRow } from "./hero";
@@ -16,14 +17,12 @@ import { kiyoBlackStance, KIYO_BLACK_FEWSHOT } from "./voice";
 
 /** 名前（姓名判断）から、その人の傾向を内部情報にする。用語は出さない */
 function buildNamePrompt(birthName: string | null | undefined, who: string): string {
-  const name = (birthName ?? "").trim();
-  if (!name) return "";
-  const parts = name.split(/[\s　]+/).filter(Boolean);
-  const family = parts.length >= 2 ? parts[0] : "";
-  const given = parts.length >= 2 ? parts.slice(1).join("") : parts[0] ?? "";
-  if (!given) return "";
+  // 分け方は1か所（lib/name.ts）に寄せる。ここで独自に分けると、
+  // 画面の入力チェックと食い違って「入力できたのに読まれない」が起きる
+  const sp = splitFullName(birthName);
+  if (!sp.ok) return "";
   let r;
-  try { r = diagnoseSeimei(family, given); } catch { return ""; }
+  try { r = diagnoseSeimei(sp.family, sp.given); } catch { return ""; }
   // 画数が全く取れない（記号だけ等）なら使わない
   if (r.soukaku <= 0) return "";
   const clean = (t: string) => t.replace(/【[^】]*】/g, "").trim();

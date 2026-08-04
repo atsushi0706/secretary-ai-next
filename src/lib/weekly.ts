@@ -61,30 +61,89 @@ export async function buildWeekly(userId: string): Promise<{ body: string; facet
   const s: any = await getUserSettings(userId).catch(() => null);
   const who = s?.user_call_name || "きみ";
 
-  const [marks, tomorrows, walks, emotions] = await Promise.all([
+  /**
+   * 材料は、多いほど良い。
+   *
+   * 前は「どんな一日だったか／明日の感情／状態チェック／歩いた話」の4つしか渡しておらず、
+   * **リアルバースで実際にやったこと（チェックを入れたタスク）が1件も入っていなかった。**
+   * だから手紙が短く、何をやった週なのかが書けなかった。
+   * その週に残った記録は、全部渡す。
+   */
+  const supa = supabaseAdmin();
+  const from = jstDateStr(new Date(Date.now() - 7 * 86400000));
+  const q = (table: string, cols: string) =>
+    supa.from(table).select(cols).eq("user_id", userId).gte("date", from)
+      .order("date", { ascending: true }).limit(200)
+      .then((r: any) => (r.data ?? []) as any[], () => [] as any[]);
+
+  const [marks, tomorrows, walks, emotions, acts, hq, cards, skills, guards, said] = await Promise.all([
     listDayMarks(userId, 7).catch(() => []),
     listTomorrow(userId, 7).catch(() => []),
     listWalkLogs(userId, 7).catch(() => []),
     listEmotions(userId, 30).catch(() => []),
+    q("real_actions", "date, title, kind, aligned"),      // リアルバースでやったこと
+    q("higher_quest", "date, items"),                     // 今日の一手
+    q("quest_cards", "date, title, done"),                // 未来からのクエスト
+    q("skill_cards", "date, title, body"),                // 手に入れた力
+    q("guardians", "date, color"),                        // 解き放った守り手
+    supa.from("shinga_conversations").select("date, place, content")
+      .eq("user_id", userId).eq("role", "user").gte("date", from)
+      .order("created_at", { ascending: true }).limit(60)
+      .then((r: any) => (r.data ?? []) as any[], () => [] as any[]),
   ]);
 
-  const from = jstDateStr(new Date(Date.now() - 7 * 86400000));
   const emo7 = emotions.filter((e: any) => e.date >= from);
+  const wd = (d: string) => {
+    try { return jstWeekdayJa(new Date(`${d}T00:00:00+09:00`)); } catch { return ""; }
+  };
+  const line = (t: unknown, n = 60) => String(t ?? "").trim().replace(/\s+/g, " ").slice(0, n);
 
+  // 日ごとに、その日あったことを1行にまとめる（週の流れが見えるように）
+  const byDay = new Map<string, string[]>();
+  const add = (d: string, t: string) => {
+    if (!d || !t) return;
+    const list = byDay.get(d) ?? [];
+    list.push(t);
+    byDay.set(d, list);
+  };
+  for (const m of marks as any[]) add(m.date, `気分：${dayKind(m.kind).label}`);
+  for (const a of acts) { const t = line(a.title); if (t) add(a.date, `${a.aligned ? "理想からのタスク" : "やること"}を片づけた：${t}`); }
+  for (const r of hq) for (const it of (Array.isArray(r.items) ? r.items : [])) {
+    const t = line(it?.text); if (it?.done && t) add(r.date, `今日の一手をやった：${t}`);
+  }
+  for (const c of cards) { const t = line(c.title); if (c.done && t) add(c.date, `未来からのクエストをやった：${t}`); }
+  for (const w of walks as any[]) { const t = line(w.summary, 120); if (t) add(w.date, `パラレルウォークで語った：${t}`); }
+  for (const k of skills) { const t = line(k.title); if (t) add(k.date, `力を手に入れた：${t}`); }
+  for (const g of guards) add(g.date, "守り手をひとつ解き放った");
+  for (const e of emo7 as any[]) add(e.date, `状態 ${e.level}/10${e.note ? `（${line(e.note, 40)}）` : ""}`);
+  for (const t of tomorrows as any[]) {
+    const acts2 = (t.actions ?? []).map((x: any) => line(x, 30)).filter(Boolean);
+    add(t.date, `夜に決めた：明日の感情「${line(t.emotion, 20) || "—"}」／${acts2.join("・") || "やることは決めず"}`);
+  }
+  const PLACE: Record<string, string> = {
+    walk: "パラレルウォーク", peak: "ピークステート", akashic: "アカシック",
+    deep: "内側のワーク", higher: "ハイヤークエスト", map: "自由な会話",
+  };
+  for (const c of said) { const t = line(c.content, 90); if (t) add(c.date, `${PLACE[c.place] ?? "ワーク"}で言った：「${t}」`); }
+
+  const days = [...byDay.keys()].sort();
+  const NL = String.fromCharCode(10);
+  const timeline = days
+    .map((d) => `## ${d}（${wd(d)}）` + NL + (byDay.get(d) ?? []).map((x) => `- ${x}`).join(NL))
+    .join(NL + NL);
+
+  const doneCount = acts.filter((a) => line(a.title)).length;
+  const counts = [
+    "# 数えられること",
+    `- 記録が残った日：${days.length}日`,
+    `- 片づけたタスク：${doneCount}件`,
+    `- パラレルウォーク：${(walks as any[]).length}回`,
+    `- 状態チェック：${(emo7 as any[]).length}回`,
+  ].join(NL);
   const material = [
-    marks.length
-      ? `# どんな一日だったか（本人が選んだ言葉）\n${marks.map((m: any) => `- ${m.date}：${dayKind(m.kind).label}`).join("\n")}`
-      : "",
-    tomorrows.length
-      ? `# 毎晩そのとき決めた「明日の感情」と「明日やること」\n${tomorrows.map((t: any) =>
-          `- ${t.date}(${["日","月","火","水","木","金","土"][t.weekday] ?? "?"})：感情「${t.emotion || "—"}」／やること：${(t.actions ?? []).join("・") || "—"}`,
-        ).join("\n")}`
-      : "",
-    emo7.length
-      ? `# 状態チェック（1=穏やか〜10=しんどい）\n${emo7.slice(0, 20).map((e: any) => `- ${e.date} ${e.level}${e.note ? `（${e.note}）` : ""}`).join("\n")}`
-      : "",
-    walks.length ? `# 歩いたときに語ったこと\n${walks.slice(0, 4).map((w: any) => `- ${w.date}: ${String(w.summary ?? "").slice(0, 200)}`).join("\n")}` : "",
-  ].filter(Boolean).join("\n\n");
+    timeline ? "# 1日ずつの記録（これが週の流れそのもの）" + NL + timeline : "",
+    counts,
+  ].filter(Boolean).join(NL + NL);
 
   const emptyFacets: WeeklyFacets = { progressed: [], struggled: "", reframed: "", gained: [] };
   if (!material.trim()) {
@@ -99,19 +158,32 @@ export async function buildWeekly(userId: string): Promise<{ body: string; facet
 
 # 書き方（厳守）
 - 友達の距離。タメ口。あたたかく。絵文字は少し。
-- **曜日ごとの流れに触れる**（「週の頭は〜だったのが、金曜には〜」のように）。
-  記録にある曜日だけを使う。無い曜日を作らない。
-- 本人が選んだ言葉（どんな一日だったか・明日の感情）を、**その言葉のまま**引く。言い換えて否定しない。
-- 数えられることは数える（何日記録した、何回歩いた）。ただし数字を並べるだけにしない。
+- **600〜1000字**で書く。短くまとめない。1週間ぶんの出来事があるのだから、ちゃんと厚く書く。
+- 見出しや箇条書きは使わない。話しかけるように、段落で書ききる。
+
+## この順で書く（各段落、記録に沿って具体的に）
+1. **週のはじまり** … 月曜・火曜あたりが、どんな入り方だったか。
+   本人が選んだ言葉（気分・その日の記録）を、**そのまま引く**。
+2. **途中で何が変わったか** … 週の中で流れが変わった瞬間を1つ見つけて、そこを書く。
+   「何曜のこれがきっかけかも」と、記録を名指しする。変化が無ければ「静かなまま進んだ」と書く。
+3. **何に引っかかっていたか** … しんどかったこと・止まっていたこと。
+   本人の言葉から拾う。責めない。無ければ「大きく詰まった感じは見当たらない」と書く。
+4. **実際にやったこと** … 片づけたタスク、今日の一手、クエスト。
+   **タイトルを具体的に挙げる**（「◯◯を片づけてた」のように）。ここを省かない。
+5. **歩いた話・内側のこと** … パラレルウォークや他のワークで語ったこと。本人の言葉を引く。
+6. **来週へ** … 小さな一言をひとつだけ。押し付けない。
+
+## 守ること
+- **記録に無いことは書かない。** 曜日も、やったことも、勝手に作らない。
+- 本人が選んだ言葉は、言い換えて否定しない。
+- 数えられることは数える。ただし数字を並べるだけにしない。
 - できなかったことを責めない。空いた日は「休んだ」として受け取る。
 - 決めつけない。「〜な気がする」「〜かも」と余白を残す。
 - 占い・算命学の用語は出さない。
-- 最後に、来週へ向けた小さな一言をひとつだけ（押し付けない）。
-- 全体で8〜12行。見出しや箇条書きは使わず、話しかけるように書ききる。
 
 # 出す形（JSONだけ。前後に何も書かない）
 {
-  "letter": "上のルールで書いた手紙の本文",
+  "letter": "上のルールで書いた手紙の本文（600〜1000字）",
   "progressed": ["その週、前に進んだこと（20字以内）", "…最大4つ"],
   "struggled": "その週、何に引っかかっていたか（40字以内。記録から。無ければ空文字）",
   "reframed": "それをどう捉え直したか（50字以内。捉え直しが見えなければ空文字）",
@@ -123,7 +195,7 @@ export async function buildWeekly(userId: string): Promise<{ body: string; facet
 ${material}`;
 
   try {
-    const raw = await complete({ userId, prompt, maxTokens: 1800, temperature: 0.8 });
+    const raw = await complete({ userId, prompt, maxTokens: 3200, temperature: 0.8 });
     const m = String(raw ?? "").match(/\{[\s\S]*\}/);
     if (!m) return { body: String(raw ?? "").trim(), facets: emptyFacets };
     const j = JSON.parse(m[0]);

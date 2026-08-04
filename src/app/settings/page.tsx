@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { splitFullName } from "@/lib/name";
 import Link from "next/link";
 import Image from "next/image";
 import { PushToggle } from "@/components/PushToggle";
@@ -310,7 +311,7 @@ export default function SettingsPage() {
         </div>
 
         <div>
-          <label className="block font-bold text-sm mb-1">お名前（姓と名の間にスペース）</label>
+          <label className="block font-bold text-sm mb-1">お名前（フルネーム）</label>
           <input
             type="text"
             value={birthName}
@@ -320,9 +321,17 @@ export default function SettingsPage() {
             className="w-full p-2 border rounded-lg text-sm"
           />
           <p className="text-xs text-gray-500 mt-1">
-            <strong>姓と名の間に半角スペース</strong>を入れてください（画数を正しく読むため）。
-            戸籍の漢字だと精度が上がります。空欄でも大丈夫です。
+            <strong>姓名判断の配慮から、フルネームでお願いします。</strong>きちんとしたお名前を入れてください。<br />
+            姓と名のあいだに<strong>スペースを1つ</strong>入れてください（例：山田 太郎）。<br />
+            戸籍の漢字だと精度が上がります。
           </p>
+          {/* 入れたのに読まれない、を無くす。その場で理由を出す */}
+          {birthName.trim() && !splitFullName(birthName).ok && (
+            <p className="text-xs text-red-600 mt-1 font-bold">
+              ⚠ {(splitFullName(birthName) as { reason: string }).reason}
+              <span className="font-normal">（このままだと、名前からの読みは出ません）</span>
+            </p>
+          )}
         </div>
 
         <div>

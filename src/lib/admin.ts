@@ -115,7 +115,10 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     const email = pick(s.email) ?? pick(s.work_email);
     const callName = pick(s.user_call_name);
     const birthName = pick(s.birth_name);
-    const name = pick(s.display_name) || callName || birthName || email || `${id.slice(0, 8)}…`;
+    // 本名（フルネーム）を最優先にする。
+    // 初回の説明書でフルネームを必ずもらうようにしたので、ここがいちばん確かで、
+    // 「誰なのか」が一目で分かる。Googleの表示名はニックネームのこともある。
+    const name = birthName || pick(s.display_name) || callName || email || `${id.slice(0, 8)}…`;
     const lasts = [
       shinga.get(id)?.last, walks.get(id)?.last, emotions.get(id)?.last,
       quests.get(id)?.last, talks.get(id)?.last, notifs.get(id)?.last,

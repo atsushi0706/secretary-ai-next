@@ -16,6 +16,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
+import { splitFullName } from "@/lib/name";
 
 const TOTAL = 5;
 
@@ -34,6 +35,7 @@ function OnboardingInner() {
 
   const [step, setStep] = useState(1);
   const [name, setName] = useState("");
+  const [fullName, setFullName] = useState("");   // 本名（姓名判断に使う）
   const [birth, setBirth] = useState("");
   const [gender, setGender] = useState<"" | "male" | "female">("");
   const [key, setKey] = useState("");
@@ -46,6 +48,7 @@ function OnboardingInner() {
     if (preview) return;             // 体験モードでは、既存の設定を持ち込まない
     fetch("/api/settings").then((r) => r.json()).then((s) => {
       if (s.user_call_name) setName(s.user_call_name);
+      if (s.birth_name) setFullName(s.birth_name);
       if (s.birth_date) setBirth(String(s.birth_date).slice(0, 10));
       if (s.birth_gender === "male" || s.birth_gender === "female") setGender(s.birth_gender);
       setHasKey(!!s.gemini_api_key_set);
@@ -71,8 +74,17 @@ function OnboardingInner() {
     try {
       if (step === 2) {
         if (!name.trim()) throw new Error("呼ばれたい名前を入れてください");
+        // 本名は姓名判断に使う。分けられない書き方だと読めないので、ここで止める
+        // （前は黙って姓名判断だけ飛ばしていたので、原因が誰にも見えなかった）
+        const sp = splitFullName(fullName);
+        if (!sp.ok) throw new Error(`お名前（フルネーム）：${sp.reason}`);
         if (!/^\d{4}-\d{2}-\d{2}$/.test(birth)) throw new Error("生年月日を入れてください");
-        await save({ user_call_name: name.trim(), birth_date: birth, birth_gender: gender || null });
+        await save({
+          user_call_name: name.trim(),
+          birth_name: fullName.trim(),
+          birth_date: birth,
+          birth_gender: gender || null,
+        });
       }
       if (step === 4) {
         // すでに鍵が入っている人に、貼り直しを強要しない（空のまま進めば、今の鍵が残る）
@@ -147,6 +159,15 @@ function OnboardingInner() {
             <input className="ob-input" value={name} onChange={(e) => setName(e.target.value)}
               placeholder="例：淳くん / ゆかさん" maxLength={20} />
             <p className="ob-hint">秘書がこの名前で呼びかけます。あだ名でもOK。</p>
+
+            <label className="ob-label">お名前（フルネーム）</label>
+            <input className="ob-input" value={fullName} onChange={(e) => setFullName(e.target.value)}
+              placeholder="例：山田 太郎" maxLength={40} />
+            <p className="ob-hint">
+              <b>姓名判断の配慮から、フルネームでお願いします。</b>きちんとしたお名前を入れてください。<br />
+              姓と名のあいだに<b>スペースを1つ</b>入れてください（例：山田 太郎）。<br />
+              名前の画数から、その人が持っている傾向を読みます。ここが正しくないと読めません。
+            </p>
 
             <label className="ob-label">生年月日</label>
             <input className="ob-input" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} />

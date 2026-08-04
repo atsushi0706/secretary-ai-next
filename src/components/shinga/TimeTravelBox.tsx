@@ -32,8 +32,10 @@ const weekEnd = (start: string) => {
   return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
 };
 
-export function TimeTravelBox({ guideName, avatarUrl, onBack }: {
+export function TimeTravelBox({ guideName, avatarUrl, onBack, onOpened }: {
   guideName: string; avatarUrl: string; onBack: () => void;
+  /** 開いた＝読んだ。地図の印を消すために知らせる */
+  onOpened?: () => void;
 }) {
   const [weeks, setWeeks] = useState<Weekly[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -52,6 +54,9 @@ export function TimeTravelBox({ guideName, avatarUrl, onBack }: {
       setCards(Array.isArray(a?.cards) ? a.cards : []);
       setCounts(Array.isArray(t?.counts) ? t.counts : []);
     }).finally(() => setLoading(false));
+    // 開いた合図を送る（未読の印を消す）。失敗しても読むことはできる
+    fetch("/api/weekly", { method: "POST" }).then(() => onOpened?.()).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

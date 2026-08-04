@@ -194,4 +194,66 @@ export async function listMyWeekly(userId: string, limit = 8): Promise<WeeklyRep
   } catch { return []; }
 }
 
+/**
+ * まだ開いていない、届いているレポートの数。
+ * 通知を許可していない人は「届いたこと」に気づけないので、
+ * 地図の宝箱に印を出すために使う。
+ * （読んだかどうかは status で持つ：approved＝未読／sent＝読んだ）
+ */
+export async function countUnreadWeekly(userId: string): Promise<number> {
+  try {
+    const supa = supabaseAdmin();
+    const { count } = await supa.from("weekly_reports")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId).eq("status", "approved");
+    return count ?? 0;
+  } catch { return 0; }
+}
+
+/** 宝箱を開いた＝読んだ、として印を消す */
+export async function markWeeklyRead(userId: string): Promise<void> {
+  try {
+    const supa = supabaseAdmin();
+    await supa.from("weekly_reports")
+      .update({ status: "sent" })
+      .eq("user_id", userId).eq("status", "approved");
+  } catch { /* 印が消えなくても、読むことはできる */ }
+}
+
+/**
+ * 全員ぶんを、週ごとにまとめて読む（親アカウント用）。
+ * 承認待ちだけでなく、**すでに送ったものも含めて**一覧にする。
+ * 承認の場では下書きしか見えないので、
+ * 「先週みんなに何を送ったか」を後から追えなかった。
+ */
+export async function listAllWeekly(limitWeeks = 6): Promise<{
+  week_start: string;
+  reports: (WeeklyReport & { name: string })[];
+}[]> {
+  const supa = supabaseAdmin();
+  const { data } = await supa.from("weekly_reports")
+    .select("id, user_id, week_start, body, facets, status, created_at")
+    .order("week_start", { ascending: false }).limit(400);
+  const rows = (data ?? []) as WeeklyReport[];
+  if (!rows.length) return [];
+
+  const { data: users } = await supa.from("user_settings").select("user_id, user_call_name, display_name, email");
+  const nameOf = new Map((users ?? []).map((u: any) =>
+    [u.user_id, u.user_call_name || u.display_name || u.email || String(u.user_id).slice(0, 8) + "…"]));
+
+  const byWeek = new Map<string, (WeeklyReport & { name: string })[]>();
+  for (const r of rows) {
+    const list = byWeek.get(r.week_start) ?? [];
+    list.push({ ...r, name: nameOf.get(r.user_id) ?? String(r.user_id).slice(0, 8) + "…" });
+    byWeek.set(r.week_start, list);
+  }
+  return [...byWeek.entries()]
+    .sort((a, b) => b[0].localeCompare(a[0]))
+    .slice(0, limitWeeks)
+    .map(([week_start, reports]) => ({
+      week_start,
+      reports: reports.sort((a, b) => a.name.localeCompare(b.name, "ja")),
+    }));
+}
+
 export { jstWeekdayJa };

@@ -5468,3 +5468,22 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .82rem; line-height: 1.8;
   color: #d9edc8; background: rgba(140,200,120,.12); border: 1px solid rgba(140,200,120,.3);
 }
+
+/* 宝箱に「新しいのが入ってるよ」の印
+   通知を許可していない人は、届いたことに気づけないため */
+.iw-report.is-weekly.has-new {
+  border-color: rgba(255,150,120,.75);
+  box-shadow: 0 0 0 1px rgba(255,150,120,.3), 0 0 18px rgba(255,140,110,.35);
+  animation: newpulse 2.4s ease-in-out infinite;
+}
+@keyframes newpulse {
+  0%,100% { box-shadow: 0 0 0 1px rgba(255,150,120,.3), 0 0 14px rgba(255,140,110,.28); }
+  50%     { box-shadow: 0 0 0 1px rgba(255,150,120,.5), 0 0 26px rgba(255,140,110,.55); }
+}
+.iw-report .new-dot {
+  display: inline-grid; place-items: center; margin-left: 8px;
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: 999px;
+  font-size: .64rem; font-weight: 900; color: #fff;
+  background: linear-gradient(160deg,#ff7a6a,#e04a5f);
+  box-shadow: 0 2px 8px rgba(0,0,0,.45);
+}

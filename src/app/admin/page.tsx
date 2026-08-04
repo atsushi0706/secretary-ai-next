@@ -54,6 +54,16 @@ export default function AdminPage() {
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [wkMsg, setWkMsg] = useState("");
   const [wkBusy, setWkBusy] = useState(false);
+  /**
+   * 全員ぶんの週次レポートを、週ごとにまとめて読む場所。
+   * 承認の欄は「まだ送っていないもの」しか出ないので、
+   * 先週みんなに何を送ったのかを後から追えなかった。
+   */
+  const [allWeeks, setAllWeeks] = useState<{
+    week_start: string;
+    reports: { id: string; name: string; body: string; status: string; facets?: any }[];
+  }[]>([]);
+  const [openWeek, setOpenWeek] = useState<string | null>(null);
 
   async function loadDrafts() {
     try {
@@ -62,6 +72,10 @@ export default function AdminPage() {
       if (Array.isArray(d.drafts)) {
         setDrafts(d.drafts);
         setPicked(Object.fromEntries(d.drafts.map((x: any) => [x.id, true])));  // 既定は全部チェック
+      }
+      if (Array.isArray(d.all)) {
+        setAllWeeks(d.all);
+        if (d.all.length) setOpenWeek((w) => w ?? d.all[0].week_start);   // いちばん新しい週は開けておく
       }
     } catch { /* 出せなくても他は動く */ }
   }
@@ -244,6 +258,56 @@ export default function AdminPage() {
             className="mt-3 w-full bg-purple-600 text-white font-bold text-sm py-2.5 rounded-lg disabled:opacity-50">
             {wkBusy ? "送っています…" : `✓ チェックした人に送る（${Object.values(picked).filter(Boolean).length}人）`}
           </button>
+        </div>
+      )}
+
+      {/* 全員ぶんを、週ごとにまとめて読む（送りおえたものも含む） */}
+      {allWeeks.length > 0 && (
+        <div className="border rounded-xl bg-white p-4 mb-4">
+          <div className="text-sm font-bold mb-1">📚 みんなの週次レポート（全員・週ごと）</div>
+          <p className="text-xs text-gray-500 mb-3">
+            送りおえたものも含めて、ここに全部並びます。週を押すと開きます。
+          </p>
+          {allWeeks.map((w) => {
+            const open = openWeek === w.week_start;
+            const yet = w.reports.filter((r) => r.status === "draft").length;
+            return (
+              <div key={w.week_start} className="border rounded-lg mb-2 overflow-hidden">
+                <button
+                  onClick={() => setOpenWeek(open ? null : w.week_start)}
+                  className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 text-sm font-bold"
+                >
+                  <span>{w.week_start} の週　<span className="font-normal text-gray-500">{w.reports.length}人ぶん</span></span>
+                  <span className="flex items-center gap-2">
+                    {yet > 0 && <span className="badge bg-amber-100 text-amber-700">未送信 {yet}</span>}
+                    <span className="text-gray-400">{open ? "▲" : "▼"}</span>
+                  </span>
+                </button>
+                {open && (
+                  <div className="divide-y">
+                    {w.reports.map((r) => (
+                      <div key={r.id} className="p-3">
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <b className="text-sm">{r.name}</b>
+                          <span className={`badge ${r.status === "draft"
+                            ? "bg-amber-100 text-amber-700"
+                            : r.status === "approved" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
+                            {r.status === "draft" ? "未送信" : r.status === "approved" ? "送信ずみ・未読" : "読んだ"}
+                          </span>
+                        </div>
+                        {r.facets?.progressed?.length > 0 && (
+                          <div className="text-[11px] text-gray-600 mb-1.5">
+                            進んだこと：{r.facets.progressed.join(" / ")}
+                          </div>
+                        )}
+                        <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{r.body}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

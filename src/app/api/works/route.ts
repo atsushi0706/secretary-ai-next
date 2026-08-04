@@ -10,6 +10,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { getLockedWorks, getFeatureGrants, GRANTABLE, type FeatureKey } from "@/lib/app-config";
+import { countUnreadWeekly } from "@/lib/weekly";
 
 export const dynamic = "force-dynamic";
 
@@ -19,11 +20,13 @@ export async function GET() {
   if (!userId) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
 
   const admin = isAdmin(userId);
-  const grants = await getFeatureGrants();
+  // 未読の週次レポート数。通知を許可していない人にも「届いてるよ」と分かるように、
+  // 地図の宝箱へ印を出すために使う
+  const [grants, unreadWeekly] = await Promise.all([getFeatureGrants(), countUnreadWeekly(userId)]);
   const features = Object.fromEntries(
     GRANTABLE.map((g) => [g.key, admin || (grants[g.key as FeatureKey] ?? []).includes(userId)]),
   );
 
-  if (admin) return NextResponse.json({ locked: [], isAdmin: true, features });
-  return NextResponse.json({ locked: await getLockedWorks(), isAdmin: false, features });
+  if (admin) return NextResponse.json({ locked: [], isAdmin: true, features, unreadWeekly });
+  return NextResponse.json({ locked: await getLockedWorks(), isAdmin: false, features, unreadWeekly });
 }

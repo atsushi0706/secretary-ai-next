@@ -160,6 +160,8 @@ export function ShingaWorld({
   const [isAdmin, setIsAdmin] = useState(false);
   // ひとりずつ開ける機能。**既定は鍵**。管理画面で開けた人だけ true になる
   const [features, setFeatures] = useState<Record<string, boolean>>({});
+  // 届いているのに、まだ開いていない週次レポートの数（宝箱に印を出す）
+  const [unreadWeekly, setUnreadWeekly] = useState(0);
   // アカシック：開いた最初に「今日のあなたの取扱説明書」を出す
   const [todayManual, setTodayManual] = useState(false);
   const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
@@ -393,6 +395,7 @@ export function ShingaWorld({
       if (Array.isArray(d?.locked)) setLockedWorks(d.locked.map(String));
       setIsAdmin(!!d?.isAdmin);
       if (d?.features && typeof d.features === "object") setFeatures(d.features);
+      setUnreadWeekly(Number(d?.unreadWeekly) || 0);
     }).catch(() => {});
   }, []);
 
@@ -1125,7 +1128,9 @@ export function ShingaWorld({
       ) : heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
       ) : weeklyOpen ? (
-        <TimeTravelBox guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeeklyOpen(false)} />
+        <TimeTravelBox guideName={guideName} avatarUrl={faceSrc}
+          onOpened={() => setUnreadWeekly(0)}
+          onBack={() => setWeeklyOpen(false)} />
       ) : vaultOpen ? (
         <CardVault guideName={guideName} avatarUrl={faceSrc} onBack={() => setVaultOpen(false)} />
       ) : castOpen ? (
@@ -1162,6 +1167,7 @@ export function ShingaWorld({
           lockedWorks={lockedWorks}
           isAdmin={isAdmin}
           features={features}
+          unreadWeekly={unreadWeekly}
           onRunCustom={(w) => enterCustom(w)}
           onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
           onMake={() => { setEditWork(null); setMakerOpen(true); }}
@@ -1593,7 +1599,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {},
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1604,6 +1610,8 @@ function Home({
   isAdmin?: boolean;
   /** ひとりずつ開ける機能。既定は鍵で、開けた人だけ true */
   features?: Record<string, boolean>;
+  /** まだ開いていない週次レポートの数 */
+  unreadWeekly?: number;
   onHero: () => void;
   /** カード保管庫（旅で手に入れた力） */
   onVault: () => void;
@@ -1726,7 +1734,11 @@ function Home({
           <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>
         </div>
         <div className="iw-reflect-row is-shelf">
-          <button className="iw-report is-weekly" onClick={onWeekly}>🧰 タイムトラベルボックス</button>
+          {/* 届いたのに気づけない、を無くす。通知を許可していない人にも印で分かる */}
+          <button className={`iw-report is-weekly ${unreadWeekly > 0 ? "has-new" : ""}`} onClick={onWeekly}>
+            🧰 タイムトラベルボックス
+            {unreadWeekly > 0 && <span className="new-dot">{unreadWeekly}</span>}
+          </button>
           <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
           <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
           {/* 使い方の説明書。作ってはあったのに、どこからも開けなかった。

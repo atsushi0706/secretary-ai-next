@@ -6,7 +6,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
-import { listDrafts, approveWeekly } from "@/lib/weekly";
+import { listDrafts, approveWeekly, listAllWeekly } from "@/lib/weekly";
 import { sendPushToUser } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -23,6 +23,8 @@ export async function GET() {
   const nameOf = new Map((users ?? []).map((u: any) => [u.user_id, u.user_call_name || u.email || u.user_id.slice(0, 8)]));
   return NextResponse.json({
     drafts: drafts.map((d) => ({ ...d, name: nameOf.get(d.user_id) ?? d.user_id.slice(0, 8) })),
+    // 承認待ちだけでなく、送りおえたものも含めて週ごとに全員ぶん
+    all: await listAllWeekly(6),
   });
 }
 

@@ -29,8 +29,8 @@ export async function GET(req: Request) {
   const failed: string[] = [];
   for (const u of list) {
     try {
-      const body = await buildWeekly(u.user_id);
-      await saveWeeklyDraft(u.user_id, body);
+      const { body, facets } = await buildWeekly(u.user_id);
+      await saveWeeklyDraft(u.user_id, body, facets);
       made++;
     } catch (e: any) {
       failed.push(`${u.user_id.slice(0, 8)}: ${String(e?.message ?? e).slice(0, 60)}`);

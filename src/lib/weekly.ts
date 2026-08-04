@@ -22,12 +22,29 @@ import { listWalkLogs, listEmotions } from "./shinga";
 
 export type WeeklyStatus = "draft" | "approved" | "sent";
 
+/**
+ * その週の「中身」。手紙の文章だけだと、あとから箱を開けたときに
+ * 「何に悩んで、それをどう解釈して、何が進んだのか」が拾えない。
+ * だから分けて持たせて、宝箱の中で1つずつ並べられるようにする。
+ */
+export type WeeklyFacets = {
+  /** その週、前に進んだこと */
+  progressed: string[];
+  /** その週、何に引っかかっていたか */
+  struggled: string;
+  /** それをどう捉え直したか（解釈の変化） */
+  reframed: string;
+  /** 手に入れたもの（力・気づき） */
+  gained: string[];
+};
+
 export type WeeklyReport = {
   id: string;
   user_id: string;
   /** その週の月曜（YYYY-MM-DD） */
   week_start: string;
   body: string;
+  facets?: WeeklyFacets | null;
   status: WeeklyStatus;
   created_at: string;
 };
@@ -39,8 +56,8 @@ export function weekStartStr(at: Date = jstNow()): string {
   return jstDateStr(new Date(at.getTime() - back * 86400000));
 }
 
-/** 1人ぶんの週刊レポートを作る（保存はしない） */
-export async function buildWeekly(userId: string): Promise<string> {
+/** 1人ぶんの週刊レポートを作る（保存はしない）。手紙と、宝箱に並べる中身を一緒に返す */
+export async function buildWeekly(userId: string): Promise<{ body: string; facets: WeeklyFacets }> {
   const s: any = await getUserSettings(userId).catch(() => null);
   const who = s?.user_call_name || "きみ";
 
@@ -69,8 +86,12 @@ export async function buildWeekly(userId: string): Promise<string> {
     walks.length ? `# 歩いたときに語ったこと\n${walks.slice(0, 4).map((w: any) => `- ${w.date}: ${String(w.summary ?? "").slice(0, 200)}`).join("\n")}` : "",
   ].filter(Boolean).join("\n\n");
 
+  const emptyFacets: WeeklyFacets = { progressed: [], struggled: "", reframed: "", gained: [] };
   if (!material.trim()) {
-    return `${who}へ。\n今週は記録がまだ少なかったから、まとめはお休み。\n書けなかった週があっても、それはそれでいい。来週またここで会おう。`;
+    return {
+      body: `${who}へ。\n今週は記録がまだ少なかったから、まとめはお休み。\n書けなかった週があっても、それはそれでいい。来週またここで会おう。`,
+      facets: emptyFacets,
+    };
   }
 
   const prompt = `あなたは ${s?.secretary_name || "清瀬リンク"}。${who} の相棒。
@@ -88,24 +109,52 @@ export async function buildWeekly(userId: string): Promise<string> {
 - 最後に、来週へ向けた小さな一言をひとつだけ（押し付けない）。
 - 全体で8〜12行。見出しや箇条書きは使わず、話しかけるように書ききる。
 
+# 出す形（JSONだけ。前後に何も書かない）
+{
+  "letter": "上のルールで書いた手紙の本文",
+  "progressed": ["その週、前に進んだこと（20字以内）", "…最大4つ"],
+  "struggled": "その週、何に引っかかっていたか（40字以内。記録から。無ければ空文字）",
+  "reframed": "それをどう捉え直したか（50字以内。捉え直しが見えなければ空文字）",
+  "gained": ["手に入れたもの・気づき（20字以内）", "…最大3つ"]
+}
+※ progressed / gained は**記録にあることだけ**。無ければ空配列にする。作らない。
+
 # ${who} の1週間
 ${material}`;
 
   try {
-    return String(await complete({ userId, prompt, maxTokens: 1800, temperature: 0.8 })).trim();
+    const raw = await complete({ userId, prompt, maxTokens: 1800, temperature: 0.8 });
+    const m = String(raw ?? "").match(/\{[\s\S]*\}/);
+    if (!m) return { body: String(raw ?? "").trim(), facets: emptyFacets };
+    const j = JSON.parse(m[0]);
+    const arr = (v: any, n: number) =>
+      (Array.isArray(v) ? v : []).map((x: any) => String(x ?? "").trim()).filter(Boolean).slice(0, n);
+    return {
+      body: String(j.letter ?? "").trim() || `${who}へ。今週もおつかれさま。`,
+      facets: {
+        progressed: arr(j.progressed, 4),
+        struggled: String(j.struggled ?? "").trim().slice(0, 80),
+        reframed: String(j.reframed ?? "").trim().slice(0, 100),
+        gained: arr(j.gained, 3),
+      },
+    };
   } catch {
-    return `${who}へ。\n今週もおつかれさま。うまく言葉にできなかったけど、続いていること自体がちゃんと効いてるよ。`;
+    return {
+      body: `${who}へ。\n今週もおつかれさま。うまく言葉にできなかったけど、続いていること自体がちゃんと効いてるよ。`,
+      facets: emptyFacets,
+    };
   }
 }
 
 /** 週刊レポートを下書きとして保存（同じ週は上書き） */
-export async function saveWeeklyDraft(userId: string, body: string): Promise<void> {
+export async function saveWeeklyDraft(userId: string, body: string, facets?: WeeklyFacets): Promise<void> {
   const supa = supabaseAdmin();
   await supa.from("weekly_reports").upsert(
     {
       user_id: userId,
       week_start: weekStartStr(),
       body,
+      facets: facets ?? null,
       status: "draft",
       updated_at: new Date().toISOString(),
     },
@@ -117,7 +166,7 @@ export async function saveWeeklyDraft(userId: string, body: string): Promise<voi
 export async function listDrafts(weekStart?: string): Promise<WeeklyReport[]> {
   const supa = supabaseAdmin();
   const q = supa.from("weekly_reports")
-    .select("id, user_id, week_start, body, status, created_at")
+    .select("id, user_id, week_start, body, facets, status, created_at")
     .eq("status", "draft").order("created_at", { ascending: false });
   const { data } = weekStart ? await q.eq("week_start", weekStart) : await q;
   return (data ?? []) as WeeklyReport[];
@@ -138,7 +187,7 @@ export async function listMyWeekly(userId: string, limit = 8): Promise<WeeklyRep
   try {
     const supa = supabaseAdmin();
     const { data } = await supa.from("weekly_reports")
-      .select("id, user_id, week_start, body, status, created_at")
+      .select("id, user_id, week_start, body, facets, status, created_at")
       .eq("user_id", userId).in("status", ["approved", "sent"])
       .order("week_start", { ascending: false }).limit(limit);
     return (data ?? []) as WeeklyReport[];

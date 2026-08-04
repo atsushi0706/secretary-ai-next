@@ -5207,3 +5207,89 @@ body:has(.realverse-bg) { background: transparent; }
 .pf-note { margin-top: 8px; font-size: .66rem; line-height: 1.75; color: #999; }
 .pf-tail { font-size: .74rem; line-height: 1.85; color: #555; }
 .pf-tail b { color: #6b4fb8; }
+
+/* ── ワールドリプレイ：今日の進み ── */
+.rp-go {
+  margin-top: 8px; padding: 11px; border-radius: 12px; font-size: .8rem; font-weight: 700;
+  color: #1a1208; background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}
+.rp-go:disabled { opacity: .55; }
+.rp-moved {
+  padding: 12px 14px; border-radius: 14px;
+  background: rgba(140,210,160,.1); border: 1px solid rgba(140,210,160,.4);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.rp-moved.is-quiet { background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.14); }
+.rp-moved-t { font-size: .8rem; font-weight: 700; color: #8fd0a0; margin-bottom: 3px; }
+.rp-moved.is-quiet .rp-moved-t { color: var(--singa-ink-soft); }
+.rp-line { font-size: .74rem; line-height: 1.8; color: var(--singa-ink); }
+.rp-line.is-in { color: var(--singa-ink-soft); }
+.rp-say {
+  padding: 12px 14px; border-radius: 14px;
+  background: rgba(238,214,155,.08); border: 1px solid rgba(238,214,155,.3);
+}
+.rp-recv { font-size: .78rem; color: var(--singa-gold); margin-bottom: 5px; }
+.rp-mean { font-size: .84rem; line-height: 1.95; color: var(--singa-ink); }
+.rp-picks { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 4px; }
+.rp-picks label {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 7px 11px; border-radius: 999px; font-size: .74rem;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14);
+}
+.rp-picks label.on { color: var(--singa-ink); background: rgba(238,214,155,.14); border-color: rgba(238,214,155,.5); }
+
+/* ── タイムトラベルボックス ── */
+.tt-screen {
+  position: relative; z-index: 3;
+  max-width: 640px; margin: 0 auto; padding: 14px 16px 40px;
+  overflow-y: auto; max-height: calc(100dvh - 20px);
+}
+.tt-card {
+  padding: 16px; border-radius: 20px;
+  background: linear-gradient(180deg, rgba(10,8,14,.93), rgba(10,8,14,.88));
+  border: 1px solid rgba(238,214,155,.2);
+}
+.tt-empty { font-size: .78rem; line-height: 2.1; color: var(--singa-ink-soft); padding: 26px 4px; text-align: center; }
+.tt-stats { display: flex; gap: 14px; flex-wrap: wrap; margin: 14px 0 12px; font-size: .68rem; color: var(--singa-ink-soft); }
+.tt-stats b { font-size: 1.2rem; color: var(--singa-gold); margin-right: 2px; }
+
+.tt-line { display: flex; flex-direction: column; gap: 9px; }
+.tt-week {
+  border-radius: 15px; overflow: hidden;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.12);
+  transition: opacity .2s ease;
+}
+.tt-week.is-new { background: rgba(238,214,155,.07); border-color: rgba(238,214,155,.34); }
+.tt-week:not(.is-open):not(.is-new) { opacity: .78; }
+.tt-week-head {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 12px 14px; text-align: left;
+}
+.tt-when { font-size: .78rem; font-weight: 700; color: var(--singa-ink); font-variant-numeric: tabular-nums; }
+.tt-new {
+  font-size: .56rem; padding: 2px 8px; border-radius: 999px; font-weight: 700;
+  color: #1a1208; background: linear-gradient(160deg,#eed69b,#c9a55e);
+}
+.tt-chev { margin-left: auto; font-size: .6rem; color: var(--singa-ink-soft); }
+
+.tt-body { padding: 0 14px 14px; display: flex; flex-direction: column; gap: 11px; }
+.tt-sec { display: flex; flex-direction: column; gap: 4px; }
+.tt-sec-t { font-size: .64rem; letter-spacing: .06em; color: var(--singa-gold); margin-bottom: 2px; }
+.tt-item { font-size: .76rem; line-height: 1.85; color: var(--singa-ink); }
+.tt-item.is-gain { color: var(--singa-gold); }
+
+/* 引っかかり → 捉え直し（ここが成長の中身） */
+.tt-sec.is-shift {
+  padding: 11px 13px; border-radius: 13px;
+  background: rgba(255,255,255,.04); border: 1px dashed rgba(238,214,155,.3);
+}
+.tt-from { font-size: .76rem; line-height: 1.85; color: var(--singa-ink-soft); }
+.tt-arrow { text-align: center; font-size: .8rem; color: var(--singa-gold); margin: 2px 0; }
+.tt-to { font-size: .8rem; line-height: 1.9; color: var(--singa-ink); font-weight: 700; }
+
+.tt-cards { display: flex; flex-wrap: wrap; gap: 8px; }
+.tt-cardchip { display: flex; flex-direction: column; align-items: center; gap: 3px; width: 74px; }
+.tt-cardchip svg { border-radius: 9px; }
+.tt-cardchip span { font-size: .58rem; line-height: 1.4; text-align: center; color: var(--singa-ink-soft); }
+.tt-letter { font-size: .78rem; line-height: 2; color: var(--singa-ink); white-space: pre-wrap; }
+.tt-note { margin-top: 14px; font-size: .64rem; text-align: center; color: var(--singa-ink-soft); }

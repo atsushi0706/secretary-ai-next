@@ -44,7 +44,7 @@ export async function POST(req: Request) {
       try {
         const r = await sendPushToUser(d.user_id, {
           title: "📮 今週のふりかえりが届いたよ",
-          body: "1週間、おつかれさま。読みにおいで。",
+          body: "1週間、おつかれさま。宝箱に入れておいたよ。",
           url: "/shinga?open=weekly", tag: "weekly",
         });
         if (r.sent > 0) sent++;

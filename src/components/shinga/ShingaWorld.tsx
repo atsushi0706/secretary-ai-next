@@ -20,7 +20,7 @@ import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type
 import { ShadowGate, ShadowProgress, ShadowCardReveal, BeastReveal, type ShadowSafety } from "./ShadowMirror";
 import { TodayManual } from "./TodayManual";
 import { CardVault } from "./CardVault";
-import { WeeklyLetters } from "./WeeklyLetters";
+import { TimeTravelBox } from "./TimeTravelBox";
 import { ChatCard, encodeChatCard, decodeChatCard } from "./ChatCard";
 import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
 import { BroadcastStudio } from "./BroadcastStudio";
@@ -163,7 +163,7 @@ export function ShingaWorld({
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);   // カード保管庫
-  const [weeklyOpen, setWeeklyOpen] = useState(false); // 週刊レポート（承認ずみのものだけ）
+  const [weeklyOpen, setWeeklyOpen] = useState(false); // タイムトラベルボックス（過去の宝箱）
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
   const [weightOpen, setWeightOpen] = useState(false); // からだの記録
@@ -1111,7 +1111,7 @@ export function ShingaWorld({
       ) : heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
       ) : weeklyOpen ? (
-        <WeeklyLetters guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeeklyOpen(false)} />
+        <TimeTravelBox guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeeklyOpen(false)} />
       ) : vaultOpen ? (
         <CardVault guideName={guideName} avatarUrl={faceSrc} onBack={() => setVaultOpen(false)} />
       ) : castOpen ? (
@@ -1591,7 +1591,7 @@ function Home({
   onHero: () => void;
   /** カード保管庫（旅で手に入れた力） */
   onVault: () => void;
-  /** 週刊レポート（承認ずみのものだけ届く） */
+  /** タイムトラベルボックス（過去の歩みが残る箱） */
   onWeekly: () => void;
   onLetter?: () => void;
   onCard?: () => void;
@@ -1696,7 +1696,7 @@ function Home({
       <div className="iw-reflect-row">
         <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
         <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
-        <button className="iw-report is-weekly" onClick={onWeekly}>📮 今週のふりかえり</button>
+        <button className="iw-report is-weekly" onClick={onWeekly}>🧰 タイムトラベルボックス</button>
         <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
         <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
         <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>

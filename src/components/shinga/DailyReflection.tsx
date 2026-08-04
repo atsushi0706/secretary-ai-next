@@ -47,6 +47,11 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
   const [why, setWhy] = useState("");
   const [handOver, setHandOver] = useState<{ placed: string[] } | null>(null);
   const [handBusy, setHandBusy] = useState(false);
+  // ワールドリプレイ：今日の進み（事実）と、AIからの短い受け・意味・明日の3つ
+  const [prog, setProg] = useState<{ moved: string[]; inward: string[]; movedCount: number } | null>(null);
+  const [replay, setReplay] = useState<{ received: string; meaning: string; tomorrow: string[] } | null>(null);
+  const [replayBusy, setReplayBusy] = useState(false);
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
 
   const load = useCallback(() => {
     setLoading(true);
@@ -57,6 +62,30 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
       .finally(() => setLoading(false));
   }, []);
   useEffect(() => { load(); }, [load]);
+  // 話す前でも「今日これだけ進んだ」は出せる（事実だから）
+  useEffect(() => {
+    fetch("/api/replay").then((r) => r.json()).then((d) => { if (d?.progress) setProg(d.progress); }).catch(() => {});
+  }, []);
+
+  /** 今日の話を渡して、短い受け・意味・明日の3つを返してもらう */
+  async function runReplay() {
+    if (replayBusy) return;
+    setReplayBusy(true);
+    try {
+      const r = await fetch("/api/replay", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ said: today }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setErr(d.error || "うまく再生できなかった"); return; }
+      setReplay(d.replay);
+      setProg(d.replay?.progress ?? prog);
+      // 出てきた明日の一手は、最初から全部チェックしておく（外すのは本人）
+      setPicked(Object.fromEntries((d.replay?.tomorrow ?? []).map((t: string) => [t, true])));
+      setActs((d.replay?.tomorrow ?? []).join("、"));
+    } catch (e: any) { setErr(String(e?.message ?? e)); }
+    finally { setReplayBusy(false); }
+  }
 
   async function pickKind(kind: string) {
     if (saving) return;
@@ -99,7 +128,7 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
         <div className="rep-head">
           <img className="singa-face" src={avatarUrl} alt={guideName} />
           <div>
-            <div className="rep-sub">1日の振り返り</div>
+            <div className="rep-sub">ワールドリプレイ</div>
             <div className="rep-who">{guideName} より</div>
           </div>
         </div>
@@ -181,18 +210,64 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
             </div>
           ) : (
             <div className="hv-box">
+              {/* ① 今日の出来事（1回だけ聞く。深掘りしない） */}
               <div className="hv-step">
                 <div className="hv-q">今日は、どんな1日だった？</div>
                 <textarea value={today} onChange={(e) => setToday(e.target.value)} rows={2}
-                  placeholder="思ったことを、そのまま。" />
+                  placeholder="思ったことを、そのまま。ひとことでいい。" />
                 <VoiceInput mode="reflect" compact onText={(t) => setToday((p) => (p ? `${p} ${t}` : t))} />
+                {!replay && (
+                  <button className="rp-go" disabled={replayBusy} onClick={() => void runReplay()}>
+                    {replayBusy ? "今日を再生してる…" : "▶ 今日を再生する"}
+                  </button>
+                )}
               </div>
 
+              {/* ② 今日これだけ進んだ（事実。AIには数えさせない） */}
+              {prog && (
+                <div className={`rp-moved ${prog.movedCount === 0 ? "is-quiet" : ""}`}>
+                  <div className="rp-moved-t">
+                    {prog.movedCount > 0 ? `今日、これだけ進んだ（${prog.movedCount}）` : "今日は、静かな日だった"}
+                  </div>
+                  {prog.moved.map((m, i) => <div key={i} className="rp-line">✓ {m}</div>)}
+                  {prog.inward.map((m, i) => <div key={`i${i}`} className="rp-line is-in">◦ {m}</div>)}
+                  {prog.movedCount === 0 && prog.inward.length === 0 && (
+                    <div className="rp-line is-in">◦ 何もしなかった日も、要る時間だよ。</div>
+                  )}
+                </div>
+              )}
+
+              {/* ③ 受けと、今日の意味（AIはここだけ。短い） */}
+              {replay && (
+                <div className="rp-say">
+                  <div className="rp-recv">{replay.received}</div>
+                  <div className="rp-mean">{replay.meaning}</div>
+                </div>
+              )}
+
+              {/* ④ 明日の朝いちにやること（最大3つ） */}
               <div className="hv-step">
-                <div className="hv-q">じゃあ明日は、どうしていく？</div>
+                <div className="hv-q">明日の朝いち、なにから手をつける？</div>
+                {replay && replay.tomorrow.length > 0 && (
+                  <div className="rp-picks">
+                    {replay.tomorrow.map((t) => (
+                      <label key={t} className={picked[t] ? "on" : ""}>
+                        <input type="checkbox" checked={!!picked[t]}
+                          onChange={(e) => {
+                            const next = { ...picked, [t]: e.target.checked };
+                            setPicked(next);
+                            setActs(replay.tomorrow.filter((x) => next[x]).join("、"));
+                          }} />
+                        {t}
+                      </label>
+                    ))}
+                  </div>
+                )}
                 <textarea value={acts} onChange={(e) => setActs(e.target.value)} rows={2}
                   placeholder="1つでいい。読点で区切ると複数入る。" />
-                <div className="hv-hint">ここに書いたものは、明日づけのタスクになるよ。</div>
+                <div className="hv-hint">
+                  ここに書いたものが、明日づけのタスクになるよ。<b>多くても3つまで</b>にしよう。
+                </div>
               </div>
 
               <div className="hv-step is-emo">

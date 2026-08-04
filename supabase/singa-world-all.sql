@@ -396,3 +396,6 @@ create table if not exists public.weekly_reports (
 );
 create index if not exists weekly_reports_status_idx on public.weekly_reports (status, week_start desc);
 alter table public.weekly_reports enable row level security;
+
+-- 週刊レポートに「中身」を持たせる（宝箱で、悩み→解釈→進みを並べるため）
+alter table public.weekly_reports add column if not exists facets jsonb;

@@ -4992,3 +4992,47 @@ body:has(.realverse-bg) { background: transparent; }
 .cc.is-skill.r-gold { --cc: #eed69b; }
 .cc.is-skill.r-silver { --cc: #c9d4e2; }
 .cc.is-skill.r-bronze { --cc: #cfa276; }
+
+/* ── 夜の振り返り：明日への引き継ぎ ── */
+.hv-box {
+  margin-top: 16px; padding: 14px 15px; border-radius: 16px;
+  background: rgba(238,214,155,.07); border: 1px solid rgba(238,214,155,.3);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.hv-step { display: flex; flex-direction: column; gap: 7px; }
+.hv-q { font-size: .82rem; line-height: 1.8; color: var(--singa-ink); }
+.hv-q b { color: var(--singa-gold); }
+.hv-sub { font-size: .68rem; color: var(--singa-ink-soft); margin-top: -4px; }
+.hv-hint { font-size: .64rem; color: var(--singa-ink-soft); }
+.hv-box textarea, .hv-box input {
+  width: 100%; padding: 10px 12px; font-size: .82rem; line-height: 1.7; border-radius: 11px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.15);
+  color: var(--singa-ink); outline: none; resize: vertical;
+}
+.hv-box textarea:focus, .hv-box input:focus { border-color: rgba(238,214,155,.5); }
+.hv-box textarea::placeholder, .hv-box input::placeholder { color: rgba(244,236,221,.3); }
+.hv-step.is-emo { padding: 12px; border-radius: 13px; background: rgba(238,214,155,.09); border: 1px dashed rgba(238,214,155,.4); }
+.hv-step.is-emo input { font-size: 1rem; font-weight: 700; }
+.hv-go {
+  padding: 14px; border-radius: 14px; font-weight: 700; font-size: .88rem; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e); box-shadow: 0 8px 24px rgba(201,165,94,.32);
+}
+.hv-go:disabled { opacity: .5; box-shadow: none; }
+.hv-done {
+  margin-top: 16px; padding: 14px 15px; border-radius: 16px;
+  background: rgba(140,210,160,.12); border: 1px solid rgba(140,210,160,.45);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.hv-done b { font-size: .84rem; color: #8fd0a0; }
+.hv-emo { font-size: .8rem; color: var(--singa-ink); }
+.hv-emo em { font-style: normal; font-weight: 700; font-size: 1rem; color: var(--singa-gold); }
+.hv-acts { font-size: .74rem; color: var(--singa-ink-soft); }
+.hv-note { font-size: .66rem; color: var(--singa-ink-soft); line-height: 1.7; }
+
+/* ── 週刊レポート（届いた手紙） ── */
+.wk-letter {
+  margin-top: 14px; padding: 14px 15px; border-radius: 16px;
+  background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.12);
+}
+.wk-letter.is-new { background: rgba(238,214,155,.08); border-color: rgba(238,214,155,.35); }
+.wk-week { font-size: .66rem; color: var(--singa-gold); letter-spacing: .06em; margin-bottom: 7px; }

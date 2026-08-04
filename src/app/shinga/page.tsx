@@ -18,6 +18,8 @@ export default async function ShingaPage({
   const { place, open } = await searchParams;
   const initialPlace: PlaceKey | undefined = isPlaceKey(place) ? place : undefined;
   const openMode: ModeKey | undefined = isModeKey(open) ? open : undefined;
+  // 通知から直行する画面（ワークではないもの）
+  const openPanel = open === "daily" || open === "weekly" ? open : undefined;
 
   let guideName = "清瀬リンク";
   let avatarUrl = "/kiyose.png";
@@ -35,5 +37,5 @@ export default async function ShingaPage({
     // 名前や姿が取れなくても世界には入れる
   }
 
-  return <ShingaWorld guideName={guideName} avatarUrl={avatarUrl} initialPlace={initialPlace} openMode={openMode} />;
+  return <ShingaWorld guideName={guideName} avatarUrl={avatarUrl} initialPlace={initialPlace} openMode={openMode} openPanel={openPanel} />;
 }

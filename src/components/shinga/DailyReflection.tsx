@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { emoColor, emoName } from "./EmotionMeter";
+import { VoiceInput } from "./VoiceInput";
 
 /**
  * 1日の振り返り（夜20時の通知で開く場所）。
@@ -39,6 +40,13 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
   const [d, setD] = useState<Daily | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  // 今日どうだった → 明日どうする → 明日の感情、と1つずつ進む
+  const [today, setToday] = useState("");
+  const [acts, setActs] = useState("");
+  const [emo, setEmo] = useState("");
+  const [why, setWhy] = useState("");
+  const [handOver, setHandOver] = useState<{ placed: string[] } | null>(null);
+  const [handBusy, setHandBusy] = useState(false);
 
   const load = useCallback(() => {
     setLoading(true);
@@ -62,6 +70,23 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
       if (!r.ok) { setErr(res.error || "保存できなかった"); return; }
       load();   // 選んだ言葉を締めのひとことにも反映させる
     } finally { setSaving(false); }
+  }
+
+  /** 明日へ引き継ぐ（感情＋やること）。やることは明日づけのタスクになる */
+  async function handOverToTomorrow() {
+    if (handBusy) return;
+    setHandBusy(true);
+    try {
+      const actions = acts.split(/[\n、,]/).map((a) => a.trim()).filter(Boolean).slice(0, 3);
+      const r = await fetch("/api/tomorrow", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emotion: emo, why: why || today, actions }),
+      });
+      const res = await r.json();
+      if (!r.ok) { setErr(res.error || "引き継げなかった"); return; }
+      setHandOver({ placed: res.placed ?? [] });
+    } catch (e: any) { setErr(String(e?.message ?? e)); }
+    finally { setHandBusy(false); }
   }
 
   const kinds = d?.kinds ?? [];
@@ -142,6 +167,50 @@ export function DailyReflection({ guideName, avatarUrl, onBack }: { guideName: s
 
         {/* ④ 締めのひとこと */}
         {!loading && d && !d.empty && d.closing && <p className="rep-body">{d.closing}</p>}
+
+        {/* ④-2 今日どうだった → 明日どうする → 明日の感情 */}
+        {!loading && d && !d.empty && (
+          handOver ? (
+            <div className="hv-done">
+              <b>✓ 明日へ引き継いだ</b>
+              {emo && <span className="hv-emo">明日の最優先感情：<em>{emo}</em></span>}
+              {handOver.placed.length > 0 && (
+                <span className="hv-acts">明日のタスクに置いた：{handOver.placed.join("／")}</span>
+              )}
+              <span className="hv-note">朝、リアルバースを開くと、この感情が最初に出るよ。</span>
+            </div>
+          ) : (
+            <div className="hv-box">
+              <div className="hv-step">
+                <div className="hv-q">今日は、どんな1日だった？</div>
+                <textarea value={today} onChange={(e) => setToday(e.target.value)} rows={2}
+                  placeholder="思ったことを、そのまま。" />
+                <VoiceInput mode="reflect" compact onText={(t) => setToday((p) => (p ? `${p} ${t}` : t))} />
+              </div>
+
+              <div className="hv-step">
+                <div className="hv-q">じゃあ明日は、どうしていく？</div>
+                <textarea value={acts} onChange={(e) => setActs(e.target.value)} rows={2}
+                  placeholder="1つでいい。読点で区切ると複数入る。" />
+                <div className="hv-hint">ここに書いたものは、明日づけのタスクになるよ。</div>
+              </div>
+
+              <div className="hv-step is-emo">
+                <div className="hv-q">最後にひとつ。<b>明日の夜、どんな感情になっていたい？</b></div>
+                <div className="hv-sub">理想の先に得ている感情って、どんな感情だろう。</div>
+                <input value={emo} onChange={(e) => setEmo(e.target.value)} maxLength={20}
+                  placeholder="例：満ちている / 軽い / 誇らしい" />
+                <textarea value={why} onChange={(e) => setWhy(e.target.value)} rows={2}
+                  placeholder="なんでその感情？（書かなくてもいい）" />
+              </div>
+
+              <button className="hv-go" disabled={handBusy || (!emo.trim() && !acts.trim())}
+                onClick={() => void handOverToTomorrow()}>
+                {handBusy ? "引き継いでる…" : "明日へ引き継いで、今日を閉じる"}
+              </button>
+            </div>
+          )
+        )}
 
         {/* ⑤ この一週間の並び（経過） */}
         {!loading && (d?.marks?.length ?? 0) > 0 && (

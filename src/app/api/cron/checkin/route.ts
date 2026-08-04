@@ -127,7 +127,7 @@ export async function GET(req: Request) {
           const pr = await sendPushToUser(u.user_id, {
             title: "🌙 1日の振り返りが開いたよ",
             body: "今日はどんな日だった？ 3分だけ、一緒に振り返ろう。",
-            url: "/shinga", tag: "reflect-open",
+            url: "/shinga?open=daily", tag: "reflect-open",
           });
           night = pr.sent > 0;
           await supa.from("notifications").insert({

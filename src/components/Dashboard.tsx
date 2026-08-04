@@ -454,10 +454,16 @@ function TodayFocusCard() {
   const [emotion, setEmotion] = useState("");
   const [priority, setPriority] = useState("");
   const [saving, setSaving] = useState(false);
+  // 前の晩の振り返りで決めた「明日の最優先感情」。朝いちで、ここに出す
+  const [lastNight, setLastNight] = useState<{ emotion: string; why: string; actions: string[] } | null>(null);
 
   useEffect(() => {
     fetch("/api/daily-focus").then((r) => r.json()).then((d) => {
       if (d.focus) { setFocus(d.focus); setEmotion(d.focus.emotion ?? ""); setPriority(d.focus.priority ?? ""); }
+    }).catch(() => {});
+    // 昨夜「明日の夜どんな感情でいたいか」を決めていたら、それを今日の狙いとして見せる
+    fetch("/api/tomorrow").then((r) => r.json()).then((d) => {
+      if (d?.focus?.emotion) setLastNight(d.focus);
     }).catch(() => {});
   }, []);
 
@@ -499,10 +505,26 @@ function TodayFocusCard() {
     <section className="card border-l-4 border-amber-400 flex items-start gap-3">
       <div className="flex-1 min-w-0">
         <div className="font-bold text-sm mb-1.5">🎯 今日のフォーカス</div>
+
+        {/* 昨夜、自分で決めた「今日の夜こうなっていたい」。何をやるかより先に置く */}
+        {lastNight && (
+          <div className="mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
+            <div className="text-[10px] text-amber-700 font-bold">昨夜きみが決めた・今日の最優先感情</div>
+            <div className="text-base font-bold text-amber-800 leading-snug">{lastNight.emotion}</div>
+            {lastNight.why && <div className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">{lastNight.why}</div>}
+            {lastNight.actions.length > 0 && (
+              <div className="text-[11px] text-gray-600 mt-1">
+                決めたこと：{lastNight.actions.join("／")}
+              </div>
+            )}
+          </div>
+        )}
+
         {empty ? (
           <p className="text-xs text-gray-500 leading-relaxed">
-            まだ今日の狙いは決まってないみたい。<br />
-            インナーワールドのパラレルウォークで決めるか、右の ✎ から入れてね。
+            {lastNight
+              ? "上の感情が、今日の狙い。ほかに決めたいことがあれば右の ✎ から。"
+              : <>まだ今日の狙いは決まってないみたい。<br />夜の振り返りで「明日の感情」を決めると、翌朝ここに出るよ。</>}
           </p>
         ) : (
           <div className="space-y-1.5">

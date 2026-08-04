@@ -40,6 +40,40 @@ export default function AdminPage() {
   const [locked, setLocked] = useState<string[]>([]);
   const [lockMsg, setLockMsg] = useState("");
   const [lockBusy, setLockBusy] = useState(false);
+  // 週刊レポートの承認待ち（OKを出すまで、本人には絶対に見えない）
+  const [drafts, setDrafts] = useState<{ id: string; name: string; week_start: string; body: string }[]>([]);
+  const [picked, setPicked] = useState<Record<string, boolean>>({});
+  const [wkMsg, setWkMsg] = useState("");
+  const [wkBusy, setWkBusy] = useState(false);
+
+  async function loadDrafts() {
+    try {
+      const r = await fetch("/api/admin/weekly");
+      const d = await r.json();
+      if (Array.isArray(d.drafts)) {
+        setDrafts(d.drafts);
+        setPicked(Object.fromEntries(d.drafts.map((x: any) => [x.id, true])));  // 既定は全部チェック
+      }
+    } catch { /* 出せなくても他は動く */ }
+  }
+
+  async function approve() {
+    const ids = Object.entries(picked).filter(([, v]) => v).map(([k]) => k);
+    if (ids.length === 0) { setWkMsg("送るものが選ばれていません"); return; }
+    if (!confirm(`${ids.length}人にレポートを送ります。よろしいですか？`)) return;
+    setWkBusy(true); setWkMsg("");
+    try {
+      const r = await fetch("/api/admin/weekly", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setWkMsg(d.error || `HTTP ${r.status}`); return; }
+      setWkMsg(`${d.approved}人に送信しました（通知${d.notified}件）`);
+      await loadDrafts();
+    } catch (e: any) { setWkMsg(String(e?.message ?? e)); }
+    finally { setWkBusy(false); }
+  }
 
   async function toggleLock(key: string) {
     if (lockBusy) return;
@@ -93,6 +127,7 @@ export default function AdminPage() {
     fetch("/api/admin/locks").then((r) => r.json()).then((d) => {
       if (Array.isArray(d?.locked)) setLocked(d.locked.map(String));
     }).catch(() => {});
+    loadDrafts();
   }, []);
 
   async function act(action: "disable-notify" | "delete", u: AdminUser) {
@@ -151,6 +186,37 @@ export default function AdminPage() {
           <Link href="/" className="text-xs text-purple-700 underline">← ホーム</Link>
         </div>
       </div>
+
+      {/* 週刊レポートの承認。OKを出すまで、本人には絶対に届かない */}
+      {drafts.length > 0 && (
+        <div className="bg-purple-50 border border-purple-200 rounded-lg px-4 py-3 mb-4">
+          <div className="flex items-center justify-between mb-2">
+            <div className="text-sm font-bold">📋 週刊レポートの確認（{drafts.length}人ぶん）</div>
+            <span className="text-xs text-gray-500">{wkMsg}</span>
+          </div>
+          <p className="text-xs text-gray-600 mb-3">
+            読んでOKを出すと、その人に届きます。<b>OKを出すまでは誰にも見えません。</b>
+            送りたくないものはチェックを外してください。
+          </p>
+          <div className="space-y-2 max-h-[420px] overflow-y-auto">
+            {drafts.map((d) => (
+              <label key={d.id} className="block bg-white border rounded-lg p-3 cursor-pointer">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <input type="checkbox" checked={!!picked[d.id]}
+                    onChange={(e) => setPicked((p) => ({ ...p, [d.id]: e.target.checked }))} />
+                  <b className="text-sm">{d.name}</b>
+                  <span className="text-xs text-gray-400">{d.week_start} の週</span>
+                </div>
+                <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{d.body}</div>
+              </label>
+            ))}
+          </div>
+          <button onClick={() => void approve()} disabled={wkBusy}
+            className="mt-3 w-full bg-purple-600 text-white font-bold text-sm py-2.5 rounded-lg disabled:opacity-50">
+            {wkBusy ? "送っています…" : `✓ チェックした人に送る（${Object.values(picked).filter(Boolean).length}人）`}
+          </button>
+        </div>
+      )}
 
       {/* ワークの鍵：チェックを付けたワークは、管理者以外は開けなくなる */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">

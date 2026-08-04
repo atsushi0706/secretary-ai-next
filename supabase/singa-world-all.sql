@@ -362,3 +362,37 @@ create table if not exists public.real_actions (
 );
 create index if not exists real_actions_user_idx on public.real_actions (user_id, date desc);
 alter table public.real_actions enable row level security;
+
+-- ═══ ⑪ 明日への引き継ぎ（夜の振り返りで決めたもの） ═══
+-- weekday と decided_at を持つ理由：
+--  ・週刊レポートで「何曜日にどう感じていたか」を並べるのに要る
+--  ・あとから「いつ決めたのか」を辿れないと、振り返りの精度が落ちる
+create table if not exists public.tomorrow_focus (
+  user_id     text not null,
+  date        text not null,              -- 振り返りをした日（JST）
+  target_date text not null,              -- 対象の日（＝明日）
+  weekday     smallint not null,          -- 0=日 〜 6=土（JST）
+  emotion     text,                       -- 明日の夜、どんな感情でいたいか
+  why         text,
+  actions     jsonb not null default '[]'::jsonb,
+  decided_at  timestamptz not null default now(),   -- 決めた瞬間の実時刻
+  updated_at  timestamptz not null default now(),
+  primary key (user_id, date)
+);
+create index if not exists tomorrow_focus_target_idx on public.tomorrow_focus (user_id, target_date);
+alter table public.tomorrow_focus enable row level security;
+
+-- ═══ ⑫ 週刊レポート（金曜に作り、マスターが承認してから届く） ═══
+create table if not exists public.weekly_reports (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,
+  week_start  text not null,              -- その週の月曜（JST）
+  body        text not null,
+  status      text not null default 'draft',   -- draft / approved / sent
+  approved_at timestamptz,
+  created_at  timestamptz not null default now(),
+  updated_at  timestamptz not null default now(),
+  unique (user_id, week_start)
+);
+create index if not exists weekly_reports_status_idx on public.weekly_reports (status, week_start desc);
+alter table public.weekly_reports enable row level security;

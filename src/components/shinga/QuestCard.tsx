@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrivalFx } from "./ArrivalFx";
+import { VoiceInput } from "./VoiceInput";
 
 /**
  * 未来からのクエストカード。
@@ -68,6 +69,8 @@ export function QuestCard({ card, onClose, onDone }: { card: Card; onClose: () =
               className="qcard-input" value={text} onChange={(e) => setText(e.target.value)} rows={3}
               placeholder="例：ずっと避けてた連絡。今日は逃げるなってことかも。"
             />
+            {/* 書くより、話したほうが出てくることがある。話した内容は整えてから入る */}
+            <VoiceInput mode="quest" compact onText={(t) => setText((prev) => (prev ? `${prev} ${t}` : t))} />
             {err && <div className="qcard-err">{err}</div>}
             <button className="qcard-btn is-go" disabled={busy} onClick={receive}>
               {busy ? "受け取ってる…" : "受け取る →"}

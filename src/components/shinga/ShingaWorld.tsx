@@ -20,6 +20,7 @@ import { PartsGate, PartsIntro, PartsProgress, GuardianReveal, ChildReveal, type
 import { ShadowGate, ShadowProgress, ShadowCardReveal, BeastReveal, type ShadowSafety } from "./ShadowMirror";
 import { TodayManual } from "./TodayManual";
 import { CardVault } from "./CardVault";
+import { WeeklyLetters } from "./WeeklyLetters";
 import { ChatCard, encodeChatCard, decodeChatCard } from "./ChatCard";
 import type { ShadowCard, ShadowPairId } from "@/lib/shadow";
 import { BroadcastStudio } from "./BroadcastStudio";
@@ -103,13 +104,15 @@ const FACE_SRC: Record<Face, string> = {
 };
 
 export function ShingaWorld({
-  guideName, avatarUrl, initialPlace, openMode,
+  guideName, avatarUrl, initialPlace, openMode, openPanel,
 }: {
   guideName: string;
   avatarUrl: string;
   initialPlace?: PlaceKey;
   /** 通知やリンクから「このワークで開いてほしい」と指定されたとき */
   openMode?: ModeKey;
+  /** 通知から直行する画面（ワークではないもの）：daily=1日の振り返り / weekly=週刊レポート */
+  openPanel?: "daily" | "weekly";
 }) {
   const [view, setView] = useState<"home" | "talk">(initialPlace ? "talk" : "home");
   const [mode, setMode] = useState<ModeKey | null>(null);
@@ -160,6 +163,7 @@ export function ShingaWorld({
   const [dailyOpen, setDailyOpen] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);   // カード保管庫
+  const [weeklyOpen, setWeeklyOpen] = useState(false); // 週刊レポート（承認ずみのものだけ）
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
   const [weightOpen, setWeightOpen] = useState(false); // からだの記録
@@ -362,14 +366,17 @@ export function ShingaWorld({
     });
   }, [messages, typing, choices, widget, partsStep, walkStage, travelStage]);
 
-  // 通知（朝8時）から来たときは、指定のワークをそのまま開く
+  // 通知から来たときは、その画面をそのまま開く
   const openedRef = useRef(false);
   useEffect(() => {
-    if (openedRef.current || !openMode) return;
+    if (openedRef.current) return;
+    if (openPanel === "daily") { openedRef.current = true; setDailyOpen(true); return; }
+    if (openPanel === "weekly") { openedRef.current = true; setWeeklyOpen(true); return; }
+    if (!openMode) return;
     openedRef.current = true;
     void enter(openMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openMode]);
+  }, [openMode, openPanel]);
 
   // 鍵がかかっているワークを読む（親アカウントには鍵がかからない）
   useEffect(() => {
@@ -1101,6 +1108,8 @@ export function ShingaWorld({
         />
       ) : heroOpen ? (
         <HeroScreen guideName={guideName} avatarUrl={faceSrc} onBack={() => setHeroOpen(false)} />
+      ) : weeklyOpen ? (
+        <WeeklyLetters guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeeklyOpen(false)} />
       ) : vaultOpen ? (
         <CardVault guideName={guideName} avatarUrl={faceSrc} onBack={() => setVaultOpen(false)} />
       ) : castOpen ? (
@@ -1129,6 +1138,7 @@ export function ShingaWorld({
           onDaily={() => setDailyOpen(true)}
           onHero={() => setHeroOpen(true)}
           onVault={() => setVaultOpen(true)}
+          onWeekly={() => setWeeklyOpen(true)}
           onLetter={letter ? () => { setLetterDramatic(false); setPhase("letter"); } : undefined}
           onCard={card && !card.done ? () => setShowCard(true) : undefined}
           onBalance={() => void enter("balance")}
@@ -1568,7 +1578,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onVault, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [],
+  guideName, avatarUrl, onPick, onTalk, onReport, onDaily, onHero, onVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [],
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1579,6 +1589,8 @@ function Home({
   onHero: () => void;
   /** カード保管庫（旅で手に入れた力） */
   onVault: () => void;
+  /** 週刊レポート（承認ずみのものだけ届く） */
+  onWeekly: () => void;
   onLetter?: () => void;
   onCard?: () => void;
   /** メーターから「どうすれば真ん中に戻る？」の対話へ */
@@ -1682,6 +1694,7 @@ function Home({
       <div className="iw-reflect-row">
         <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（レベル）</button>
         <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
+        <button className="iw-report is-weekly" onClick={onWeekly}>📮 今週のふりかえり</button>
         <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
         <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
         <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>

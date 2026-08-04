@@ -19,11 +19,17 @@ export default async function HomePage() {
     }
     const userId = (session.user as any).id as string;
 
-    // 初回ログインで何も設定していないなら、先にオンボーディングへ
+    // 初期設定が終わるまでは、中に入れない。
+    // 名前・生年月日・APIキーのどれかが欠けていると、取扱説明書やアカシックが
+    // そもそも動かず、「壊れている」ように見えてしまうため。
     try {
       const { getUserSettings } = await import("@/lib/supabase");
       const s: any = await getUserSettings(userId);
-      if (!s?.user_call_name && !s?.gemini_api_key && !s?.anthropic_api_key) {
+      const needsSetup =
+        !s?.user_call_name ||
+        !s?.birth_date ||
+        !(s?.gemini_api_key || s?.anthropic_api_key);
+      if (needsSetup) {
         redirect("/onboarding");
       }
     } catch (e: any) {

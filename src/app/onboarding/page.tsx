@@ -1,184 +1,247 @@
 "use client";
 
+/**
+ * はじめての人の入口（説明書＋初期設定）。
+ *
+ * 何ができるかを知らないまま設定だけさせられると、何のための入力か分からない。
+ * かといって説明を読ませてから設定させると、読み終える頃には気持ちが切れている。
+ * だから **「これは何をする場所か」→「そのために要るもの」** の順で交互に進む。
+ *
+ * ここを終えるまで、中には入れない（必要な情報が無いと機能が動かないため）。
+ *
+ * ?preview=1 を付けて開くと、**何も保存せずに** 流れだけ体験できる。
+ * すでに設定が済んでいる人が「初めての人にどう見えるか」を確かめるためのもの。
+ */
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense } from "react";
 
-type Step = 1 | 2 | 3;
+const TOTAL = 5;
 
-export default function OnboardingPage() {
+function OnboardingInner() {
   const router = useRouter();
-  const [step, setStep] = useState<Step>(1);
-  const [userCallName, setUserCallName] = useState("");
-  const [geminiKey, setGeminiKey] = useState("");
+  const sp = useSearchParams();
+  const preview = sp.get("preview") === "1";
+
+  const [step, setStep] = useState(1);
+  const [name, setName] = useState("");
+  const [birth, setBirth] = useState("");
+  const [gender, setGender] = useState<"" | "male" | "female">("");
+  const [key, setKey] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [ready, setReady] = useState(preview);
 
-  // 既存の設定があったらスキップ判定
   useEffect(() => {
+    if (preview) return;             // 体験モードでは、既存の設定を持ち込まない
     fetch("/api/settings").then((r) => r.json()).then((s) => {
-      if (s.user_call_name) setUserCallName(s.user_call_name);
-      if (s.gemini_api_key_set && s.user_call_name) {
-        // すでに完了している → ホームへ
-        router.replace("/");
-      }
-    });
-  }, [router]);
+      if (s.user_call_name) setName(s.user_call_name);
+      if (s.birth_date) setBirth(String(s.birth_date).slice(0, 10));
+      if (s.birth_gender === "male" || s.birth_gender === "female") setGender(s.birth_gender);
+      // 全部そろっている人は、ここに留める意味がない
+      if (s.user_call_name && s.birth_date && s.gemini_api_key_set) router.replace("/");
+      else setReady(true);
+    }).catch(() => setReady(true));
+  }, [router, preview]);
 
-  async function saveAndNext() {
-    setSaving(true);
-    setError("");
-    try {
-      const body: any = {};
-      if (step === 1 && userCallName) body.user_call_name = userCallName;
-      if (step === 2 && geminiKey) body.gemini_api_key = geminiKey;
-      if (Object.keys(body).length > 0) {
-        const r = await fetch("/api/settings", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-        if (!r.ok) throw new Error("保存に失敗しました");
-      }
-      if (step < 3) setStep((step + 1) as Step);
-      else router.replace("/");
-    } catch (e: any) {
-      setError(e?.message ?? String(e));
-    } finally {
-      setSaving(false);
-    }
+  async function save(body: any) {
+    if (preview) return true;        // 体験モードでは何も書き込まない
+    const r = await fetch("/api/settings", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) throw new Error("保存できませんでした。もう一度お願いします。");
+    return true;
   }
 
-  return (
-    <main className="min-h-screen flex items-start justify-center p-6 pt-12">
-      <div className="max-w-xl w-full">
-        <h1 className="text-2xl font-bold text-purple-700 mb-2">ようこそ！</h1>
-        <p className="text-sm text-gray-600 mb-6">
-          秘書AIを使い始める前に、3つだけ設定させてください（2〜3分）
-        </p>
+  async function next() {
+    setError(""); setSaving(true);
+    try {
+      if (step === 2) {
+        if (!name.trim()) throw new Error("呼ばれたい名前を入れてください");
+        if (!/^\d{4}-\d{2}-\d{2}$/.test(birth)) throw new Error("生年月日を入れてください");
+        await save({ user_call_name: name.trim(), birth_date: birth, birth_gender: gender || null });
+      }
+      if (step === 4) {
+        if (!key.trim()) throw new Error("APIキーを貼り付けてください");
+        await save({ gemini_api_key: key.trim() });
+      }
+      if (step < TOTAL) setStep(step + 1);
+      else router.replace(preview ? "/onboarding?preview=1" : "/");
+    } catch (e: any) {
+      setError(e?.message ?? String(e));
+    } finally { setSaving(false); }
+  }
 
-        {/* ステップインジケータ */}
-        <div className="flex items-center gap-2 mb-6">
-          {[1, 2, 3].map((n) => (
-            <div key={n} className="flex-1 flex items-center gap-2">
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold ${
-                step >= n ? "bg-[var(--accent)] text-white" : "bg-gray-200 text-gray-500"
-              }`}>{n}</div>
-              {n < 3 && <div className={`flex-1 h-0.5 ${step > n ? "bg-[var(--accent)]" : "bg-gray-200"}`} />}
-            </div>
+  if (!ready) return <main className="min-h-screen grid place-items-center text-sm text-gray-500">読み込み中…</main>;
+
+  return (
+    <main className="ob-page">
+      {preview && (
+        <div className="ob-preview">
+          👀 体験モード：<b>何も保存されません</b>。初めての人にどう見えるかを確かめるための画面です。
+        </div>
+      )}
+
+      <div className="ob-wrap">
+        <div className="ob-dots">
+          {Array.from({ length: TOTAL }, (_, i) => (
+            <span key={i} className={`ob-dot ${step > i ? "on" : ""} ${step === i + 1 ? "now" : ""}`} />
           ))}
         </div>
 
-        {/* Step 1: 呼ばれたい名前 */}
+        {/* ① この世界は何をする場所か */}
         {step === 1 && (
-          <div className="card space-y-4">
-            <h2 className="font-bold text-lg">① あなたの呼ばれたい名前</h2>
-            <p className="text-sm text-gray-600">
-              秘書がこの名前でお声がけします。本名でもニックネームでもOK。
+          <section className="ob-card">
+            <div className="ob-kicker">SINGA WORLD</div>
+            <h1>ようこそ</h1>
+            <p className="ob-lead">
+              ここは、<b>やりたいことを思い出して、それを today に落とす</b>ための場所です。
             </p>
-            <input
-              type="text"
-              value={userCallName}
-              onChange={(e) => setUserCallName(e.target.value)}
-              placeholder="例: 淳くん、たろう、Mike"
-              maxLength={30}
-              className="w-full p-3 border-2 border-purple-200 rounded-lg text-base focus:border-[var(--accent)] outline-none"
-              autoFocus
-            />
-            <button
-              onClick={saveAndNext}
-              disabled={!userCallName.trim() || saving}
-              className="w-full bg-[var(--accent)] text-white font-bold py-3 rounded-lg disabled:opacity-50"
-            >
-              {saving ? "保存中…" : "次へ →"}
-            </button>
-          </div>
+            <div className="ob-two">
+              <div className="ob-half">
+                <div className="ob-half-t">🔑 インナーワールド</div>
+                <p>理想を歩いて、内側にあるものをほどく。呼吸で整え、望む世界を言葉にする。</p>
+              </div>
+              <div className="ob-half">
+                <div className="ob-half-t">🧭 リアルバース</div>
+                <p>そこで掴んだものを、今日の予定とタスクに落とす。カレンダーとタスクに繋がる。</p>
+              </div>
+            </div>
+            <p className="ob-note">
+              この2つを行き来するのが、このアプリの使い方です。<br />
+              先に、始めるための情報を<b>2つだけ</b>いただきます（3分ほど）。
+            </p>
+          </section>
         )}
 
-        {/* Step 2: Gemini API キー */}
+        {/* ② プロフィール */}
         {step === 2 && (
-          <div className="card space-y-4">
-            <h2 className="font-bold text-lg">② Gemini API キーの取得</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              秘書AIを動かすために、Google の Gemini API キーをご自身で取得してください。
-              <strong className="text-purple-700">無料枠で1日1,000回まで利用可能</strong>（毎日リセット）。
-              ご自身のキーなので、運営側で利用内容を知ることはできません。
+          <section className="ob-card">
+            <div className="ob-kicker">STEP 1 / 2</div>
+            <h1>あなたのこと</h1>
+            <p className="ob-lead">呼び方と、生まれた日を教えてください。</p>
+
+            <label className="ob-label">なんて呼べばいい？</label>
+            <input className="ob-input" value={name} onChange={(e) => setName(e.target.value)}
+              placeholder="例：淳くん / ゆかさん" maxLength={20} />
+            <p className="ob-hint">秘書がこの名前で呼びかけます。あだ名でもOK。</p>
+
+            <label className="ob-label">生年月日</label>
+            <input className="ob-input" type="date" value={birth} onChange={(e) => setBirth(e.target.value)} />
+            <p className="ob-hint">
+              生まれ持った性質と、年・月・今日の流れを読むのに使います。<br />
+              これが無いと「自分の取扱説明書」と「アカシックレコーダー」が動きません。
             </p>
 
-            <div className="bg-purple-50 border border-purple-200 rounded-lg p-4 text-sm leading-relaxed">
-              <div className="font-bold text-purple-700 mb-2">📝 取得手順</div>
-              <ol className="list-decimal list-inside space-y-2">
-                <li>
-                  <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer"
-                     className="text-purple-700 underline font-bold">
-                    Google AI Studio を開く ↗
-                  </a>
-                </li>
-                <li>Google アカウントでログイン（このアプリと同じアカウントでOK）</li>
-                <li>右上の <strong>「Create API key」</strong> ボタンを押す</li>
-                <li>プロジェクト選択 or 「Create API key in new project」</li>
-                <li><strong>「AIzaSy...」で始まる文字列</strong>をコピー</li>
-                <li>下の枠に貼り付け</li>
-              </ol>
+            <label className="ob-label">性別（任意）</label>
+            <div className="ob-seg">
+              {([["male", "男性"], ["female", "女性"], ["", "答えない"]] as const).map(([v, l]) => (
+                <button key={l} className={gender === v ? "on" : ""} onClick={() => setGender(v as any)}>{l}</button>
+              ))}
             </div>
-
-            <input
-              type="password"
-              value={geminiKey}
-              onChange={(e) => setGeminiKey(e.target.value)}
-              placeholder="AIzaSy... を貼り付け"
-              className="w-full p-3 border-2 border-purple-200 rounded-lg text-base font-mono focus:border-[var(--accent)] outline-none"
-            />
-            {error && <div className="text-red-600 text-sm">{error}</div>}
-            <div className="flex gap-2">
-              <button
-                onClick={() => setStep(1)}
-                className="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg"
-              >
-                ← 戻る
-              </button>
-              <button
-                onClick={saveAndNext}
-                disabled={!geminiKey.trim() || saving}
-                className="flex-1 bg-[var(--accent)] text-white font-bold py-3 rounded-lg disabled:opacity-50"
-              >
-                {saving ? "保存中…" : "次へ →"}
-              </button>
-            </div>
-          </div>
+            <p className="ob-hint">入れると、10年ごとの流れまで読めるようになります。</p>
+          </section>
         )}
 
-        {/* Step 3: 完了 */}
+        {/* ③ なぜAPIキーが要るのか（先に理由を渡す） */}
         {step === 3 && (
-          <div className="card space-y-4 text-center">
-            <div className="text-6xl">🎉</div>
-            <h2 className="font-bold text-xl text-purple-700">準備完了！</h2>
-            <p className="text-sm text-gray-600 leading-relaxed">
-              これで秘書AIが使えます。<br />
-              ホーム画面で「{userCallName}」と呼びかけてくれます。
+          <section className="ob-card">
+            <div className="ob-kicker">STEP 2 / 2</div>
+            <h1>あなた専用の鍵</h1>
+            <p className="ob-lead">
+              次に、Google の <b>API キー</b>をひとつ取ってきていただきます。
             </p>
-            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-sm text-left">
-              <div className="font-bold text-amber-700 mb-1">✨ おすすめの次の一手</div>
-              <ul className="list-disc list-inside text-gray-700 space-y-1">
-                <li>「⚙️ 設定」から秘書の名前・アバター画像をカスタマイズ</li>
-                <li>スマホに通知を飛ばしたい場合は ntfy を設定</li>
-                <li>Chrome 拡張機能で集中モード＋タイマー</li>
-              </ul>
+            <div className="ob-why">
+              <div className="ob-why-t">💰 お金は<b>一切かかりません</b></div>
+              <p>Google が無料で配っている鍵です。クレジットカードの登録も要りません。</p>
             </div>
-            <button
-              onClick={() => router.replace("/")}
-              className="w-full bg-[var(--accent)] text-white font-bold py-3 rounded-lg"
-            >
-              ホームへ
-            </button>
-          </div>
+            <div className="ob-why">
+              <div className="ob-why-t">🛡 なぜ、ご自身の鍵が要るのか</div>
+              <p>
+                みんなで同じ鍵を使っていると、<b>混み合ったときにサーバーエラーで動かなくなります</b>。
+                「返事が返ってこない」「途中で止まる」の原因は、ほとんどこれです。<br />
+                ご自身の鍵にしておけば、他の人の使用状況に左右されず、いつでも動きます。
+              </p>
+            </div>
+            <p className="ob-note">次の画面で、取り方を1つずつ案内します。</p>
+          </section>
         )}
 
-        <div className="mt-6 text-center">
-          <Link href="/" className="text-xs text-gray-400 hover:text-purple-600 underline">
-            スキップしてホームへ
-          </Link>
-        </div>
+        {/* ④ APIキーを取って貼る */}
+        {step === 4 && (
+          <section className="ob-card">
+            <div className="ob-kicker">STEP 2 / 2</div>
+            <h1>鍵を取ってくる</h1>
+            <ol className="ob-steps">
+              <li>
+                <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noreferrer" className="ob-link">
+                  Google AI Studio を開く ↗
+                </a>
+                <span>（Googleアカウントでそのまま入れます）</span>
+              </li>
+              <li><b>「Create API key」</b> を押す</li>
+              <li>プロジェクトを選ぶ画面が出たら、<b>「Create API key in new project」</b></li>
+              <li>出てきた文字列を<b>コピー</b>（<code>AIza…</code> で始まります）</li>
+              <li>下に貼り付ける</li>
+            </ol>
+            <input className="ob-input is-key" value={key} onChange={(e) => setKey(e.target.value)}
+              placeholder="AIza… で始まる文字列を貼り付け" spellCheck={false} />
+            <p className="ob-hint">
+              鍵は暗号化して保存され、あなたの応答生成にしか使いません。他の人には見えません。
+            </p>
+          </section>
+        )}
+
+        {/* ⑤ 1日の流れ（使い方の説明書） */}
+        {step === 5 && (
+          <section className="ob-card">
+            <div className="ob-kicker">READY</div>
+            <h1>1日の流れ</h1>
+            <p className="ob-lead">迷ったら、この順でどうぞ。</p>
+            <div className="ob-flow">
+              <div className="ob-flow-row"><span className="n">朝</span>
+                <div><b>今日のあなたの取扱説明書</b><span>10年後の自分から届く、今日の手引き。通知から開けます。</span></div></div>
+              <div className="ob-flow-row"><span className="n">整える</span>
+                <div><b>ピークステート</b><span>呼吸で、いちばん良かったときの自分に戻る。</span></div></div>
+              <div className="ob-flow-row"><span className="n">歩く</span>
+                <div><b>パラレルウォーク</b><span>望む世界を、上を向いて口に出す。</span></div></div>
+              <div className="ob-flow-row"><span className="n">落とす</span>
+                <div><b>今日1ミリ</b><span>ワークの終わりに「今日1つだけ入れること」を決める。それが今日の一手になります。</span></div></div>
+              <div className="ob-flow-row"><span className="n">夜</span>
+                <div><b>1日の振り返り</b><span>今日を置いて、明日の感情を決めて閉じる。20時に通知が届きます。</span></div></div>
+            </div>
+            <p className="ob-note">
+              あとは自由です。気が向いたワークから触ってみてください。<br />
+              使い方は <Link href="/guide" className="ob-link">📘 説明書</Link> にいつでもあります。
+            </p>
+          </section>
+        )}
+
+        {error && <div className="ob-err">{error}</div>}
+
+        <button className="ob-go" onClick={() => void next()} disabled={saving}>
+          {saving ? "保存中…"
+            : step === 1 ? "はじめる →"
+            : step === 2 ? "これで進む →"
+            : step === 3 ? "鍵を取りにいく →"
+            : step === 4 ? "この鍵で始める →"
+            : preview ? "体験おわり（最初に戻る）" : "世界に入る →"}
+        </button>
+
+        {step > 1 && !saving && (
+          <button className="ob-back" onClick={() => setStep(step - 1)}>← ひとつ戻る</button>
+        )}
       </div>
     </main>
+  );
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={<main className="min-h-screen grid place-items-center text-sm text-gray-500">読み込み中…</main>}>
+      <OnboardingInner />
+    </Suspense>
   );
 }

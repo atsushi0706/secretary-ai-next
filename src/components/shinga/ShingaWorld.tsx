@@ -928,6 +928,8 @@ export function ShingaWorld({
     : mode === "breakthrough" ? `/wall-${wallStage}.png`
     : mode === "travel" ? `/travel-${travelStage}.jpg`
     : mode === "walk" ? `/walk-${walkStage}.jpg`
+    // ミラーオブワールドは専用の絵（左＝いまの世界／右＝もう一つの世界／中央に鏡の環）
+    : mode === "shadow" ? "/shadow-bg.jpg"
     : here.image;
   // 直前の絵を覚えておき、上に新しい絵をふわっと重ねて切り替える
   const [prevBg, setPrevBg] = useState<string | null>(null);
@@ -1359,7 +1361,7 @@ export function ShingaWorld({
         <div className="zone-intro" onClick={skipZoneIntro} role="button" aria-label="スキップ">
           <div
             className="zi-bg"
-            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : entering === "walk" ? "/walk-1.jpg" : PLACES[MODES[entering].place].image})` }}
+            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : entering === "walk" ? "/walk-1.jpg" : entering === "shadow" ? "/shadow-bg.jpg" : PLACES[MODES[entering].place].image})` }}
           />
           <div className="zi-veil" />
           <div className="zi-title">

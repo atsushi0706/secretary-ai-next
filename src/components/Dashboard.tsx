@@ -9,6 +9,7 @@ import { Chat } from "./Chat";
 import { MonthCalendar } from "./MonthCalendar";
 import { WeekCalendarCompact } from "./WeekCalendarCompact";
 import { TimerWidget } from "./TimerWidget";
+import { PhoneFocus } from "./PhoneFocus";
 import AlarmManager from "./AlarmManager";
 import { RealmNav } from "./RealmNav";
 import { syncTodayProgress, type TodayProgress } from "@/lib/todayProgress";
@@ -252,6 +253,9 @@ export function Dashboard({ userName }: { userName: string }) {
 
           {/* タイマー (30分 / 5分) */}
           <TimerWidget />
+
+          {/* スマホの誘惑をとめる（できることの範囲を正直に書いたうえで案内する） */}
+          <PhoneFocus />
 
           {/* アラーム (時刻指定で1回鳴らす) */}
           <AlarmManager />

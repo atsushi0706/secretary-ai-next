@@ -5560,3 +5560,47 @@ body:has(.realverse-bg) { background: transparent; }
   background: rgba(255,255,255,.06); border: 1px dashed rgba(238,214,155,.45);
 }
 .wm-blank:disabled { opacity: .5; }
+
+/* 初回の説明書：ホーム画面に追加＋通知 */
+.ian { display: flex; flex-direction: column; gap: 14px; margin-top: 6px; }
+.ian-box {
+  padding: 16px 16px 14px; border-radius: 16px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(238,214,155,.3);
+}
+.ian-box.is-done { border-color: rgba(140,200,120,.5); background: rgba(140,200,120,.09); }
+.ian-t {
+  display: flex; align-items: center; gap: 9px; margin-bottom: 10px;
+  font-size: .95rem; font-weight: 900; color: #f0d08a;
+}
+.ian-n {
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%;
+  display: grid; place-items: center; font-size: .8rem;
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e);
+}
+.ian-ok { margin-left: auto; font-size: .68rem; font-weight: 800; color: #9fe6a0; }
+.ian-p { font-size: .82rem; line-height: 1.95; color: #e6dcc6; }
+.ian-p b { color: #fff; }
+.ian-sub { font-size: .74rem; color: rgba(240,230,210,.72); }
+.ian-steps { margin: 12px 0 4px; padding-left: 20px; display: flex; flex-direction: column; gap: 7px; }
+.ian-steps li { font-size: .8rem; line-height: 1.75; color: #efe6d2; }
+.ian-steps b { color: #f4d99a; }
+.ian-go {
+  width: 100%; margin-top: 12px; padding: 13px 0; border-radius: 999px;
+  font-size: .88rem; font-weight: 900; color: #221b10;
+  background: linear-gradient(160deg,#ffeec2,#e0bd72);
+}
+.ian-did {
+  width: 100%; margin-top: 10px; padding: 11px 0; border-radius: 999px;
+  font-size: .8rem; font-weight: 800; color: var(--singa-ink, #f4e7c8);
+  background: rgba(255,255,255,.07); border: 1px solid rgba(238,214,155,.35);
+}
+.ian-skip {
+  margin-top: 9px; text-align: center; font-size: .72rem;
+  color: rgba(240,230,210,.6); text-decoration: underline; cursor: pointer;
+}
+.ian-lock {
+  margin-top: 8px; padding: 12px 13px; border-radius: 12px;
+  font-size: .78rem; line-height: 1.85; color: #e8d9b6;
+  background: rgba(238,214,155,.1); border: 1px dashed rgba(238,214,155,.45);
+}
+.ian-toggle { margin-top: 6px; }

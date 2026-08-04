@@ -17,8 +17,14 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { splitFullName } from "@/lib/name";
+import { InstallAndNotify } from "@/components/InstallAndNotify";
 
-const TOTAL = 5;
+/**
+ * 5 → 6 に増やした。
+ * 「ホーム画面に追加」と「通知」を、主人公を決める前に済ませる。
+ * 後回しにすると、次の日ここへ来る道も、朝夜の声かけも無いまま終わってしまう。
+ */
+const TOTAL = 6;
 
 function OnboardingInner() {
   const router = useRouter();
@@ -243,7 +249,20 @@ function OnboardingInner() {
         )}
 
         {/* ⑤ 1日の流れ（使い方の説明書） */}
+        {/* ⑤ ホーム画面に追加＋通知（主人公を決める前に、ここで済ませる） */}
         {step === 5 && (
+          <section className="ob-card">
+            <div className="ob-kicker">SET UP</div>
+            <h1>受け取れるようにする</h1>
+            <p className="ob-lead">
+              このあと主人公を決めます。その前に、<b>2つだけ</b>整えさせてください。<br />
+              ここをやっておかないと、明日ここへ戻る道も、朝夜の声かけも無いまま終わってしまいます。
+            </p>
+            <InstallAndNotify />
+          </section>
+        )}
+
+        {step === 6 && (
           <section className="ob-card">
             <div className="ob-kicker">READY</div>
             <h1>いちばん最初に、これを決める</h1>
@@ -303,6 +322,7 @@ function OnboardingInner() {
             : step === 2 ? "これで進む →"
             : step === 3 ? "鍵を取りにいく →"
             : step === 4 ? (hasKey && !key.trim() ? "このまま進む →" : "この鍵で始める →")
+            : step === 5 ? "できた。次へ →"
             : preview ? "体験おわり（最初に戻る）" : "世界に入る →"}
         </button>
 

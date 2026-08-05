@@ -192,6 +192,19 @@ export function ShingaWorld({
   // 今日を閉じる板（ワールドリプレイの部屋の中でひらく）
   const [closing, setClosing] = useState(false);
   const [mealOpen, setMealOpen] = useState(false);   // ミールレンズ（食事の写真）
+  /**
+   * パラレルウォークから、そのまま続けてクリスタルルームへ飛ぶときに持っていく話。
+   *
+   * 【なぜ画面で持つのか】
+   * 「いま歩いていた話の続き」なのかは、時計では分からない。
+   * DBから直近を引くと、昨日のパラレルウォークまで拾ってしまう。
+   * ボタンで飛んだ瞬間だけここに入れて、部屋を出たら捨てる。
+   * こうすれば「同じ流れで飛んだときだけ引き継ぐ」が自然に成り立つ
+   *（画面を閉じれば消えるので、明日には持ち越されない）。
+   */
+  const carryRef = useRef<string>("");
+  /** パラレルウォークで、もう結晶化に誘ったか（二度は誘わない） */
+  const crystalOfferedRef = useRef(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);   // カード保管庫
   const [weeklyOpen, setWeeklyOpen] = useState(false); // タイムトラベルボックス（過去の宝箱）
@@ -602,6 +615,15 @@ export function ShingaWorld({
 
   async function enter(m: ModeKey, resume = false) {
     if (lockedWorks.includes(m)) return;   // 鍵がかかっている扉は開かない
+    /**
+     * 持ち物（パラレルウォークから結晶化へ持っていく話）は、
+     * クリスタルルームへ入るときだけ生きている。
+     * それ以外の部屋へ移った時点で捨てる——別の日に持ち越さないため。
+     * （pickChoice で入れた直後にここへ来るので、crystal のときは触らない）
+     */
+    if (m !== "crystal") carryRef.current = "";
+    // パラレルウォークに入り直したら、結晶化の誘いはまた一度できる
+    if (m === "walk" && !resume) crystalOfferedRef.current = false;
     resetWorkState();
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (mode === "walk" && m !== "walk") void finishSteps();
@@ -753,6 +775,10 @@ export function ShingaWorld({
           sessionHistory: messages
             .filter((x) => x.content && !x.content.startsWith("[["))
             .map((x) => ({ role: x.role, content: x.content })),
+          // パラレルウォークからそのまま飛んできたときだけ、歩いていた話を持ち込む
+          carryOver: m === "crystal" && carryRef.current ? carryRef.current : undefined,
+          // もう結晶化に誘ってあるか（誘いを重ねない）
+          crystalOffered: m === "walk" ? crystalOfferedRef.current : undefined,
           shadowStep: m === "shadow" ? shadowStep : undefined,
           shadowPair: m === "shadow" ? shadowPairRef.current ?? undefined : undefined,
           shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
@@ -876,6 +902,18 @@ export function ShingaWorld({
 
   function pickChoice(c: Choice) {
     setChoices(null);
+    // パラレルウォークから「結晶化する」を押したときだけ、いま歩いていた話を持っていく
+    if (c.mode === "crystal" && mode === "walk") {
+      carryRef.current = messages
+        .filter((m) => m.content && !m.content.startsWith("[["))
+        .map((m) => `${m.role === "user" ? "本人" : guideName}：${m.content}`)
+        .join("\n")
+        .slice(-2400);
+    }
+    // 「もう少し歩く」を選んだ＝誘いを断られた。もう誘わない
+    if (!c.mode && mode === "walk" && /もう少し歩く|まだ歩く/.test(c.label)) {
+      crystalOfferedRef.current = true;
+    }
     if (c.mode) void enter(c.mode, true);
     else void talk(c.label);
   }

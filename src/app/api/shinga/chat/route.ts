@@ -55,6 +55,21 @@ export async function POST(req: Request) {
   // じぶんワーク：定義そのものを毎ターン受け取る（DBを引かない＝ステートレスで簡単）
   const customWork = body.customWork && typeof body.customWork === "object" ? body.customWork : null;
   const customIdx = Number.isFinite(Number(body.customIdx)) ? Number(body.customIdx) : 0;
+  /**
+   * パラレルウォークで、もう結晶化に誘ったか。
+   * 一度誘って「もう少し歩く」と言われたのに、周ごとに誘い直したら押し売りになる。
+   */
+  const crystalOffered = !!body.crystalOffered;
+  /**
+   * パラレルウォークから、そのまま続けてクリスタルルームへ移ったときに持ち込む話。
+   *
+   * 【なぜ画面から受け取るのか】
+   * 「いま歩いていた話の続き」なのかどうかは、時計では分からない。
+   * DBから直近の会話を引くと、昨日のパラレルウォークまで拾ってしまう。
+   * 画面がボタンで飛んだ瞬間だけ手渡す形にすれば、
+   * 「同じ流れで飛んだときだけ引き継ぐ」が自然に成り立つ（画面を閉じれば消える）。
+   */
+  const carryOver = typeof body.carryOver === "string" ? body.carryOver.slice(0, 2400).trim() : "";
 
   const progress = {
     partsStep: Number.isFinite(Number(body.partsStep)) ? Number(body.partsStep) : null,
@@ -237,6 +252,22 @@ export async function POST(req: Request) {
           } catch { /* 引けなくても会話は進む */ }
         }
 
+        // クリスタルルームへ、パラレルウォークからそのまま飛んできたとき。
+        // 「さっき歩きながら話していたこと」を持ち込む。
+        // ——これは画面から手渡されたときだけ入る（＝同じ流れで飛んだときだけ）。
+        // 日をまたいで開き直したときには入らない。
+        if (mode === "crystal" && carryOver) {
+          pastCtx = [
+            "# さっきパラレルウォークで歩きながら話していたこと（そのまま続きから）",
+            carryOver,
+            "",
+            "**これは今この流れで話していたことなので、遠慮なく続きから扱っていい。**",
+            "改めて「何を形にしたい？」と聞き直さない。**上のどれを形にするかから始める。**",
+            "本人の言葉をそのまま拾って、「さっき言ってた◯◯を、日常に落とすとどうなる？」から入る。",
+            "—— ただし上に無いことは足さない。",
+          ].join("\n");
+        }
+
         // いまの進行状況（画面に出ている段階）。これが無いとAIは自分がどこまで進めたか分からず、
         // 同じ質問を繰り返して「1/9のまま堂々巡り」になる。
         let progressCtx = "";
@@ -248,9 +279,37 @@ export async function POST(req: Request) {
             lines.push(`  答えを受け取ったら次の段階へ進み、<parts_step>${Math.min(9, progress.partsStep + 1)}</parts_step> 以上を付ける。`);
             lines.push(`  同じ数字を3回続けて出してはいけない（進むか、進めない理由の"新しい"問いを出す）。`);
           }
-          if (mode === "walk" && progress.walkStage) {
-            lines.push(`- パラレルウォーク：いまの地点 ${progress.walkStage}/10。`);
-            lines.push(`  理想の解像度が少しでも上がったら必ず数字を上げる。同じ数字を2回続けたら、次は上げるか、五感・人・役割など"まだ聞いていない角度"の問いを出す。`);
+          if (mode === "walk") {
+            if (progress.walkStage) {
+              lines.push(`- パラレルウォーク：いまの地点 ${progress.walkStage}/10。`);
+              lines.push(`  理想の解像度が少しでも上がったら必ず数字を上げる。同じ数字を2回続けたら、次は上げるか、五感・人・役割など"まだ聞いていない角度"の問いを出す。`);
+            }
+            /**
+             * そろそろ結晶化（クリスタルルーム）に誘っていいか。
+             *
+             * AIに「頃合い」を任せると、毎回誘ったり、一度も誘わなかったりする。
+             * だから**数えられることはこちらで数える**。
+             *   ・十分に歩いた（本人の発言が8回以上）
+             *   ・または、ずっとフワッとしたまま（6回以上話しているのに地点が4以下）
+             * すでに一度誘ってあるなら、二度は誘わない（押し売りにしない）。
+             */
+            const said = sessionHistory.filter((m) => m.role === "user").length;
+            const stage = progress.walkStage ?? 1;
+            const enough = said >= 8;
+            const vague = said >= 6 && stage <= 4;
+            if (!crystalOffered && (enough || vague)) {
+              lines.push(vague
+                ? `- **そろそろ結晶化に誘っていい。** ${said}往復ぶん話しているが、まだ形が見えていない（地点 ${stage}/10）。`
+                  + `　ふわっとしたまま歩き続けても日常には落ちない。いま出ているものを持って結晶化しに行こう、と誘う。`
+                : `- **そろそろ結晶化に誘っていい。** ${said}往復ぶん歩いて、材料が出ている。`
+                  + `　いま出ているものを持って結晶化しに行こう、と誘う。`);
+              lines.push(`  「行ってみる？」ではなく「**結晶化しに行こうか**」と、動作で誘う。`);
+              lines.push(`  本人が言った言葉を1つ入れて、何を持っていくのか分かるようにする。`);
+              lines.push(`  <choices>[{"label":"今話したことを結晶化する","mode":"crystal"},{"label":"もう少し歩く"}]</choices> を付ける。`);
+              lines.push(`  ——ただし**この返事で話を締めない。** いつも通り受け取ってから、最後に添えるだけ。`);
+            } else if (crystalOffered) {
+              lines.push(`- 結晶化はもう一度誘ってある。**二度は誘わない。**クリスタルルームの話は出さない。`);
+            }
           }
           if (mode === "travel" && progress.travelStage) {
             lines.push(`- パラレルトラベル：いまの高度 ${progress.travelStage}/10。話が広がったら必ず上げる。`);

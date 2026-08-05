@@ -857,8 +857,17 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-entry-s .ja { font-size: .8rem; font-weight: 700; }
 .singa-entry-s .en { font-size: .52rem; letter-spacing: .14em; text-transform: uppercase; color: rgba(224,189,114,.7); }
 
+/*
+ * 「← 地図にもどる」。
+ *
+ * 前は画面に貼り付けていた（position:absolute）。そのせいで、どの画面でも
+ * すぐ下にある見出しの上を通り、スマホでは文字が実際に重なって読めなかった
+ * （からだの記録・カード保管庫・宝箱・発信スタジオ・食事のレンズ、全部）。
+ * いまは普通に上から順に置く。中身は必ずこのボタンの下から始まる。
+ */
 .singa-back {
-  position: absolute; left: 12px; top: 12px; z-index: 6;
+  position: relative; z-index: 6;
+  display: inline-block; margin: 0 0 9px;
   font-size: .68rem; letter-spacing: .06em;
   color: var(--singa-ink-soft);
   padding: 6px 12px; border-radius: 999px;
@@ -6144,3 +6153,22 @@ body:has(.realverse-bg) { background: transparent; }
   color: var(--singa-ink-soft); background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.15); }
 .ml-empty { font-size: .74rem; line-height: 1.8; color: var(--singa-ink-soft); text-align: center; padding: 12px 0; }
 .ml-foot { font-size: .62rem; line-height: 1.9; color: var(--singa-ink-soft); }
+
+/* ── 部屋の上の帯（戻る／ゾーン名／？） ───────────────────
+   前は「戻る」と「？」を画面に貼り付けて（position:absolute）、
+   真ん中のゾーン名の上を通っていた。スマホでは文字が実際に重なって読めなかった。
+   3つを1本の帯として並べれば、名前が長くてもぶつからない。 */
+.singa-topbar {
+  position: relative; z-index: 6;
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center; gap: 8px;
+  padding: 10px 12px 0;
+}
+.singa-topbar .singa-back { margin: 0; white-space: nowrap; }
+.singa-topbar .singa-howto { position: static; }
+.singa-topbar-pad { width: 30px; }          /* 「？」が無い部屋でも真ん中がずれないように */
+.singa-topbar .singa-place-name { padding: 0; min-width: 0; }
+/* 名前が長い部屋（内なる子の神殿・ミラーオブワールド）でも、はみ出さずに収まる大きさ */
+.singa-topbar .singa-place-name .ja { font-size: clamp(.86rem, 3.9vw, 1.2rem); letter-spacing: .06em; }
+.singa-topbar .singa-place-name .en { font-size: clamp(.48rem, 1.9vw, .56rem); letter-spacing: .2em; }
+

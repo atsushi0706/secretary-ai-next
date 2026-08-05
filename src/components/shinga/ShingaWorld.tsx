@@ -1233,20 +1233,26 @@ export function ShingaWorld({
         />
       ) : (
         <>
-          <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); maybeAfterCheck(mode); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); setShadowGate(false); setTodayManual(false); skipZoneIntro(); }}>
-            ← 地図にもどる
-          </button>
+          {/* 上の帯。
+              以前は「戻る」も「？」も画面に貼り付けた置き方（position:absolute）で、
+              真ん中のゾーン名とぶつかっていた。スマホでは実際に文字が重なって読めなかった。
+              いまは3つを1本の帯として並べるので、名前が長くてもぶつからない。 */}
+          <div className="singa-topbar">
+            <button className="singa-back" onClick={() => { void finishSteps(); void finishWork(mode, messages); maybeAfterCheck(mode); runWorkRef.current = null; setRunWork(null); setDrawStep(null); setView("home"); setChoices(null); setWidget(null); setEmoPick(null); setPartsGate(false); setPartsIntro(null); setShadowGate(false); setTodayManual(false); skipZoneIntro(); }}>
+              ← 地図にもどる
+            </button>
 
-          <div className="singa-place-name">
-            <span className="en">{mode ? MODES[mode].en : here.en}</span>
-            <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
+            <div className="singa-place-name">
+              <span className="en">{mode ? MODES[mode].en : here.en}</span>
+              <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
+            </div>
+
+            {/* この部屋の歩き方。いつでも開ける */}
+            {mode && flags.tutorial && WORK_GUIDE[mode]?.howTo ? (
+              <button className="singa-howto" title="この部屋の歩き方"
+                onClick={() => setTutorial({ mode, first: false })}>？</button>
+            ) : <span className="singa-topbar-pad" />}
           </div>
-
-          {/* この部屋の歩き方。いつでも開ける */}
-          {mode && flags.tutorial && WORK_GUIDE[mode]?.howTo && (
-            <button className="singa-howto" title="この部屋の歩き方"
-              onClick={() => setTutorial({ mode, first: false })}>？</button>
-          )}
 
           {/* アカシック：まず「今日のあなたの取扱説明書」。読んでから流れを選ぶ */}
           {mode === "akashic" && todayManual && (

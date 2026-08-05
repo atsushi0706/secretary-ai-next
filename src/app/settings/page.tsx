@@ -76,12 +76,6 @@ export default function SettingsPage() {
   const [saveError, setSaveError] = useState("");
   const [loading, setLoading] = useState(true);
 
-  // 管理者かどうか（データの控えの入口を出し分ける）
-  const [isAdminUser, setIsAdminUser] = useState(false);
-  useEffect(() => {
-    fetch("/api/works").then((r) => r.json()).then((d) => setIsAdminUser(!!d?.isAdmin)).catch(() => {});
-  }, []);
-
   useEffect(() => {
     fetch("/api/settings").then((r) => r.json()).then((s) => {
       setHasGeminiKey(!!s.gemini_api_key_set);
@@ -560,23 +554,6 @@ export default function SettingsPage() {
           </p>
         </div>
       </details>
-
-      {/* ── データの控え（管理者だけ。誰にでも見せない） ── */}
-      {isAdminUser && (
-      <div className="card mt-6">
-        <h2 className="font-bold text-base text-purple-700 mb-2">🗄 データの控え</h2>
-        <p className="text-xs text-gray-600 leading-relaxed mb-3">
-          クエスト・会話・状態の記録を、まるごとファイルに落とせます。
-          月に1回やっておくと、万一のときに戻せます。
-        </p>
-        <Link
-          href="/backup"
-          className="block text-center bg-gray-100 hover:bg-gray-200 font-bold text-sm py-2 rounded-lg"
-        >
-          控えを取るページへ
-        </Link>
-      </div>
-      )}
 
       {/* ── 保存ボタン (固定 footer) ── */}
       <div className="sticky bottom-0 mt-6 -mx-6 px-6 py-4 bg-white/95 backdrop-blur border-t border-purple-100">

@@ -62,6 +62,13 @@ export default function AdminPage() {
   const [flags, setFlags] = useState<Record<string, string>>({});
   const [flagDefs, setFlagDefs] = useState<{ key: string; label: string; note: string }[]>([]);
   const [flagBusy, setFlagBusy] = useState("");
+  /**
+   * データの控え。
+   * 自動では取られないので、月に1回ここから落として保管しておく。
+   * （以前は設定ページに置いていたが、運用の話なので管理画面にまとめた）
+   */
+  const [dlBusy, setDlBusy] = useState<"mine" | "all" | "">("");
+  const [dlMsg, setDlMsg] = useState("");
   const [grantMsg, setGrantMsg] = useState("");
 
   // 週刊レポートの承認待ち（OKを出すまで、本人には絶対に見えない）
@@ -177,6 +184,28 @@ export default function AdminPage() {
     }).catch(() => {});
     loadDrafts();
   }, []);
+
+  /** 控えを1つ落とす */
+  async function download(scope: "mine" | "all") {
+    setDlBusy(scope); setDlMsg("");
+    try {
+      const r = await fetch(`/api/admin/export${scope === "mine" ? "?mine=1" : ""}`);
+      if (!r.ok) {
+        const d = await r.json().catch(() => ({}));
+        setDlMsg(d?.error ?? `取り出せませんでした（${r.status}）`);
+        return;
+      }
+      const blob = await r.blob();
+      const cd = r.headers.get("Content-Disposition") ?? "";
+      const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? "backup.json";
+      const url = URL.createObjectURL(blob);
+      const a2 = document.createElement("a");
+      a2.href = url; a2.download = name; a2.click();
+      URL.revokeObjectURL(url);
+      setDlMsg(`${name}（${(blob.size / 1024 / 1024).toFixed(2)} MB）を保存しました`);
+    } catch (e: any) { setDlMsg(String(e?.message ?? e)); }
+    finally { setDlBusy(""); }
+  }
 
   /** お試しスイッチを切り替える */
   async function setFlagState(key: string, state: string) {
@@ -397,6 +426,28 @@ export default function AdminPage() {
   add column if not exists display_name text;`}</pre>
         </div>
       )}
+
+      {/* データの控え。運用の話なので、ここにだけ置く */}
+      <div className="border rounded-xl p-4 bg-white mb-4">
+        <div className="text-sm font-bold">🗄 データの控え</div>
+        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+          月に1回、落としてパソコンかクラウドに置いておくと安心です。<br />
+          APIキーとGoogleの連携情報は、安全のためファイルに入れていません。
+        </p>
+        <div className="flex gap-2 mt-3">
+          <button
+            disabled={dlBusy !== ""}
+            onClick={() => void download("mine")}
+            className="flex-1 text-sm font-bold py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40"
+          >{dlBusy === "mine" ? "取り出しています…" : "⬇ 自分の分"}</button>
+          <button
+            disabled={dlBusy !== ""}
+            onClick={() => void download("all")}
+            className="flex-1 text-sm font-bold py-2.5 rounded-lg bg-gray-800 text-white disabled:opacity-40"
+          >{dlBusy === "all" ? "取り出しています…" : "⬇ 全員分"}</button>
+        </div>
+        {dlMsg && <div className="text-xs text-gray-700 mt-2 leading-relaxed">{dlMsg}</div>}
+      </div>
 
       {/* お試しスイッチ：新しいものは、まず自分の画面だけで確かめる */}
       {flagDefs.length > 0 && (

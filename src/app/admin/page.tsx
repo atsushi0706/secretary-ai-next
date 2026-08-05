@@ -47,6 +47,13 @@ export default function AdminPage() {
    */
   const [grants, setGrants] = useState<Record<string, { all: boolean; except: string[] }>>({});
   const [grantBusy, setGrantBusy] = useState("");
+  /**
+   * 呼吸ガイドの音声の焼き直し。
+   * 焼いた音声は全員に配られるので、読みや声を変えたら**ここで焼き直さないと**古いまま鳴る。
+   */
+  const [bake, setBake] = useState<{ baked: number; total: number } | null>(null);
+  const [bakeBusy, setBakeBusy] = useState(false);
+  const [bakeMsg, setBakeMsg] = useState("");
   const [grantMsg, setGrantMsg] = useState("");
 
   // 週刊レポートの承認待ち（OKを出すまで、本人には絶対に見えない）
@@ -150,11 +157,30 @@ export default function AdminPage() {
     fetch("/api/admin/locks").then((r) => r.json()).then((d) => {
       if (Array.isArray(d?.locked)) setLocked(d.locked.map(String));
     }).catch(() => {});
+    fetch("/api/tts/bake").then((r) => r.json()).then((d) => {
+      setBake({ baked: Object.keys(d?.baked ?? {}).length, total: Number(d?.total ?? 0) });
+    }).catch(() => {});
     fetch("/api/admin/grants").then((r) => r.json()).then((d) => {
       if (d?.grants) setGrants(d.grants);
     }).catch(() => {});
     loadDrafts();
   }, []);
+
+  /** 呼吸ガイドの音声を焼き直す */
+  async function rebake() {
+    if (!confirm("呼吸ガイドの音声を、いまの読み・いまの声で焼き直します。1分ほどかかります。よろしいですか？")) return;
+    setBakeBusy(true); setBakeMsg("焼いています…（1分ほどかかります）");
+    try {
+      const r = await fetch("/api/tts/bake", { method: "POST" });
+      const d = await r.json();
+      if (!r.ok) { setBakeMsg(d?.error ?? "焼けませんでした"); return; }
+      setBake({ baked: Number(d.baked ?? 0), total: Number(d.total ?? 0) });
+      setBakeMsg(d.ok
+        ? `✅ ${d.baked}/${d.total} 本を焼き直しました。次に開いた人から、新しい音声で鳴ります。`
+        : `${d.baked}/${d.total} 本まで焼けました。うまくいかなかったもの：${(d.failed ?? []).join(" / ")}`);
+    } catch (e: any) { setBakeMsg(String(e?.message ?? e)); }
+    finally { setBakeBusy(false); }
+  }
 
   /** 全員まとめて開ける／閉じる（何百人でも1回で済む） */
   async function toggleAll(feature: string, on: boolean) {
@@ -345,6 +371,29 @@ export default function AdminPage() {
   add column if not exists display_name text;`}</pre>
         </div>
       )}
+
+      {/* 呼吸ガイドの音声。読みや声を変えたら、ここで焼き直す */}
+      <div className="border rounded-xl p-4 bg-white mb-4">
+        <div className="text-sm font-bold">🎧 呼吸ガイドの音声</div>
+        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+          焼いた音声は<b>全員に同じものが配られます</b>（1回焼けば、あとは無料で鳴ります）。<br />
+          読み方や声を変えたときは、ここで<b>焼き直さないと古いまま</b>鳴り続けます。
+        </p>
+        {bake && (
+          <div className="text-xs text-gray-700 mt-2">
+            いま焼けているもの：<b>{bake.baked}</b> / {bake.total} 本
+            {bake.baked === 0 && <span className="text-amber-700">（まだ1本も焼けていません）</span>}
+          </div>
+        )}
+        <button
+          disabled={bakeBusy}
+          onClick={() => void rebake()}
+          className="mt-3 w-full bg-sky-600 text-white font-bold text-sm py-2.5 rounded-lg disabled:opacity-50"
+        >
+          {bakeBusy ? "焼いています…" : "🎧 音声を焼き直す"}
+        </button>
+        {bakeMsg && <div className="text-xs text-gray-700 mt-2 leading-relaxed">{bakeMsg}</div>}
+      </div>
 
       {/* 発信スタジオ：まず全員まとめて、必要なら個別に */}
       {(() => {

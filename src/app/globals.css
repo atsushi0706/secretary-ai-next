@@ -5812,3 +5812,64 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .74rem; line-height: 1.7; color: #e0bd72;
   background: rgba(238,214,155,.1); border: 1px solid rgba(238,214,155,.25);
 }
+
+/* 部屋の歩き方（チュートリアル） */
+.singa-howto {
+  position: absolute; top: 12px; right: 12px; z-index: 8;
+  width: 30px; height: 30px; border-radius: 50%;
+  font-size: .82rem; font-weight: 900; color: var(--singa-ink, #f4e7c8);
+  background: rgba(20,16,11,.78); border: 1px solid rgba(232,189,114,.45);
+  backdrop-filter: blur(6px);
+}
+.singa-howto:hover { background: rgba(34,27,16,.9); }
+.wtut {
+  position: absolute; inset: 0; z-index: 45; display: grid; place-items: center;
+  padding: 14px; background: rgba(4,3,9,.82); backdrop-filter: blur(5px);
+  opacity: 0; transition: opacity .25s ease;
+}
+.wtut.is-in { opacity: 1; }
+.wtut-card {
+  width: min(520px, 96%); max-height: 90%; overflow-y: auto; padding: 24px 22px 20px;
+  border-radius: 20px; background: rgba(16,13,22,.98);
+  border: 1px solid rgba(238,214,155,.34); box-shadow: 0 18px 50px rgba(0,0,0,.7);
+}
+.wtut-top { text-align: center; padding-bottom: 14px; border-bottom: 1px solid rgba(238,214,155,.18); }
+.wtut-en { font-family: Georgia, serif; font-size: .62rem; letter-spacing: .34em; color: var(--singa-gold, #e0bd72); text-transform: uppercase; }
+.wtut-ja { font-family: Georgia, "Yu Mincho", "游明朝", serif; font-size: 1.35rem; font-weight: 900; color: #fff; margin-top: 5px; }
+.wtut-one { font-size: .78rem; color: var(--singa-ink-soft, #c3b291); margin-top: 6px; }
+.wtut-first {
+  margin: 14px 0 0; padding: 11px 13px; border-radius: 12px;
+  font-size: .78rem; line-height: 1.8; color: #efe6d2;
+  background: rgba(238,214,155,.12); border: 1px solid rgba(238,214,155,.35);
+}
+.wtut-sec { margin-top: 16px; }
+.wtut-t { font-size: .62rem; letter-spacing: .14em; color: var(--singa-gold, #e0bd72); margin-bottom: 8px; }
+.wtut-p { font-size: .82rem; line-height: 1.95; color: #e8dcc6; }
+.wtut-p b, .wtut-steps b, .wtut-tips b { color: #fff; }
+.wtut-steps { display: flex; flex-direction: column; gap: 9px; list-style: none; padding-left: 0; margin: 0; }
+.wtut-steps li { display: flex; gap: 10px; font-size: .82rem; line-height: 1.8; color: #e8dcc6; }
+.wtut-n {
+  flex: 0 0 auto; width: 21px; height: 21px; margin-top: 2px; border-radius: 50%;
+  display: grid; place-items: center; font-size: .64rem; font-weight: 900;
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#c9a55e);
+}
+/* 既定の点（•）と、こちらの「・」が二重に出ないようにする */
+.wtut-tips { display: flex; flex-direction: column; gap: 7px; padding-left: 2px; list-style: none; margin: 0; }
+.wtut-tips li {
+  font-size: .8rem; line-height: 1.85; color: #e8dcc6; padding-left: 15px; position: relative;
+}
+.wtut-tips li::before { content: "・"; position: absolute; left: 0; color: var(--singa-gold, #e0bd72); }
+.wtut-leaves {
+  margin-top: 18px; padding: 12px 14px; border-radius: 12px;
+  display: flex; flex-direction: column; gap: 4px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(238,214,155,.22);
+}
+.wtut-leaves span { font-size: .62rem; letter-spacing: .1em; color: var(--singa-ink-soft, #c3b291); }
+.wtut-leaves b { font-size: .82rem; color: #f4d99a; }
+.wtut-go {
+  width: 100%; margin-top: 18px; padding: 13px 0; border-radius: 999px;
+  font-size: .88rem; font-weight: 900; color: #221b10;
+  background: linear-gradient(160deg,#ffeec2,#e0bd72);
+}
+.wtut-note { margin-top: 10px; font-size: .68rem; text-align: center; color: var(--singa-ink-soft, #c3b291); }
+.wtut-note b { color: var(--singa-gold, #e0bd72); }

@@ -7,6 +7,8 @@ import { MODES, MODE_OPENERS, type ModeKey, MODE_KEYS } from "@/lib/modes";
 import { introOf } from "@/lib/mode-intro";
 import { VoiceBar } from "./VoiceBar";
 import { HomeVoice } from "./HomeVoice";
+import { WorkTutorial, tutorialSeen, markTutorialSeen } from "./WorkTutorial";
+import { WORK_GUIDE } from "@/lib/work-guide";
 import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
@@ -133,6 +135,8 @@ export function ShingaWorld({
   const [questOffer, setQuestOffer] = useState<{ title: string; body?: string } | null>(null);
   const [questSaving, setQuestSaving] = useState(false);
   // クリスタルルーム：まとめて名前をつける流れに入ったか
+  // 部屋の歩き方。初めて入った部屋では必ず出す。あとは「？」からいつでも
+  const [tutorial, setTutorial] = useState<{ mode: ModeKey; first: boolean } | null>(null);
   const [crystallizing, setCrystallizing] = useState(false);
   const [vaultCrystalOpen, setVaultCrystalOpen] = useState(false);   // クリスタル保管庫
   const [wallDug, setWallDug] = useState(0);    // ウォールブレイク：陰の側から掘り出せた個数（7個で次の段階へ）
@@ -648,6 +652,8 @@ export function ShingaWorld({
     //（選択肢で「パラレルウォークへ」と移ったとき、前回の地点が残っていた）
     const fresh = !resume || m !== mode;
     if (m === "breakthrough" && fresh) { setWallStage(1); setWallDug(0); } // 扉は固く閉じた状態から始める
+    // 初めて入る部屋なら、歩き方を先に渡す（2回目からは出さない）
+    if (fresh && !tutorialSeen(m)) setTutorial({ mode: m, first: true });
     if (m === "travel" && fresh) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
     if (m === "walk" && fresh) setWalkStage(1);         // 歩きは門のほとりから始まる
     if (!resume) setMessages([]);
@@ -1204,6 +1210,12 @@ export function ShingaWorld({
             <span className="ja">{mode ? MODES[mode].label : here.ja}</span>
           </div>
 
+          {/* この部屋の歩き方。いつでも開ける */}
+          {mode && WORK_GUIDE[mode]?.howTo && (
+            <button className="singa-howto" title="この部屋の歩き方"
+              onClick={() => setTutorial({ mode, first: false })}>？</button>
+          )}
+
           {/* アカシック：まず「今日のあなたの取扱説明書」。読んでから流れを選ぶ */}
           {mode === "akashic" && todayManual && (
             <TodayManual
@@ -1352,6 +1364,15 @@ export function ShingaWorld({
                   </button>
                 ))}
               </div>
+            )}
+
+            {/* 部屋の歩き方。初回は自動、あとは「？」から */}
+            {tutorial && (
+              <WorkTutorial
+                mode={tutorial.mode}
+                first={tutorial.first}
+                onClose={() => { markTutorialSeen(tutorial.mode); setTutorial(null); }}
+              />
             )}
 
             {/* クリスタルルーム：形になったら、まとめ→命名→保管庫 */}

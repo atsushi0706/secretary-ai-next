@@ -44,6 +44,50 @@ function guessType(): string {
   return "snack";
 }
 
+/**
+ * 送る前に、写真を小さくする。
+ *
+ * 【なぜ要るか】
+ * スマホの写真はそのままだと3〜6MBある。Vercelが受け取れるのは4.5MBまでなので、
+ * 大きい写真を送ると「Request Entity Too Large」という**JSONでない**返事が返ってきて、
+ * 画面が落ちていた（Unexpected token 'R', "Request En"... is not valid JSON）。
+ *
+ * 料理を見分けるのに4000pxは要らない。長辺1280pxまで縮めれば十分で、
+ * 送るのも速くなるし、AIに渡す量も減る。
+ * ——縮められない形式（古い端末のHEIC等）のときは、そのまま返す。
+ */
+async function shrink(file: File): Promise<File> {
+  const MAX_EDGE = 1280;
+  try {
+    const bmp = await createImageBitmap(file);
+    const scale = Math.min(1, MAX_EDGE / Math.max(bmp.width, bmp.height));
+    const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+    const canvas = document.createElement("canvas");
+    canvas.width = w; canvas.height = h;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return file;
+    ctx.drawImage(bmp, 0, 0, w, h);
+    bmp.close?.();
+    const blob: Blob | null = await new Promise((res) => canvas.toBlob(res, "image/jpeg", 0.82));
+    if (!blob || blob.size === 0) return file;
+    // 縮めたつもりが大きくなった、ということが起きたら元のまま送る
+    if (blob.size >= file.size && file.size < 3_500_000) return file;
+    return new File([blob], "meal.jpg", { type: "image/jpeg" });
+  } catch {
+    return file;   // 読めない形式でも、送るところまではやってみる
+  }
+}
+
+/** JSONで返ってこないことがある（Vercelの上限超えなど）。落ちずに理由を出す */
+async function readJson(r: Response): Promise<any> {
+  const text = await r.text();
+  try { return JSON.parse(text); } catch { /* JSONじゃなかった */ }
+  if (r.status === 413 || /Request En|too large|FUNCTION_PAYLOAD/i.test(text)) {
+    return { error: "写真が大きすぎて送れなかった。もう一度撮ってみて（それでもだめなら、少し引いて撮ってね）" };
+  }
+  return { error: `うまく返ってこなかった（${r.status}）${text.slice(0, 80)}` };
+}
+
 const hhmm = (iso: string) => {
   try {
     return new Intl.DateTimeFormat("ja-JP", {
@@ -71,7 +115,7 @@ export function MealLens({ onBack }: { onBack: () => void }) {
   const load = useCallback(async () => {
     try {
       const r = await fetch("/api/meal");
-      const d = await r.json();
+      const d = await readJson(r);
       if (!r.ok) { setErr(d.error || "読み込めなかった"); setSql(d.sql || ""); return; }
       setErr(""); setSql("");
       setMeals(d.meals ?? []); setTotal(d.total ?? null);
@@ -84,10 +128,11 @@ export function MealLens({ onBack }: { onBack: () => void }) {
     setErr(""); setAna(null); setBusy(true);
     try { setShot(URL.createObjectURL(file)); } catch { /* 出せなくても進む */ }
     try {
+      const small = await shrink(file);
       const fd = new FormData();
-      fd.append("image", file);
+      fd.append("image", small);
       const r = await fetch("/api/meal/analyze", { method: "POST", body: fd });
-      const d = await r.json();
+      const d = await readJson(r);
       if (!r.ok) { setErr(d.detail ? `${d.error}（${d.detail}）` : (d.error || "読み取れなかった")); return; }
       const a: Analysis = d.result;
       if (!a.food_detected) {
@@ -154,7 +199,7 @@ export function MealLens({ onBack }: { onBack: () => void }) {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mealType, result: ana }),
       });
-      const d = await r.json();
+      const d = await readJson(r);
       if (!r.ok) { setErr(d.error || "記録できなかった"); setSql(d.sql || ""); return; }
       setAna(null); setShot(null);
       await load();

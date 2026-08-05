@@ -85,7 +85,13 @@ const MODELS = [
   "gemini-3.5-flash",
 ];
 
-export const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+/**
+ * 受け取れる写真の大きさ。
+ * Vercel が1回に受け取れるのは 4.5MB まで。それを超えると、こちらのコードに届く前に
+ * 「Request Entity Too Large」という**JSONでない**返事が返る（画面が落ちていた原因）。
+ * 画面側で送る前に長辺1280pxへ縮めているので、普通はこの上限に当たらない。
+ */
+export const MAX_IMAGE_BYTES = 4 * 1024 * 1024;
 export const MIME_OK = new Set(["image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"]);
 
 export type MealFood = {

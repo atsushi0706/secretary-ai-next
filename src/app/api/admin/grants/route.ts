@@ -6,7 +6,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
-import { getFeatureGrants, setFeatureGrant, GRANTABLE, isFeatureKey } from "@/lib/app-config";
+import { getFeatureGrants, setFeatureGrant, setFeatureAll, GRANTABLE, isFeatureKey } from "@/lib/app-config";
 
 export const dynamic = "force-dynamic";
 
@@ -30,6 +30,12 @@ export async function POST(req: Request) {
   try {
     const b = await req.json();
     if (!isFeatureKey(b.feature)) return NextResponse.json({ error: "unknown feature" }, { status: 400 });
+    // 一括：全員まとめて開ける／閉じる（例外はまっさらになる）
+    if (b.scope === "all") {
+      const grants = await setFeatureAll(b.feature, !!b.on);
+      return NextResponse.json({ ok: true, grants });
+    }
+    // 個別：既定と違う扱いにする
     const target = String(b.userId ?? "").trim();
     if (!target) return NextResponse.json({ error: "userId が要ります" }, { status: 400 });
     const grants = await setFeatureGrant(b.feature, target, !!b.on);

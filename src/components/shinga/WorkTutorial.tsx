@@ -71,29 +71,22 @@ export function WorkTutorial({ mode, first, onClose }: {
 
         {first && (
           <div className="wtut-first">
-            はじめての部屋だね。<b>どう歩くか</b>だけ、先に渡しておくよ。
+            はじめての部屋だね。<b>どう使うか</b>だけ、先に渡しておくよ。
           </div>
         )}
 
         <div className="wtut-sec">
-          <div className="wtut-t">どんな格好で</div>
-          <p className="wtut-p">{rich(h.posture)}</p>
+          <div className="wtut-t">何をするためのもの？</div>
+          <p className="wtut-p">{rich(h.purpose)}</p>
         </div>
 
         <div className="wtut-sec">
-          <div className="wtut-t">何が起きるか</div>
+          <div className="wtut-t">こういう風に使います</div>
           <ol className="wtut-steps">
-            {h.steps.map((x, i) => (
+            {h.use.map((x, i) => (
               <li key={i}><span className="wtut-n">{i + 1}</span><span>{rich(x)}</span></li>
             ))}
           </ol>
-        </div>
-
-        <div className="wtut-sec">
-          <div className="wtut-t">コツ</div>
-          <ul className="wtut-tips">
-            {h.tips.map((x, i) => <li key={i}>{rich(x)}</li>)}
-          </ul>
         </div>
 
         <div className="wtut-leaves">

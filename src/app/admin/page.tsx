@@ -45,7 +45,7 @@ export default function AdminPage() {
    * 既定は全員に鍵。ここで「開ける」を押した人だけが使える。
    * grants = { broadcast: [userId, ...] }
    */
-  const [grants, setGrants] = useState<Record<string, string[]>>({});
+  const [grants, setGrants] = useState<Record<string, { all: boolean; except: string[] }>>({});
   const [grantBusy, setGrantBusy] = useState("");
   const [grantMsg, setGrantMsg] = useState("");
 
@@ -155,6 +155,25 @@ export default function AdminPage() {
     }).catch(() => {});
     loadDrafts();
   }, []);
+
+  /** 全員まとめて開ける／閉じる（何百人でも1回で済む） */
+  async function toggleAll(feature: string, on: boolean) {
+    if (!confirm(on
+      ? "発信スタジオを、**全員に開けます**。個別の例外はいったん消えます。よろしいですか？"
+      : "発信スタジオを、**全員に鍵をかけます**。個別の例外はいったん消えます。よろしいですか？")) return;
+    setGrantBusy("all" + feature); setGrantMsg("");
+    try {
+      const r = await fetch("/api/admin/grants", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ feature, scope: "all", on }),
+      });
+      const j = await r.json();
+      if (!r.ok) throw new Error(j?.error ?? "変更できませんでした");
+      setGrants(j.grants ?? {});
+      setGrantMsg(on ? "全員に開けました" : "全員に鍵をかけました");
+    } catch (e: any) { setGrantMsg(String(e?.message ?? e)); }
+    finally { setGrantBusy(""); }
+  }
 
   /** 発信スタジオを、この人に開ける／閉める */
   async function toggleGrant(feature: string, u: AdminUser, on: boolean) {
@@ -327,24 +346,51 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* 発信スタジオの開放状況（既定は全員に鍵） */}
-      <div className="border rounded-xl p-4 bg-white mb-4">
-        <div className="text-sm font-bold">📣 発信スタジオ（ひとりずつ開ける）</div>
-        <p className="text-xs text-gray-500 mt-1">
-          既定は<b>全員に鍵</b>。下の一覧で「開ける」を押した人だけに出ます。親アカウントは常に使えます。
-        </p>
-        <div className="text-xs text-gray-700 mt-2">
-          いま開いている人：<b>{(grants.broadcast ?? []).length}</b>人
-          {(grants.broadcast ?? []).length > 0 && (
-            <span className="text-gray-500">
-              {" "}（{(grants.broadcast ?? [])
-                .map((id) => data?.users.find((u) => u.userId === id)?.name ?? id.slice(0, 8) + "…")
-                .join("、")}）
-            </span>
-          )}
-        </div>
-        {grantMsg && <div className="text-xs text-emerald-700 mt-2">{grantMsg}</div>}
-      </div>
+      {/* 発信スタジオ：まず全員まとめて、必要なら個別に */}
+      {(() => {
+        const rule = grants.broadcast ?? { all: false, except: [] };
+        return (
+          <div className="border rounded-xl p-4 bg-white mb-4">
+            <div className="text-sm font-bold">📣 発信スタジオ</div>
+            <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+              まず<b>全員まとめて</b>決めて、そこから外したい人だけ個別に変えます。<br />
+              人数が増えても、ここを1回押すだけで済みます。親アカウントは常に使えます。
+            </p>
+
+            <div className="flex gap-2 mt-3">
+              <button
+                disabled={grantBusy === "allbroadcast"}
+                onClick={() => void toggleAll("broadcast", true)}
+                className={`flex-1 text-sm font-bold py-2.5 rounded-lg border disabled:opacity-40 ${
+                  rule.all ? "bg-emerald-600 text-white border-emerald-600"
+                           : "bg-white text-emerald-700 border-emerald-300"}`}
+              >📣 全員に開ける</button>
+              <button
+                disabled={grantBusy === "allbroadcast"}
+                onClick={() => void toggleAll("broadcast", false)}
+                className={`flex-1 text-sm font-bold py-2.5 rounded-lg border disabled:opacity-40 ${
+                  !rule.all ? "bg-gray-800 text-white border-gray-800"
+                            : "bg-white text-gray-600 border-gray-300"}`}
+              >🔒 全員に鍵</button>
+            </div>
+
+            <div className="text-xs text-gray-700 mt-3">
+              いまの既定：<b>{rule.all ? "全員に開いている" : "全員に鍵"}</b>
+              {rule.except.length > 0 && (
+                <>
+                  {" ／ "}
+                  例外 <b>{rule.except.length}</b>人（
+                  {rule.except
+                    .map((id) => data?.users.find((u) => u.userId === id)?.name ?? id.slice(0, 8) + "…")
+                    .join("、")}
+                  ）は{rule.all ? "鍵" : "開いている"}
+                </>
+              )}
+            </div>
+            {grantMsg && <div className="text-xs text-emerald-700 mt-2">{grantMsg}</div>}
+          </div>
+        );
+      })()}
 
       {/* ワークの鍵：チェックを付けたワークは、管理者以外は開けなくなる */}
       <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 mb-4">
@@ -421,7 +467,9 @@ export default function AdminPage() {
             {/* ひとりずつ開ける機能。既定は鍵なので、押すまでこの人には出ない */}
             <div className="flex items-center gap-2 mt-3">
               {(() => {
-                const on = (grants.broadcast ?? []).includes(u.userId);
+                const rule = grants.broadcast ?? { all: false, except: [] };
+                const isExcept = rule.except.includes(u.userId);
+                const on = rule.all !== isExcept;   // 既定と例外の組み合わせ
                 const busyNow = grantBusy === u.userId + "broadcast";
                 return (
                   <button
@@ -431,7 +479,9 @@ export default function AdminPage() {
                       on ? "bg-emerald-50 border-emerald-300 text-emerald-700"
                          : "bg-gray-50 border-gray-300 text-gray-500"}`}
                   >
-                    {busyNow ? "…" : on ? "📣 発信スタジオ：開いている（押すと閉じる）" : "🔒 発信スタジオ：鍵（押すと開ける）"}
+                    {busyNow ? "…"
+                      : on ? `📣 発信スタジオ：開いている${isExcept ? "（この人だけ）" : ""}`
+                           : `🔒 発信スタジオ：鍵${isExcept ? "（この人だけ）" : ""}`}
                   </button>
                 );
               })()}

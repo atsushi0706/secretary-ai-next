@@ -5983,7 +5983,8 @@ body:has(.realverse-bg) { background: transparent; }
   padding: 13px 14px; border-radius: 14px;
   background: rgba(238,214,155,.1); border: 1px solid rgba(238,214,155,.42);
 }
-.wtut-voice-i { font-size: 1.15rem; line-height: 1.4; flex: 0 0 auto; }
+/* 色付き絵文字フォントが無い端末では、この字も色で描かれる。読める色にしておく */
+.wtut-voice-i { font-size: 1.15rem; line-height: 1.4; flex: 0 0 auto; color: #f4d99a; }
 .wtut-voice b { font-size: .86rem; color: #f4d99a; }
 .wtut-voice p { font-size: .78rem; line-height: 1.9; color: var(--singa-ink, #f4e7c8); margin-top: 4px; }
 .wtut-voice p b { font-size: inherit; }
@@ -6028,16 +6029,29 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .68rem; color: var(--singa-ink-soft, #c3b291); margin-bottom: 12px;
 }
 
-/* 入力欄の上の「打つより、話して」
-   （このファイルには vbar の定義が2箇所あるので、最後にまとめて置く） */
-.vbar-urge {
-  font-size: .68rem; line-height: 1.7; letter-spacing: .02em;
-  color: var(--singa-ink-soft, #c3b291);
-  margin-bottom: 6px;
+/* 入力欄の上に出るもの（「打つより、話して」／「聞いてるよ」）
+ *
+ * .vbar そのものは透明で、丸い枠を持つのは .vbar-input だけ。
+ * つまりこの行は**景色の上に直接乗る**。草原でも夜空でも読めないといけないので、
+ * 文字色だけでは足りない。自分の下敷きを持たせる。
+ * （このファイルには vbar の定義が2箇所あるので、最後にまとめて置く） */
+.vbar-urge, .vbar-state {
+  margin: 0 0 6px; padding: 4px 11px; border-radius: 999px;
+  font-size: .66rem; line-height: 1.65; letter-spacing: .02em;
+  color: #e8dcc0;
+  background: rgba(12, 10, 18, .74);
+  border: 1px solid rgba(224, 189, 114, .22);
 }
+/* こちらは文章なので、ふつうに流す。
+   inline-flex にすると gap が <b> の前後に入って「打つより、 話して 。」と隙間ができる */
+.vbar-urge { display: inline-block; }
+/* こちらは 点・文字・音量バー が並ぶので横並び */
+.vbar-state { display: inline-flex; align-items: center; gap: 6px; }
 .vbar-urge b { color: #f4d99a; }
-.singa-stage.is-bright .vbar-urge { color: #4a6480; }
-.singa-stage.is-bright .vbar-urge b { color: #23324a; }
+.singa-stage.is-bright :is(.vbar-urge, .vbar-state) {
+  color: #23324a; background: rgba(255, 255, 255, .88); border-color: rgba(120, 170, 210, .45);
+}
+.singa-stage.is-bright .vbar-urge b { color: #17263c; }
 
 /* 今日はどんな一日だったか（話から起こして、違えば押して直す） */
 .rc-kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
@@ -6172,3 +6186,26 @@ body:has(.realverse-bg) { background: transparent; }
 .singa-topbar .singa-place-name .ja { font-size: clamp(.86rem, 3.9vw, 1.2rem); letter-spacing: .06em; }
 .singa-topbar .singa-place-name .en { font-size: clamp(.48rem, 1.9vw, .56rem); letter-spacing: .2em; }
 
+
+/* ── 明るい部屋の中に出る「黒い板」の文字を取り戻す ─────────────
+ *
+ * 【何が起きていたか】
+ * パラレルウォークは明るい部屋なので、.singa-stage.is-bright が
+ * その中ぜんぶの --singa-ink を濃紺(#23324a)に差し替える。背景が明るいから、
+ * 文字は濃くないと読めない——ここまでは正しい。
+ *
+ * ところが、その明るい部屋の**中に出る黒い板**（ワークの歩き方・今日を閉じる・
+ * 食事のレンズ・結晶化・入口の案内など）は、板そのものが暗い。
+ * そこへ濃紺の文字が乗るので、黒地に濃紺＝ほとんど見えなくなっていた（実測で比1.49）。
+ *
+ * 板は自分が暗いことを知っているのだから、板の側で暗い部屋ぶんの色に戻す。
+ * こうすれば、明るい部屋でも暗い部屋でも同じように読める。 */
+.singa-stage.is-bright :is(
+  .wtut, .rc-wrap, .ml-screen, .cr-card, .pt-gate, .sm-gate, .tm-wrap, .gr-card,
+  .singa-panel, .qo-box, .zone-intro, .hv-box, .pi-screen, .wm-screen, .bc-screen,
+  .tt-screen, .cv-screen, .cry-screen, .mn-screen, .wt-screen, .hero-card, .tl-card
+) {
+  --singa-ink: #f4e7c8;
+  --singa-ink-soft: #c3b291;
+  --singa-gold: #e0bd72;
+}

@@ -309,10 +309,19 @@ export async function POST(req: Request) {
         // 実書き込みの掟（AIが「入れておいた」と言ったのに実体が無い、を絶対に起こさない）
         const honestyCtx = [
           "# 実行の掟（最重要）",
-          "- クエストは、**こちらで勝手に置かない**。置くかどうかは本人が決める。",
-          "- 「置いた」「入れておいた」と**言い切らない**。実際に置くのは本人が選んだあとなので、嘘になる。",
-          "- 置いたほうがよさそうなことが出てきたら、**同じ返事の最後に** <quest_to_add>[{\"title\":\"20字以内の行動\"}]</quest_to_add> を付ける。",
-          "  画面が「これ、クエストに置いとく？」と本人に聞いてくれる。**本文では聞かなくていい**（二重に聞くことになる）。",
+          ...(mode === "crystal"
+            ? [
+                "- クエストは、**こちらで勝手に置かない**。置くかどうかは本人が決める。",
+                "- 「置いた」「入れておいた」と**言い切らない**。実際に置くのは本人が選んだあとなので、嘘になる。",
+                "- 形になった一手が出てきたら、**同じ返事の最後に** <quest_to_add>[{\"title\":\"20字以内の行動\"}]</quest_to_add> を付ける。",
+                "  画面が「これ、クエストに置いとく？」と本人に聞いてくれる。**本文では聞かなくていい**（二重に聞くことになる）。",
+              ]
+            : [
+                // クエストに置くのは、形にする部屋（クリスタルルーム）の仕事。
+                // 他の部屋で聞くと、まだ形になっていないものを置かせることになる。
+                "- **ここではクエストの話をしない。**「クエストに置いとく？」と聞かない。置いたとも言わない。",
+                "- 形にしたそうなら、クリスタルルームがその場所だと伝えるだけでいい（誘導のしかたは下記に従う）。",
+              ]),
         ].join("\n");
 
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
@@ -493,7 +502,9 @@ export async function POST(req: Request) {
          * 置くと決まったときに、はじめて作る（/api/shinga/quest）。
          */
         const offerQuests: Array<{ title: string; body: string }> = [];
-        const questMatch = full.match(/<quest_to_add>([\s\S]*?)<\/quest_to_add>/);
+        // 置く場所は、形にする部屋だけ。他の部屋でタグが出ても拾わない
+        const canOfferQuest = mode === "crystal";
+        const questMatch = canOfferQuest ? full.match(/<quest_to_add>([\s\S]*?)<\/quest_to_add>/) : null;
         if (questMatch) {
           try {
             const cands = extractJson<any[]>(questMatch[1]) ?? [];
@@ -517,7 +528,7 @@ export async function POST(req: Request) {
           if (!/(クエスト|一手)/.test(s)) return false;
           return /(置いた|置いとく|置いといた|置いておく|置いておいた|入れた|入れとく|入れといた|入れておく|入れておいた|追加した|追加しておく|登録した|登録しておく)/.test(s);
         });
-        const claimedQuest = declaredQuest && !questMatch;
+        const claimedQuest = canOfferQuest && declaredQuest && !questMatch;
         if (claimedQuest && !greet) {
           try {
             const { complete } = await import("@/lib/ai");

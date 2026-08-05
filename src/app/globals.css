@@ -2383,23 +2383,51 @@ body:has(.realverse-bg) { background: transparent; }
 }
 @keyframes zi-fadeout { to { opacity: 0; } }
 /* 背景が「フュン」とズームインしながらピントが合う */
+/**
+ * 背景の「フュン」。
+ *
+ * 以前は全画面の絵に filter: blur(16px→0) を動かしていた。
+ * ぼかしは毎フレーム描き直しになるうえ、上に重ねた文字の敷き(backdrop-filter)が
+ * それをもう一度サンプリングするので、端末によっては
+ * **黒い影がざざっと走るノイズ**になって見えていた。
+ *
+ * 動かすのは transform と opacity だけにする（この2つは画面の合成だけで済む）。
+ * ピントが合う感じは、**ぼかした絵を重ねて薄くする**ことで出す。
+ */
 .zone-intro .zi-bg {
   position: absolute; inset: -8%;
   background-size: cover; background-position: center;
-  transform: scale(1.5); filter: blur(16px) brightness(.35);
+  transform: scale(1.5) translateZ(0);
+  will-change: transform;
   animation: zi-zoom 2.4s cubic-bezier(.14,.75,.2,1) forwards;
 }
 @keyframes zi-zoom {
-  0%   { transform: scale(1.5); filter: blur(16px) brightness(.35); }
-  55%  { filter: blur(2px) brightness(.86); }
-  100% { transform: scale(1.02); filter: blur(0) brightness(.94); }
+  0%   { transform: scale(1.5) translateZ(0); }
+  100% { transform: scale(1.02) translateZ(0); }
 }
+/* ピント合わせ：ぼかした同じ絵を重ねて、薄くしていく（opacity だけ動かす） */
+.zone-intro .zi-bg::after {
+  content: ""; position: absolute; inset: 0;
+  background: inherit; background-size: cover; background-position: center;
+  filter: blur(14px);
+  opacity: 1;
+  will-change: opacity;
+  animation: zi-focus 1.5s ease-out forwards;
+}
+@keyframes zi-focus { to { opacity: 0; } }
 /* うっすらビネット＋光の帯が一度走る */
 .zone-intro .zi-veil { position: absolute; inset: 0;
   background: radial-gradient(120% 100% at 50% 45%, transparent 40%, rgba(0,0,0,.55) 100%); }
+/* 入りぎわの暗さ。brightness を動かす代わりに、黒い面を薄くしていく */
+.zone-intro .zi-veil::before {
+  content: ""; position: absolute; inset: 0; background: #05040a;
+  opacity: .62; will-change: opacity;
+  animation: zi-lighten 1.6s ease-out forwards;
+}
+@keyframes zi-lighten { to { opacity: .1; } }
 .zone-intro .zi-veil::after { content: ""; position: absolute; inset: 0;
   background: linear-gradient(115deg, transparent 32%, rgba(255,255,255,.35) 48%, rgba(255,255,255,.6) 50%, transparent 66%);
-  transform: translateX(-130%); animation: zi-sweep 1s ease-out .55s 1; }
+  transform: translateX(-130%); will-change: transform; animation: zi-sweep 1s ease-out .55s 1; }
 @keyframes zi-sweep { to { transform: translateX(130%); } }
 /* タイトル（英語→日本語、文字間が締まりながら出る） */
 .zone-intro .zi-title { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 8px;
@@ -2413,15 +2441,16 @@ body:has(.realverse-bg) { background: transparent; }
   content: ""; position: absolute; inset: -16% -16%; z-index: -1; border-radius: 50%;
   background: radial-gradient(closest-side,
     rgba(3,2,7,.92) 0%, rgba(3,2,7,.88) 62%, rgba(3,2,7,.62) 84%, rgba(3,2,7,0) 100%);
-  /* 絵が明るくて細かい場所（神殿・鏡など）は、黒を重ねるだけでは足りない。
-     後ろそのものをぼかして暗くする。まわりは素通しなので、絵は残る。 */
-  /* 絵は暗くしない（明るい絵はそのまま美しく見せる）。
-     文字の下だけ、後ろをぼかして落とす。まわりは素通しなので世界観は残る。 */
-  backdrop-filter: blur(9px) brightness(.34) saturate(.9);
-  -webkit-backdrop-filter: blur(9px) brightness(.34) saturate(.9);
+  /* 以前はここで後ろをぼかして暗くしていたが、背景のズームと重なると
+     毎フレーム後ろを取り直すことになり、ノイズの原因になっていた。
+     敷きの濃さだけで読めることは実測ずみなので、掛けない。 */
 }
-@keyframes zi-title-in { 0% { opacity: 0; transform: translateY(18px); letter-spacing: .6em; filter: blur(6px); }
-  100% { opacity: 1; transform: none; letter-spacing: normal; filter: blur(0); } }
+/* 文字間(letter-spacing)とぼかしは、動かすと毎フレーム計算が要る。
+   同じ「すーっと寄ってくる」感じは、拡大と透明度だけで出せる。 */
+@keyframes zi-title-in {
+  0%   { opacity: 0; transform: translateY(18px) scale(1.08); }
+  100% { opacity: 1; transform: none; }
+}
 .zone-intro .zi-en { font-family: Georgia, "Times New Roman", serif; font-size: .8rem; letter-spacing: .42em; color: #eed69b;
   text-transform: uppercase; text-shadow: 0 2px 14px rgba(0,0,0,.8); }
 .zone-intro .zi-ja { font-size: 1.7rem; font-weight: 900; color: #fff; letter-spacing: .1em;

@@ -14,6 +14,7 @@ import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
 import { ReflectClose } from "./ReflectClose";
+import { MealLens } from "./MealLens";
 import { HeroScreen } from "./HeroScreen";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
@@ -190,6 +191,7 @@ export function ShingaWorld({
   const [panelOpen, setPanelOpen] = useState(true);
   // 今日を閉じる板（ワールドリプレイの部屋の中でひらく）
   const [closing, setClosing] = useState(false);
+  const [mealOpen, setMealOpen] = useState(false);   // ミールレンズ（食事の写真）
   const [heroOpen, setHeroOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);   // カード保管庫
   const [weeklyOpen, setWeeklyOpen] = useState(false); // タイムトラベルボックス（過去の宝箱）
@@ -1197,6 +1199,8 @@ export function ShingaWorld({
         <ManualScreen guideName={guideName} onBack={() => setManualOpen(false)} />
       ) : weightOpen ? (
         <WeightPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeightOpen(false)} />
+      ) : mealOpen ? (
+        <MealLens onBack={() => setMealOpen(false)} />
       ) : view === "home" ? (
         <Home
           guideName={guideName}
@@ -1214,6 +1218,7 @@ export function ShingaWorld({
           onCast={() => setCastOpen(true)}
           onManual={() => setManualOpen(true)}
           onWeight={() => setWeightOpen(true)}
+          onMeal={() => setMealOpen(true)}
           customWorks={customWorks}
           lockedWorks={lockedWorks}
           isAdmin={isAdmin}
@@ -1738,13 +1743,14 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, flags = {},
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, flags = {},
 }: {
   guideName: string;
   avatarUrl: string;
   onPick: (m: ModeKey) => void;
   onTalk: (text: string) => void;
   onDaily: () => void;
+  onMeal: () => void;
   /** 親アカウントか（まだ配っていない機能を出し分ける） */
   isAdmin?: boolean;
   /** ひとりずつ開ける機能。既定は鍵で、開けた人だけ true */
@@ -1887,6 +1893,10 @@ function Home({
               「レベルチェック」だけの名前にしたら、いちばん大事なものが名前から消えてしまった。 */}
           <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（何者として生きるか）</button>
           <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>
+          {/* ミールレンズ。まだ淳くんの画面だけ（/admin のお試しスイッチで全員に配れる） */}
+          {flags.mealLens && (
+            <button className="iw-report is-meal" onClick={onMeal}>📷 食事のレンズ</button>
+          )}
         </div>
         <div className="iw-reflect-row is-shelf">
           {/* 届いたのに気づけない、を無くす。通知を許可していない人にも印で分かる */}

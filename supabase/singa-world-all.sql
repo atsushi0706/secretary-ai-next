@@ -399,3 +399,25 @@ alter table public.weekly_reports enable row level security;
 
 -- 週刊レポートに「中身」を持たせる（宝箱で、悩み→解釈→進みを並べるため）
 alter table public.weekly_reports add column if not exists facets jsonb;
+
+-- ミールレンズ（食事の写真 → カロリーとPFCの目安）
+-- mealens-app で作ったものを、この世界の中へ移したときに足した表。
+create table if not exists public.meal_records (
+  id                 uuid primary key default gen_random_uuid(),
+  user_id            text not null,
+  date               date not null,
+  meal_type          text not null default 'other',
+  meal_name          text not null default '',
+  foods              jsonb not null default '[]'::jsonb,
+  total_kcal         integer not null default 0,
+  protein_g          real not null default 0,
+  fat_g              real not null default 0,
+  carbs_g            real not null default 0,
+  confidence         integer not null default 0,
+  estimate_min_kcal  integer not null default 0,
+  estimate_max_kcal  integer not null default 0,
+  uncertainty_reason text not null default '',
+  created_at         timestamptz not null default now()
+);
+create index if not exists meal_records_user_date_idx on public.meal_records (user_id, date);
+alter table public.meal_records enable row level security;

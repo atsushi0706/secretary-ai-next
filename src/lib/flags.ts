@@ -46,6 +46,13 @@ export const FLAGS: FlagDef[] = [
     note: "初めて入った部屋で出る「何をするためのもの／こう使う」の案内。",
     fallback: "all",   // すでに配ってあるので、現状のまま
   },
+  {
+    key: "mealLens",
+    label: "ミールレンズ（食事の写真からカロリー）",
+    note: "食事を撮ると、料理・量・カロリー・PFCの目安が出る。数字は目安として幅つきで出す。"
+      + "使うのは本人のGeminiキー。写真は保存しない。",
+    fallback: "admin",   // まず淳くんの画面だけ。試してよければ "all" へ
+  },
 ];
 
 export const isFlagKey = (v: unknown): v is string =>

@@ -60,6 +60,7 @@ const TABLES = [
   "link_letter",
   "reports",
   "weekly_reports",
+  "meal_records",
   "briefings",
   // 自分で作ったもの
   "custom_works",

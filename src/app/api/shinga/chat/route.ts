@@ -72,6 +72,22 @@ export async function POST(req: Request) {
    */
   const openWorks: string[] = (Array.isArray(body.openWorks) ? body.openWorks : [])
     .map(String).filter((k: string) => isModeKey(k));
+  /**
+   * いま画面に出ている、この部屋での会話。
+   *
+   * ワークの中では **この枠で話したことだけ** を材料にする。
+   * 以前は「その日の会話すべて」をDBから読んでいたので、
+   * ピークステートにパラレルウォークの話が入り込み、
+   * 「ここでまだ話していないこと」を前提に返してきていた。
+   */
+  const sessionHistory: { role: "assistant" | "user"; content: string }[] =
+    (Array.isArray(body.sessionHistory) ? body.sessionHistory : [])
+      .filter((m: any) => m && (m.role === "user" || m.role === "assistant") && typeof m.content === "string")
+      .map((m: any) => ({
+        role: m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+        content: String(m.content).slice(0, 2000),
+      }))
+      .slice(-24);
   // ミラーオブワールド：画面のゲートで選ばれた安全度と、選択ずみの幻獣
   const { isShadowPairId, shadowPair } = await import("@/lib/shadow");
   const shadowSafety: "normal" | "boundary" = body.shadowSafety === "boundary" ? "boundary" : "normal";
@@ -132,7 +148,13 @@ export async function POST(req: Request) {
         //（＝過去の別の話を引きずらない）。
         let history: { role: "assistant" | "user"; content: string }[] = [];
         let debugHistory: any[] = [];
-        if (!(greet && mode)) {
+        if (mode || customWork) {
+          // ワーク（じぶんワークも含む）の中は、この枠で話したことだけ。
+          // 他の部屋の話を持ち込まない
+          history = sessionHistory;
+          debugHistory = sessionHistory.map((m) => ({ ...m, from: "この部屋の会話" }));
+        } else if (!greet) {
+          // 地図での自由な会話は、これまでどおり今日ぶんを見る
           const past = await loadShingaMessages(userId, 24, today);
           debugHistory = past.map((m) => ({ role: m.role, date: m.date, at: m.created_at, content: m.content }));
           history = past.map((m) => ({

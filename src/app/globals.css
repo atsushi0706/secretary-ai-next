@@ -5873,3 +5873,12 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .wtut-note { margin-top: 10px; font-size: .68rem; text-align: center; color: var(--singa-ink-soft, #c3b291); }
 .wtut-note b { color: var(--singa-gold, #e0bd72); }
+
+/* クエストの中身は、本人が書き直せる */
+.quest-offer textarea.qo-title {
+  width: 100%; resize: vertical; text-align: left; font-family: inherit;
+  margin-bottom: 8px;
+}
+.quest-offer .qo-note {
+  font-size: .68rem; color: var(--singa-ink-soft, #c3b291); margin-bottom: 12px;
+}

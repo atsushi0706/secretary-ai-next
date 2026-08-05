@@ -134,6 +134,8 @@ export function ShingaWorld({
   // 「これ、クエストに置いとく？」の確認カード（置くのは本人が決める）
   const [questOffer, setQuestOffer] = useState<{ title: string; body?: string } | null>(null);
   const [questSaving, setQuestSaving] = useState(false);
+  // クエストの中身は、こちらの案をそのまま置くのではなく、本人が決められるようにする
+  const [questText, setQuestText] = useState("");
   // クリスタルルーム：まとめて名前をつける流れに入ったか
   // 部屋の歩き方。初めて入った部屋では必ず出す。あとは「？」からいつでも
   const [tutorial, setTutorial] = useState<{ mode: ModeKey; first: boolean } | null>(null);
@@ -507,7 +509,7 @@ export function ShingaWorld({
    * 入口（enter / enterFree / enterCustom / AIの<move>）は必ずここを通す。
    */
   function resetWorkState() {
-    setQuestOffer(null);   // 前のワークの「置いとく？」を持ち越さない
+    setQuestOffer(null); setQuestText("");   // 前のワークの「置いとく？」を持ち越さない
     setCrystallizing(false);
     runWorkRef.current = null; setRunWork(null); setDrawStep(null);
     setChoices(null); setWidget(null); setEmoPick(null);
@@ -550,6 +552,10 @@ export function ShingaWorld({
           text: body, place: "peak", greet,
           customWork: { name: w.name, purpose: w.purpose, intro: w.intro, closing: w.closing, steps: w.steps },
           customIdx: customIdxRef.current,
+          // じぶんワークも、この部屋で話したことだけで進める
+          sessionHistory: messages
+            .filter((x) => x.content && !x.content.startsWith("[["))
+            .map((x) => ({ role: x.role, content: x.content })),
         }),
       });
       if (!r.ok) { targetRef.current = "（うまく届かなかった）"; finalRef.current = true; return; }
@@ -734,6 +740,15 @@ export function ShingaWorld({
           wallDug: m === "breakthrough" ? wallDug : undefined,
           // 鍵が開いている部屋だけを渡す。押しても開かないボタンを出させないため
           openWorks: MODE_KEYS.filter((k) => !lockedWorks.includes(k)),
+          /**
+           * この部屋で話したことだけを渡す。
+           * サーバがその日の会話をまとめて読むと、
+           * ピークステートにパラレルウォークの話が入り込んでしまう。
+           * カードなどの目印（[[…]]）は会話ではないので外す。
+           */
+          sessionHistory: messages
+            .filter((x) => x.content && !x.content.startsWith("[["))
+            .map((x) => ({ role: x.role, content: x.content })),
           shadowStep: m === "shadow" ? shadowStep : undefined,
           shadowPair: m === "shadow" ? shadowPairRef.current ?? undefined : undefined,
           shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
@@ -831,7 +846,7 @@ export function ShingaWorld({
           // 勝手に置かない。「これ、置いとく？」と1件ずつ聞く。
           // 会話の吹き出しの中に混ぜると見落とすので、独立したカードで出す。
           const qs = (data?.quests as { title: string; body?: string }[]) ?? [];
-          if (qs.length) setQuestOffer(qs[0]);
+          if (qs.length) { setQuestOffer(qs[0]); setQuestText(qs[0].title); }
         } else if (name === "skill") {
           dropCard({ t: "skill", title: String(data?.title ?? ""), body: data?.body, rarity: data?.rarity ?? "gold" });
         } else if (name === "care") {
@@ -1401,20 +1416,24 @@ export function ShingaWorld({
             {questOffer && (
               <div className="quest-offer">
                 <div className="qo-head">🔨 これ、クエストに置いとく？</div>
-                <div className="qo-title">{questOffer.title}</div>
+                {/* 案はこちらから出すが、**中身は本人が決める**。そのまま書き換えられる */}
+                <textarea className="qo-title" rows={2} value={questText} disabled={questSaving}
+                  onChange={(e) => setQuestText(e.target.value)}
+                  placeholder="自分の言葉に書き直してもいいよ" />
+                <div className="qo-note">そのままでも、書き直してもいい。決めるのはきみ。</div>
                 <div className="qo-btns">
-                  <button className="qo-yes" disabled={questSaving}
+                  <button className="qo-yes" disabled={questSaving || !questText.trim()}
                     onClick={async () => {
                       setQuestSaving(true);
                       try {
                         const r = await fetch("/api/shinga/quest", {
                           method: "POST", headers: { "Content-Type": "application/json" },
-                          body: JSON.stringify(questOffer),
+                          body: JSON.stringify({ ...questOffer, title: questText.trim() }),
                         });
                         const d = await r.json();
                         if (r.ok) {
                           setMessages((prev) => [...prev,
-                            { role: "assistant", content: `[[quests]]${questOffer.title}` }]);
+                            { role: "assistant", content: `[[quests]]${questText.trim()}` }]);
                         } else {
                           setMessages((prev) => [...prev,
                             { role: "assistant", content: `[[care]]置けなかった：${d?.error ?? "もう一度ためして"}` }]);

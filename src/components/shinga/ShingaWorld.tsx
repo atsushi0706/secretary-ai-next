@@ -175,6 +175,8 @@ export function ShingaWorld({
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   // 届いているのに、まだ開いていない週次レポートの数（宝箱に印を出す）
   const [unreadWeekly, setUnreadWeekly] = useState(0);
+  // お試しスイッチ。新しいものは、まず淳くんの画面にだけ出る
+  const [flags, setFlags] = useState<Record<string, boolean>>({});
   // アカシック：開いた最初に「今日のあなたの取扱説明書」を出す
   const [todayManual, setTodayManual] = useState(false);
   const [shadowCard, setShadowCard] = useState<ShadowCard | null>(null);
@@ -409,6 +411,7 @@ export function ShingaWorld({
       setIsAdmin(!!d?.isAdmin);
       if (d?.features && typeof d.features === "object") setFeatures(d.features);
       setUnreadWeekly(Number(d?.unreadWeekly) || 0);
+      if (d?.flags && typeof d.flags === "object") setFlags(d.flags);
     }).catch(() => {});
   }, []);
 
@@ -653,7 +656,7 @@ export function ShingaWorld({
     const fresh = !resume || m !== mode;
     if (m === "breakthrough" && fresh) { setWallStage(1); setWallDug(0); } // 扉は固く閉じた状態から始める
     // 初めて入る部屋なら、歩き方を先に渡す（2回目からは出さない）
-    if (fresh && !tutorialSeen(m)) setTutorial({ mode: m, first: true });
+    if (fresh && flags.tutorial && !tutorialSeen(m)) setTutorial({ mode: m, first: true });
     if (m === "travel" && fresh) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
     if (m === "walk" && fresh) setWalkStage(1);         // 歩きは門のほとりから始まる
     if (!resume) setMessages([]);
@@ -1201,6 +1204,7 @@ export function ShingaWorld({
           isAdmin={isAdmin}
           features={features}
           unreadWeekly={unreadWeekly}
+          flags={flags}
           onRunCustom={(w) => enterCustom(w)}
           onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
           onMake={() => { setEditWork(null); setMakerOpen(true); }}
@@ -1219,7 +1223,7 @@ export function ShingaWorld({
           </div>
 
           {/* この部屋の歩き方。いつでも開ける */}
-          {mode && WORK_GUIDE[mode]?.howTo && (
+          {mode && flags.tutorial && WORK_GUIDE[mode]?.howTo && (
             <button className="singa-howto" title="この部屋の歩き方"
               onClick={() => setTutorial({ mode, first: false })}>？</button>
           )}
@@ -1697,7 +1701,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0,
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, flags = {},
 }: {
   guideName: string;
   avatarUrl: string;
@@ -1710,6 +1714,8 @@ function Home({
   features?: Record<string, boolean>;
   /** まだ開いていない週次レポートの数 */
   unreadWeekly?: number;
+  /** お試しスイッチ（新しいものは、まず淳くんだけに出る） */
+  flags?: Record<string, boolean>;
   onHero: () => void;
   /** カード保管庫（旅で手に入れた力） */
   onVault: () => void;
@@ -1776,11 +1782,13 @@ function Home({
       {/* ゲームHUD：空想↔現実のバランス＋ハイヤークエスト */}
       {/* 話しかけて行き先を決める。扉が並んでいても、初めての人には
           どれが自分に要るのか分からないため。 */}
-      <HomeVoice
-        openWorks={MODE_KEYS.filter((k) => !lockedWorks.includes(k))}
-        onGo={(m) => onPick(m)}
-        onTalk={(t) => onTalk(t)}
-      />
+      {flags.homeVoice && (
+        <HomeVoice
+          openWorks={MODE_KEYS.filter((k) => !lockedWorks.includes(k))}
+          onGo={(m) => onPick(m)}
+          onTalk={(t) => onTalk(t)}
+        />
+      )}
 
       <InnerHud guideName={guideName} onTalkBalance={onBalance} />
 

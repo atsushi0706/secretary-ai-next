@@ -55,6 +55,13 @@ export default function AdminPage() {
   const [bake, setBake] = useState<{ baked: number; total: number } | null>(null);
   const [bakeBusy, setBakeBusy] = useState(false);
   const [bakeMsg, setBakeMsg] = useState("");
+  /**
+   * お試しスイッチ。新しいものは「淳くんだけ」から始めて、
+   * 確かめてから全員に配る。
+   */
+  const [flags, setFlags] = useState<Record<string, string>>({});
+  const [flagDefs, setFlagDefs] = useState<{ key: string; label: string; note: string }[]>([]);
+  const [flagBusy, setFlagBusy] = useState("");
   const [grantMsg, setGrantMsg] = useState("");
 
   // 週刊レポートの承認待ち（OKを出すまで、本人には絶対に見えない）
@@ -158,6 +165,10 @@ export default function AdminPage() {
     fetch("/api/admin/locks").then((r) => r.json()).then((d) => {
       if (Array.isArray(d?.locked)) setLocked(d.locked.map(String));
     }).catch(() => {});
+    fetch("/api/admin/flags").then((r) => r.json()).then((d) => {
+      if (d?.flags) setFlags(d.flags);
+      if (Array.isArray(d?.defs)) setFlagDefs(d.defs);
+    }).catch(() => {});
     fetch("/api/tts/bake").then((r) => r.json()).then((d) => {
       setBake({ baked: Object.keys(d?.baked ?? {}).length, total: Number(d?.total ?? 0) });
     }).catch(() => {});
@@ -166,6 +177,20 @@ export default function AdminPage() {
     }).catch(() => {});
     loadDrafts();
   }, []);
+
+  /** お試しスイッチを切り替える */
+  async function setFlagState(key: string, state: string) {
+    setFlagBusy(key);
+    try {
+      const r = await fetch("/api/admin/flags", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, state }),
+      });
+      const j = await r.json();
+      if (r.ok && j?.flags) setFlags(j.flags);
+    } catch { /* 失敗したら、いまの表示のまま */ }
+    finally { setFlagBusy(""); }
+  }
 
   /** 呼吸ガイドの音声を焼き直す */
   async function rebake() {
@@ -370,6 +395,46 @@ export default function AdminPage() {
           <pre className="text-[11px] bg-white border rounded-lg p-2 mt-2 overflow-x-auto">{`alter table public.user_settings
   add column if not exists email text,
   add column if not exists display_name text;`}</pre>
+        </div>
+      )}
+
+      {/* お試しスイッチ：新しいものは、まず自分の画面だけで確かめる */}
+      {flagDefs.length > 0 && (
+        <div className="border rounded-xl p-4 bg-white mb-4">
+          <div className="text-sm font-bold">🧪 お試しスイッチ</div>
+          <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+            新しく作ったものは、まず<b>あなたの画面だけ</b>に出ます。<br />
+            触ってみてよければ「全員へ」を押すと、その場で全員に配られます。
+          </p>
+          <div className="mt-3 space-y-2">
+            {flagDefs.map((f) => {
+              const st = flags[f.key] ?? "admin";
+              return (
+                <div key={f.key} className="border rounded-lg p-3">
+                  <div className="text-sm font-bold">{f.label}</div>
+                  <div className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{f.note}</div>
+                  <div className="flex gap-1.5 mt-2">
+                    {([
+                      ["admin", "自分だけ"],
+                      ["all", "全員へ"],
+                      ["off", "止める"],
+                    ] as const).map(([v, label]) => (
+                      <button key={v}
+                        disabled={flagBusy === f.key}
+                        onClick={() => void setFlagState(f.key, v)}
+                        className={`flex-1 text-xs font-bold py-1.5 rounded-md border disabled:opacity-40 ${
+                          st === v
+                            ? v === "all" ? "bg-emerald-600 text-white border-emerald-600"
+                              : v === "off" ? "bg-gray-700 text-white border-gray-700"
+                              : "bg-amber-500 text-white border-amber-500"
+                            : "bg-white text-gray-600 border-gray-300"}`}
+                      >{label}</button>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         </div>
       )}
 

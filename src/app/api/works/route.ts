@@ -11,6 +11,7 @@ import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { getLockedWorks, getFeatureGrants, ruleAllows, GRANTABLE, type FeatureKey } from "@/lib/app-config";
 import { countUnreadWeekly } from "@/lib/weekly";
+import { getFlags, resolveFlags } from "@/lib/flags";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +23,15 @@ export async function GET() {
   const admin = isAdmin(userId);
   // 未読の週次レポート数。通知を許可していない人にも「届いてるよ」と分かるように、
   // 地図の宝箱へ印を出すために使う
-  const [grants, unreadWeekly] = await Promise.all([getFeatureGrants(), countUnreadWeekly(userId)]);
+  const [grants, unreadWeekly, flagStates] = await Promise.all([
+    getFeatureGrants(), countUnreadWeekly(userId), getFlags(),
+  ]);
+  // お試しスイッチ。新しいものは、まず淳くんの画面にだけ出る
+  const flags = resolveFlags(flagStates, admin);
   const features = Object.fromEntries(
     GRANTABLE.map((g) => [g.key, admin || ruleAllows(grants[g.key as FeatureKey], userId)]),
   );
 
-  if (admin) return NextResponse.json({ locked: [], isAdmin: true, features, unreadWeekly });
-  return NextResponse.json({ locked: await getLockedWorks(), isAdmin: false, features, unreadWeekly });
+  if (admin) return NextResponse.json({ locked: [], isAdmin: true, features, unreadWeekly, flags });
+  return NextResponse.json({ locked: await getLockedWorks(), isAdmin: false, features, unreadWeekly, flags });
 }

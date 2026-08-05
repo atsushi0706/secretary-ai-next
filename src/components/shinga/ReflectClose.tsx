@@ -39,6 +39,7 @@ type Replay = {
   tomorrow: string[];
   emotion: string;
   dayKind: string;
+  emotionWhy: string;
   progress?: { moved: string[]; inward: string[]; movedCount: number };
 };
 
@@ -56,7 +57,16 @@ export function ReflectClose({
   const [err, setErr] = useState("");
   const [rep, setRep] = useState<Replay | null>(null);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
-  const [extra, setExtra] = useState("");      // 話して足したぶん
+  /**
+   * 話して足したぶん。**1回のマイクで1件**として持つ。
+   *
+   * 前はこれを1本の文字列にして、保存のときに読点（、）で切っていた。
+   * 話し言葉には読点がいくらでも入るので、
+   *   「明日からは、しないことを決めよう。おりもとさんのやつとか、もっと増すな自分でいるために」
+   * が3つのタスクに割れて、意味の通らないものがタスクボードに並んでいた。
+   * 切らずに、話した単位のまま持つ。
+   */
+  const [extra, setExtra] = useState<string[]>([]);
   const [emo, setEmo] = useState("");
   const [kind, setKind] = useState("");
   const [handing, setHanding] = useState(false);
@@ -89,11 +99,21 @@ export function ReflectClose({
     try {
       const actions = [
         ...(rep?.tomorrow ?? []).filter((t) => picked[t]),
-        ...extra.split(/[\n、,]/).map((a) => a.trim()).filter(Boolean),
-      ].slice(0, 3);
+        ...extra,                       // 話した単位のまま。読点で切らない
+      ].map((a) => a.trim()).filter(Boolean).slice(0, 3);
       const r = await fetch("/api/tomorrow", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emotion: emo, why: said.slice(0, 400), actions }),
+        body: JSON.stringify({
+          emotion: emo,
+          /**
+           * なぜその感情なのか。**短い一言**を渡す。
+           * 前はここに会話まるごと（said）を入れていたので、朝の「今日のフォーカス」に
+           *   「清瀬リンク：おつかれさま🌙 今日を一緒に閉じよう。…本人：そうね。今日は…」
+           * と、やり取りがそのまま貼りついていた。読むところではないのに長い。
+           */
+          why: (rep?.emotionWhy || rep?.meaning || "").slice(0, 120),
+          actions,
+        }),
       });
       const res = await r.json();
       if (!r.ok) { setErr(res.error || "引き継げなかった"); return; }
@@ -190,12 +210,19 @@ export function ReflectClose({
                 <div className="rc-none">今日の話からは起こせなかった。話して足してもいいよ。</div>
               )}
               <div className="rc-add">
-                <VoiceInput mode="quest" compact onText={(t) => setExtra((p) => (p ? `${p}、${t}` : t))} />
+                <VoiceInput mode="quest" compact
+                  onText={(t) => setExtra((p) => [...p, t.trim()].filter(Boolean).slice(0, 3))} />
                 <span className="rc-addlabel">
-                  {extra ? extra : "足したいことがあれば、マイクで話して"}
+                  {extra.length ? "足したぶん↓" : "足したいことがあれば、マイクで話して（1回にひとつ）"}
                 </span>
-                {extra && <button className="rc-clear" onClick={() => setExtra("")}>消す</button>}
               </div>
+              {extra.map((x, i) => (
+                <div key={i} className="rc-extra">
+                  <span>{x}</span>
+                  <button onClick={() => setExtra((p) => p.filter((_, j) => j !== i))}
+                    aria-label="これを外す">×</button>
+                </div>
+              ))}
             </div>
 
             {/* 明日の感情（これも今日の話から起こす） */}
@@ -210,7 +237,7 @@ export function ReflectClose({
               <div className="rc-hint">違ったら、マイクで言い直してね。</div>
             </div>
 
-            <button className="rc-go" disabled={handing || (!emo.trim() && !Object.values(picked).some(Boolean) && !extra.trim())}
+            <button className="rc-go" disabled={handing || (!emo.trim() && !Object.values(picked).some(Boolean) && extra.length === 0)}
               onClick={() => void handOver()}>
               {handing ? "渡してる…" : "明日へ渡して、今日を閉じる"}
             </button>

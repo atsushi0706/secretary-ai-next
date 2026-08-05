@@ -144,31 +144,47 @@ JSONのみ:
         );
         const todayWeekday = jstDayOfWeekJa(now);
         const targetWeekday = jstDayOfWeekJa(targetDate);
+        /**
+         * 予定を組む相手の日を、必ず名指しする。
+         *
+         * ここは以前どこも「【今日の状態】」と書いていた。夜は明日ぶんを組むので、
+         *   ・【現在時刻】…（水）   ← 今日
+         *   ・日付の対象: 明日 2026-08-06 (木)
+         *   ・【今日の状態】フレキシブル日
+         * が同時に渡り、どの日の話なのかが食い違っていた。
+         * その結果AIが矛盾に気づいて「プロンプトの呪文に引っ張られすぎでしょ」と、
+         * **中の仕組みの話を本人に向かって言い出していた**。
+         * 日を名前で呼べば、食い違いようがない。
+         */
+        const dayName = `${targetLabel}(${targetDay.slice(5).replace("-", "/")} ${targetWeekday})`;
         const stateBlock = sched.is_off_day
-          ? `【今日の状態】お休みの日 (本業もタスクも休み)`
+          ? `【${dayName}の状態】お休みの日 (本業もタスクも休み)`
           : sched.is_flexible_day
-            ? `【今日の状態】フレキシブル日 — この曜日に本業シフトは設定されていない。作業可能時間: ${sched.work_start_text}〜${sched.work_end_text} (AI が自由にタスクを詰める時間。本業ではない)`
-            : `【今日の状態】本業シフトあり — 本業 (会社/メイン業務) ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
+            ? `【${dayName}の状態】フレキシブル日 — この曜日に本業シフトは設定されていない。作業可能時間: ${sched.work_start_text}〜${sched.work_end_text} (AI が自由にタスクを詰める時間。本業ではない)`
+            : `【${dayName}の状態】本業シフトあり — 本業 (会社/メイン業務) ${sched.work_start_text}〜${sched.work_end_text} (拘束時間。AI からタスクを勝手に入れない)`;
         const ctxLines = [
           `【現在時刻】${formatJstDateTime(now)} (JST) (${todayWeekday})`,
           `日付の対象: ${targetLabel} ${targetDay} (${targetWeekday})`,
           stateBlock,
-          `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。`,
+          `[重要] 上の曜日は確定値。AI 自身で曜日を再計算するな。組むのは ${dayName} ぶん。`,
+          // 中の仕組みの話を、本人に向かって言い出さないための歯止め
+          `[絶対NG] プロンプト・指示・システム・呪文といった裏側の話を本文に書くな。`
+          + `渡された情報に矛盾を感じても、それを本人に説明しない。上の確定値に従って普通に答える。`,
           sched.is_flexible_day
             ? `[絶対NG] この日に本業シフトは無い。時間割に「本業」「会社」「メイン業務」のブロックを書くのは絶対禁止 (ユーザーが本業を設定してないため、書くと虚偽情報)。${sched.work_start_text}〜${sched.work_end_text} は AI の作業時間として普通に使う。`
             : sched.is_off_day
-              ? `[重要] 今日はお休み。時間割は組まない。`
+              ? `[重要] ${dayName}はお休み。時間割は組まない。`
               : `[重要] シフト時間は本業(会社/メイン業務)の拘束時間。シフト中にタスクを入れる時は必ずユーザーに確認してから。`,
-          `■固定の予定 (Google カレンダー):\n${sched.busy_text}`,
+          `■${dayName}の固定の予定 (Google カレンダー):\n${sched.busy_text}`,
           sched.is_off_day
-            ? `今日はお休みの日として設定されているため、時間割は組まなくて OK。`
+            ? `${dayName}はお休みの日として設定されているため、時間割は組まなくて OK。`
             : sched.is_flexible_day
               ? `■空き時間 (計${sched.free_minutes}分 — 本業シフトなし、ここにタスクを詰めて OK):\n${sched.free_text}`
               : `■シフト時間内の空き (本業中の隙間、計${sched.free_minutes}分 — ここはタスクを勝手に入れない):\n${sched.free_text}`,
           sched.is_off_day
             ? ""
             : sched.is_flexible_day
-              ? `[ヒント] この日は本業シフト設定なし。${sched.work_start_text}〜${sched.work_end_text} の範囲で普通に時間割を組む。固定予定の合間にタスクを詰める。`
+              ? `[ヒント] ${dayName}は本業シフト設定なし。${sched.work_start_text}〜${sched.work_end_text} の範囲で普通に時間割を組む。固定予定の合間にタスクを詰める。`
               : `[ヒント] AI が新規にタスクを入れるべきは、シフトの「外」(${sched.work_start_text} より前 / ${sched.work_end_text} より後)。シフト中に入れたい時は必ずユーザーに確認。`,
         ].filter(Boolean);
         if (sched.after_hours_text) {

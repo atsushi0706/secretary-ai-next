@@ -391,7 +391,9 @@ function EveningBriefingCard({
 }: {
   briefing: { body: string; created_at: string };
 }) {
-  const [collapsed, setCollapsed] = useState(false);
+  // 既定は閉じておく。朝いちで開くと、この長い文章が画面を埋めてしまう。
+  // 読みたい人は「▼ 開く」を押せばいい。
+  const [collapsed, setCollapsed] = useState(true);
   const created = new Date(briefing.created_at);
   const m = `${created.getMonth() + 1}/${created.getDate()} ${String(created.getHours()).padStart(2, "0")}:${String(created.getMinutes()).padStart(2, "0")}`;
   // 簡易: 時刻範囲行をハイライト

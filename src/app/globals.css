@@ -6209,3 +6209,16 @@ body:has(.realverse-bg) { background: transparent; }
   --singa-ink-soft: #c3b291;
   --singa-gold: #e0bd72;
 }
+
+/* 話して足したぶん（1回のマイクで1件。読点で切らない） */
+.rc-extra {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px; border-radius: 12px;
+  font-size: .78rem; line-height: 1.6; color: var(--singa-ink);
+  background: rgba(238,214,155,.12); border: 1px solid rgba(238,214,155,.45);
+}
+.rc-extra span { flex: 1; min-width: 0; }
+.rc-extra button {
+  width: 24px; height: 24px; border-radius: 7px; flex: 0 0 auto;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
+}

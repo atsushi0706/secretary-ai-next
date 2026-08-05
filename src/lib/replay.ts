@@ -51,6 +51,12 @@ export type Replay = {
    *   話した内容から候補を出して、違えば言い直してもらう形にした。
    */
   emotion: string;
+  /**
+   * なぜその感情なのか（1〜2文）。
+   * 翌朝の「今日のフォーカス」に添える一言。
+   * ——以前ここに会話まるごとを入れていたので、朝の画面にやり取りが貼りついていた。
+   */
+  emotionWhy: string;
 };
 
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
@@ -167,6 +173,7 @@ export async function buildReplay(userId: string, saidToday: string): Promise<Re
     tomorrow: [],
     emotion: "",
     dayKind: "",
+    emotionWhy: "",
   };
 
   const prompt = `あなたは ${s?.secretary_name || "清瀬リンク"}。${who} の相棒。
@@ -188,7 +195,8 @@ export async function buildReplay(userId: string, saidToday: string): Promise<Re
   "meaning": "今日の意味を1つ（50〜80字）。進んだ日はその進みを指す。動かなかった日は「内に向く時期だった」方向で",
   "tomorrow": ["明日の朝いちにやること（20字以内）", "…最大3つ"],
   "emotion": "明日の夜こうなっていたい、という感情を1語（10字以内。例：満ちている／軽い／誇らしい）",
-  "dayKind": "今日はどんな一日だったか。下の8つの中の英字キーを1つだけ"
+  "dayKind": "今日はどんな一日だったか。下の8つの中の英字キーを1つだけ",
+  "emotion_why": "なぜその感情でいたいのか（40〜70字）。翌朝これだけを読んで思い出せる一言にする"
 }
 
 # dayKind の8つ（どれが上等ということはない。判定しない）
@@ -230,6 +238,7 @@ ${season || "（読めない）"}`;
         .slice(0, 3),                      // 何があっても3つまで
       emotion: String(j.emotion ?? "").trim().slice(0, 20),
       dayKind: String(j.dayKind ?? "").trim().slice(0, 10),
+      emotionWhy: String(j.emotion_why ?? "").trim().slice(0, 160),
     };
   } catch {
     return fallback;

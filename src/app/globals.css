@@ -613,6 +613,27 @@ body:has(.realverse-bg) { background: transparent; }
   50%      { box-shadow: 0 0 0 8px rgba(200, 70, 60, 0); }
 }
 
+/* 話している間の様子（拾えているかが見えないと、話していいのか分からない） */
+.vi-state {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: .62rem; letter-spacing: .06em;
+  color: var(--singa-gold);
+  white-space: nowrap;
+}
+.vi-state .pulse {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #e2574c;
+  animation: vbar-pulse 1.2s ease-in-out infinite;
+}
+.vi-level {
+  display: inline-block; width: 54px; height: 5px;
+  border-radius: 999px; background: rgba(255,255,255,.14); overflow: hidden;
+}
+.vi-level span { display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg,#8fd07a,#eed69b); transition: width .12s linear; }
+.vi-err { font-size: .62rem; color: #ffb4ac; line-height: 1.5; }
+.singa-stage.is-bright .vi-state { color: #2f7fb0; }
+
 /* その場所のパネル */
 .singa-panel-wrap {
   position: absolute;
@@ -5294,6 +5315,80 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .rp-picks label.on { color: var(--singa-ink); background: rgba(238,214,155,.14); border-color: rgba(238,214,155,.5); }
 
+/* ── 今日を閉じる（ワールドリプレイの締め。部屋の中でひらく板） ── */
+.rc-open {
+  position: relative; z-index: 6;
+  display: block; margin: 0 auto 8px; padding: 9px 20px; border-radius: 999px;
+  font-size: .78rem; font-weight: 800; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e);
+  border: 1px solid rgba(255,255,255,.5);
+  box-shadow: 0 4px 16px rgba(0,0,0,.4);
+}
+.rc-wrap {
+  position: relative; z-index: 7;
+  margin: 0 auto 8px; width: 100%;
+  max-height: calc(var(--stage-h, 100dvh) - 150px); overflow-y: auto;
+}
+.rc-card {
+  display: flex; flex-direction: column; gap: 12px;
+  padding: 14px; border-radius: 16px;
+  background: rgba(12,10,22,.92);
+  border: 1px solid rgba(238,214,155,.32);
+  box-shadow: 0 10px 34px rgba(0,0,0,.55);
+}
+.rc-head { display: flex; align-items: center; justify-content: space-between;
+  font-size: .8rem; font-weight: 700; color: var(--singa-gold); }
+.rc-x { width: 28px; height: 28px; border-radius: 50%; color: var(--singa-ink-soft);
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); }
+.rc-busy, .rc-none { font-size: .76rem; color: var(--singa-ink-soft); line-height: 1.8; }
+.rc-err { font-size: .74rem; color: #ffb4ac; line-height: 1.7; }
+
+.rc-moved {
+  padding: 11px 13px; border-radius: 13px;
+  background: rgba(140,210,160,.1); border: 1px solid rgba(140,210,160,.4);
+  display: flex; flex-direction: column; gap: 4px;
+}
+.rc-moved.is-quiet { background: rgba(255,255,255,.045); border-color: rgba(255,255,255,.14); }
+.rc-moved-t { font-size: .78rem; font-weight: 700; color: #8fd0a0; margin-bottom: 3px; }
+.rc-moved.is-quiet .rc-moved-t { color: var(--singa-ink-soft); }
+.rc-line { font-size: .73rem; line-height: 1.8; color: var(--singa-ink); }
+.rc-line.is-in { color: var(--singa-ink-soft); }
+
+.rc-say { padding: 11px 13px; border-radius: 13px;
+  background: rgba(238,214,155,.08); border: 1px solid rgba(238,214,155,.3); }
+.rc-recv { font-size: .76rem; color: var(--singa-gold); margin-bottom: 5px; }
+.rc-mean { font-size: .84rem; line-height: 1.95; color: var(--singa-ink); }
+
+.rc-sec { display: flex; flex-direction: column; gap: 8px; }
+.rc-q { font-size: .82rem; font-weight: 700; color: var(--singa-ink); }
+.rc-hint { font-size: .68rem; color: var(--singa-ink-soft); }
+.rc-picks { display: flex; flex-direction: column; gap: 6px; }
+.rc-picks label {
+  display: flex; align-items: flex-start; gap: 9px; cursor: pointer;
+  padding: 10px 13px; border-radius: 12px; font-size: .78rem; line-height: 1.6;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14);
+}
+.rc-picks label.on { color: var(--singa-ink); background: rgba(238,214,155,.14); border-color: rgba(238,214,155,.5); }
+.rc-picks input { width: 18px; height: 18px; flex: 0 0 auto; margin-top: 1px; }
+
+.rc-add { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.rc-addlabel { flex: 1 1 130px; font-size: .74rem; line-height: 1.7; color: var(--singa-ink-soft); }
+.rc-clear { font-size: .68rem; color: var(--singa-ink-soft); text-decoration: underline; }
+
+.rc-emorow { display: flex; align-items: center; gap: 11px; }
+.rc-emoval { flex: 1; font-size: .95rem; font-weight: 700; color: var(--singa-gold); }
+.rc-emoval.is-empty { font-size: .76rem; font-weight: 400; color: var(--singa-ink-soft); }
+
+.rc-go {
+  margin-top: 2px; padding: 13px; border-radius: 13px;
+  font-size: .84rem; font-weight: 800; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}
+.rc-go:disabled { opacity: .45; }
+.rc-card.is-done { align-items: center; text-align: center; font-size: .82rem; color: var(--singa-ink); }
+.rc-emo, .rc-acts, .rc-note { font-size: .76rem; line-height: 1.8; color: var(--singa-ink-soft); }
+.rc-emo em { font-style: normal; color: var(--singa-gold); font-weight: 700; }
+
 /* ── タイムトラベルボックス ── */
 .tt-screen {
   position: relative; z-index: 3;
@@ -5872,6 +5967,17 @@ body:has(.realverse-bg) { background: transparent; }
   background: rgba(238,214,155,.12); border: 1px solid rgba(238,214,155,.35);
 }
 .wtut-sec { margin-top: 16px; }
+/* どの部屋でも出す「打つより話して」 */
+.wtut-voice {
+  display: flex; gap: 11px; margin-top: 16px;
+  padding: 13px 14px; border-radius: 14px;
+  background: rgba(238,214,155,.1); border: 1px solid rgba(238,214,155,.42);
+}
+.wtut-voice-i { font-size: 1.15rem; line-height: 1.4; flex: 0 0 auto; }
+.wtut-voice b { font-size: .86rem; color: #f4d99a; }
+.wtut-voice p { font-size: .78rem; line-height: 1.9; color: var(--singa-ink, #f4e7c8); margin-top: 4px; }
+.wtut-voice p b { font-size: inherit; }
+.wtut-voice .wtut-voice-s { font-size: .71rem; color: var(--singa-ink-soft, #c3b291); }
 .wtut-t { font-size: .62rem; letter-spacing: .14em; color: var(--singa-gold, #e0bd72); margin-bottom: 8px; }
 .wtut-p { font-size: .82rem; line-height: 1.95; color: #e8dcc6; }
 .wtut-p b, .wtut-steps b, .wtut-tips b { color: #fff; }
@@ -5910,4 +6016,30 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .quest-offer .qo-note {
   font-size: .68rem; color: var(--singa-ink-soft, #c3b291); margin-bottom: 12px;
+}
+
+/* 入力欄の上の「打つより、話して」
+   （このファイルには vbar の定義が2箇所あるので、最後にまとめて置く） */
+.vbar-urge {
+  font-size: .68rem; line-height: 1.7; letter-spacing: .02em;
+  color: var(--singa-ink-soft, #c3b291);
+  margin-bottom: 6px;
+}
+.vbar-urge b { color: #f4d99a; }
+.singa-stage.is-bright .vbar-urge { color: #4a6480; }
+.singa-stage.is-bright .vbar-urge b { color: #23324a; }
+
+/* 今日はどんな一日だったか（話から起こして、違えば押して直す） */
+.rc-kinds { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.rc-kinds button {
+  display: flex; flex-direction: column; align-items: center; gap: 3px;
+  padding: 9px 4px; border-radius: 11px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14);
+  color: var(--singa-ink-soft, #c3b291);
+}
+.rc-kinds button .e { font-size: 1.05rem; line-height: 1.2; }
+.rc-kinds button .l { font-size: .58rem; letter-spacing: -.02em; }
+.rc-kinds button.on {
+  color: var(--singa-ink, #f4e7c8);
+  background: rgba(238,214,155,.16); border-color: rgba(238,214,155,.6);
 }

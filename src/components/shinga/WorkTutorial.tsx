@@ -80,6 +80,26 @@ export function WorkTutorial({ mode, first, onClose }: {
           <p className="wtut-p">{rich(h.purpose)}</p>
         </div>
 
+        {/*
+          どの部屋でも、いちばん先に渡したいのはこれ。
+          打つと、頭で整えてから出すことになる。話すと、整う前のものがそのまま出る。
+          このアプリで起きてほしいのは後者なので、入口で必ず言う。
+        */}
+        <div className="wtut-voice">
+          <span className="wtut-voice-i">🎙</span>
+          <div>
+            <b>打つより、話して。</b>
+            <p>
+              打つと、頭で整えてから出すことになる。話すと、整う前の気持ちがそのまま出る。
+              <b>変わるのは、そっち。</b>
+            </p>
+            <p className="wtut-voice-s">
+              マイクを押して、話し終わったらもう一度押すだけ。黙っても切れないから、考えながらでいいよ。
+              （まわりに人がいるときは、もちろん打ってもいい）
+            </p>
+          </div>
+        </div>
+
         <div className="wtut-sec">
           <div className="wtut-t">こういう風に使います</div>
           <ol className="wtut-steps">

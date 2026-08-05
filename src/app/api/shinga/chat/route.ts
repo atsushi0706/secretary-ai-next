@@ -212,6 +212,31 @@ export async function POST(req: Request) {
           } catch { /* 引けなくても会話は進む */ }
         }
 
+        // ワールドリプレイ（夜の部屋）は「1日を閉じる」場所。
+        // 今日ほんとうに何が起きたか（事実）と、今日ワークで本人が言ったことを渡す。
+        // ——事実をAIに数えさせると、盛る／落とすの両方が起きる。だからこちらで数えて渡す。
+        if (mode === "reflect" && !greet) {
+          try {
+            const { todaysProgress, todaysSaid } = await import("@/lib/replay");
+            const [prog, said] = await Promise.all([
+              todaysProgress(userId).catch(() => null),
+              todaysSaid(userId).catch(() => ""),
+            ]);
+            const lines: string[] = ["# 今日の記録（事実。ここにあることだけが本当に起きたこと）"];
+            if (prog) {
+              lines.push(`- 前に進んだこと（${prog.movedCount}件）：${prog.moved.join(" / ") || "なし"}`);
+              lines.push(`- 内に向いたこと：${prog.inward.join(" / ") || "なし"}`);
+              if (prog.movedCount === 0 && prog.inward.length === 0) {
+                lines.push("- **今日は記録が無い。** 無理に褒めない。「静かな日だった」という方向で受ける。");
+              }
+            }
+            if (said) {
+              lines.push("", "# 今日、ワークの中で本人が言ったこと（引いていい。ここに無いことは言わない）", said);
+            }
+            pastCtx = [pastCtx, lines.join("\n")].filter(Boolean).join("\n\n");
+          } catch { /* 引けなくても会話は進む */ }
+        }
+
         // いまの進行状況（画面に出ている段階）。これが無いとAIは自分がどこまで進めたか分からず、
         // 同じ質問を繰り返して「1/9のまま堂々巡り」になる。
         let progressCtx = "";

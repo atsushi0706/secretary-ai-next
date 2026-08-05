@@ -38,6 +38,19 @@ export type Replay = {
   meaning: string;
   /** 明日の朝いちにやること（最大3つ。AIが今日の話から起こす） */
   tomorrow: string[];
+  /**
+   * 今日はどんな一日だったか（8種類のどれか）。
+   * ——ここも「8つのボタンから選ぶ」形にしていたが、選ばせるより
+   *   話した内容から起こして、違えば直してもらうほうが早い。
+   *   週のふりかえりがこの記録を使うので、絶対に落とせない。
+   */
+  dayKind: string;
+  /**
+   * 明日の夜、どんな感情になっていたいか（AIが今日の話から起こす）。
+   * ——ここを空欄にして本人に打たせていたが、打つのは負担が大きい。
+   *   話した内容から候補を出して、違えば言い直してもらう形にした。
+   */
+  emotion: string;
 };
 
 const WD = ["日", "月", "火", "水", "木", "金", "土"];
@@ -101,7 +114,7 @@ export async function todaysProgress(userId: string): Promise<ReplayProgress> {
  * 振り返りは「引いていい場所」なので、ここは渡す。
  * （個別のワークには渡さない。言っていないことが混ざる事故になるため）
  */
-async function todaysWorks(userId: string): Promise<string> {
+export async function todaysSaid(userId: string): Promise<string> {
   try {
     const supa = supabaseAdmin();
     const today = jstDateStr();
@@ -141,7 +154,7 @@ export async function buildReplay(userId: string, saidToday: string): Promise<Re
     todaysProgress(userId),
     todaysSeason(userId),
     getUserSettings(userId).catch(() => null) as Promise<any>,
-    todaysWorks(userId),
+    todaysSaid(userId),
   ]);
   const who = s?.user_call_name || "きみ";
 
@@ -152,6 +165,8 @@ export async function buildReplay(userId: string, saidToday: string): Promise<Re
       ? "今日、ちゃんと前に進んでる。"
       : "今日は動かない日だった。それも要る時間だよ。",
     tomorrow: [],
+    emotion: "",
+    dayKind: "",
   };
 
   const prompt = `あなたは ${s?.secretary_name || "清瀬リンク"}。${who} の相棒。
@@ -171,10 +186,23 @@ export async function buildReplay(userId: string, saidToday: string): Promise<Re
 {
   "received": "今日の話を受ける一言（20字以内。『オッケー、受け取った』程度の軽さ）",
   "meaning": "今日の意味を1つ（50〜80字）。進んだ日はその進みを指す。動かなかった日は「内に向く時期だった」方向で",
-  "tomorrow": ["明日の朝いちにやること（20字以内）", "…最大3つ"]
+  "tomorrow": ["明日の朝いちにやること（20字以内）", "…最大3つ"],
+  "emotion": "明日の夜こうなっていたい、という感情を1語（10字以内。例：満ちている／軽い／誇らしい）",
+  "dayKind": "今日はどんな一日だったか。下の8つの中の英字キーを1つだけ"
 }
 
-# 今日 ${who} が話したこと（振り返りの画面で書いたもの）
+# dayKind の8つ（どれが上等ということはない。判定しない）
+full=満ちた日（うれしい・満たされた） / burn=燃えた日（集中して動けた）
+calm=しずかな日（おだやか・ゆっくり） / wave=ゆれた日（気持ちが上下した）
+fog=もやの日（はっきりしない） / spark=ざわめいた日（焦り・いらいら）
+hold=ふんばった日（しんどい中たえた） / empty=からっぽの日（つかれはてた）
+——本人の話しぶりから素直に選ぶ。良い日に寄せない。手がかりが無ければ空文字。
+
+# emotion について
+${who} が今日話したことから起こす。今日の話に手がかりが無ければ空文字にする。
+勝手に立派な感情にしない。今日の話の続きとして自然なものを1つ。
+
+# 今日 ${who} が話したこと（この夜の部屋でのやり取り）
 ${saidToday.slice(0, 1200) || "（まだ何も話していない）"}
 
 # 今日、ワークの中で ${who} が言ったこと（ここは引いていい。ただし無いことは言わない）
@@ -200,6 +228,8 @@ ${season || "（読めない）"}`;
         .map((t: any) => String(t ?? "").trim())
         .filter(Boolean)
         .slice(0, 3),                      // 何があっても3つまで
+      emotion: String(j.emotion ?? "").trim().slice(0, 20),
+      dayKind: String(j.dayKind ?? "").trim().slice(0, 10),
     };
   } catch {
     return fallback;

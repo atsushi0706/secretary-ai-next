@@ -13,7 +13,7 @@ import { useDictation } from "@/components/useDictation";
 export function VoiceBar({
   onSend,
   disabled,
-  placeholder = "話す、または書く",
+  placeholder = "🎙 マイクを押して、話してみて",
 }: {
   onSend: (text: string) => void | Promise<void>;
   disabled?: boolean;
@@ -68,6 +68,17 @@ export function VoiceBar({
         </div>
       )}
       {d.error && <div className="vbar-err">{d.error}</div>}
+
+      {/*
+        打つと、頭で整えてから出すことになる。話すと、整う前のものがそのまま出る。
+        だから入口では必ず「話して」と言う。——ただし、
+        ・もう話し始めている／打ち始めている
+        ・録音中・文字化中
+        ときは邪魔になるので引っ込める。
+      */}
+      {!text && d.phase === "idle" && !disabled && d.supported && (
+        <div className="vbar-urge">🎙 打つより、<b>話して</b>。そのほうが、気持ちごと届くよ。</div>
+      )}
 
       <div className="vbar-input">
         <textarea

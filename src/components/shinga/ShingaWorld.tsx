@@ -13,7 +13,7 @@ import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
-import { DailyReflection } from "./DailyReflection";
+import { ReflectClose } from "./ReflectClose";
 import { HeroScreen } from "./HeroScreen";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
@@ -188,7 +188,8 @@ export function ShingaWorld({
   const [typing, setTyping] = useState(false);
   const [moving, setMoving] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
-  const [dailyOpen, setDailyOpen] = useState(false);
+  // 今日を閉じる板（ワールドリプレイの部屋の中でひらく）
+  const [closing, setClosing] = useState(false);
   const [heroOpen, setHeroOpen] = useState(false);
   const [vaultOpen, setVaultOpen] = useState(false);   // カード保管庫
   const [weeklyOpen, setWeeklyOpen] = useState(false); // タイムトラベルボックス（過去の宝箱）
@@ -398,7 +399,7 @@ export function ShingaWorld({
   const openedRef = useRef(false);
   useEffect(() => {
     if (openedRef.current) return;
-    if (openPanel === "daily") { openedRef.current = true; setDailyOpen(true); return; }
+    if (openPanel === "daily") { openedRef.current = true; void enter("reflect"); return; }
     if (openPanel === "weekly") { openedRef.current = true; setWeeklyOpen(true); return; }
     if (!openMode) return;
     openedRef.current = true;
@@ -517,6 +518,7 @@ export function ShingaWorld({
     setShadowGate(false); setBeastReveal(null); setShadowCard(null);
     shadowPairRef.current = null; shadowSafetyRef.current = "normal";
     setTodayManual(false);
+    setClosing(false);          // 夜の「今日を閉じる」板を持ち越さない
     childShownRef.current = false;
   }
 
@@ -1195,15 +1197,13 @@ export function ShingaWorld({
         <ManualScreen guideName={guideName} onBack={() => setManualOpen(false)} />
       ) : weightOpen ? (
         <WeightPanel guideName={guideName} avatarUrl={faceSrc} onBack={() => setWeightOpen(false)} />
-      ) : dailyOpen ? (
-        <DailyReflection guideName={guideName} avatarUrl={faceSrc} onBack={() => setDailyOpen(false)} />
       ) : view === "home" ? (
         <Home
           guideName={guideName}
           avatarUrl={faceSrc}
           onPick={(m) => void enter(m)}
           onTalk={(t) => void enterFree(t)}
-          onDaily={() => setDailyOpen(true)}
+          onDaily={() => void enter("reflect")}
           onHero={() => setHeroOpen(true)}
           onVault={() => setVaultOpen(true)}
           onCrystalVault={() => setVaultCrystalOpen(true)}
@@ -1473,6 +1473,24 @@ export function ShingaWorld({
           {/* パラレルウォーク：1対1で完結。終わるボタンだけ出す */}
           {mode === "walk" && (
             <button className="walk-end-btn" onClick={endWalk}>🌱 終わる</button>
+          )}
+
+          {/* ワールドリプレイ：ひとこと話したら「今日を閉じる」を出す。
+              明日のことを聞き出すのはAIではなく、このボタン。話した内容から起こす。 */}
+          {mode === "reflect" && !closing && messages.some((m) => m.role === "user") && (
+            <button className="rc-open" onClick={() => setClosing(true)}>
+              🌙 今日を閉じる（話したことから明日を決める）
+            </button>
+          )}
+          {mode === "reflect" && closing && (
+            <ReflectClose
+              said={messages
+                .filter((m) => m.content?.trim())
+                .map((m) => `${m.role === "user" ? "本人" : guideName}：${m.content}`)
+                .join("\n")}
+              onClose={() => setClosing(false)}
+              onDone={() => { setClosing(false); setView("home"); setMode(null); }}
+            />
           )}
 
           {/* 音声入力バー */}

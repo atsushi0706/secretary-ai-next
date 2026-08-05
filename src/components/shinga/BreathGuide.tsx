@@ -42,20 +42,25 @@ function buildSteps(emotionRaw?: string): Step[] {
   const steps: Step[] = [
     { instr: emotion ? `立って、体を軽くゆらそう（未来の「${emotion}」を入れる準備）` : "立って、体を軽くゆらそう", say: L("intro"), count: SETTLE, scale: 1, voice: "intro" },
   ];
-  for (let i = 0; i < 3; i++) {
+  /**
+   * 吐く回数は **3回**。
+   *
+   * 以前は「3回まわしたあと、最後にもう一度」を足していたので、
+   * 実際には4回吐くことになっていた。締めの一言は、3回目の整えに寄せる。
+   */
+  const ROUNDS = 3;
+  for (let i = 0; i < ROUNDS; i++) {
+    const last = i === ROUNDS - 1;
     steps.push(
       { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, round: i + 1, say: L(`ex${i + 1}`), count: EXHALE, scale: 0.35, img: IMG_EXHALE, voice: `ex${i + 1}` },
-      { instr: `吐ききったら、少し止める（真空を作る・${HOLD}秒）`, round: i + 1, say: L("hold"), count: HOLD, scale: 0.28, img: IMG_HOLD, voice: "hold" },
-      { instr: inhaleInstr, say: L("inhale"), count: INHALE, scale: 1.1, img: IMG_INHALE, voice: "inhale" },
-      { instr: "ゆっくり、呼吸を整える", say: L("settle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "settle" },
+      { instr: `吐ききったら、少し止める（真空を作る・${HOLD}秒）`, round: i + 1, say: L(last ? "lasthold" : "hold"), count: HOLD, scale: last ? 0.24 : 0.28, img: IMG_HOLD, voice: last ? "lasthold" : "hold" },
+      { instr: last && emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : inhaleInstr,
+        say: L("inhale"), count: INHALE, scale: last ? 1.12 : 1.1, img: IMG_INHALE, voice: "inhale" },
+      last
+        ? { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: L("lastsettle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "lastsettle" }
+        : { instr: "ゆっくり、呼吸を整える", say: L("settle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "settle" },
     );
   }
-  steps.push(
-    { instr: "最後にもう一度、口をすぼめて吐ききる", say: L("lastex"), count: EXHALE, scale: 0.3, img: IMG_EXHALE, voice: "lastex" },
-    { instr: `少し止める（真空を作る・${HOLD}秒）`, say: L("lasthold"), count: HOLD, scale: 0.24, img: IMG_HOLD, voice: "lasthold" },
-    { instr: emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : "一気に、強く吸う", say: L("inhale"), count: INHALE, scale: 1.12, img: IMG_INHALE, voice: "inhale" },
-    { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: L("lastsettle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "lastsettle" },
-  );
   return steps;
 }
 

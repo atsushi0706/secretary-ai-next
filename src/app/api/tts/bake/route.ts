@@ -13,6 +13,7 @@ import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase";
 import { BREATH_LINES, BAKE_BUCKET, bakePath, totalChars } from "@/lib/breath-lines";
+import { toYomi } from "@/lib/yomi";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -79,7 +80,9 @@ export async function POST() {
         method: "POST",
         headers: { "xi-api-key": key, "Content-Type": "application/json", Accept: "audio/mpeg" },
         body: JSON.stringify({
-          text: line.text,
+          // 読みなおしを通してから焼く。
+          // 通していなかったので「吐ききって」が「つききって」と焼き込まれていた。
+          text: toYomi(line.text),
           model_id: EL_MODEL,
           voice_settings: { stability: 0.42, similarity_boost: 0.8, style: 0.25, use_speaker_boost: true },
         }),

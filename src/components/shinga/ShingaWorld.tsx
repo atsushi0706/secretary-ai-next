@@ -981,8 +981,16 @@ export function ShingaWorld({
     return () => clearTimeout(t);
   }, [bgUrl]);
 
-  // 「今日の取扱説明書」を読んでいる間は、ゾーンのパネルを重ねない
-  const hasPanel = here.panel !== "none" && !todayManual;
+  /**
+   * ゾーンのパネル（呼吸／流れを読む）を出すか。
+   *
+   * 部屋によっては、見た目のために別のゾーンを「借りて」いる。
+   * クリスタルルームは akashic を借りているので、そのままだと
+   * **クリスタルルームにアカシックの「流れを読む・落とし込む」が出てしまう**（実際に出ていた）。
+   * パネルは、そのゾーン本来のワークにいるときだけ出す。
+   */
+  const ownPlace = !mode || MODES[mode].place === mode;
+  const hasPanel = here.panel !== "none" && !todayManual && ownPlace;
   // パラレルウォークだけ、明るい空の画面にする（暗いと沈むので）
   const bright = view === "talk" && place === "walk";
 

@@ -16,6 +16,7 @@ const LOCKABLE: { key: string; label: string }[] = [
   { key: "peak", label: "ピークステート" },
   { key: "walk", label: "パラレルウォーク" },
   { key: "akashic", label: "アカシックレコーダー" },
+  { key: "crystal", label: "クリスタルルーム" },
   { key: "higher", label: "ハイヤークエスト" },
   { key: "deep", label: "ディープアイデンティティ" },
   { key: "travel", label: "パラレルトラベル" },

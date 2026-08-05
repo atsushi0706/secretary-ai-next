@@ -7,7 +7,7 @@
  */
 import { placesForPrompt, PLACES, type PlaceKey } from "./places";
 import { buildStarPrompt, computeCycles } from "./star";
-import { buildModePrompt, type ModeKey } from "./modes";
+import { buildModePrompt, MODES, type ModeKey } from "./modes";
 import { diagnoseSeimei } from "./seimei";
 import { splitFullName } from "./name";
 import { buildReframePrompt } from "./reframe";
@@ -94,6 +94,19 @@ export function buildGuidePersona(opts: {
   const name = opts.guideName || "清瀬リンク";
   const who = opts.userCallName || "きみ";
   const here = PLACES[opts.place] ?? PLACES.peak;
+  /**
+   * 見た目のために別のゾーンを「借りて」いる部屋がある。
+   * そのままゾーンの説明を渡すと、**その場所の話が会話に混ざる**。
+   * 実際、クリスタルルーム（akashic を借りている）に
+   * 「記録から洞察を受け取る」というアカシックの話が入り込んでいた。
+   * 借りものの場合は、ゾーンではなく **そのワークの名前** を渡す。
+   */
+  const mm = opts.mode ? MODES[opts.mode] : null;
+  const borrowed = !!mm && mm.place !== mm.key;
+  const hereName = borrowed
+    ? `${mm!.label}（${mm!.en}）。${mm!.desc}
+※ 背景の絵は別の場所のものを使っているが、**ここは ${mm!.label} である**。他の場所の話は持ち出さない。`
+    : `${here.ja}（${here.en}）。${here.tagline}`;
 
   /**
    * 過去の情報（生まれ持った傾向・名前から読んだ性質）を持ち込んでよい場所は限られる。
@@ -141,7 +154,7 @@ ${opts.todayStr ? `- 今日は ${opts.todayStr}。いまのこの会話は「今
 （怒りは無し）
 
 # いまいる場所
-${here.ja}（${here.en}）。${here.tagline}
+${hereName}
 
 # 行ける場所
 ${placesForPrompt()}

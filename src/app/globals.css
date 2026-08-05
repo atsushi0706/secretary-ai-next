@@ -5737,3 +5737,78 @@ body:has(.realverse-bg) { background: transparent; }
 .czl-when label { display: block; font-size: .7rem; color: var(--singa-ink-soft); margin-bottom: 6px; }
 .czl-sent { margin-top: 14px; padding: 11px 13px; border-radius: 12px; font-size: .8rem;
   color: #cfe6cf; background: rgba(140,200,120,.14); border: 1px solid rgba(140,200,120,.3); }
+
+/* ホームの音声入力：話しかけて行き先を決める */
+.hv {
+  width: min(560px, 100%); margin: 10px auto 0; border-radius: 16px;
+  background: rgba(20,16,11,.78); border: 1px solid rgba(232,189,114,.34);
+  backdrop-filter: blur(8px); overflow: hidden;
+}
+.hv-head {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 15px; font-size: .82rem; font-weight: 800; color: var(--singa-ink, #f4e7c8);
+  background: transparent; border: 0;
+}
+.hv-t { color: var(--singa-gold, #e0bd72); }
+.hv-toggle { font-size: .68rem; color: var(--singa-ink-soft, #c3b291); font-weight: 700; }
+.hv-body { padding: 0 15px 15px; }
+.hv-lead { font-size: .76rem; line-height: 1.9; color: var(--singa-ink-soft, #c3b291); margin-bottom: 10px; }
+.hv-lead b { color: var(--singa-ink, #f4e7c8); }
+.hv-input textarea {
+  width: 100%; padding: 11px 12px; border-radius: 12px; resize: vertical;
+  font-size: .86rem; line-height: 1.7; color: var(--singa-ink, #f4e7c8);
+  background: rgba(255,255,255,.07); border: 1px solid rgba(232,189,114,.28);
+}
+.hv-btns { display: flex; align-items: center; gap: 10px; margin-top: 9px; }
+.hv-go {
+  flex: 1; padding: 11px 0; border-radius: 999px; font-size: .84rem; font-weight: 900;
+  color: #221b10; background: linear-gradient(160deg,#eed69b,#d9b463); border: 0;
+}
+.hv-go:disabled { opacity: .45; }
+.hv-err { margin-top: 10px; font-size: .76rem; color: #f0a8a0; }
+.hv-answer {
+  margin-top: 13px; padding-top: 12px; border-top: 1px solid rgba(232,189,114,.2);
+  animation: hv-in .3s cubic-bezier(.15,.8,.25,1);
+}
+@keyframes hv-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.hv-asked { font-size: .72rem; color: var(--singa-ink-soft, #c3b291); margin-bottom: 7px; }
+.hv-say { font-size: .86rem; line-height: 1.85; color: var(--singa-ink, #f4e7c8); margin-bottom: 11px; }
+.hv-pick {
+  width: 100%; display: flex; flex-direction: column; gap: 3px; text-align: left;
+  padding: 12px 14px; margin-bottom: 8px; border-radius: 13px;
+  background: rgba(238,214,155,.12); border: 1px solid rgba(238,214,155,.45);
+  transition: transform .14s ease;
+}
+.hv-pick:active { transform: scale(.985); }
+.hv-pick-t { font-size: .88rem; font-weight: 900; color: #f4d99a; }
+.hv-pick-w { font-size: .74rem; color: var(--singa-ink, #f4e7c8); }
+.hv-pick-o { font-size: .68rem; color: var(--singa-ink-soft, #c3b291); }
+.hv-plain {
+  width: 100%; padding: 10px 0; border-radius: 999px; font-size: .76rem; font-weight: 700;
+  color: var(--singa-ink-soft, #c3b291);
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14);
+}
+
+/* 説明書：部屋ごとの説明（折りたたみ） */
+.gd-works { display: flex; flex-direction: column; gap: 8px; }
+.gd-work {
+  border-radius: 12px; overflow: hidden;
+  background: rgba(255,255,255,.04); border: 1px solid rgba(238,214,155,.24);
+}
+.gd-work > summary {
+  list-style: none; cursor: pointer; padding: 13px 15px;
+  display: flex; flex-direction: column; gap: 3px;
+}
+.gd-work > summary::-webkit-details-marker { display: none; }
+.gd-work > summary::after { content: "▼ 開く"; font-size: .64rem; color: rgba(240,230,210,.55); margin-top: 3px; }
+.gd-work[open] > summary::after { content: "▲ 閉じる"; }
+.gd-work > summary b { font-size: .92rem; color: #f4d99a; }
+.gd-work > summary em { font-style: normal; font-size: .76rem; color: rgba(240,230,210,.78); }
+.gd-work-b { padding: 0 15px 15px; border-top: 1px solid rgba(238,214,155,.16); padding-top: 12px; }
+.gd-work-b p { font-size: .82rem; line-height: 1.95; color: #e8dcc6; margin-bottom: 4px; }
+.gd-work-b b { color: #fff; }
+.gd-work-w {
+  margin-top: 11px; padding: 9px 11px; border-radius: 10px;
+  font-size: .74rem; line-height: 1.7; color: #e0bd72;
+  background: rgba(238,214,155,.1); border: 1px solid rgba(238,214,155,.25);
+}

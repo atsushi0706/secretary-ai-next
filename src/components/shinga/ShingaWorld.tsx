@@ -6,6 +6,7 @@ import { PLACES, type PlaceKey } from "@/lib/places";
 import { MODES, MODE_OPENERS, type ModeKey, MODE_KEYS } from "@/lib/modes";
 import { introOf } from "@/lib/mode-intro";
 import { VoiceBar } from "./VoiceBar";
+import { HomeVoice } from "./HomeVoice";
 import { PeakPanel } from "./PeakPanel";
 import { AkashicPanel } from "./AkashicPanel";
 import { EmotionMeter, emoName } from "./EmotionMeter";
@@ -1744,6 +1745,14 @@ function Home({
       </div>
 
       {/* ゲームHUD：空想↔現実のバランス＋ハイヤークエスト */}
+      {/* 話しかけて行き先を決める。扉が並んでいても、初めての人には
+          どれが自分に要るのか分からないため。 */}
+      <HomeVoice
+        openWorks={MODE_KEYS.filter((k) => !lockedWorks.includes(k))}
+        onGo={(m) => onPick(m)}
+        onTalk={(t) => onTalk(t)}
+      />
+
       <InnerHud guideName={guideName} onTalkBalance={onBalance} />
 
       {/* または、行き先を選ぶ */}

@@ -67,8 +67,14 @@ export default function AdminPage() {
    * 自動では取られないので、月に1回ここから落として保管しておく。
    * （以前は設定ページに置いていたが、運用の話なので管理画面にまとめた）
    */
-  const [dlBusy, setDlBusy] = useState<"mine" | "all" | "">("");
+  const [dlBusy, setDlBusy] = useState("");
   const [dlMsg, setDlMsg] = useState("");
+  /** いまどれくらい貯まっているか（無料枠で続けられるかを、数字で見る） */
+  const [usage, setUsage] = useState<{
+    tables: { table: string; rows: number; bytes: number; week: number }[];
+    totalBytes: number; weekRows: number; yearBytes: number; limitMB: number; monthsLeft: number | null;
+  } | null>(null);
+  const [usageOpen, setUsageOpen] = useState(false);
   const [grantMsg, setGrantMsg] = useState("");
 
   // 週刊レポートの承認待ち（OKを出すまで、本人には絶対に見えない）
@@ -172,6 +178,9 @@ export default function AdminPage() {
     fetch("/api/admin/locks").then((r) => r.json()).then((d) => {
       if (Array.isArray(d?.locked)) setLocked(d.locked.map(String));
     }).catch(() => {});
+    fetch("/api/admin/usage").then((r) => r.json()).then((d) => {
+      if (Array.isArray(d?.tables)) setUsage(d);
+    }).catch(() => {});
     fetch("/api/admin/flags").then((r) => r.json()).then((d) => {
       if (d?.flags) setFlags(d.flags);
       if (Array.isArray(d?.defs)) setFlagDefs(d.defs);
@@ -186,10 +195,12 @@ export default function AdminPage() {
   }, []);
 
   /** 控えを1つ落とす */
-  async function download(scope: "mine" | "all") {
-    setDlBusy(scope); setDlMsg("");
+  async function download(scope: "mine" | "all", readable: boolean) {
+    const tag = scope + (readable ? "-read" : "");
+    setDlBusy(tag); setDlMsg(readable ? "並べ直しています…（少し時間がかかります）" : "");
     try {
-      const r = await fetch(`/api/admin/export${scope === "mine" ? "?mine=1" : ""}`);
+      const q = [scope === "mine" ? "mine=1" : "", readable ? "read=1" : ""].filter(Boolean).join("&");
+      const r = await fetch(`/api/admin/export${q ? `?${q}` : ""}`);
       if (!r.ok) {
         const d = await r.json().catch(() => ({}));
         setDlMsg(d?.error ?? `取り出せませんでした（${r.status}）`);
@@ -197,7 +208,11 @@ export default function AdminPage() {
       }
       const blob = await r.blob();
       const cd = r.headers.get("Content-Disposition") ?? "";
-      const name = /filename="([^"]+)"/.exec(cd)?.[1] ?? "backup.json";
+      // 日本語のファイル名（filename*=UTF-8''…）にも対応する
+      const star = /filename\*=UTF-8''([^;]+)/.exec(cd)?.[1];
+      const name = star
+        ? decodeURIComponent(star)
+        : (/filename="([^"]+)"/.exec(cd)?.[1] ?? (readable ? "記録.txt" : "backup.json"));
       const url = URL.createObjectURL(blob);
       const a2 = document.createElement("a");
       a2.href = url; a2.download = name; a2.click();
@@ -427,24 +442,87 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* いまどれくらい貯まっているか */}
+      {usage && (() => {
+        const mb = (n: number) => (n / 1024 / 1024).toFixed(1);
+        const pct = Math.min(100, (usage.totalBytes / (usage.limitMB * 1024 * 1024)) * 100);
+        const tight = usage.monthsLeft != null && usage.monthsLeft < 12;
+        return (
+          <div className="border rounded-xl p-4 bg-white mb-4">
+            <div className="text-sm font-bold">📦 いま貯まっている量</div>
+            <div className="mt-2 h-2 rounded-full bg-gray-100 overflow-hidden">
+              <div className={`h-full ${tight ? "bg-amber-500" : "bg-emerald-500"}`} style={{ width: `${Math.max(1, pct)}%` }} />
+            </div>
+            <div className="text-xs text-gray-700 mt-2">
+              約 <b>{mb(usage.totalBytes)} MB</b> / 無料枠 {usage.limitMB} MB（{pct.toFixed(1)}%）
+            </div>
+            <div className="text-xs text-gray-500 mt-1 leading-relaxed">
+              直近1週間で <b>{usage.weekRows.toLocaleString()}</b> 件増えました。
+              このペースなら1年で <b>約 {mb(usage.yearBytes)} MB</b> 増えます。
+              {usage.monthsLeft != null && (
+                <> 無料枠に届くのは <b>約 {usage.monthsLeft} か月後</b>の見込みです。</>
+              )}
+            </div>
+            <p className="text-[11px] text-gray-400 mt-1">
+              ※ 1行の大きさは実物から測った平均なので、おおよその数字です。
+            </p>
+            <button className="text-xs text-purple-700 underline mt-2" onClick={() => setUsageOpen((v) => !v)}>
+              {usageOpen ? "内訳を閉じる" : "内訳を見る"}
+            </button>
+            {usageOpen && (
+              <div className="mt-2 space-y-1">
+                {usage.tables.slice(0, 12).map((t) => (
+                  <div key={t.table} className="flex items-center justify-between text-[11px] text-gray-600">
+                    <span className="font-mono">{t.table}</span>
+                    <span>{t.rows.toLocaleString()}件 ／ 約{mb(t.bytes)}MB{t.week > 0 && <span className="text-emerald-700">（+{t.week}）</span>}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* データの控え。運用の話なので、ここにだけ置く */}
       <div className="border rounded-xl p-4 bg-white mb-4">
         <div className="text-sm font-bold">🗄 データの控え</div>
         <p className="text-xs text-gray-500 mt-1 leading-relaxed">
           月に1回、落としてパソコンかクラウドに置いておくと安心です。<br />
-          APIキーとGoogleの連携情報は、安全のためファイルに入れていません。
+          APIキーとGoogleの連携情報は、安全のためファイルに入れていません。<br />
+          <b className="text-gray-700">話した内容がそのまま入ります。扱いにご注意ください。</b>
         </p>
-        <div className="flex gap-2 mt-3">
-          <button
-            disabled={dlBusy !== ""}
-            onClick={() => void download("mine")}
-            className="flex-1 text-sm font-bold py-2.5 rounded-lg border border-gray-300 bg-white text-gray-700 disabled:opacity-40"
-          >{dlBusy === "mine" ? "取り出しています…" : "⬇ 自分の分"}</button>
-          <button
-            disabled={dlBusy !== ""}
-            onClick={() => void download("all")}
-            className="flex-1 text-sm font-bold py-2.5 rounded-lg bg-gray-800 text-white disabled:opacity-40"
-          >{dlBusy === "all" ? "取り出しています…" : "⬇ 全員分"}</button>
+        <div className="mt-3">
+          <div className="text-xs font-bold text-gray-700 mb-1.5">読める形（名前・日付・部屋・やり取りが並びます）</div>
+          <div className="flex gap-2">
+            <button
+              disabled={dlBusy !== ""}
+              onClick={() => void download("mine", true)}
+              className="flex-1 text-sm font-bold py-2.5 rounded-lg border border-purple-300 bg-white text-purple-700 disabled:opacity-40"
+            >{dlBusy === "mine-read" ? "作成中…" : "📄 自分の記録"}</button>
+            <button
+              disabled={dlBusy !== ""}
+              onClick={() => void download("all", true)}
+              className="flex-1 text-sm font-bold py-2.5 rounded-lg bg-purple-600 text-white disabled:opacity-40"
+            >{dlBusy === "all-read" ? "作成中…" : "📄 みんなの記録"}</button>
+          </div>
+        </div>
+
+        <div className="mt-3">
+          <div className="text-xs font-bold text-gray-700 mb-1.5">
+            まるごと（戻すとき用。開いても読みづらい形です）
+          </div>
+          <div className="flex gap-2">
+            <button
+              disabled={dlBusy !== ""}
+              onClick={() => void download("mine", false)}
+              className="flex-1 text-xs font-bold py-2 rounded-lg border border-gray-300 bg-white text-gray-600 disabled:opacity-40"
+            >⬇ 自分の分</button>
+            <button
+              disabled={dlBusy !== ""}
+              onClick={() => void download("all", false)}
+              className="flex-1 text-xs font-bold py-2 rounded-lg border border-gray-400 bg-gray-50 text-gray-700 disabled:opacity-40"
+            >⬇ 全員分</button>
+          </div>
         </div>
         {dlMsg && <div className="text-xs text-gray-700 mt-2 leading-relaxed">{dlMsg}</div>}
       </div>

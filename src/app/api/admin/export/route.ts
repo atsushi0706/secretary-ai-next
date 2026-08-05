@@ -9,6 +9,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { exportAll } from "@/lib/backup";
+import { buildReadable } from "@/lib/backup-readable";
 import { logError } from "@/lib/supabase";
 
 function isAdmin(userId: string): boolean {
@@ -20,6 +21,8 @@ function isAdmin(userId: string): boolean {
 export async function GET(req: Request) {
   const url = new URL(req.url);
   const mine = url.searchParams.get("mine") === "1";
+  // read=1 … 人ごと・日付ごとに並べ直した「読める形」
+  const readable = url.searchParams.get("read") === "1";
 
   const session = await auth();
   const userId = (session?.user as any)?.id;
@@ -31,8 +34,21 @@ export async function GET(req: Request) {
   }
 
   try {
+    if (readable) {
+      const text = await buildReadable(mine ? userId : undefined);
+      const stamp = new Date().toISOString().slice(0, 10);
+      const name = mine ? `わたしの記録-${stamp}.txt` : `みんなの記録-${stamp}.txt`;
+      return new NextResponse(text, {
+        headers: {
+          "Content-Type": "text/plain; charset=utf-8",
+          "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(name)}`,
+        },
+      });
+    }
+
+    // まるごと（復元用）
     const data = await exportAll(mine ? userId : undefined);
-    const stamp = data.takenAt.slice(0, 19).replace(/[:T]/g, "-");
+    const stamp = new Date().toISOString().slice(0, 10);
     const name = mine ? `my-data-${stamp}.json` : `secretary-ai-backup-${stamp}.json`;
     return new NextResponse(JSON.stringify(data, null, 2), {
       headers: {

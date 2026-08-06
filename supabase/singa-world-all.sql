@@ -429,3 +429,40 @@ alter table public.user_settings add column if not exists activity_level   text;
 alter table public.user_settings add column if not exists goal_kg_per_month numeric(4,2);
 -- 写真から見たビタミン・ミネラル（あとから足した列）
 alter table public.meal_records add column if not exists micros jsonb not null default '{}'::jsonb;
+
+-- 優先順位（1・2・3）と、そこに至る道のりの分解
+-- ※ 既存の goals テーブル（年→月→週の青写真）とは別物
+create table if not exists public.priority_goals (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       text not null,
+  rank          smallint not null default 1,
+  title         text not null default '',
+  subject       text not null default 'me',   -- me / others（誰のための目標か）
+  kind          text not null default '',     -- money / state / mixed（お金か状態か）
+  metric        text not null default '',
+  target_value  numeric,
+  unit          text not null default '',
+  due           date,
+  status        text not null default 'active',
+  plan          jsonb,                        -- 分解の途中経過（段ごとに増える）
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+create index if not exists priority_goals_user_idx on public.priority_goals (user_id, rank);
+alter table public.priority_goals enable row level security;
+
+create table if not exists public.goal_steps (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    text not null,
+  goal_id    uuid not null,
+  milestone  text not null default '',
+  title      text not null default '',
+  minutes    smallint not null default 30,   -- 1日30分の粒
+  due        date,
+  done       boolean not null default false,
+  order_no   integer not null default 0,
+  task_id    text,                           -- Googleタスクに置いたときのID
+  created_at timestamptz not null default now()
+);
+create index if not exists goal_steps_goal_idx on public.goal_steps (user_id, goal_id, order_no);
+alter table public.goal_steps enable row level security;

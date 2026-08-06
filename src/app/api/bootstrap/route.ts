@@ -131,6 +131,8 @@ ${taskBlock}`;
       targetDay,
       targetLabel,
       isMorning,
+      // 優先順位の分解は、まず淳くんの画面だけに出す（試してから全員へ）
+      isAdmin: (await import("@/lib/admin")).isAdmin(userId),
       // ユーザー個別のカスタマイズ設定
       secretaryName: (settings as any)?.secretary_name || "清瀬リンク",
       secretaryAvatarUrl: (settings as any)?.secretary_avatar_url || "/kiyose.png",

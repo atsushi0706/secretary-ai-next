@@ -1,5 +1,6 @@
 "use client";
 
+import { PriorityGoals } from "./PriorityGoals";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -21,6 +22,8 @@ type Bootstrap = {
   targetDay: string;
   targetLabel: string;
   isMorning: boolean;
+  /** 優先順位の分解を出すかどうか（まだ管理者だけ） */
+  isAdmin?: boolean;
   events: any[];
   tasks: any[];
   schedule: any;
@@ -290,6 +293,13 @@ export function Dashboard({ userName }: { userName: string }) {
 
         {/* ── メイン列 (モバイルでは上に表示) ── */}
         <div className="space-y-4 min-w-0 order-1 lg:order-2">
+          {/*
+            優先順位（1・2・3）と、その道のりの分解。**いちばん上**に置く。
+            ここが「何を優先するか」を決める場所なので、他のどれよりも先に目に入る位置に要る。
+            まだ淳くんの画面だけ（試してから全員へ）。
+          */}
+          {data.isAdmin && <PriorityGoals />}
+
           {/* 昨夜決めた明日の流れ（朝モード時、briefingがあれば） */}
           {data.isMorning && data.eveningBriefing?.body && (
             <EveningBriefingCard briefing={data.eveningBriefing} />

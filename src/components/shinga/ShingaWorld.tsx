@@ -16,6 +16,7 @@ import { BreathGuide } from "./BreathGuide";
 import { ReflectClose } from "./ReflectClose";
 import { MealLens } from "./MealLens";
 import { PointsBadge } from "./PointsBadge";
+import { Drawer } from "./Drawer";
 import { HeroScreen } from "./HeroScreen";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
@@ -1982,21 +1983,49 @@ function Home({
           {/* この画面は「何者として生きるか」を決める場所。週1のレベルチェックはその中にある。
               「レベルチェック」だけの名前にしたら、いちばん大事なものが名前から消えてしまった。 */}
           <button className="iw-report is-hero" onClick={onHero}>🦸 主人公（何者として生きるか）</button>
-          <button className="iw-report is-weight" onClick={onWeight}>⚖️ からだの記録</button>
-          {/* ミールレンズ。まだ淳くんの画面だけ（/admin のお試しスイッチで全員に配れる） */}
-          {flags.mealLens && (
-            <button className="iw-report is-meal" onClick={onMeal}>📷 食事のレンズ</button>
-          )}
         </div>
+
+        {/*
+          【引き出しにまとめた理由】
+          以前は10個のボタンが散らばっていた。PCでは背景の絵と混ざって
+          「どこに何があるのか」が読み取れなかった。近いものを1つにまとめて、
+          表に出るものを絞る。押すとその場でひらく（別の画面へは飛ばさない）。
+        */}
+        <div className="iw-drawers">
+          <Drawer
+            emoji="🧰" label="ワールドメモリー"
+            note="残ってきたもの（週の記憶・カード・クリスタル・取扱説明書）"
+            tone="memory"
+            items={[
+              {
+                key: "weekly", emoji: "📦", label: "タイムトラベルボックス",
+                note: "週ごとの記憶。悩み→どう見たか→進んだこと",
+                onOpen: onWeekly, badge: unreadWeekly,
+              },
+              { key: "cards", emoji: "🃏", label: "カード保管庫", note: "手に入れた力", onOpen: onVault },
+              { key: "crystals", emoji: "💎", label: "クリスタル保管庫", note: "かたちにしたもの", onOpen: onCrystalVault },
+              ...(onManual
+                ? [{ key: "manual", emoji: "📖", label: "自分の取扱説明書", note: "生まれ持った傾向と、16の答え", onOpen: onManual }]
+                : []),
+            ]}
+          />
+
+          <Drawer
+            emoji="🌿" label="若返りの部屋"
+            note="からだのこと（記録・食事）"
+            tone="care"
+            items={[
+              ...(onWeight
+                ? [{ key: "weight", emoji: "⚖️", label: "からだの記録", note: "毎朝の体重・体脂肪率", onOpen: onWeight }]
+                : []),
+              ...(flags.mealLens && onMeal
+                ? [{ key: "meal", emoji: "📷", label: "食事のレンズ", note: "撮るとカロリーとPFCの目安が出る", onOpen: onMeal }]
+                : []),
+            ]}
+          />
+        </div>
+
         <div className="iw-reflect-row is-shelf">
-          {/* 届いたのに気づけない、を無くす。通知を許可していない人にも印で分かる */}
-          <button className={`iw-report is-weekly ${unreadWeekly > 0 ? "has-new" : ""}`} onClick={onWeekly}>
-            🧰 タイムトラベルボックス
-            {unreadWeekly > 0 && <span className="new-dot">{unreadWeekly}</span>}
-          </button>
-          <button className="iw-report is-vault" onClick={onVault}>🃏 カード保管庫</button>
-          <button className="iw-report is-crystal" onClick={onCrystalVault}>💎 クリスタル保管庫</button>
-          <button className="iw-report is-manual" onClick={onManual}>📖 自分の取扱説明書</button>
           {/* 使い方の説明書。作ってはあったのに、どこからも開けなかった。
               ここは「読むところ」なので、設定の入力欄ではなく説明書そのものへ行く。
               （初期設定のやり直しは、その説明書の中から入れる） */}

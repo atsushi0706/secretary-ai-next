@@ -6444,3 +6444,88 @@ body:has(.realverse-bg) { background: transparent; }
 .pb-rule.is-top { background: rgba(238,214,155,.12); border-color: rgba(238,214,155,.42); }
 .pb-rule.is-cap { background: rgba(255,255,255,.03); border-style: dashed; }
 .pb-rule.is-cap b { color: #f4d99a; }
+
+/* ── 棚の引き出し（ワールドメモリー／若返りの部屋） ────────── */
+.iw-drawers {
+  /* align-items: start が無いと、閉じている側が開いた側の高さに引き伸ばされる */
+  display: grid; grid-template-columns: 1fr; gap: 8px; align-items: start;
+  width: 100%; max-width: 720px; margin: 8px auto 0;
+}
+@media (min-width: 760px) { .iw-drawers { grid-template-columns: 1fr 1fr; } }
+
+.dw {
+  border-radius: 14px; overflow: hidden;
+  background: rgba(18, 14, 10, .84);
+  border: 1px solid rgba(232,189,114,.28);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 20px rgba(0,0,0,.45);
+}
+.dw.is-open { border-color: rgba(232,189,114,.6); }
+.dw-care { border-color: rgba(150,205,160,.3); }
+.dw-care.is-open { border-color: rgba(150,205,160,.6); }
+
+.dw-head {
+  width: 100%; display: flex; align-items: center; gap: 10px;
+  padding: 11px 13px; text-align: left; color: var(--singa-ink);
+  /* ボタンは既定で白背景になる。透明にしないと見出しが白い箱になって読めない */
+  background: transparent; border: none;
+}
+.dw-emoji { font-size: 1.15rem; line-height: 1; flex: 0 0 auto; }
+.dw-t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.dw-t b { font-size: .84rem; font-weight: 700; }
+.dw-t small { font-size: .62rem; color: var(--singa-ink-soft); line-height: 1.5; }
+.dw-arrow { flex: 0 0 auto; font-size: .6rem; color: var(--singa-ink-soft); }
+.dw-new {
+  flex: 0 0 auto; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+  display: inline-grid; place-items: center; font-size: .6rem; font-weight: 800;
+  color: #2a1a05; background: linear-gradient(160deg,#ffe6a6,#e8b960);
+}
+
+.dw-body {
+  display: flex; flex-direction: column; gap: 4px;
+  padding: 4px 8px 9px;
+  border-top: 1px solid rgba(255,255,255,.09);
+}
+.dw-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 9px 10px; border-radius: 11px; text-align: left;
+  color: var(--singa-ink);
+  background: rgba(255,255,255,.05);
+  border: 1px solid rgba(255,255,255,.12);
+  transition: background .16s ease, border-color .16s ease;
+}
+.dw-item:hover { background: rgba(255,255,255,.1); border-color: rgba(232,189,114,.45); }
+.dw-item .e { font-size: 1rem; line-height: 1; flex: 0 0 auto; }
+.dw-item .t { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.dw-item .t b { font-size: .78rem; font-weight: 700; }
+.dw-item .t small { font-size: .6rem; color: var(--singa-ink-soft); line-height: 1.5; }
+.dw-item .a { flex: 0 0 auto; font-size: .7rem; color: var(--singa-ink-soft); }
+
+/* ── 部屋の並び（ピークステート・パラレルウォーク…） ──────────
+ * PCで8個が横一列に散らばり、背景の絵と混ざって読み取れなかった。
+ * ・1枚の落ち着いた面を敷いて、絵と分ける
+ * ・列の数を決めて、行を揃える（横一列は目が滑る）
+ * ・影と枠を弱めて、面の中で静かに並ばせる                         */
+.iw-doors {
+  display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px;
+  width: 100%; max-width: 720px; margin: 10px auto 0; padding: 10px;
+  border-radius: 16px;
+  background: rgba(12, 9, 6, .58);
+  border: 1px solid rgba(232,189,114,.16);
+  backdrop-filter: blur(8px);
+}
+@media (min-width: 560px) { .iw-doors { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+.iw-doors .iw-door {
+  min-width: 0; width: 100%; padding: 11px 6px;
+  background: rgba(255,255,255,.05);
+  border-color: rgba(255,255,255,.13);
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.iw-doors .iw-door:hover { background: rgba(255,255,255,.11); border-color: rgba(232,189,114,.5); transform: none; }
+.iw-doors .iw-door .ja { font-size: .68rem; line-height: 1.35; text-align: center; }
+.iw-doors .iw-door .emoji { font-size: 1.15rem; }
+/* 「まずここから」だけは、面の中でも分かるように */
+.iw-doors .iw-door.is-start { background: rgba(238,214,155,.15); border-color: rgba(232,193,90,.55); }
+/* じぶんワークは作るもの＝ほかと役割が違うので、行を分けて全幅に */
+.iw-doors .iw-door.is-make { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 7px; }

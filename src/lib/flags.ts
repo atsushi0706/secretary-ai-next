@@ -53,6 +53,13 @@ export const FLAGS: FlagDef[] = [
       + "使うのは本人のGeminiキー。写真は保存しない。",
     fallback: "admin",   // まず淳くんの画面だけ。試してよければ "all" へ
   },
+  {
+    key: "points",
+    label: "速学力プレゼント企画のポイント",
+    note: "会話・ワーク・完了の記録から数えたポイントを、清瀬リンクの右上に出す。"
+      + "ポイントは持たずに毎回数え直すので、あとから増減できない。8/31まで。",
+    fallback: "admin",   // まず淳くんだけで検証してから全員へ
+  },
 ];
 
 export const isFlagKey = (v: unknown): v is string =>

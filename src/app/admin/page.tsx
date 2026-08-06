@@ -93,6 +93,9 @@ export default function AdminPage() {
     reports: { id: string; name: string; body: string; status: string; facets?: any }[];
   }[]>([]);
   const [openWeek, setOpenWeek] = useState<string | null>(null);
+  // 速学力プレゼント企画の上位（数えるのに時間がかかるので、押したときだけ）
+  const [rank, setRank] = useState<{ userId: string; name: string; total: number; days: number }[] | null>(null);
+  const [rankBusy, setRankBusy] = useState(false);
 
   async function loadDrafts() {
     try {
@@ -376,6 +379,51 @@ export default function AdminPage() {
           </button>
         </div>
       )}
+
+      {/* 速学力プレゼント企画の上位 */}
+      <div className="border rounded-xl bg-white p-4 mb-4">
+        <div className="text-sm font-bold mb-1">✦ 速学力プレゼント企画の上位</div>
+        <p className="text-xs text-gray-500 mb-3">
+          ポイントは記録から数え直しています（貯めていません）。
+          全員ぶん数えるので、少し時間がかかります。
+        </p>
+        <button
+          className="text-xs bg-amber-500 text-white px-3 py-1.5 rounded font-bold disabled:opacity-40"
+          disabled={rankBusy}
+          onClick={async () => {
+            setRankBusy(true);
+            try {
+              const r = await fetch("/api/points?all=1");
+              const j = await r.json();
+              setRank(j.ranking ?? []);
+            } catch { setRank([]); }
+            finally { setRankBusy(false); }
+          }}
+        >
+          {rankBusy ? "数えてる…" : rank ? "数え直す" : "上位を出す"}
+        </button>
+        {rank && (
+          <div className="mt-3 space-y-1">
+            {rank.length === 0 && <p className="text-xs text-gray-500">まだポイントのある人がいません。</p>}
+            {rank.map((r, i) => (
+              <div key={r.userId}
+                className={`flex items-center gap-2 rounded-lg px-2.5 py-2 text-sm ${
+                  i < 3 ? "bg-amber-50 border border-amber-300" : "bg-gray-50 border border-gray-200"}`}>
+                <span className={`shrink-0 w-6 h-6 rounded-full grid place-items-center text-[11px] font-bold ${
+                  i < 3 ? "bg-amber-500 text-white" : "bg-gray-300 text-gray-700"}`}>{i + 1}</span>
+                <span className="flex-1 min-w-0 truncate">{r.name}</span>
+                <span className="shrink-0 text-xs text-gray-500">{r.days}日</span>
+                <span className="shrink-0 font-bold text-amber-700">{r.total}pt</span>
+              </div>
+            ))}
+            {rank.length >= 3 && (
+              <p className="text-[11px] text-gray-500 mt-2">
+                上の3人が、いまの上位。景品は「非売品の電子書籍『速学力』」。
+              </p>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 全員ぶんを、週ごとにまとめて読む（送りおえたものも含む） */}
       {allWeeks.length > 0 && (

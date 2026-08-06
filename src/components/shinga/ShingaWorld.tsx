@@ -15,6 +15,7 @@ import { EmotionMeter, emoName } from "./EmotionMeter";
 import { BreathGuide } from "./BreathGuide";
 import { ReflectClose } from "./ReflectClose";
 import { MealLens } from "./MealLens";
+import { PointsBadge } from "./PointsBadge";
 import { HeroScreen } from "./HeroScreen";
 import { InnerHud } from "./InnerHud";
 import { FutureLetter, type Letter } from "./FutureLetter";
@@ -1897,6 +1898,8 @@ function Home({
           />
           {/* 100%到達者の称号バッジ（枠は出さず、ここにそっと付く） */}
           {isAdventurer && <span className="iw-badge" title="人生の冒険者">🏆</span>}
+          {/* 速学力プレゼント企画のポイント。清瀬リンクの右上に、小さく光らせる */}
+          {flags.points && <PointsBadge />}
         </div>
         <div className="iw-bubble is-centered">
           <span className="who">{guideName}</span>

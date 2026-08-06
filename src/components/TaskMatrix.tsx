@@ -218,6 +218,12 @@ function CategoryCard({
   todayProgress?: TodayProgress;
 }) {
   const [adding, setAdding] = useState(false);
+  /**
+   * 追加している途中かどうか。
+   * これが無いと、2回タップで2件できる（画面が戻る前にもう一度押せてしまう）。
+   * ボタンを止めるだけでなく、関数の頭でも弾く——連打は onClick が2回走るのが先なので。
+   */
+  const [addBusy, setAddBusy] = useState(false);
   const [newTitle, setNewTitle] = useState("");
   const [newTime, setNewTime] = useState<TimeKey>("mid");
   const [newUrgent, setNewUrgent] = useState(false);
@@ -276,7 +282,10 @@ function CategoryCard({
   }
 
   async function addNew() {
+    if (addBusy) return;                    // 連打の2度目は、ここで止まる
     if (!newTitle.trim()) return;
+    setAddBusy(true);
+    try {
     await fetch("/api/tasks", {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -291,6 +300,7 @@ function CategoryCard({
     });
     setAdding(false); setNewTitle(""); setNewUrgent(false); setNewImportant(true); setNewTime("mid");
     onRefresh();
+    } finally { setAddBusy(false); }
   }
 
   async function complete(t: Task) {
@@ -438,10 +448,10 @@ function CategoryCard({
           </div>
           <button
             onClick={addNew}
-            disabled={!newTitle.trim()}
+            disabled={addBusy || !newTitle.trim()}
             className="w-full bg-purple-500 text-white text-xs font-bold py-2 rounded disabled:opacity-50"
           >
-            追加（期限: {defaultDue()}）
+            {addBusy ? "追加してる…" : `追加（期限: ${defaultDue()}）`}
           </button>
         </div>
       )}

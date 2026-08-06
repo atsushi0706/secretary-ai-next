@@ -187,6 +187,22 @@ export async function savePGoal(
   if (g.plan !== undefined) row.plan = g.plan;
   if (g.id) row.id = g.id;
 
+  /*
+   * 新しく置くとき、**同じ題名のものが既にあれば、それを返す**。
+   *
+   * 画面側で連打を止めてはいるが、それだけでは足りない。
+   * 通信が遅いとき・電波が切れて押し直したとき・画面を2つ開いているときは、
+   * 同じものが2回届く。実際に「AIチームビルディングのお客様を優先する」が
+   * 順位1で2つ並んだ。**作る側で止めるのが本筋。**
+   */
+  if (!g.id && row.title) {
+    const { data: dup } = await supa.from("priority_goals")
+      .select("*").eq("user_id", userId).eq("title", row.title).neq("status", "done")
+      .limit(1);
+    const found = (dup ?? [])[0];
+    if (found) return found as PGoal;
+  }
+
   const { data, error } = await supa.from("priority_goals")
     .upsert(row, { onConflict: "id" }).select("*").single();
   if (error) throw error;

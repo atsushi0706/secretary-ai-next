@@ -27,6 +27,26 @@ export async function POST(req: Request) {
     const body = await req.json();
     const action = body.action;
     if (action === "add") {
+      /*
+       * 直前に同じ題名で作ったものがあれば、**もう作らない**。
+       *
+       * 2回タップすると2件できていた。画面側でも押している間は止めるようにしたが、
+       * 通信が遅いとき・押し直したとき・画面を2つ開いているときは同じものが2回届く。
+       * 作る側で止めるのが本筋。
+       *
+       * ——ただし「同じ題名を二度と作れない」のは行き過ぎ（毎週同じことをやる人もいる）。
+       * だから **2分以内に作られたもの** に限る。連打の窓だけを塞ぐ。
+       */
+      const title = String(body.title ?? "").trim();
+      try {
+        const recent = await getTasks(userId, false);
+        const norm = (t: string) => t.replace(/\s+/g, "").toLowerCase();
+        const dup = recent.find((t) =>
+          norm(t.title) === norm(title)
+          && t.updated && Date.now() - new Date(t.updated).getTime() < 2 * 60 * 1000);
+        if (dup) return NextResponse.json({ ok: true, task: dup, deduped: true });
+      } catch { /* 確かめられなくても、作るところまでは進む */ }
+
       const created = await addTask(userId, body.title, {
         notes: body.notes ?? "", due: body.due ?? null,
       });

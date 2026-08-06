@@ -462,6 +462,46 @@ function LastLoadedBadge({ ts, stale }: { ts: number; stale: boolean }) {
   );
 }
 
+
+/**
+ * 「なぜその感情か」を、思い返せるだけの短さにする。
+ *
+ * 保存する側（ReflectClose）は短い一言だけを渡すよう直したが、
+ * それ以前に保存されたぶんには**夜の会話がまるごと**入っている。
+ * 過去のデータを書き換えることはしないので、出すときに締める。
+ *
+ * ・会話の形（「清瀬リンク：」「本人：」）が混ざっていたら、それは読ませない
+ * ・長すぎるものは、最初のひと区切りだけにする（2〜3行ぶん）
+ */
+function shortWhy(why: string | null | undefined): string {
+  const t = String(why ?? "").replace(/\s+/g, " ").trim();
+  if (!t) return "";
+  // 会話がそのまま入っているものは出さない。切り取っても意味が通らないため
+  if (/(清瀬リンク|本人|きみ)\s*[:：]/.test(t)) return "";
+  if (t.length <= 120) return t;
+  // 長いものは、文の切れ目まで（2〜3行ぶん）
+  const cut = t.slice(0, 120);
+  const at = Math.max(cut.lastIndexOf("。"), cut.lastIndexOf("、"));
+  return (at > 40 ? cut.slice(0, at + 1) : cut) + "…";
+}
+
+/**
+ * 「決めたこと」を、読める形だけにする。
+ *
+ * 話し言葉を読点で切っていた時期のデータには、
+ *   「明日からは」「もっと増すな自分でいるために」
+ * のような、文の途中で切れた断片が入っている。
+ * 助詞で終わっているものは、それだけ読んでも意味が取れないので出さない。
+ */
+function tidyActions(actions: string[] | null | undefined): string[] {
+  return (Array.isArray(actions) ? actions : [])
+    .map((a) => String(a ?? "").trim())
+    .filter(Boolean)
+    .filter((a) => a.length >= 4)
+    .filter((a) => !/(は|が|を|と|に|で|も|へ|から|より|とか|ため|ために)$/.test(a))
+    .slice(0, 3);
+}
+
 // 今日のフォーカス：インナーワールドのパラレルウォークで決めた「今日の感情」と「最優先の一歩」。
 // リアルバースの一番上にピン留めして、今日の狙いを見失わないようにする。ここでも編集できる。
 function TodayFocusCard() {
@@ -527,12 +567,22 @@ function TodayFocusCard() {
           <div className="mb-2 rounded-lg bg-amber-50 border border-amber-200 px-3 py-2">
             <div className="text-[10px] text-amber-700 font-bold">昨夜きみが決めた・今日の最優先感情</div>
             <div className="text-base font-bold text-amber-800 leading-snug">{lastNight.emotion}</div>
-            {lastNight.why && <div className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">{lastNight.why}</div>}
-            {lastNight.actions.length > 0 && (
-              <div className="text-[11px] text-gray-600 mt-1">
-                決めたこと：{lastNight.actions.join("／")}
-              </div>
+            {/*
+              「昨日そう言ってたね」と思い返せるだけの短さにする。
+              以前は、夜の会話がまるごと入った値をそのまま出していたので、
+                「清瀬リンク：おつかれさま🌙 今日を一緒に閉じよう。…本人：そうね。今日は…」
+              が朝いちの画面に貼りついていた。読むところではないのに長い。
+              保存する側は直したが、**もう保存されてしまったぶん**はここで締める。
+            */}
+            {shortWhy(lastNight.why) && (
+              <div className="text-[11px] text-gray-600 mt-0.5 leading-relaxed">{shortWhy(lastNight.why)}</div>
             )}
+            {(() => {
+              const acts = tidyActions(lastNight.actions);
+              return acts.length > 0 ? (
+                <div className="text-[11px] text-gray-600 mt-1">決めたこと：{acts.join("／")}</div>
+              ) : null;
+            })()}
           </div>
         )}
 

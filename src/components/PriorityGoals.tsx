@@ -59,6 +59,12 @@ export function PriorityGoals() {
   const [newTitle, setNewTitle] = useState("");
   const [newDue, setNewDue] = useState("");
   const [newSubject, setNewSubject] = useState<"me" | "others">("me");
+  /**
+   * 置いている途中かどうか。
+   * これが無いと、2回タップで2つ増える（画面が戻る前にもう一度押せてしまう）。
+   * ボタンを止めるだけでなく、関数の頭でも弾く——連打は onClick が2回走るのが先なので。
+   */
+  const [savingGoal, setSavingGoal] = useState(false);
 
   // 段を進めるとき
   const [busy, setBusy] = useState(false);
@@ -93,14 +99,19 @@ export function PriorityGoals() {
   }
 
   async function addGoal() {
+    if (savingGoal) return;                 // 連打の2度目は、ここで止まる
     if (!newTitle.trim()) return;
-    const rank = Math.min(3, goals.length + 1);
-    const j = await post({ action: "save", rank, title: newTitle.trim(), due: newDue || null, subject: newSubject });
-    if (j) {
-      setNewTitle(""); setNewDue(""); setAdding(false);
-      await load();
-      setOpen(j.goal?.id ?? null);
-    }
+    setSavingGoal(true);
+    try {
+      // 順位は、いまあるものの次。同じ順位が2つできないようにする
+      const rank = Math.min(3, Math.max(0, ...goals.map((g) => g.rank)) + 1);
+      const j = await post({ action: "save", rank, title: newTitle.trim(), due: newDue || null, subject: newSubject });
+      if (j) {
+        setNewTitle(""); setNewDue(""); setAdding(false);
+        await load();
+        setOpen(j.goal?.id ?? null);
+      }
+    } finally { setSavingGoal(false); }
   }
 
   /** 段を1つ進める */
@@ -180,7 +191,9 @@ export function PriorityGoals() {
           </div>
           <div className="flex gap-2">
             <button className="flex-1 text-xs bg-rose-600 text-white py-1.5 rounded font-bold disabled:opacity-40"
-              disabled={!newTitle.trim()} onClick={() => void addGoal()}>置く</button>
+              disabled={savingGoal || !newTitle.trim()} onClick={() => void addGoal()}>
+              {savingGoal ? "置いてる…" : "置く"}
+            </button>
             <button className="text-xs border border-gray-300 px-3 py-1.5 rounded text-gray-600"
               onClick={() => { setAdding(false); setNewTitle(""); }}>やめる</button>
           </div>

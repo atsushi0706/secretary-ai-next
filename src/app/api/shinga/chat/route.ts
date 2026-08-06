@@ -656,12 +656,36 @@ export async function POST(req: Request) {
           // 最後の網：AIがタグ名を書き間違えても、本文には絶対に出さない。
           // 実際 <hero_delta> を <q-delta> と書いて、JSONごと画面に出たことがある。
           // 日本語の文章に <英小文字_-> の組は出てこないので、まとめて落とす。
-          .replace(/<([a-z][a-z0-9_-]{1,22})>[\s\S]*?<\/>/g, "")
+          /*
+           * 最後の網：AIがタグ名を書き間違えても、本文には絶対に出さない。
+           *
+           * 【やらかしたこと】
+           * ・<hero_delta> を <q-delta> と書いて、JSONごと画面に出た
+           * ・画面に「neutral</ani>」と出た。原因は2つ：
+           *   (a) この行の後方参照が**制御文字に化けていた**（0x01 になっていた）ので、
+           *       名前つきの閉じタグにまったく当たっていなかった
+           *   (b) 閉じタグだけを落とす規則が無かった
+           *
+           * 順番が大事：
+           *   ① 名前が一致する組（中身ごと落とす）
+           *   ② はぐれた閉じタグ
+           *   ③ はぐれた開きタグ
+           * ①を先にやらないと、中身（neutral など）が本文に残る。
+           */
+          .replace(/<([a-z][a-z0-9_-]{1,22})>[\s\S]*?<\/\1>/g, "")
+          .replace(/<\/[a-z][a-z0-9_-]{1,22}>/g, "")
           .replace(/<[a-z][a-z0-9_-]{1,22}\s*\/?>/g, "")
           .trim();
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
-        if (faceMatch || moveMatch || choMatch || questMatch || heroMatch || wantEmotion || wantBreath || wallMatch || stepMatch || guardMatch || travelMatch || walkMatch || shStepMatch || shPickMatch || shLightMatch) {
+        /*
+         * 【ここも穴だった】
+         * 知っているタグに当たったときだけ差し替えていたので、
+         * AIが**知らない名前のタグ**を書いたときは差し替えが走らず、
+         * タグがそのまま画面に出た。
+         * 削って形が変わったなら、理由に関係なく差し替える。
+         */
+        if (clean !== full.trim()) {
           send("replace", { text: clean });
         }
         if (face) send("face", { face });

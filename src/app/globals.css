@@ -1101,9 +1101,12 @@ body:has(.realverse-bg) { background: transparent; }
  * 下敷きを付けて、どんな絵の上でも読めるようにする。
  */
 .singa-stage.is-bright .singa-line .who {
+  /* inline-block が無いと、下敷きが吹き出しの幅いっぱいに伸びて
+     「清瀬リンク」の横に白い帯が走る。名前の幅だけに収める */
+  display: inline-block; align-self: flex-start;
   color: #1c4f70; text-shadow: none;
   background: rgba(255, 255, 255, .82);
-  border-radius: 999px; padding: 1px 7px;
+  border-radius: 999px; padding: 1px 8px;
 }
 .singa-stage.is-bright .singa-line p {
   background: rgba(255,255,255,.9);
@@ -1676,9 +1679,12 @@ body:has(.realverse-bg) { background: transparent; }
  * 下敷きを付けて、どんな絵の上でも読めるようにする。
  */
 .singa-stage.is-bright .singa-line .who {
+  /* inline-block が無いと、下敷きが吹き出しの幅いっぱいに伸びて
+     「清瀬リンク」の横に白い帯が走る。名前の幅だけに収める */
+  display: inline-block; align-self: flex-start;
   color: #1c4f70; text-shadow: none;
   background: rgba(255, 255, 255, .82);
-  border-radius: 999px; padding: 1px 7px;
+  border-radius: 999px; padding: 1px 8px;
 }
 .singa-stage.is-bright .singa-line p {
   background: rgba(255,255,255,.9);
@@ -6529,3 +6535,21 @@ body:has(.realverse-bg) { background: transparent; }
 .iw-doors .iw-door.is-start { background: rgba(238,214,155,.15); border-color: rgba(232,193,90,.55); }
 /* じぶんワークは作るもの＝ほかと役割が違うので、行を分けて全幅に */
 .iw-doors .iw-door.is-make { grid-column: 1 / -1; flex-direction: row; justify-content: center; gap: 7px; }
+
+/* AIが「形になった」と言ってきたときの、結晶化ボタン（光らせるだけ。勝手に画面は変えない） */
+.rc-open.is-ready {
+  animation: rc-ready 2.2s ease-in-out infinite;
+}
+@keyframes rc-ready {
+  0%, 100% { box-shadow: 0 4px 16px rgba(0,0,0,.4), 0 0 0 0 rgba(255,235,170,.65); }
+  50%      { box-shadow: 0 4px 16px rgba(0,0,0,.4), 0 0 0 9px rgba(255,235,170,0); }
+}
+
+/* 宝石の絵（ダイヤモンドカット） */
+.gem { display: block; margin: 0 auto; filter: drop-shadow(0 0 20px var(--glow)); }
+.gem.is-sparkle { animation: gem-pop .7s cubic-bezier(.1,.9,.2,1); }
+@keyframes gem-pop {
+  0%   { transform: scale(.35) rotate(-14deg); opacity: 0; }
+  60%  { transform: scale(1.06) rotate(3deg); opacity: 1; }
+  100% { transform: none; opacity: 1; }
+}

@@ -9,6 +9,7 @@
  */
 import { useEffect, useState } from "react";
 import { hueOf, colorOf } from "@/lib/crystal-colors";
+import { Gem, hueFor } from "./Gem";
 
 type Draft = { headline: string; summary: string; points: string[]; next_steps: string[] };
 type Line = { role: "assistant" | "user"; content: string };
@@ -137,7 +138,12 @@ export function Crystallize({ lines, onDone, onCancel }: {
       {phase === "saved" && (
         <div className="czl-card">
           <div className="czl-done" style={{ ["--g" as any]: hue.glow }}>
-            <div className="czl-gem" style={{ ["--l" as any]: hue.light, ["--d" as any]: hue.dark }} />
+            {/*
+              前は clip-path で切った五角形だった。平らな紫の五角形にしか見えず、
+              宝石に見えなかった。面（ファセット）を並べて描く形に差し替えた。
+              色は名前から決めるので、同じ石はいつも同じ色になる。
+            */}
+            <Gem hue={hueFor(name || "crystal")} size={104} sparkle />
             <div className="czl-donename">{name}</div>
             <div className="czl-donesub">保管庫に置いたよ</div>
           </div>

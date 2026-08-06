@@ -143,6 +143,11 @@ export function ShingaWorld({
   // 部屋の歩き方。初めて入った部屋では必ず出す。あとは「？」からいつでも
   const [tutorial, setTutorial] = useState<{ mode: ModeKey; first: boolean } | null>(null);
   const [crystallizing, setCrystallizing] = useState(false);
+  /**
+   * AIが「そろそろ形になった」と言ってきたか。
+   * 画面を切り替えるためではなく、**ボタンを光らせるため**だけに使う。
+   */
+  const [crystalReady, setCrystalReady] = useState(false);
   const [vaultCrystalOpen, setVaultCrystalOpen] = useState(false);   // クリスタル保管庫
   const [wallDug, setWallDug] = useState(0);    // ウォールブレイク：陰の側から掘り出せた個数（7個で次の段階へ）
   const [travelStage, setTravelStage] = useState(1); // パラレルトラベル：高度(1=目の前 〜 10=すべてがつながる)
@@ -528,7 +533,7 @@ export function ShingaWorld({
    */
   function resetWorkState() {
     setQuestOffer(null); setQuestText("");   // 前のワークの「置いとく？」を持ち越さない
-    setCrystallizing(false);
+    setCrystallizing(false); setCrystalReady(false);
     runWorkRef.current = null; setRunWork(null); setDrawStep(null);
     setChoices(null); setWidget(null); setEmoPick(null);
     setPartsGate(false); setPartsIntro(null);
@@ -872,8 +877,17 @@ export function ShingaWorld({
           moveTo(data.place as PlaceKey);
           setMode(data.place as ModeKey);
         } else if (name === "crystallize") {
-          // 形になった。まとめ→命名→保管庫、の流れへ
-          setCrystallizing(true);
+          /*
+           * AIが「形になった」と言ってきた合図。
+           *
+           * 【前はここで画面を切り替えていた】
+           * ボタンを押していないのに、話している途中で結晶化の画面に飛んでいた。
+           * 何を残すかを決めるのは本人なので、**AIの判断で画面を変えてはいけない。**
+           *
+           * だから画面は切り替えず、**ボタンを光らせるだけ**にする。
+           * 押すかどうかは本人が決める。
+           */
+          setCrystalReady(true);
         } else if (name === "quest_offer") {
           // 勝手に置かない。「これ、置いとく？」と1件ずつ聞く。
           // 会話の吹き出しの中に混ぜると見落とすので、独立したカードで出す。
@@ -1563,11 +1577,14 @@ export function ShingaWorld({
             指示文に「まだ形になっていないうちは付けない。焦って締めない」と書いてあるので、
             AIは安全側に寄って**いつまでも出さない**。結果、結晶ができあがらなかった。
             締めるかどうかを決めるのは本人。ボタンにする。
-            （AIのタグも残してあるので、向こうが先に気づいたときはそれでも開く）
+            AIが「形になった」と言ってきたときは、**画面を切り替えずにボタンを光らせるだけ**。
+            以前はそこで勝手に結晶化の画面へ飛んでいた（話している途中なのに）。
+            押すかどうかを決めるのは本人。
           */}
           {mode === "crystal" && !crystallizing && messages.some((m) => m.role === "user") && (
-            <button className="rc-open" onClick={() => setCrystallizing(true)}>
-              💎 結晶化する（ここまでを、かたちにして残す）
+            <button className={`rc-open ${crystalReady ? "is-ready" : ""}`}
+              onClick={() => setCrystallizing(true)}>
+              💎 結晶化する{crystalReady ? "（そろそろ形になってきたよ）" : "（ここまでを、かたちにして残す）"}
             </button>
           )}
 

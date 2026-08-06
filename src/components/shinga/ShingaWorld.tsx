@@ -1870,6 +1870,13 @@ function Home({
 }) {
   return (
     <div className="iw-home">
+      {/*
+        速学力プレゼント企画のポイント。
+        立ち絵の右上に付けていたら、**清瀬リンクの顔にかぶった**。
+        画面の右上に出して、スクロールしても付いてくる形にする（顔には乗らない）。
+      */}
+      {flags.points && <PointsBadge />}
+
       {/* 未来からのクエストが届いた（3日連続で使うと届く・目立たせる） */}
       {onCard && (
         <button className="iw-card-arrived" onClick={onCard}>
@@ -1898,8 +1905,6 @@ function Home({
           />
           {/* 100%到達者の称号バッジ（枠は出さず、ここにそっと付く） */}
           {isAdventurer && <span className="iw-badge" title="人生の冒険者">🏆</span>}
-          {/* 速学力プレゼント企画のポイント。清瀬リンクの右上に、小さく光らせる */}
-          {flags.points && <PointsBadge />}
         </div>
         <div className="iw-bubble is-centered">
           <span className="who">{guideName}</span>

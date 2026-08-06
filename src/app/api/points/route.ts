@@ -11,7 +11,7 @@ import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { logError } from "@/lib/supabase";
 import { jstDateStr } from "@/lib/google";
-import { scoreOf, ranking, CAMPAIGN, RULES, daysLeft } from "@/lib/points";
+import { scoreOf, ranking, CAMPAIGN, RULES, RULE_LIST, daysLeft } from "@/lib/points";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -35,6 +35,8 @@ export async function GET(req: Request) {
       campaign: CAMPAIGN,
       daysLeft: daysLeft(today),
       dailyCap: RULES.dailyCap,
+      // 何をすると増えるのか。分からないとやる気にならないので、必ず一緒に返す
+      rules: RULE_LIST,
       ...score,
     });
   } catch (e: any) {

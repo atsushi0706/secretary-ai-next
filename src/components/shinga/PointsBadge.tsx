@@ -14,10 +14,12 @@ import { useCallback, useEffect, useState } from "react";
 
 type Breakdown = { label: string; points: number };
 type DayPoints = { date: string; points: number; raw: number; capped: boolean };
+type Rule = { label: string; points: string; note?: string };
 type Data = {
   campaign: { name: string; from: string; to: string; prize: string };
   daysLeft: number;
   dailyCap: number;
+  rules: Rule[];
   total: number;
   days: number;
   breakdown: Breakdown[];
@@ -79,6 +81,27 @@ export function PointsBadge() {
               AIとの会話やワークへの挑戦が、そのままポイントになる。
               どんどん自分の内側と向き合って、使い倒してみて。
             </p>
+
+            {/*
+              何をすると増えるのか。ここがいちばん先に要る。
+              分からないと、そもそもやる気にならないので、内訳より上に置く。
+            */}
+            <div className="pb-t">どうすると増える？</div>
+            <div className="pb-rules">
+              {(d.rules ?? []).map((r, i) => (
+                <div key={i} className={`pb-rule ${i < 3 ? "is-top" : ""}`}>
+                  <span className="l">
+                    {r.label}
+                    {r.note && <small>{r.note}</small>}
+                  </span>
+                  <span className="p">{r.points}</span>
+                </div>
+              ))}
+              <div className="pb-rule is-cap">
+                <span className="l">1日に入るのは、ぜんぶ合わせて<b>{d.dailyCap}pt</b>まで
+                  <small>まとめて詰め込むより、毎日ちょっとずつのほうが伸びる</small></span>
+              </div>
+            </div>
 
             {d.breakdown.length > 0 ? (
               <>

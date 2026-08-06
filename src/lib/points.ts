@@ -54,10 +54,16 @@ function roomName(place: unknown): string {
 
 /* ── 企画の期間 ────────────────────────────────── */
 
-/** 期間（JSTの日付・両端を含む） */
+/**
+ * 期間（JSTの日付・両端を含む）。
+ *
+ * 数え始めは **8月11日**。企画を伝えた日から数えないと、
+ * 先に使っていた人が有利になって、公平でなくなる。
+ * ここを変えれば過去ぶんも数え直る（ポイントを貯めていないので）。
+ */
 export const CAMPAIGN = {
   name: "速学力プレゼント企画",
-  from: "2026-08-01",
+  from: "2026-08-11",
   to: "2026-08-31",
   prize: "上位3名に、非売品の電子書籍『速学力』",
 } as const;
@@ -87,14 +93,16 @@ export const RULES = {
   talkMaxPerRoom: 4,
   /** ワークを終えた（同じ日・同じワークは1点まで） */
   work: 1,
-  /** パラレルウォークで歩いた（1日1点） */
-  walk: 1,
-  /** クリスタルを1粒残した（形にするのは重いので厚め） */
-  crystal: 2,
-  /** じぶんワーク：開いて1歩でも進めた／最後まで通した */
-  customStart: 1,
-  customFinish: 1,
-  /** 今日の説明書に答えた（アカシック） */
+  /** パラレルウォークを歩いた。**いちばん高い**（1日1回） */
+  walk: 3,
+  /** 実際に歩いた歩数のぶん。500歩で1点、1000歩以上で2点（1日1回） */
+  steps500: 1,
+  steps1000: 2,
+  /** 夜、その日を閉じた（ふりかえり） */
+  reflect: 2,
+  /** クリスタルを1粒残した */
+  crystal: 1,
+  /** 今日の説明書に答えた */
   manual: 1,
   /** 理想から生まれたタスクを終えた（1日3点まで） */
   alignedTask: 1,
@@ -102,15 +110,37 @@ export const RULES = {
   /** ふつうのタスクを終えた（1日2点まで） */
   task: 1,
   taskMax: 2,
-  /** いまの状態をみつめた（1日1点） */
+  /** いまの状態をみつめた */
   state: 1,
-  /** 夜、その日を閉じた */
-  closeDay: 2,
   /** 週のふりかえりが届いた */
-  weekly: 3,
+  weekly: 1,
   /** 1日に稼げる上限。まとめて荒稼ぎできないようにする */
-  dailyCap: 20,
+  dailyCap: 35,
 } as const;
+
+/**
+ * 何をすると何点入るか（画面に出す一覧）。
+ *
+ * 【なぜ出すのか】
+ * 何が点になるのか分からないと、そもそもやる気にならない。
+ * 配点は隠すものではないので、押せば全部見えるようにする。
+ * ——上限や「同じものは1回」も一緒に書く。
+ *   あとで「増えないじゃないか」と思わせないため。
+ */
+export const RULE_LIST: { label: string; points: string; note?: string }[] = [
+  { label: "パラレルウォークを歩く", points: "3pt", note: "いちばん高い。1日1回" },
+  { label: "実際に歩く（歩数）", points: "1〜2pt", note: "500歩で1pt／1000歩以上で2pt" },
+  { label: "夜、その日を閉じる（ふりかえり）", points: "2pt" },
+  { label: "部屋で話す", points: "1pt", note: "ひとことだけは入らない。2回以上話すこと" },
+  { label: "たくさん話す", points: "＋1pt", note: "3往復ごと。同じ部屋で4ptまで" },
+  { label: "ワークを終える", points: "1pt", note: "同じ日・同じワークは1回まで" },
+  { label: "クリスタルを残す", points: "1pt", note: "1日3粒まで" },
+  { label: "今日の説明書に答える", points: "1pt" },
+  { label: "いまの状態をみつめる", points: "1pt" },
+  { label: "理想からのタスクを終える", points: "1pt", note: "1日3ptまで" },
+  { label: "やることを終える", points: "1pt", note: "1日2ptまで" },
+  { label: "週のふりかえりが届く", points: "1pt" },
+];
 
 /* ── 数える ────────────────────────────────────── */
 
@@ -142,7 +172,7 @@ export async function scoreOf(userId: string): Promise<Score> {
   const supa = supabaseAdmin();
   const from = CAMPAIGN.from, to = CAMPAIGN.to;
 
-  const [talks, works, walks, crystals, manuals, acts, emos, closes, weeklies, customs] =
+  const [talks, works, walks, crystals, manuals, acts, emos, closes, weeklies, steps] =
     await Promise.all([
       rows(supa.from("shinga_conversations").select("date, place, role, content")
         .eq("user_id", userId).gte("date", from).lte("date", to)),
@@ -162,7 +192,8 @@ export async function scoreOf(userId: string): Promise<Score> {
         .eq("user_id", userId).gte("date", from).lte("date", to)),
       rows(supa.from("weekly_reports").select("week_start, status")
         .eq("user_id", userId).gte("week_start", from).lte("week_start", to)),
-      rows(supa.from("custom_works").select("id").eq("user_id", userId)),
+      rows(supa.from("step_logs").select("date, steps")
+        .eq("user_id", userId).gte("date", from).lte("date", to)),
     ]);
 
   /** 日 → 内訳名 → 点 */
@@ -214,6 +245,20 @@ export async function scoreOf(userId: string): Promise<Score> {
       if (seen.has(r.date)) continue;
       seen.add(r.date);
       add(r.date, "パラレルウォークを歩いた", RULES.walk);
+    }
+  }
+
+  /* ③-2 実際に歩いた歩数（1日1回。500歩で1点、1000歩以上で2点）
+     ここは端末が数えた歩数なので、手で増やせない。 */
+  {
+    const per = new Map<string, number>();
+    for (const r of steps) {
+      const n = Number(r.steps) || 0;
+      per.set(String(r.date), Math.max(per.get(String(r.date)) ?? 0, n));
+    }
+    for (const [d, n] of per) {
+      if (n >= 1000) add(d, `${n}歩 歩いた`, RULES.steps1000);
+      else if (n >= 500) add(d, `${n}歩 歩いた`, RULES.steps500);
     }
   }
 
@@ -280,7 +325,7 @@ export async function scoreOf(userId: string): Promise<Score> {
     for (const r of closes) {
       if (seen.has(r.date)) continue;
       seen.add(r.date);
-      add(r.date, "夜、その日を閉じた", RULES.closeDay);
+      add(r.date, "夜、その日を閉じた", RULES.reflect);
     }
   }
 
@@ -292,11 +337,11 @@ export async function scoreOf(userId: string): Promise<Score> {
     }
   }
 
-  /* ⑩ じぶんワークを作った（1つ作れば1点。作るのも使うこと） */
-  if (customs.length > 0) {
-    // 作った日が分からないので、期間の初日に1点だけ乗せる（水増しにならない）
-    add(CAMPAIGN.from, "じぶんワークを作った", RULES.customStart);
-  }
+  /*
+   * じぶんワークは点にしない。
+   * 作った日が記録されていないので、どの日に乗せても嘘になる。
+   * （じぶんワークを**走らせた**ぶんは、work_sessions に残るので②で数えている）
+   */
 
   /* ── 1日の上限で丸めて、合計する ───────────────── */
   const byDay: DayPoints[] = [...day.entries()]

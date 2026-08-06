@@ -1,6 +1,7 @@
 "use client";
 
-import { PriorityGoals } from "./PriorityGoals";
+import { PriorityList } from "./PriorityList";
+import { Fold } from "./Fold";
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -10,7 +11,6 @@ import { Chat } from "./Chat";
 import { MonthCalendar } from "./MonthCalendar";
 import { WeekCalendarCompact } from "./WeekCalendarCompact";
 import { TimerWidget } from "./TimerWidget";
-import { PhoneFocus } from "./PhoneFocus";
 import AlarmManager from "./AlarmManager";
 import { RealmNav } from "./RealmNav";
 import { syncTodayProgress, type TodayProgress } from "@/lib/todayProgress";
@@ -254,86 +254,121 @@ export function Dashboard({ userName }: { userName: string }) {
             )}
           </section>
 
-          {/* タイマー (30分 / 5分) */}
-          <TimerWidget />
+          {/*
+            ここから下は、いつも見るものではない。**畳んでおいて、押して見に行く。**
+            リアルバースを開いた瞬間に全部が縦に並んでいると、
+            スマホでは延々スクロールになって「いま何を見ればいいのか」が分からなくなる。
+          */}
+          <Fold id="timer" title="⏱ タイマー" summary="1時間 / 30分 / 5分" accent="gray">
+            <TimerWidget />
+          </Fold>
 
-          {/* スマホの誘惑をとめる（できることの範囲を正直に書いたうえで案内する） */}
-          <PhoneFocus />
+          <Fold id="alarm" title="⏰ アラーム" summary="時刻を決めて1回鳴らす" accent="gray">
+            <AlarmManager />
+          </Fold>
 
-          {/* アラーム (時刻指定で1回鳴らす) */}
-          <AlarmManager />
+          <Fold id="tools" title="🔗 マイツール" summary="よく使うWebツールへの近道" accent="gray">
+            <ToolLinks />
+          </Fold>
 
-          {/* マイツール（外部のWebツールへのショートカット） */}
-          <ToolLinks />
-
-
-          {/* 月/週 タブ切替カレンダー */}
-          <section className="card">
-            <div className="flex items-center gap-1 mb-3">
-              <button
-                onClick={() => setCalTab("week")}
-                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition ${
-                  calTab === "week" ? "bg-[var(--accent)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                週
-              </button>
-              <button
-                onClick={() => setCalTab("month")}
-                className={`flex-1 text-xs font-bold py-1.5 rounded-md transition ${
-                  calTab === "month" ? "bg-[var(--accent)] text-white" : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                }`}
-              >
-                月
-              </button>
-            </div>
-            {calTab === "week" ? <WeekCalendarCompact /> : <MonthCalendar />}
-          </section>
+          {/*
+            「スマホの誘惑をとめる」は外した。
+            このアプリからは他のアプリを止められないので（Webページにはその権限が無い）、
+            端末の設定のやり方を案内するだけの画面になっていた。**機能していない。**
+            端末側の手順は変わるものなので、案内として持つのも無理がある。
+            止める仕組みを本当に作れるようになったら、そのときに戻す。
+          */}
         </aside>
 
         {/* ── メイン列 (モバイルでは上に表示) ── */}
         <div className="space-y-4 min-w-0 order-1 lg:order-2">
           {/*
-            優先順位（1・2・3）と、その道のりの分解。**いちばん上**に置く。
-            ここが「何を優先するか」を決める場所なので、他のどれよりも先に目に入る位置に要る。
-            まだ淳くんの画面だけ（試してから全員へ）。
+            【リアルバースの並べ方】
+            表に出しておくのは、この2つだけ：
+              ① 今日のフォーカス … いまどんな状態でいたいか
+              ② 優先順位         … 何が一番なのか
+            ほかは全部**閉じておく**。押して、自分で見に行く。
+            閉じているときも一行のあらましを出すので、開く必要があるかは分かる。
           */}
-          {data.isAdmin && <PriorityGoals />}
 
-          {/* 昨夜決めた明日の流れ（朝モード時、briefingがあれば） */}
+          {/* ① 今日のフォーカス */}
+          <TodayFocusCard />
+
+          {/* ② 優先順位（1・2・3が並ぶだけ。書き込みと分解は /priority へ） */}
+          {data.isAdmin && <PriorityList />}
+
+          {/* 昨夜決めた今日の流れ */}
           {data.isMorning && data.eveningBriefing?.body && (
             <EveningBriefingCard briefing={data.eveningBriefing} />
           )}
 
-          {/* 今日のフォーカス（インナーワールドで決めた 今日の感情＋最優先の一歩） */}
-          <TodayFocusCard />
+          {/* 今日の進捗 */}
+          <Fold id="progress" title="🎯 今日の進捗"
+            summary={`${todayProgress.completedCount}/${todayProgress.baselineCount} 完了 ／ ${todayProgress.pct}%`}>
+            <DailyProgress progress={todayProgress} onRefresh={() => setReloadKey((k) => k + 1)} />
+          </Fold>
 
-          {/* 今日のタスク進捗（リング表示・100%超え可） */}
-          <DailyProgress progress={todayProgress} onRefresh={() => setReloadKey((k) => k + 1)} />
-
-          {/* 秘書との会話（森背景＋立ち絵） */}
-          <section>
-            <h2 className="font-bold text-base mb-2">💬 {secretaryName}との会話</h2>
-            <Chat
-              key={`${data.targetDay}-${data.isMorning}`}
-              initialMessages={data.messages}
-              isMorning={data.isMorning}
-              autoGreet={autoGreet}
-              onTasksUpdated={() => setReloadKey((k) => k + 1)}
-              secretaryName={secretaryName}
-              secretaryAvatarUrl={secretaryAvatarUrl}
-            />
-          </section>
+          {/* 秘書との会話。**カレンダーをここへ寄せた** ——
+              時間割を組んでもらうときに、予定を見ながら話せないと確認しながら進められない。 */}
+          <Fold id="chat" title={`💬 ${secretaryName}との会話`}
+            summary="時間割づくり・相談。カレンダーもここ" defaultOpen>
+            <div className="space-y-3">
+              <div className="rounded-xl border border-gray-200 bg-white p-2.5">
+                <div className="flex items-center gap-1 mb-2">
+                  <button
+                    onClick={() => setCalTab("week")}
+                    className={`flex-1 text-xs font-bold py-1.5 rounded-md transition ${
+                      calTab === "week" ? "bg-[var(--accent)] text-white" : "bg-gray-100 text-gray-600"
+                    }`}
+                  >週</button>
+                  <button
+                    onClick={() => setCalTab("month")}
+                    className={`flex-1 text-xs font-bold py-1.5 rounded-md transition ${
+                      calTab === "month" ? "bg-[var(--accent)] text-white" : "bg-gray-100 text-gray-600"
+                    }`}
+                  >月</button>
+                </div>
+                {calTab === "week" ? <WeekCalendarCompact /> : <MonthCalendar />}
+              </div>
+              <Chat
+                key={`${data.targetDay}-${data.isMorning}`}
+                initialMessages={data.messages}
+                isMorning={data.isMorning}
+                autoGreet={autoGreet}
+                onTasksUpdated={() => setReloadKey((k) => k + 1)}
+                secretaryName={secretaryName}
+                secretaryAvatarUrl={secretaryAvatarUrl}
+              />
+            </div>
+          </Fold>
 
           {/* タスクボード */}
-          <section>
-            <h2 className="font-bold text-base mb-2">🗂️ タスクボード</h2>
+          <Fold id="tasks" title="🗂️ タスクボード"
+            summary={taskSummary(data.tasks)}>
             <TaskMatrix tasks={data.tasks} todayProgress={todayProgress} onRefresh={() => setReloadKey((k) => k + 1)} />
-          </section>
+          </Fold>
         </div>
       </div>
     </main>
   );
+}
+
+/**
+ * 閉じているときに出す、タスクの一行。
+ * これが無いと「開く必要があるのか」が判断できない。
+ */
+function taskSummary(tasks: any[]): string {
+  const today = new Date();
+  const p = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  const t = p(today);
+  const open = (tasks ?? []).filter((x) => x.status !== "completed");
+  const due = (x: any) => String(x.due ?? "").slice(0, 10);
+  const overdue = open.filter((x) => due(x) && due(x) < t).length;
+  const todayN = open.filter((x) => due(x) === t).length;
+  const parts = [`未完了 ${open.length}件`];
+  if (todayN) parts.push(`今日 ${todayN}件`);
+  if (overdue) parts.push(`期限すぎ ${overdue}件`);
+  return parts.join(" ／ ");
 }
 
 const WALK_ROUTINE_TITLE = "ウォーキング30分";

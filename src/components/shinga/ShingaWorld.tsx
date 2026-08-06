@@ -1100,7 +1100,14 @@ export function ShingaWorld({
       </div>
 
       {/* ワークが終わって、発信の素材が1件たまった */}
-      {materialToast && (
+      {/*
+        ワークを終えた直後に出る「発信の素材になったよ」の通知。
+        **ここには鍵がかかっていなかった。**
+        棚のボタンを閉じていても、この通知だけは全員に出ていて、
+        「やっている時に発信スタジオというのが出てきた」の原因はこれだった。
+        大元のスイッチが off のときは、通知も出さない。
+      */}
+      {flags.broadcast && materialToast && (
         <div className="material-toast">
           <div className="mt-body">
             <span className="mt-kicker">📣 発信の素材になったよ</span>
@@ -2033,9 +2040,16 @@ function Home({
             onClick={() => { try { window.location.href = "/guide"; } catch { /* ignore */ } }}>
             📘 使い方の説明書
           </button>
-          {/* 発信スタジオは、既定で鍵。管理画面で開けた人にだけ出す
-              （親アカウントは常に開いている） */}
-          {features.broadcast && <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>}
+          {/*
+            発信スタジオ。まだ完成していないので、既定は**誰にも出さない**（管理者にも）。
+            以前は features.broadcast だけで見ていたが、その判定は
+            「管理者なら常に通す」だったので、淳くんの画面には必ず出ていた。
+            大元のスイッチ（flags.broadcast）を先に見るようにして、
+            off のときは誰にも出さない。
+          */}
+          {flags.broadcast && features.broadcast && (
+            <button className="iw-report is-cast" onClick={onCast}>📣 発信スタジオ</button>
+          )}
         </div>
       </div>
     </div>

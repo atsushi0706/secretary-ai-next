@@ -1093,7 +1093,18 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .singa-stage.is-bright .singa-place-name .ja { text-shadow: 0 2px 10px rgba(255,255,255,.8); color: #1f3350; }
 .singa-stage.is-bright .singa-place-name .en { color: #2f7fb0; text-shadow: 0 1px 4px rgba(255,255,255,.8); }
-.singa-stage.is-bright .singa-line .who { color: #2f7fb0; text-shadow: none; }
+/*
+ * 明るい絵の部屋（パラレルウォーク・クリスタルルーム）の話し手の名前。
+ *
+ * ここは吹き出しの外なので、**絵の上に直に乗る**。
+ * 文字色だけだと、実測で比2.23（ほぼ読めない）だった。
+ * 下敷きを付けて、どんな絵の上でも読めるようにする。
+ */
+.singa-stage.is-bright .singa-line .who {
+  color: #1c4f70; text-shadow: none;
+  background: rgba(255, 255, 255, .82);
+  border-radius: 999px; padding: 1px 7px;
+}
 .singa-stage.is-bright .singa-line p {
   background: rgba(255,255,255,.9);
   color: #23324a;
@@ -1657,7 +1668,18 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .singa-stage.is-bright .singa-place-name .ja { text-shadow: 0 2px 10px rgba(255,255,255,.8); color: #1f3350; }
 .singa-stage.is-bright .singa-place-name .en { color: #2f7fb0; text-shadow: 0 1px 4px rgba(255,255,255,.8); }
-.singa-stage.is-bright .singa-line .who { color: #2f7fb0; text-shadow: none; }
+/*
+ * 明るい絵の部屋（パラレルウォーク・クリスタルルーム）の話し手の名前。
+ *
+ * ここは吹き出しの外なので、**絵の上に直に乗る**。
+ * 文字色だけだと、実測で比2.23（ほぼ読めない）だった。
+ * 下敷きを付けて、どんな絵の上でも読めるようにする。
+ */
+.singa-stage.is-bright .singa-line .who {
+  color: #1c4f70; text-shadow: none;
+  background: rgba(255, 255, 255, .82);
+  border-radius: 999px; padding: 1px 7px;
+}
 .singa-stage.is-bright .singa-line p {
   background: rgba(255,255,255,.9);
   color: #23324a;
@@ -6201,7 +6223,7 @@ body:has(.realverse-bg) { background: transparent; }
  * 板は自分が暗いことを知っているのだから、板の側で暗い部屋ぶんの色に戻す。
  * こうすれば、明るい部屋でも暗い部屋でも同じように読める。 */
 .singa-stage.is-bright :is(
-  .wtut, .rc-wrap, .ml-screen, .cr-card, .pt-gate, .sm-gate, .tm-wrap, .gr-card,
+  .wtut, .rc-wrap, .ml-screen, .cr-card, .czl, .czl-card, .pt-gate, .sm-gate, .tm-wrap, .gr-card,
   .singa-panel, .qo-box, .zone-intro, .hv-box, .pi-screen, .wm-screen, .bc-screen,
   .tt-screen, .cv-screen, .cry-screen, .mn-screen, .wt-screen, .hero-card, .tl-card
 ) {

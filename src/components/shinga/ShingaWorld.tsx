@@ -1068,8 +1068,14 @@ export function ShingaWorld({
    */
   const ownPlace = !mode || MODES[mode].place === mode;
   const hasPanel = here.panel !== "none" && !todayManual && ownPlace;
-  // パラレルウォークだけ、明るい空の画面にする（暗いと沈むので）
-  const bright = view === "talk" && place === "walk";
+  /**
+   * 明るい絵の部屋では、文字を濃い側に切り替える。
+   *
+   * 背景の明るさを測ると、パラレルウォーク120／クリスタルルーム147／
+   * できあがりの絵132（ほかのゾーンは78〜84）。
+   * 明るい絵に淡い文字を乗せると、白飛びして読めなくなる。
+   */
+  const bright = view === "talk" && (place === "walk" || mode === "crystal");
 
   return (
     <div

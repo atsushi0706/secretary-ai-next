@@ -55,6 +55,10 @@ export async function upsertUserSettings(
     birth_date: string | null;
     birth_name: string;
     birth_gender: string | null;
+    /** ミールレンズで消費カロリーを出すのに要る（他では使わない） */
+    height_cm: number | null;
+    activity_level: string | null;
+    goal_kg_per_month: number | null;
     weekly_schedule: WeeklySchedule | null;
   }>,
 ) {

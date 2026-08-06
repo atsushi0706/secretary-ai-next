@@ -74,7 +74,7 @@ type Person = { userId: string; name: string; email: string; call: string };
  * @param userId 指定するとその人だけ。省略で全員。
  */
 export async function buildReadable(userId?: string): Promise<string> {
-  const [settings, shinga, talks, walks, emos, marks, acts, crystals, quests, weeklies] =
+  const [settings, shinga, talks, walks, emos, marks, acts, crystals, quests, weeklies, meals] =
     await Promise.all([
       fetchAll("user_settings", userId),
       fetchAll("shinga_conversations", userId),
@@ -86,6 +86,7 @@ export async function buildReadable(userId?: string): Promise<string> {
       fetchAll("crystals", userId),
       fetchAll("quests", userId),
       fetchAll("weekly_reports", userId),
+      fetchAll("meal_records", userId),
     ]);
 
   const people: Person[] = settings.map((s: any) => ({
@@ -116,6 +117,7 @@ export async function buildReadable(userId?: string): Promise<string> {
     const cr = mine(crystals, p.userId);
     const qs = mine(quests, p.userId);
     const wr = mine(weeklies, p.userId);
+    const ml = mine(meals, p.userId);
 
     lines.push("");
     lines.push("═".repeat(60));
@@ -126,7 +128,7 @@ export async function buildReadable(userId?: string): Promise<string> {
 
     // 日付ごとにまとめる
     const days = new Set<string>();
-    for (const r of [...sh, ...tk, ...wk, ...em, ...mk, ...ac, ...cr]) if (r?.date) days.add(String(r.date));
+    for (const r of [...sh, ...tk, ...wk, ...em, ...mk, ...ac, ...cr, ...ml]) if (r?.date) days.add(String(r.date));
     const sorted = [...days].sort();
 
     if (sorted.length === 0) {
@@ -201,6 +203,25 @@ export async function buildReadable(userId?: string): Promise<string> {
       const acDay = ac.filter((r: any) => r.date === day);
       for (const a of acDay) {
         if (clean(a.title)) lines.push(`  [やったこと] ${clean(a.title)}`);
+      }
+      // その日の食事（写真から見た目安）
+      const mlDay = ml.filter((r: any) => r.date === day)
+        .sort((a: any, b: any) => String(a.created_at).localeCompare(String(b.created_at)));
+      if (mlDay.length) {
+        const TYPE: Record<string, string> = {
+          breakfast: "朝", lunch: "昼", dinner: "夕", snack: "間食", other: "食事",
+        };
+        let kcal = 0;
+        lines.push("");
+        lines.push("  【食べたもの】");
+        for (const m of mlDay) {
+          kcal += Number(m.total_kcal) || 0;
+          const items = (m.foods ?? []).map((f: any) => `${clean(f.name)} ${Math.round(Number(f.grams) || 0)}g`).join("・");
+          lines.push(`  [${hhmm(m.created_at)}] ${TYPE[String(m.meal_type)] ?? "食事"}：${clean(m.meal_name)}`
+            + `　${Math.round(Number(m.total_kcal) || 0)}kcal（${Math.round(Number(m.estimate_min_kcal) || 0)}〜${Math.round(Number(m.estimate_max_kcal) || 0)}）`);
+          if (items) lines.push(`         中身：${items}`);
+        }
+        lines.push(`  この日の合計：${kcal}kcal`);
       }
     }
 

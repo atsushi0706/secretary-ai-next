@@ -52,8 +52,30 @@ const SCHEMA = {
     estimate_max_kcal: { type: "number" },
     uncertainty_reason: { type: "string" },
     warnings: { type: "array", items: { type: "string" } },
+    /**
+     * ビタミンとミネラル（この食事ぶんの合計）。
+     * 料理ごとには出させない——写真1枚からその細かさは出ないし、返事が重くなる。
+     */
+    micros: {
+      type: "object",
+      properties: {
+        fiber: { type: "number" }, salt: { type: "number" },
+        calcium: { type: "number" }, iron: { type: "number" }, zinc: { type: "number" },
+        magnesium: { type: "number" }, potassium: { type: "number" },
+        vitA: { type: "number" }, vitD: { type: "number" }, vitE: { type: "number" },
+        vitB1: { type: "number" }, vitB2: { type: "number" }, vitB6: { type: "number" },
+        vitB12: { type: "number" }, folate: { type: "number" }, vitC: { type: "number" },
+      },
+    },
   },
 } as const;
+
+/** ビタミン・ミネラルの並び（nutrition.ts の NutrientKey とそろえる） */
+const MICRO_KEYS = [
+  "fiber", "salt", "calcium", "iron", "zinc", "magnesium", "potassium",
+  "vitA", "vitD", "vitE", "vitB1", "vitB2", "vitB6", "vitB12", "folate", "vitC",
+] as const;
+export type MicroKey = typeof MICRO_KEYS[number];
 
 const INSTRUCTIONS = `
 あなたは日本の食生活に詳しい管理栄養士の補助AIです。食事写真を観察し、見えている食品と量、栄養を推定してください。
@@ -70,6 +92,15 @@ const INSTRUCTIONS = `
 - 画像だけで分からない油、砂糖、ソース、容器の深さは uncertainty_reason と warnings に明記する。
 - 出力は日本語。meal_nameは短く自然な料理名にする。
 - 医療診断や厳密な栄養値ではなく、記録用の目安として推定する。
+
+micros（ビタミン・ミネラル）について:
+- 見分けた料理と推定重量から、日本食品標準成分表の知識で概算する。この食事ぶんの合計を返す。
+- 単位は必ずこれに揃える：
+  fiber=g（食物繊維） / salt=g（食塩相当量） / calcium=mg / iron=mg / zinc=mg /
+  magnesium=mg / potassium=mg / vitA=µgRAE / vitD=µg / vitE=mg /
+  vitB1=mg / vitB2=mg / vitB6=mg / vitB12=µg / folate=µg / vitC=mg
+- **分からないものは0にする。** それらしい数字で埋めない。
+- 調味料や油は写真から読めないので、salt は「見えている料理から普通に想像できる範囲」にとどめる。
 
 JSONだけを返す。前後に説明や記号を付けない。
 `.trim();
@@ -108,6 +139,8 @@ export type MealAnalysis = {
   estimate_min_kcal: number; estimate_max_kcal: number;
   uncertainty_reason: string;
   warnings: string[];
+  /** ビタミンとミネラル（この食事ぶんの合計）。分からないものは0 */
+  micros: Record<MicroKey, number>;
 };
 
 /** 中身が本当にその形式の画像か（拡張子だけを信じない） */
@@ -139,6 +172,11 @@ export function normalize(value: unknown): MealAnalysis | null {
     ? src.warnings.map((w) => str(w, 200)).filter(Boolean).slice(0, 8) : [];
   const why = str(src.uncertainty_reason, 500);
 
+  // ビタミン・ミネラルは、あるものだけ拾って、無いものは0で埋める
+  const rawMicros = (src.micros && typeof src.micros === "object" ? src.micros : {}) as Record<string, unknown>;
+  const micros = {} as Record<MicroKey, number>;
+  for (const k of MICRO_KEYS) micros[k] = r1(num(rawMicros[k]));
+
   if (src.food_detected !== true) {
     return {
       food_detected: false, meal_name: "", foods: [],
@@ -146,6 +184,7 @@ export function normalize(value: unknown): MealAnalysis | null {
       estimate_min_kcal: 0, estimate_max_kcal: 0,
       uncertainty_reason: why || "食べ物を確認できませんでした。",
       warnings,
+      micros: Object.fromEntries(MICRO_KEYS.map((k) => [k, 0])) as Record<MicroKey, number>,
     };
   }
 
@@ -183,6 +222,7 @@ export function normalize(value: unknown): MealAnalysis | null {
     estimate_max_kcal: Math.round(Math.max(total, max || total * 1.2)),
     uncertainty_reason: why || "写真1枚からの推定のため、量や調味料に幅があります。",
     warnings,
+    micros,
   };
 }
 
@@ -258,6 +298,7 @@ export type MealRecord = {
   confidence: number;
   estimate_min_kcal: number; estimate_max_kcal: number;
   uncertainty_reason: string;
+  micros: Record<string, number> | null;
   created_at: string;
 };
 
@@ -279,6 +320,7 @@ export async function saveMeal(
     estimate_min_kcal: a.estimate_min_kcal,
     estimate_max_kcal: a.estimate_max_kcal,
     uncertainty_reason: a.uncertainty_reason,
+    micros: a.micros,
   });
   if (error) throw error;
 }
@@ -317,7 +359,10 @@ create table if not exists meal_records (
   estimate_min_kcal  integer not null default 0,
   estimate_max_kcal  integer not null default 0,
   uncertainty_reason text not null default '',
+  micros             jsonb not null default '{}'::jsonb,
   created_at         timestamptz not null default now()
 );
 create index if not exists meal_records_user_date_idx on meal_records (user_id, date);
+-- あとから足した列（すでに表がある人向け）
+alter table meal_records add column if not exists micros jsonb not null default '{}'::jsonb;
 `.trim();

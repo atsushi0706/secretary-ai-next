@@ -421,3 +421,11 @@ create table if not exists public.meal_records (
 );
 create index if not exists meal_records_user_date_idx on public.meal_records (user_id, date);
 alter table public.meal_records enable row level security;
+
+-- ミールレンズ：消費カロリーを出すのに要る3つ
+-- （体重は weight_logs、年齢と性別は誕生日の設定から取れるので、足りないのはこれだけ）
+alter table public.user_settings add column if not exists height_cm        numeric(5,1);
+alter table public.user_settings add column if not exists activity_level   text;
+alter table public.user_settings add column if not exists goal_kg_per_month numeric(4,2);
+-- 写真から見たビタミン・ミネラル（あとから足した列）
+alter table public.meal_records add column if not exists micros jsonb not null default '{}'::jsonb;

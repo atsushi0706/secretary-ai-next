@@ -24,8 +24,32 @@ type Analysis = {
   confidence: number; estimate_min_kcal: number; estimate_max_kcal: number;
   uncertainty_reason: string; warnings: string[];
 };
-type Record = Analysis & { id: string; meal_type: string; created_at: string };
+/** 保存ずみの1食（型名を Record にすると TypeScript の Record を隠してしまう） */
+type MealRow = Analysis & { id: string; meal_type: string; created_at: string };
 type Total = { kcal: number; protein_g: number; fat_g: number; carbs_g: number; min_kcal: number; max_kcal: number };
+
+/** つり合い（消費・目標・PFC・ビタミンの目安） */
+type Nutrient = { key: string; label: string; unit: string; kind: "want" | "cap"; from: string };
+type Sum = Total & { meals: number; micros: Record<string, number> };
+type Bal = {
+  missing: string[];
+  input: { weight: number | null; height: number | null; age: number | null; sex: string | null; activity: string; wantedKg: number };
+  balance: null | {
+    plan: { bmr: number; tdee: number; target: number; deficit: number; paceKg: number; wantedKg: number; capped: boolean; note: string };
+    pfc: { protein_g: number; fat_g: number; carbs_g: number; note: string };
+    micros: Record<string, number>;
+  };
+  today: Sum | null;
+  yesterday: Sum | null;
+  nutrients: Nutrient[];
+};
+
+const ACTIVITY_UI = [
+  { key: "low", label: "ほとんど座って過ごす", hint: "デスクワーク中心・運動なし" },
+  { key: "mid", label: "少し動く", hint: "軽い運動を週1〜3回／よく歩く" },
+  { key: "high", label: "よく動く", hint: "中くらいの運動を週3〜5回" },
+  { key: "vhigh", label: "かなり動く", hint: "強い運動をほぼ毎日／立ち仕事" },
+];
 
 const TYPES = [
   { key: "breakfast", emoji: "🌅", label: "朝" },
@@ -97,7 +121,7 @@ const hhmm = (iso: string) => {
 };
 
 export function MealLens({ onBack }: { onBack: () => void }) {
-  const [meals, setMeals] = useState<Record[]>([]);
+  const [meals, setMeals] = useState<MealRow[]>([]);
   const [total, setTotal] = useState<Total | null>(null);
   const [err, setErr] = useState("");
   const [sql, setSql] = useState("");
@@ -108,6 +132,14 @@ export function MealLens({ onBack }: { onBack: () => void }) {
   const [ana, setAna] = useState<Analysis | null>(null);
   const [mealType, setMealType] = useState(guessType());
   const [saving, setSaving] = useState(false);
+
+  // つり合い（消費・目標・PFC・ビタミン）
+  const [bal, setBal] = useState<Bal | null>(null);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [microOpen, setMicroOpen] = useState(false);
+  const [hIn, setHIn] = useState("");
+  const [gIn, setGIn] = useState("");
+  const [savingSetup, setSavingSetup] = useState(false);
 
   const camRef = useRef<HTMLInputElement>(null);
   const libRef = useRef<HTMLInputElement>(null);
@@ -121,7 +153,34 @@ export function MealLens({ onBack }: { onBack: () => void }) {
       setMeals(d.meals ?? []); setTotal(d.total ?? null);
     } catch (e: any) { setErr(String(e?.message ?? e)); }
   }, []);
-  useEffect(() => { void load(); }, [load]);
+  const loadBal = useCallback(async () => {
+    try {
+      const r = await fetch("/api/meal/balance");
+      const d = await readJson(r);
+      if (!r.ok) { if (d.sql) setSql(d.sql); return; }
+      setBal(d);
+      setHIn(d.input?.height ? String(d.input.height) : "");
+      setGIn(d.input?.wantedKg ? String(d.input.wantedKg) : "");
+    } catch { /* つり合いが出なくても、記録はできる */ }
+  }, []);
+  useEffect(() => { void load(); void loadBal(); }, [load, loadBal]);
+
+  /** 身長・動く量・落としたい量を保存 */
+  async function saveSetup(patch: Record<string, unknown>) {
+    if (savingSetup) return;
+    setSavingSetup(true);
+    try {
+      const r = await fetch("/api/meal/balance", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      });
+      const d = await readJson(r);
+      if (!r.ok) { setErr(d.error || "保存できなかった"); return; }
+      setErr("");
+      await loadBal();
+    } catch (e: any) { setErr(String(e?.message ?? e)); }
+    finally { setSavingSetup(false); }
+  }
 
   /** 写真を1枚見てもらう */
   async function analyze(file: File) {
@@ -202,7 +261,7 @@ export function MealLens({ onBack }: { onBack: () => void }) {
       const d = await readJson(r);
       if (!r.ok) { setErr(d.error || "記録できなかった"); setSql(d.sql || ""); return; }
       setAna(null); setShot(null);
-      await load();
+      await load(); await loadBal();
     } catch (e: any) { setErr(String(e?.message ?? e)); }
     finally { setSaving(false); }
   }
@@ -210,9 +269,52 @@ export function MealLens({ onBack }: { onBack: () => void }) {
   async function remove(id: string) {
     try {
       await fetch(`/api/meal?id=${encodeURIComponent(id)}`, { method: "DELETE" });
-      await load();
+      await load(); await loadBal();
     } catch { /* 消せなくても画面は壊さない */ }
   }
+
+  const pl = bal?.balance?.plan ?? null;
+  const tgt = bal?.balance?.pfc ?? null;
+
+  /**
+   * いま足りているのか、余っているのか。この画面の主役。
+   *
+   * 大事なのは順番。**「基礎代謝を割っている」がいちばん強い警告**にする。
+   * 目標より少ないのは良いことのように見えるが、基礎代謝を割ると
+   * 体が省エネに切り替わって減らなくなり、筋肉から削られていくので。
+   * ——ただし、まだ1食も食べていない朝に「足りない」と言っても意味がないので、
+   *   その日の記録がまだ無いうちは何も言わない。
+   */
+  const verdict = (() => {
+    const got = total?.kcal ?? 0;
+    if (!pl || meals.length === 0) return { tone: "", text: "" };
+    if (got < pl.bmr) {
+      return {
+        tone: "is-under",
+        text: `いま ${pl.bmr - got}kcal、基礎代謝に足りていない。`
+          + `ここを割ると体が省エネに切り替わって、かえって減りにくくなるよ。あと少し食べよう。`,
+      };
+    }
+    if (got <= pl.target) {
+      return {
+        tone: "is-ok",
+        text: `目標まであと ${pl.target - got}kcal。基礎代謝は超えているから、いい位置だよ。`,
+      };
+    }
+    const over = got - pl.target;
+    if (got <= pl.tdee) {
+      return {
+        tone: "is-warn",
+        text: `目標を ${over}kcal 超えた。でも使う量（${pl.tdee}）の中には収まってる。`
+          + `増えはしないけど、減るペースはゆるやかになるね。`,
+      };
+    }
+    return {
+      tone: "is-over",
+      text: `使う量（${pl.tdee}kcal）を ${got - pl.tdee}kcal 超えてる。`
+        + `明日で戻せば大丈夫。1日で決まるものじゃないよ。`,
+    };
+  })();
 
   return (
     <div className="ml-screen">
@@ -239,21 +341,141 @@ export function MealLens({ onBack }: { onBack: () => void }) {
           </div>
         )}
 
-        {/* ── 今日の合計 ───────────────────────── */}
+        {/* ── 今日の合計と、消費とのつり合い ───────────── */}
         {total && (
           <div className="ml-total">
             <div className="ml-total-t">今日ここまで</div>
             <div className="ml-kcal">
               <strong>{total.kcal}</strong><span>kcal</span>
+              {pl && <span className="ml-of">／ 目標 {pl.target}</span>}
             </div>
             {total.kcal > 0 && (
               <div className="ml-range">だいたい {total.min_kcal}〜{total.max_kcal} kcal のあいだ</div>
             )}
+
+            {/* 目標に対してどこまで来たか。目標を超えたら色が変わる */}
+            {pl && (
+              <>
+                <div className={`ml-bar ${total.kcal > pl.target ? "is-over" : ""}`}>
+                  <span style={{ width: `${Math.min(100, (total.kcal / Math.max(1, pl.target)) * 100)}%` }} />
+                  {/* 基礎代謝の線。ここより下は「食べ足りない」側 */}
+                  <i style={{ left: `${Math.min(100, (pl.bmr / Math.max(1, pl.target)) * 100)}%` }} />
+                </div>
+                <div className="ml-bal">
+                  <span>使う量 <b>{pl.tdee}</b></span>
+                  <span>食べる目標 <b>{pl.target}</b></span>
+                  <span>基礎代謝 <b>{pl.bmr}</b></span>
+                </div>
+                {/* いま足りているか、余っているか。ここがこの画面の主役 */}
+                <div className={`ml-verdict ${verdict.tone}`}>{verdict.text}</div>
+              </>
+            )}
+
             <div className="ml-pfc">
-              <span>たんぱく質 <b>{total.protein_g}</b>g</span>
-              <span>脂質 <b>{total.fat_g}</b>g</span>
-              <span>炭水化物 <b>{total.carbs_g}</b>g</span>
+              <span>たんぱく質 <b>{total.protein_g}</b>g{tgt && <i>／{tgt.protein_g}</i>}</span>
+              <span>脂質 <b>{total.fat_g}</b>g{tgt && <i>／{tgt.fat_g}</i>}</span>
+              <span>炭水化物 <b>{total.carbs_g}</b>g{tgt && <i>／{tgt.carbs_g}</i>}</span>
             </div>
+
+            {/* 昨日ぶん（並べて見えないと、増えたのか減ったのか分からない） */}
+            {bal?.yesterday && bal.yesterday.meals > 0 && (
+              <div className="ml-yday">
+                昨日は <b>{bal.yesterday.kcal}</b> kcal（{bal.yesterday.meals}食）
+                {pl && (total.kcal > 0
+                  ? <>　今日はここまで <b>{total.kcal - bal.yesterday.kcal > 0 ? "+" : ""}{total.kcal - bal.yesterday.kcal}</b></>
+                  : null)}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── 体の情報（足りないときだけ、うるさく言う） ───── */}
+        {bal && bal.missing.length > 0 && (
+          <button className="ml-need" onClick={() => setSetupOpen(true)}>
+            消費カロリーを出すのに、あと{bal.missing.length}つ要る
+            <small>{bal.missing.join("／")}</small>
+          </button>
+        )}
+
+        {/* ── 設定（身長・動く量・落としたい量） ───────── */}
+        {bal && (setupOpen || (bal.missing.length === 0 && !bal.input.height)) && (
+          <div className="ml-setup">
+            <div className="ml-setup-h">
+              <span>からだと目標</span>
+              <button onClick={() => setSetupOpen(false)}>×</button>
+            </div>
+
+            <label className="ml-row">
+              <span>身長</span>
+              <input type="number" inputMode="decimal" step="0.1" value={hIn}
+                onChange={(e) => setHIn(e.target.value)} placeholder="170" />
+              <em>cm</em>
+              <button disabled={savingSetup || !hIn} onClick={() => void saveSetup({ height: Number(hIn) })}>保存</button>
+            </label>
+
+            <div className="ml-row is-col">
+              <span>どれくらい動く？</span>
+              <div className="ml-acts">
+                {ACTIVITY_UI.map((a) => (
+                  <button key={a.key} className={bal.input.activity === a.key ? "on" : ""}
+                    disabled={savingSetup}
+                    onClick={() => void saveSetup({ activity: a.key })}>
+                    <b>{a.label}</b><small>{a.hint}</small>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <label className="ml-row">
+              <span>1か月に落としたい</span>
+              <input type="number" inputMode="decimal" step="0.5" min="0" max="10" value={gIn}
+                onChange={(e) => setGIn(e.target.value)} placeholder="0" />
+              <em>kg</em>
+              <button disabled={savingSetup} onClick={() => void saveSetup({ wantedKg: Number(gIn) || 0 })}>保存</button>
+            </label>
+            <p className="ml-setup-n">
+              0にすると「いまの体重を保つ」量になるよ。<br />
+              脂肪1kgを落とすには約7200kcalの赤字が要る、という計算で出している。
+            </p>
+          </div>
+        )}
+
+        {/* 望んだペースが速すぎたときは、なぜ落としたかを必ず出す */}
+        {pl?.capped && <div className="ml-capped">⚠ {pl.note}</div>}
+        {pl && !pl.capped && pl.deficit > 0 && <div className="ml-note2">{pl.note}</div>}
+        {bal?.balance?.pfc.note && <div className="ml-note2">{bal.balance.pfc.note}</div>}
+
+        {/* ── ビタミンとミネラル（畳んでおく） ─────────── */}
+        {bal?.balance && total && total.kcal > 0 && (
+          <div className="ml-micro">
+            <button className="ml-micro-h" onClick={() => setMicroOpen((v) => !v)}>
+              🥬 ビタミンとミネラル（今日）
+              <small>{microOpen ? "▲ 閉じる" : "▼ 開く"}</small>
+            </button>
+            {microOpen && (
+              <>
+                {bal.nutrients.map((n) => {
+                  const got = bal.today?.micros?.[n.key] ?? 0;
+                  const want = bal.balance!.micros[n.key] ?? 0;
+                  const pct = want > 0 ? Math.round((got / want) * 100) : 0;
+                  const over = n.kind === "cap" && got > want;
+                  return (
+                    <div key={n.key} className={`ml-mrow ${over ? "is-over" : ""}`}>
+                      <span className="l">{n.label}</span>
+                      <span className="v">{got}<i>/{want}{n.unit}</i></span>
+                      <span className="b">
+                        <span style={{ width: `${Math.min(100, pct)}%` }} />
+                      </span>
+                      <span className="p">{pct}%</span>
+                    </div>
+                  );
+                })}
+                <p className="ml-micro-n">
+                  「摂りたい量」は日本人の食事摂取基準（2020年版）の代表値。<b>食塩相当量だけは上限</b>で、
+                  超えたら赤くなるよ。集団の代表値なので、その人の必要量とはずれる目安。
+                </p>
+              </>
+            )}
           </div>
         )}
 

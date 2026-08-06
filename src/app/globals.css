@@ -6222,3 +6222,102 @@ body:has(.realverse-bg) { background: transparent; }
   width: 24px; height: 24px; border-radius: 7px; flex: 0 0 auto;
   color: var(--singa-ink-soft); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.18);
 }
+
+/* ── 摂取と消費のつり合い ────────────────────────── */
+.ml-of { font-size: .72rem; color: var(--singa-ink-soft); }
+.ml-bar {
+  position: relative; height: 9px; margin-top: 9px;
+  border-radius: 999px; background: rgba(255,255,255,.12); overflow: visible;
+}
+.ml-bar > span {
+  display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg,#8fd07a,#eed69b); transition: width .3s ease;
+}
+.ml-bar.is-over > span { background: linear-gradient(90deg,#eec07a,#e2574c); }
+/* 基礎代謝の線。ここより下は「食べ足りない」側 */
+.ml-bar > i {
+  position: absolute; top: -3px; width: 2px; height: 15px;
+  background: rgba(255,255,255,.75); border-radius: 1px;
+}
+.ml-bal { display: flex; flex-wrap: wrap; gap: 11px; margin-top: 7px;
+  font-size: .66rem; color: var(--singa-ink-soft); }
+.ml-bal b { font-size: .78rem; color: var(--singa-ink); }
+
+.ml-verdict {
+  margin-top: 9px; padding: 10px 12px; border-radius: 11px;
+  font-size: .76rem; line-height: 1.85;
+}
+.ml-verdict.is-under { color: #ffd9a0; background: rgba(226,150,60,.16); border: 1px solid rgba(226,150,60,.5); }
+.ml-verdict.is-ok    { color: #c9edb8; background: rgba(140,210,160,.14); border: 1px solid rgba(140,210,160,.45); }
+.ml-verdict.is-warn  { color: #eed69b; background: rgba(238,214,155,.12); border: 1px solid rgba(238,214,155,.4); }
+.ml-verdict.is-over  { color: #ffc0b8; background: rgba(200,70,60,.15); border: 1px solid rgba(200,70,60,.45); }
+
+.ml-pfc i { font-style: normal; color: var(--singa-ink-soft); font-size: .7rem; }
+.ml-yday { margin-top: 8px; font-size: .68rem; color: var(--singa-ink-soft); }
+.ml-yday b { color: var(--singa-ink); }
+
+.ml-need {
+  display: flex; flex-direction: column; gap: 3px; text-align: left;
+  padding: 11px 13px; border-radius: 12px; font-size: .78rem; font-weight: 700;
+  color: #ffd9a0; background: rgba(226,150,60,.14); border: 1px solid rgba(226,150,60,.45);
+}
+.ml-need small { font-size: .68rem; font-weight: 400; color: var(--singa-ink-soft); }
+
+.ml-setup {
+  display: flex; flex-direction: column; gap: 11px;
+  padding: 13px; border-radius: 14px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(238,214,155,.3);
+}
+.ml-setup-h { display: flex; align-items: center; justify-content: space-between;
+  font-size: .78rem; font-weight: 700; color: var(--singa-gold); }
+.ml-setup-h button { width: 26px; height: 26px; border-radius: 50%;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16); }
+.ml-row { display: flex; align-items: center; gap: 8px; font-size: .76rem; color: var(--singa-ink); }
+.ml-row.is-col { flex-direction: column; align-items: stretch; gap: 7px; }
+.ml-row > span { flex: 0 0 auto; }
+.ml-row input {
+  flex: 1; min-width: 0; padding: 8px 10px; border-radius: 9px; font-size: .86rem;
+  color: var(--singa-ink); background: rgba(0,0,0,.3); border: 1px solid rgba(224,189,114,.3);
+}
+.ml-row em { font-style: normal; font-size: .72rem; color: var(--singa-ink-soft); }
+.ml-row > button {
+  flex: 0 0 auto; padding: 8px 13px; border-radius: 9px; font-size: .74rem; font-weight: 700;
+  color: #1a1208; background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}
+.ml-row > button:disabled { opacity: .45; }
+.ml-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.ml-acts button {
+  display: flex; flex-direction: column; gap: 2px; text-align: left;
+  padding: 9px 10px; border-radius: 11px;
+  color: var(--singa-ink-soft); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.14);
+}
+.ml-acts button b { font-size: .74rem; }
+.ml-acts button small { font-size: .62rem; line-height: 1.5; }
+.ml-acts button.on { color: var(--singa-ink); background: rgba(238,214,155,.16); border-color: rgba(238,214,155,.6); }
+.ml-setup-n { font-size: .66rem; line-height: 1.85; color: var(--singa-ink-soft); }
+
+.ml-capped {
+  padding: 11px 13px; border-radius: 12px; font-size: .76rem; line-height: 1.9;
+  color: #ffd9a0; background: rgba(226,150,60,.15); border: 1px solid rgba(226,150,60,.5);
+}
+.ml-note2 { font-size: .68rem; line-height: 1.85; color: var(--singa-ink-soft); }
+
+.ml-micro { display: flex; flex-direction: column; gap: 5px; }
+.ml-micro-h {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 12px; border-radius: 12px; font-size: .78rem; font-weight: 700;
+  color: var(--singa-ink); background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.16);
+}
+.ml-micro-h small { font-size: .66rem; font-weight: 400; color: var(--singa-ink-soft); }
+.ml-mrow { display: grid; grid-template-columns: 5.6em auto 1fr 2.6em; gap: 7px; align-items: center;
+  font-size: .68rem; color: var(--singa-ink-soft); }
+.ml-mrow .l { color: var(--singa-ink); }
+.ml-mrow .v { white-space: nowrap; color: var(--singa-ink); }
+.ml-mrow .v i { font-style: normal; font-size: .62rem; color: var(--singa-ink-soft); }
+.ml-mrow .b { height: 6px; border-radius: 999px; background: rgba(255,255,255,.12); overflow: hidden; }
+.ml-mrow .b > span { display: block; height: 100%; border-radius: 999px;
+  background: linear-gradient(90deg,#8fd07a,#eed69b); }
+.ml-mrow .p { text-align: right; white-space: nowrap; }
+.ml-mrow.is-over .v, .ml-mrow.is-over .p { color: #ffb4ac; }
+.ml-mrow.is-over .b > span { background: linear-gradient(90deg,#eec07a,#e2574c); }
+.ml-micro-n { font-size: .64rem; line-height: 1.85; color: var(--singa-ink-soft); margin-top: 4px; }

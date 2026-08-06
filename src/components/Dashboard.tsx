@@ -297,6 +297,25 @@ export function Dashboard({ userName }: { userName: string }) {
           {/* ② 優先順位（1・2・3が並ぶだけ。書き込みと分解は /priority へ） */}
           {data.isAdmin && <PriorityList />}
 
+          {/*
+            マインドマップ・スケジューラーへの入口（淳くんだけ）。
+            わーっと話した内容を構造にして、30分の粒まで割って、ロードマップに組む道具。
+            チャットの中に埋めず、ボタンで別画面へ——マップは場所を取るので。
+          */}
+          {data.isAdmin && (
+            <Link href="/mindmap"
+              className="card border-l-4 border-violet-500 flex items-center gap-3 hover:bg-violet-50/40">
+              <span className="text-xl">🧠</span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-bold text-sm text-violet-800">マインドマップ・スケジューラー</span>
+                <span className="block text-[11px] text-gray-500 mt-0.5">
+                  話すと構造になる。30分の粒まで割って、進め方まで組む
+                </span>
+              </span>
+              <span className="text-gray-400 text-xs">→</span>
+            </Link>
+          )}
+
           {/* 昨夜決めた今日の流れ */}
           {data.isMorning && data.eveningBriefing?.body && (
             <EveningBriefingCard briefing={data.eveningBriefing} />

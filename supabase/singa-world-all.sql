@@ -466,3 +466,17 @@ create table if not exists public.goal_steps (
 );
 create index if not exists goal_steps_goal_idx on public.goal_steps (user_id, goal_id, order_no);
 alter table public.goal_steps enable row level security;
+
+-- マインドマップ・スケジューラー（淳くん専用）
+-- 話した内容を構造にして、30分の粒まで割って、フェーズのロードマップに組む
+create table if not exists public.mind_maps (
+  id         uuid primary key default gen_random_uuid(),
+  user_id    text not null,
+  title      text not null default '',
+  tree       jsonb not null default '{}'::jsonb,
+  schedule   jsonb,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+create index if not exists mind_maps_user_idx on public.mind_maps (user_id, updated_at desc);
+alter table public.mind_maps enable row level security;

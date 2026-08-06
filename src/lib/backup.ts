@@ -63,6 +63,7 @@ const TABLES = [
   "meal_records",
   "priority_goals",
   "goal_steps",
+  "mind_maps",
   "briefings",
   // 自分で作ったもの
   "custom_works",

@@ -1027,8 +1027,12 @@ export function ShingaWorld({
     : mode === "walk" ? `/walk-${walkStage}.jpg`
     // ミラーオブワールドは専用の絵（左＝いまの世界／右＝もう一つの世界／中央に鏡の環）
     : mode === "shadow" ? "/shadow-bg.jpg"
-    // クリスタルルームは、光の扉の絵（結晶化の入口）
-    : mode === "crystal" ? "/zone-breakthrough.jpg"
+    /*
+     * クリスタルルームは専用の絵。
+     * 結晶化の板がひらいている間は、**できあがった瞬間の絵**に切り替える。
+     * ——ここが「キメた」ところなので、景色も変わってほしい。
+     */
+    : mode === "crystal" ? (crystallizing ? "/crystal-done.jpg" : "/zone-crystal.jpg")
     : here.image;
   // 直前の絵を覚えておき、上に新しい絵をふわっと重ねて切り替える
   const [prevBg, setPrevBg] = useState<string | null>(null);
@@ -1040,6 +1044,19 @@ export function ShingaWorld({
     const t = setTimeout(() => setPrevBg(null), 1400);
     return () => clearTimeout(t);
   }, [bgUrl]);
+
+  /**
+   * 実際に敷くCSSの値。
+   *
+   * クリスタルルームの絵は、あとから差し替える予定のもの。
+   * まだ置かれていない間は 404 になって**背景が真っ暗になる**ので、
+   * 前から使っていた絵を下敷きとして重ねておく。
+   * CSSは複数の背景を書けて、上のものが読めなければ下が見えるので、
+   * 絵が置かれた瞬間に自然と切り替わる。
+   */
+  const bgCss = /^\/(zone-crystal|crystal-done)\.jpg$/.test(bgUrl)
+    ? `url(${bgUrl}), url(/zone-breakthrough.jpg)`
+    : `url(${bgUrl})`;
 
   /**
    * ゾーンのパネル（呼吸／流れを読む）を出すか。
@@ -1064,7 +1081,7 @@ export function ShingaWorld({
         <div
           className="singa-map-img"
           style={{
-            backgroundImage: `url(${bgUrl})`,
+            backgroundImage: bgCss,
           }}
         />
         {/* 前の風景。新しい風景が上にふわっと重なるので、切り替わりが滑らかになる
@@ -1524,6 +1541,21 @@ export function ShingaWorld({
             <button className="walk-end-btn" onClick={endWalk}>🌱 終わる</button>
           )}
 
+          {/*
+            クリスタルルーム：ひとこと話したら「結晶化する」を出す。
+
+            前は、AIが <crystallize/> を出すのを待つだけだった。
+            指示文に「まだ形になっていないうちは付けない。焦って締めない」と書いてあるので、
+            AIは安全側に寄って**いつまでも出さない**。結果、結晶ができあがらなかった。
+            締めるかどうかを決めるのは本人。ボタンにする。
+            （AIのタグも残してあるので、向こうが先に気づいたときはそれでも開く）
+          */}
+          {mode === "crystal" && !crystallizing && messages.some((m) => m.role === "user") && (
+            <button className="rc-open" onClick={() => setCrystallizing(true)}>
+              💎 結晶化する（ここまでを、かたちにして残す）
+            </button>
+          )}
+
           {/* ワールドリプレイ：ひとこと話したら「今日を閉じる」を出す。
               明日のことを聞き出すのはAIではなく、このボタン。話した内容から起こす。 */}
           {mode === "reflect" && !closing && messages.some((m) => m.role === "user") && (
@@ -1567,7 +1599,7 @@ export function ShingaWorld({
         <div className="zone-intro" onClick={skipZoneIntro} role="button" aria-label="スキップ">
           <div
             className="zi-bg"
-            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : entering === "walk" ? "/walk-1.jpg" : entering === "shadow" ? "/shadow-bg.jpg" : entering === "crystal" ? "/zone-breakthrough.jpg" : PLACES[MODES[entering].place].image})` }}
+            style={{ backgroundImage: `url(${entering === "breakthrough" ? "/wall-1.png" : entering === "travel" ? "/travel-1.jpg" : entering === "walk" ? "/walk-1.jpg" : entering === "shadow" ? "/shadow-bg.jpg" : entering === "crystal" ? "/zone-crystal.jpg" : PLACES[MODES[entering].place].image})` }}
           />
           <div className="zi-veil" />
           <div className="zi-title">

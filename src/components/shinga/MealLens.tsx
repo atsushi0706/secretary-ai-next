@@ -260,6 +260,8 @@ export function MealLens({ onBack }: { onBack: () => void }) {
       });
       const d = await readJson(r);
       if (!r.ok) { setErr(d.error || "記録できなかった"); setSql(d.sql || ""); return; }
+      // 記録はできたが、後付けの列が表に無くて一部だけ保存できなかったとき
+      if (d.warn) { setErr(d.warn); setSql(d.sql || ""); } else { setErr(""); setSql(""); }
       setAna(null); setShot(null);
       await load(); await loadBal();
     } catch (e: any) { setErr(String(e?.message ?? e)); }

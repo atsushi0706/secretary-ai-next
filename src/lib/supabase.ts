@@ -1,4 +1,5 @@
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { isMissingColumn, missingColumnName } from "./pg-errors";
 
 let _client: SupabaseClient | null = null;
 
@@ -66,8 +67,25 @@ export async function upsertUserSettings(
   const { error } = await supa
     .from("user_settings")
     .upsert({ user_id: userId, ...fields, updated_at: new Date().toISOString() });
-  if (error) throw error;
+  if (!error) return;
+  // あとから足した列（身長など）が表にまだ無いときは、何を流せばいいか言う
+  if (isMissingColumn(error)) {
+    const col = missingColumnName(error) ?? "その列";
+    const alter = SETTINGS_ALTERS[col];
+    throw new Error(
+      `設定の表（user_settings）に「${col}」を入れる場所がまだありません。`
+      + (alter ? ` Supabase でこの1行を流してね: ${alter}` : ""),
+    );
+  }
+  throw error;
 }
+
+/** あとから足した列。足りなかったときに、この1行だけ流せば直る */
+const SETTINGS_ALTERS: Record<string, string> = {
+  height_cm: "alter table user_settings add column if not exists height_cm real;",
+  activity_level: "alter table user_settings add column if not exists activity_level text;",
+  goal_kg_per_month: "alter table user_settings add column if not exists goal_kg_per_month real;",
+};
 
 export async function saveMessage(
   userId: string, date: string, mode: "morning" | "evening",

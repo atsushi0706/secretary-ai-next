@@ -67,8 +67,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "記録する中身がないみたい" }, { status: 400 });
     }
     const mealType = TYPES.includes(String(b.mealType)) ? String(b.mealType) : "other";
-    await saveMeal(userId, mealType, a);
-    return NextResponse.json({ ok: true });
+    // 後付けの列が表に無くても記録そのものは通す。抜けたぶんは warn で伝える
+    const r = await saveMeal(userId, mealType, a);
+    return NextResponse.json({ ok: true, warn: r.warn, sql: r.sql });
   } catch (e: any) {
     if (isMissingTable(e)) return needsTable();
     await logError(userId, "/api/meal", e);

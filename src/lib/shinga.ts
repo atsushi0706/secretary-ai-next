@@ -58,12 +58,12 @@ export type EmotionLog = {
   created_at: string;
 };
 
-/** Supabase に該当テーブルが無い (= マイグレーション未実行) かどうか */
-export function isMissingTable(e: any): boolean {
-  const code = e?.code ?? "";
-  const msg = String(e?.message ?? e ?? "");
-  return code === "42P01" || /does not exist|schema cache/i.test(msg);
-}
+/**
+ * 表・列が無いときの読み分けは pg-errors.ts に置いてある（何もインポートしない葉っぱ）。
+ * 既に94か所から `@/lib/shinga` 経由で呼ばれているので、ここから通しておく。
+ */
+import { isMissingTable, isMissingColumn, missingColumnName } from "./pg-errors";
+export { isMissingTable, isMissingColumn, missingColumnName };
 
 export const MIGRATION_HINT =
   "インナーワールド用のテーブルがまだ作られていません。Supabase の SQL Editor で supabase/schema.sql を実行してください。";

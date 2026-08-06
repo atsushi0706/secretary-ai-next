@@ -15,6 +15,7 @@
  */
 import { supabaseAdmin, getUserSettings } from "./supabase";
 import { jstDateStr } from "./google";
+import { isMissingColumn, missingColumnName } from "./pg-errors";
 
 /** この形でしか受け取らない（Geminiに渡す型） */
 const SCHEMA = {
@@ -302,11 +303,18 @@ export type MealRecord = {
   created_at: string;
 };
 
+/**
+ * 記録する。
+ *
+ * あとから足した列（micros など）が表にまだ無い場合は、
+ * **その列だけ抜いてもう一度入れる**。食事の記録そのものを落とさないため。
+ * 抜いたことは warn で返し、画面で「この1行を流して」と見せる。
+ */
 export async function saveMeal(
   userId: string, mealType: string, a: MealAnalysis,
-): Promise<void> {
+): Promise<{ warn?: string; sql?: string }> {
   const supa = supabaseAdmin();
-  const { error } = await supa.from("meal_records").insert({
+  const row: Record<string, unknown> = {
     user_id: userId,
     date: jstDateStr(),
     meal_type: mealType,
@@ -321,9 +329,29 @@ export async function saveMeal(
     estimate_max_kcal: a.estimate_max_kcal,
     uncertainty_reason: a.uncertainty_reason,
     micros: a.micros,
-  });
-  if (error) throw error;
+  };
+  const dropped: string[] = [];
+  // 足りない列を1本ずつ外していく（表そのものが無いときは、そのまま投げる）
+  for (let i = 0; i < 6; i += 1) {
+    const { error } = await supa.from("meal_records").insert(row);
+    if (!error) break;
+    if (!isMissingColumn(error)) throw error;
+    const col = missingColumnName(error);
+    if (!col || !(col in row)) throw error;
+    delete row[col];
+    dropped.push(col);
+  }
+  if (!dropped.length) return {};
+  return {
+    warn: `記録はできたけど、${dropped.join("・")} を入れる場所が表にまだ無いから、その分だけ保存できていない`,
+    sql: dropped.map((c) => ALTERS[c] ?? `-- ${c} の列を足してね`).join("\n"),
+  };
 }
+
+/** あとから足した列。足りなかったときに、この1行だけ流せば直る */
+const ALTERS: Record<string, string> = {
+  micros: "alter table meal_records add column if not exists micros jsonb not null default '{}'::jsonb;",
+};
 
 /** 直近の記録（既定は今日のぶん） */
 export async function listMeals(userId: string, date?: string): Promise<MealRecord[]> {

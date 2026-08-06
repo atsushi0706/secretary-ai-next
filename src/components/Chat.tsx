@@ -6,6 +6,20 @@ import { useDictation } from "@/components/useDictation";
 
 type Message = { role: "user" | "assistant"; content: string };
 
+/**
+ * 画像から読み取ったタスクの候補。
+ *
+ * 【なぜ候補で止めるのか】
+ * 前は読み取った結果をそのままGoogleタスクに追加していた。使ってくれている方から
+ * 「何も入力していないのにタスクが増えている」と連絡があり、原因はそこだった。
+ * 受信箱のスクリーンショットから、メールの件名がそのままタスクになっていた。
+ * **本人が見て選ぶまで作らない。**
+ */
+type TaskCand = {
+  title: string; notes: string; due: string | null;
+  category: string; urgency: string; importance: string; time: string;
+};
+
 function slotify(text: string): string {
   return text.replace(
     /^[\s・\-\*●○◇◆]*(\d{1,2}:\d{2})\s*[-〜~–—]\s*(\d{1,2}:\d{2})\s*[:：]?\s*(.+?)\s*$/gm,
@@ -272,6 +286,41 @@ export function Chat({
     setRecording(true);
   }
 
+  /** 画像から読み取った候補（まだ作っていない）。選ばれたぶんだけ作る */
+  const [cands, setCands] = useState<TaskCand[] | null>(null);
+  const [candPick, setCandPick] = useState<Record<number, boolean>>({});
+  const [candSaving, setCandSaving] = useState(false);
+
+  /** 選ばれた候補だけをGoogleタスクにする */
+  async function addPicked() {
+    if (!cands || candSaving) return;
+    setCandSaving(true);
+    const picked = cands.filter((_, i) => candPick[i]);
+    const done: string[] = [];
+    try {
+      for (const c of picked) {
+        try {
+          const r = await fetch("/api/tasks", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "add", title: c.title, notes: c.notes, due: c.due,
+              category: c.category, urgency: c.urgency, importance: c.importance, time: c.time,
+            }),
+          });
+          if (r.ok) done.push(c.title);
+        } catch { /* 1件失敗しても、残りは進める */ }
+      }
+      setMessages((prev) => [...prev, {
+        role: "assistant",
+        content: done.length
+          ? `Googleタスクに入れたよ: ${done.map((t) => `「${t}」`).join(" / ")}`
+          : "入れるものが選ばれてなかったから、何もしてないよ。",
+      }]);
+      setCands(null); setCandPick({});
+      if (done.length) onTasksUpdated();
+    } finally { setCandSaving(false); }
+  }
+
   async function send() {
     if (sending) return;
     const text = input.trim();
@@ -292,15 +341,18 @@ export function Chat({
         setMessages((prev) => [...prev, userMsg]);
         const r = await fetch("/api/extract-image", { method: "POST", body: fd });
         const data = await r.json();
-        const added = (data.added ?? []) as string[];
-        const reply = added.length > 0
-          ? `画像から ${added.length}件 抜き出した。Googleタスクに追加したよ: ${added.map((t) => `「${t}」`).join(" / ")}`
+        const cs = (data.candidates ?? []) as TaskCand[];
+        const reply = cs.length > 0
+          ? `画像から ${cs.length}件 見つけた。**入れるものを選んでね**（勝手には入れないよ）`
           : data.error
             ? `画像読み取りでエラー: ${data.error}`
-            : "画像見たけど、新しく追加すべきタスクは見つからなかった。";
+            : "画像見たけど、やることは見つからなかった。";
         setMessages((prev) => [...prev, { role: "assistant", content: reply }]);
+        // 最初から全部にチェックを入れると、結局そのまま押されて同じことになる。
+        // **こちらからは1つもチェックしない。**選ぶのは本人。
+        setCands(cs.length ? cs : null);
+        setCandPick({});
         setInput(""); setFile(null);
-        if (added.length > 0) onTasksUpdated();
       } else {
         const userMsg: Message = { role: "user", content: text };
         setMessages((prev) => [...prev, userMsg, { role: "assistant", content: "" }]);
@@ -445,6 +497,49 @@ export function Chat({
           </div>
         )}
       </div>
+
+      {/*
+        画像から見つけたタスクの候補。
+        **ここで選ばれるまで、Googleタスクには何も作らない。**
+        以前はここが無く、読み取った結果をそのまま追加していたので、
+        受信箱のスクリーンショットからメールの件名がタスクになっていた。
+      */}
+      {cands && cands.length > 0 && (
+        <div className="mx-2 mb-2 rounded-xl border-2 border-amber-300 bg-amber-50 p-3">
+          <div className="text-xs font-bold text-amber-800 mb-2">
+            📋 画像から見つけたもの — <span className="underline">入れるものだけ</span>選んでね
+          </div>
+          <div className="space-y-1.5">
+            {cands.map((c, i) => (
+              <label key={i}
+                className={`flex items-start gap-2 rounded-lg border px-2.5 py-2 text-sm cursor-pointer ${
+                  candPick[i] ? "border-amber-500 bg-white" : "border-amber-200 bg-white/60"}`}>
+                <input type="checkbox" className="mt-0.5 w-4 h-4 shrink-0"
+                  checked={!!candPick[i]}
+                  onChange={(e) => setCandPick({ ...candPick, [i]: e.target.checked })} />
+                <span className="flex-1 leading-snug">
+                  {c.title}
+                  {c.due && <span className="ml-1 text-[10px] text-gray-500">〆{c.due.slice(5, 10)}</span>}
+                  {c.notes && <span className="block text-[10px] text-gray-500 mt-0.5">{c.notes}</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="flex gap-2 mt-2.5">
+            <button
+              className="flex-1 rounded-lg bg-purple-600 text-white text-xs font-bold py-2 disabled:opacity-40"
+              disabled={candSaving || !Object.values(candPick).some(Boolean)}
+              onClick={() => void addPicked()}>
+              {candSaving ? "入れてる…" : "選んだものを入れる"}
+            </button>
+            <button
+              className="rounded-lg border border-gray-300 bg-white text-xs text-gray-600 px-3 py-2"
+              onClick={() => { setCands(null); setCandPick({}); }}>
+              入れない
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* 入力欄 */}
       {file && (

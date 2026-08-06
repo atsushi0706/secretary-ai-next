@@ -520,9 +520,20 @@ function TaskRow({
           <span className="bg-indigo-50 text-indigo-700 px-1.5 py-0.5 rounded">
             {TIME_LABEL[tkey] ?? "📅"}
           </span>
-          {task.due && (
+          {task.due ? (
             <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded">
               〆{task.due.slice(5, 10)}{isOverdue(task) ? "（期限すぎ）" : ""}
+            </span>
+          ) : (
+            /*
+             * 期限が無いタスクは「今週」に置いている。
+             * ——ここに何も出していなかったので、Google ToDo に前から入っていたもの
+             * （Gmailの「ToDoに追加」で入ったメールの件名など）が今週に並んだとき、
+             * 「なぜ今週にあるのか」が分からず、設定ミスに見えていた。
+             * 期限が無いから今週にいる、と言っておけば迷わない。
+             */
+            <span className="bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded" title="期限が無いタスクは「今週」に置いています">
+              期限なし
             </span>
           )}
           {questId && (

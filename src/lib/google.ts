@@ -133,7 +133,14 @@ export async function getTasks(userId: string, includeCompleted = false) {
     for (const t of r.data.items ?? []) {
       allTasks.push({
         id: t.id, tasklist_id: tl.id, tasklist_title: tl.title,
-        title: t.title ?? "(無題)", notes: t.notes ?? "",
+        /*
+         * Google ToDo は、名前のないタスクを title:"" で返す。
+         * `?? "(無題)"` は null/undefined しか拾わないので空文字はそのまま通り、
+         * 画面に**中身のない行**が並んでいた（時間の目印だけが出て、何のタスクか分からない）。
+         * 消せるように、名前が無いことが見て分かる形にしておく。
+         */
+        title: String(t.title ?? "").trim() || "（名前のないタスク）",
+        notes: t.notes ?? "",
         due: t.due ?? null, status: t.status ?? "needsAction",
         updated: t.updated ?? "",
       });

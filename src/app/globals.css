@@ -6532,8 +6532,26 @@ body:has(.realverse-bg) { background: transparent; }
   backdrop-filter: none;
 }
 .iw-doors .iw-door:hover { background: rgba(255,255,255,.11); border-color: rgba(232,189,114,.5); transform: none; }
-.iw-doors .iw-door .ja { font-size: .68rem; line-height: 1.35; text-align: center; }
-.iw-doors .iw-door .emoji { font-size: 1.15rem; }
+/*
+ * 名前は**折り返す**。
+ * .iw-door .ja には white-space: nowrap が付いていて、狭い画面では
+ * 「アカシックレコーダー」がセルからはみ出し、隣のボタンの絵文字に
+ * 重なっていた（スマホで文字と絵文字が被る）。
+ * 絵文字は上、名前は下の縦積みにして、名前に幅をぜんぶ使わせる。
+ */
+.iw-doors .iw-door {
+  flex-direction: column; gap: 3px;
+  /* overflow: hidden は付けない。「まずここから」の札が枠の上にはみ出す作りなので、
+     隠すと札の頭が切れる。はみ出し止めは .ja の折り返しでやる */
+}
+.iw-doors .iw-door .ja {
+  font-size: .68rem; line-height: 1.35; text-align: center;
+  white-space: normal; max-width: 100%;
+  /* overflow-wrap: anywhere は使わない。長音だけ次の行に落ちて「レコーダ／ー」になる。
+     日本語はどこでも折り返せるので、禁則にまかせたほうがきれいに割れる */
+  line-break: strict; word-break: normal;
+}
+.iw-doors .iw-door .emoji { font-size: 1.15rem; line-height: 1; }
 /* 「まずここから」だけは、面の中でも分かるように */
 .iw-doors .iw-door.is-start { background: rgba(238,214,155,.15); border-color: rgba(232,193,90,.55); }
 /* じぶんワークは作るもの＝ほかと役割が違うので、行を分けて全幅に */

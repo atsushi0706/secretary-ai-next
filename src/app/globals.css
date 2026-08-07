@@ -6752,3 +6752,32 @@ body:has(.realverse-bg) { background: transparent; }
 .breath-flow li { font-size: .76rem; line-height: 1.75; color: var(--singa-ink-soft); }
 .breath-flow .bf-n { margin-top: 9px; font-size: .74rem; color: var(--singa-ink); }
 .breath-flow .bf-n b { color: var(--singa-gold); }
+
+/* ── マイクを許可するやりかた（/voice-check の中）──────────
+ * 「ブラウザの設定で許可してね」だけでは、どこを押すのか分からない。
+ * 端末ごとに押す場所を名指しで出す枠。
+ */
+.vc-how { background: rgba(255,255,255,.9); border: 1px solid #e3dcf5; border-radius: 14px; overflow: hidden; }
+.vc-how.is-open { border-color: #c9b6f0; }
+.vc-how-h {
+  width: 100%; text-align: left; padding: 12px 14px;
+  font-size: .82rem; font-weight: 800; color: #3b2d6e; background: #f3efff;
+}
+.vc-how-b { padding: 12px 14px; }
+.vc-how-b .t { font-size: .8rem; font-weight: 800; color: #3b2d6e; margin-bottom: 8px; }
+.vc-how-b .t2 { font-size: .74rem; font-weight: 800; color: #7a6fa8; margin: 12px 0 6px; }
+.vc-how-b ol, .vc-how-b ul { margin: 0; padding-left: 1.35em; display: flex; flex-direction: column; gap: 7px; }
+.vc-how-b li { font-size: .76rem; line-height: 1.85; color: #4b4266; }
+.vc-how-url {
+  margin-top: 12px; padding: 10px; border-radius: 10px; background: #f7f5ff; border: 1px solid #e3dcf5;
+  display: flex; flex-direction: column; gap: 6px;
+}
+.vc-how-url span { font-size: .7rem; color: #6b6390; }
+.vc-how-url code {
+  font-size: .74rem; color: #3b2d6e; background: #fff; border: 1px solid #e3dcf5;
+  border-radius: 7px; padding: 7px 9px; word-break: break-all; -webkit-user-select: all; user-select: all;
+}
+.vc-how-url button {
+  align-self: flex-start; padding: 7px 14px; border-radius: 9px;
+  font-size: .74rem; font-weight: 700; color: #3b2d6e; background: #efeaff; border: 1px solid #d9d0f5;
+}

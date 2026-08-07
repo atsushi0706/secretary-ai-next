@@ -54,6 +54,80 @@ function browserOf(ua: string): string {
   return "不明";
 }
 
+/**
+ * 端末ごとの「マイクを許可するやりかた」。
+ *
+ * ここが無いと「ブラウザの設定で許可してね」で終わってしまい、
+ * **どこを押せばいいのか分からない**（淳くん本人がパソコンで詰まった）。
+ * だから端末を見分けて、押す場所を名指しで出す。
+ */
+function howToAllow(ua: string): { title: string; steps: string[]; deeper: string[]; url?: string } {
+  const ios = /iPhone|iPad/i.test(ua);
+  const android = /Android/i.test(ua);
+  const mac = /Macintosh/i.test(ua);
+  const safari = /Safari\//i.test(ua) && !/Chrome|CriOS|Edg/i.test(ua);
+
+  if (ios) {
+    return {
+      title: "iPhone・iPad（Safari）でのやりかた",
+      steps: [
+        "アドレスバーの左にある「ぁあ」を押す",
+        "「Webサイトの設定」を押す",
+        "「マイク」を「許可」にする",
+        "この画面を下に引っぱって読み込み直す",
+      ],
+      deeper: [
+        "それでも出るなら：「設定」アプリ →「Safari」→「マイク」→「確認」か「許可」にする",
+        "LINE・インスタ・Threadsの中のブラウザでは、そもそもマイクが使えません。Safariで開いてください",
+      ],
+    };
+  }
+  if (android) {
+    return {
+      title: "Android（Chrome）でのやりかた",
+      steps: [
+        "アドレスバーの左にある鍵のマークを押す",
+        "「権限」または「サイトの設定」を押す",
+        "「マイク」を「許可」にする",
+        "この画面を読み込み直す",
+      ],
+      deeper: [
+        "それでも出るなら：「設定」アプリ →「アプリ」→「Chrome」→「権限」→「マイク」を許可にする",
+      ],
+    };
+  }
+  if (mac && safari) {
+    return {
+      title: "Mac（Safari）でのやりかた",
+      steps: [
+        "画面のいちばん上のメニューで「Safari」→「設定」を開く",
+        "「Webサイト」を選ぶ",
+        "左の並びから「マイク」を選ぶ",
+        "singaworld.rinq-systeme.jp を「許可」にする",
+      ],
+      deeper: [
+        "それでも出るなら：「システム設定」→「プライバシーとセキュリティ」→「マイク」で Safari をオンにする",
+      ],
+    };
+  }
+  // パソコンの Chrome / Edge（いちばん多い）
+  return {
+    title: "パソコン（Chrome・Edge）でのやりかた",
+    steps: [
+      "アドレスバー（URLが出ているところ）の左端にあるマークを押す（🎤 か 鍵 か スライダーの形）",
+      "出てきた一覧の「マイク」を「許可」にする",
+      "右上の × でその一覧を閉じ、この画面を読み込み直す（F5）",
+    ],
+    deeper: [
+      "アドレスバーの右端に「マイクがブロックされました」の 🎤 が出ていたら、それを押して「常に許可する」を選ぶ方法もあります",
+      "それでも出るなら、パソコン側でマイクが止められています：Windowsの「設定」→「プライバシーとセキュリティ」→「マイク」で、"
+        + "「マイクへのアクセス」と「アプリにマイクへのアクセスを許可する」を両方オンにして、ブラウザを閉じて開き直してください",
+      "Zoom や 録音アプリ が動いていると、マイクを取り合って失敗することがあります。いったん閉じてみてください",
+    ],
+    url: "chrome://settings/content/microphone",
+  };
+}
+
 export function VoiceCheck() {
   const [ua, setUa] = useState("");
   const [steps, setSteps] = useState<Step[]>([]);
@@ -68,6 +142,8 @@ export function VoiceCheck() {
   const [engine, setEngine] = useState("");
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
+  const [showHow, setShowHow] = useState(false);
+  const [urlCopied, setUrlCopied] = useState(false);
 
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -126,6 +202,22 @@ export function VoiceCheck() {
 
     setSteps(list);
 
+    // マイクが1本も見えないときは、ブラウザではなくパソコン側で止められている
+    (async () => {
+      try {
+        const ds = await navigator.mediaDevices?.enumerateDevices?.();
+        if (!ds) return;
+        const mics = ds.filter((d) => d.kind === "audioinput");
+        setSteps((p) => [...p, {
+          name: "マイクが見えているか",
+          ok: mics.length > 0,
+          note: mics.length > 0
+            ? `${mics.length}本 見えています`
+            : "1本も見えません。ブラウザではなく、パソコン（またはスマホ）側でマイクが止められている可能性があります",
+        }]);
+      } catch { /* 見られないブラウザは飛ばす */ }
+    })();
+
     // 許可の状態は聞けるときだけ聞く（Safariは対応していない）
     (async () => {
       try {
@@ -135,9 +227,10 @@ export function VoiceCheck() {
           name: "マイクの許可",
           ok: st.state !== "denied",
           note: st.state === "granted" ? "許可されています"
-            : st.state === "denied" ? "ブロックされています。ブラウザの設定で許可してください"
+            : st.state === "denied" ? "ブロックされています。下の「マイクを許可するやりかた」のとおりに直せます"
               : "まだ聞かれていません（録音を始めると聞かれます）",
         }]);
+        if (st.state === "denied") setShowHow(true);   // 詰まっている人には最初から開いて見せる
       } catch { /* 聞けないブラウザは飛ばす */ }
     })();
   }, []);
@@ -195,9 +288,11 @@ export function VoiceCheck() {
     } catch (e: any) {
       const name = e?.name ?? "";
       setErr(name === "NotAllowedError"
-        ? "マイクが許可されませんでした。ブラウザの設定でこのサイトのマイクを「許可」にしてください。"
-        : name === "NotFoundError" ? "マイクが見つかりませんでした。"
-          : `マイクを始められませんでした（${name || "原因不明"}）`);
+        ? "マイクが許可されませんでした。下の「マイクを許可するやりかた」のとおりに進めてください。"
+        : name === "NotFoundError" ? "マイクが見つかりませんでした。パソコン（スマホ）側でマイクが止められているか、つながっていないようです。"
+          : name === "NotReadableError" ? "マイクが他のアプリに使われているようです。Zoom や 録音アプリ を閉じて、もう一度お試しください。"
+            : `マイクを始められませんでした（${name || "原因不明"}）`);
+      setShowHow(true);
       cleanup();
     }
   }
@@ -335,6 +430,39 @@ export function VoiceCheck() {
       )}
 
       {err && phase !== "done" && <div className="vc-err">{err}</div>}
+
+      {/* マイクを許可するやりかた（端末で出し分ける）。断られたときは自動で開く */}
+      {(() => {
+        const h = howToAllow(ua);
+        return (
+          <div className={`vc-how ${showHow ? "is-open" : ""}`}>
+            <button className="vc-how-h" onClick={() => setShowHow((v) => !v)}>
+              🔑 マイクを許可するやりかた{showHow ? "" : "（押すと開きます）"}
+            </button>
+            {showHow && (
+              <div className="vc-how-b">
+                <div className="t">{h.title}</div>
+                <ol>{h.steps.map((x, i) => <li key={i}>{x}</li>)}</ol>
+                <div className="t2">それでも出るとき</div>
+                <ul>{h.deeper.map((x, i) => <li key={i}>{x}</li>)}</ul>
+                {h.url && (
+                  <div className="vc-how-url">
+                    <span>この住所をアドレスバーに貼ると、設定を直接開けます</span>
+                    <code>{h.url}</code>
+                    <button onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(h.url as string);
+                        setUrlCopied(true);
+                        setTimeout(() => setUrlCopied(false), 2500);
+                      } catch { /* 押せなくても文字は見えている */ }
+                    }}>{urlCopied ? "コピーしました" : "コピー"}</button>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       <div className="vc-send">
         <p>うまくいかないときは、この下の内容をコピーして送ってください。原因を調べます。</p>

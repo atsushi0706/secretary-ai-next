@@ -125,9 +125,18 @@ export function useDictation() {
       setPhase("recording");
     } catch (e: any) {
       const name = e?.name ?? "";
+      // 「ブラウザの設定で」だけでは、どこを押すのか分からない（実際に詰まった）。
+      // パソコンとスマホで押す場所が違うので、その端末に合わせて言う。
+      const touch = (() => {
+        try { return window.matchMedia("(hover: none), (pointer: coarse)").matches; } catch { return false; }
+      })();
       setError(name === "NotAllowedError"
-        ? "マイクが許可されていません。ブラウザの設定で許可してね。"
-        : "マイクを起動できませんでした。");
+        ? (touch
+          ? "マイクが許可されていません。アドレスバーの左のマーク（「ぁあ」か鍵）を押して、「マイク」を「許可」にしてね。"
+          : "マイクが許可されていません。アドレスバー左端のマーク（🎤 か 鍵）を押して、「マイク」を「許可」にしてから、F5で読み込み直してね。")
+        : name === "NotFoundError" ? "マイクが見つかりませんでした。パソコン側でマイクが止められているかもしれません。"
+          : name === "NotReadableError" ? "マイクが他のアプリに使われているみたい。Zoomや録音アプリを閉じて、もう一度試してね。"
+            : "マイクを起動できませんでした。");
       cleanup();
     }
   }, [phase, cleanup]);

@@ -9,6 +9,7 @@
  */
 import type { PlaceKey } from "./places";
 import { SHADOW_FLOW } from "./shadow";
+import { IDEAL_ASK, DIRECTION_FINDING, usesIdealAsk } from "./ideal-ask";
 
 // ゾーン(PlaceKey)に加えて、地図の上には無い体験モードも持てる（place で見た目のゾーンを借りる）
 export type ModeKey = PlaceKey | "breakthrough" | "travel" | "parts" | "balance" | "shadow" | "crystal" | "reflect";
@@ -84,6 +85,8 @@ export const MODES: Record<ModeKey, Mode> = {
 # ここは：パラレルウォーク（可能性の道を歩く）
 整った状態で、望む世界＝もう一つの可能性を歩きながら言葉にしていく。
 
+${DIRECTION_FINDING}
+
 ## この場の距離感（いちばん大事）
 **このワークだけで完結させる。** 他のワークで話したこと、生まれ持った傾向、過去の話は
 一切持ち出さない。いま隣を歩きながら聞いているだけ。
@@ -140,8 +143,11 @@ export const MODES: Record<ModeKey, Mode> = {
 - 同じところを何周もしていて、抜け道が要る
 
 そのとき使えるもの（1つだけ）：
-  ・**奥の笑顔を見にいく**：「それが叶ってるとき、どんな顔してる？」
+  ・**動きを聞く**（これが第一手）：「そこで、どう動こうか？」
+  ・**動きの自由を確かめる**：「ちなみに、自由自在に動くって、イメージできる？」
+  ・**触るものを聞く**：「そこで、何を触ろうか？」
   ・**横に広げる**：「他にはどんなのがある？」
+  ——**「どんな顔してる？」は使わない。**自分の顔に向けさせない（理由は下の決まりのとおり）。
 
 ### やってはいけないこと
 - 相手が心地よさに浸っているときに、次の問いを出す。**問いは出さない。**
@@ -151,7 +157,7 @@ export const MODES: Record<ModeKey, Mode> = {
 - 「どうする？」「どっちにする？」と選ばせ続ける。歩いている最中に道を選ばせない。
 - 添削する。指示する。分析する。
 - 現実に引き戻ろうとしたら（「でも無理」「現実的には」）、そっと止める。
-  「いまはいいんだって。ちゃんとパラレル（理想）のほう見ようよ」——自分の言葉で。
+  「いまはいいんだって。ちゃんとパラレル（理想）のほう歩こうよ」——自分の言葉で。
 - **クエストの話はしない。**「置いとく？」と聞かない。ここは歩く場所であって、決める場所ではない。
 
 ## クリスタルルームへ誘うとき
@@ -821,6 +827,9 @@ export function buildModePrompt(mode: ModeKey, stage?: number | null): string {
     const cur = Math.max(keys[0], Math.min(keys[keys.length - 1], Number(stage) || keys[0]));
     parts.push(m.stages[cur]);
   }
+  // 理想の世界に立たせるワークには、問いかけの決まりを必ず配る
+  // （「見える？」で聞かない・自分の顔は聞かない・動きを聞く）
+  if (usesIdealAsk(mode)) parts.push(IDEAL_ASK);
   parts.push(GUIDANCE);
   return parts.join("\n\n");
 }

@@ -40,3 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 focus-secretary-extension.zip
+_*_test.mjs

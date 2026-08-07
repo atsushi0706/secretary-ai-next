@@ -1994,7 +1994,10 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .95rem; font-weight: 700; text-align: center;
   color: var(--singa-ink);
   min-height: 1.4em;
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
 }
+/* 渡されたテロップの改行をそのまま出す（読む間が変わるので大事） */
+.breath-text { white-space: pre-line; line-height: 1.95; }
 .breath-next {
   flex: 1;
   padding: 12px; border-radius: 12px;
@@ -6734,3 +6737,18 @@ body:has(.realverse-bg) { background: transparent; }
 
 .vbar-err-a { display: inline-block; margin-left: 8px; font-weight: 700;
   color: var(--singa-gold); text-decoration: underline; }
+
+/* ── ピークステート：はじめる前に見せる流れ ────────────────
+ * 前は絵（breath-overview.png）を出していたが、あの絵は前のやり方の流れ。
+ * 新しい流れに合う絵ができるまでは、文字で並べておく。
+ */
+.breath-flow {
+  width: 100%; max-width: 520px; margin: 0 auto 10px;
+  background: rgba(0,0,0,.3); border: 1px solid rgba(201,165,94,.28);
+  border-radius: 13px; padding: 12px 14px;
+}
+.breath-flow .bf-t { font-size: .74rem; font-weight: 800; color: var(--singa-gold); margin-bottom: 7px; }
+.breath-flow ol { margin: 0; padding-left: 1.25em; display: flex; flex-direction: column; gap: 5px; }
+.breath-flow li { font-size: .76rem; line-height: 1.75; color: var(--singa-ink-soft); }
+.breath-flow .bf-n { margin-top: 9px; font-size: .74rem; color: var(--singa-ink); }
+.breath-flow .bf-n b { color: var(--singa-gold); }

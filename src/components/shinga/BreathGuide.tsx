@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { BREATH_LINES } from "@/lib/breath-lines";
+import { lineOf, voiceFile } from "@/lib/breath-lines";
 import { feelGuide } from "@/lib/feelGuide";
 
 /**
@@ -12,53 +12,113 @@ import { feelGuide } from "@/lib/feelGuide";
  * - カウントが終わったら「次へ」を押して進む＝体感覚に馴染ませる。
  */
 
-type Step = { instr: string; say: string; count: number; scale: number; img?: string; voice?: string; round?: number };
+type Step = {
+  /** 画面に出す文（改行はそのまま出す） */
+  instr: string;
+  /** 音が鳴らないときの読み上げ用 */
+  say: string;
+  count: number;
+  scale: number;
+  img?: string;
+  /** 鳴らす音声。複数書くと、その順に続けて鳴る（「1回目」→「口を閉じます」など） */
+  voice?: string[];
+  round?: number;
+};
 
-// 呼吸ステップの図（public に置く）。無ければオーブ表示にフォールバック。
-const IMG_EXHALE = "/breath-step1.png"; // ふーっと全部吐ききる
-const IMG_HOLD = "/breath-step2.png";   // 吐ききって3秒止める
-const IMG_INHALE = "/breath-step3.png"; // はぁーっと一気に吸う
-const IMG_SETTLE = "/breath-step4.png"; // 吸った感覚をゆっくりなじませる
+/**
+ * 呼吸ステップの図（public に置く）。無ければ光の玉（オーブ）に戻る。
+ *
+ * 【この4枚は、文字が入った解説パネル】
+ * 中身は**前のやり方**の説明になっている。
+ *   step1「『ふーっ』と全部吐ききる」（頭をお腹に近づけて丸まる／口をすぼめて吐く）
+ *   step2「吐ききったあと5秒止める」
+ *   step3「口を開けて『はぁーっ』と一気に吸う」
+ *   step4「吸った感覚をゆっくりなじませる（約15秒）」
+ * 新しい流れ（口を閉じて口の中に圧をかける）と食い違う面があるので、
+ * **主題が一致するところにだけ**割り当てる。合う絵が無いところは光の玉にする。
+ * 絵の中の秒数（5秒・15秒）に合わせて、こちらのカウントもそろえてある。
+ *   ・口を閉じる／口の中に圧をかける … 絵なし（この局面の絵が存在しない）
+ *   ・細く長く吐く … 絵なし（玉が縮んでいくほうが「細く長く」に合う）
+ */
+const IMG_BURST = "/breath-step1.png";  // 全部吐ききる
+const IMG_HOLD = "/breath-step2.png";   // 吐ききったあと5秒止める
+const IMG_INHALE = "/breath-step3.png"; // 一気に吸う
+const IMG_SETTLE = "/breath-step4.png"; // なじませる（約15秒）
 
-// 吐く＝口をすぼめて細く強く少しずつ吐ききる → 吐いたら少し止めて真空を作る(3秒) → 強く吸う → ゆっくり整える
-const EXHALE = 10; // すぼめて少しずつ吐ききる
-const HOLD = 3;    // 吐ききったら少し止める＝真空の状態を作る（3秒）
-const INHALE = 4;  // 一気に、強く吸う
-const SETTLE = 15; // ゆっくり呼吸で、15秒かけてならす
+/**
+ * 各ステップの長さ（秒）。淳くんの声の長さを測って、そこに動作の時間を足してある。
+ * 声：intro 4.2 / closemouth 1.5 / press 4.6 / exhale 6.9 / burst 3.8 /
+ *     hold 2.6 / inhale 1.6 / settle 6.6 秒
+ */
+const T = {
+  intro: 16,       // 体をゆらす
+  closemouth: 5,   // 口を閉じる（掛け声＋この一言＝実測3.6秒。間をとって5秒）
+  press: 9,        // 口の中に圧をかける
+  exhale: 16,      // 細い息を長く吐く
+  burst: 6,        // 勢いよく吐き切る
+  hold: 5,         // キープ（絵に「5秒」と書いてあるので5秒にそろえる）
+  inhale: 4,       // 一気に吸う
+  settle: 15,      // 馴染ませる（絵に「約15秒」と書いてあるのでそろえる）
+};
 
-// emotion があれば、吸うステップで「未来からの◯◯を吸う」＝インストールにする
+/**
+ * 流れを組む。
+ *
+ * 【2026-08-07 に作り替えた】淳くんが録り直した音声（音声改.mp4）の流れに合わせた。
+ *   はじめ … 目を閉じて体を左右にゆらゆら
+ *   1回目 … 口を閉じる → 口の中に圧 → 細く吐く → 勢いよく吐き切る
+ *            → キープ → 一気に吸う → 馴染ませる
+ *   2回目 … 同じ7つ
+ *   3回目 … 同じ7つ
+ * 「馴染ませる」まで含めて**丸ごう3回**繰り返すのが、いまの決まり。
+ *
+ * emotion（未来からの手紙の感情）は**画面の文字だけ**に出す。
+ * 音声は録音した固定の11個なので、人によって変わる言葉は音に入れない。
+ */
 function buildSteps(emotionRaw?: string): Step[] {
   // 手紙由来の値に <山括弧> やかっこが混ざったまま画面に出ないよう、入口で落とす
   const emotion = emotionRaw?.replace(/[<>「」]/g, "").trim() || undefined;
-  // 喋る言葉は breath-lines.ts が唯一の正（焼き込みと画面がズレないように）。
-  // 感情は画面の文字だけで見せる。音声に入れると全員ぶんを焼けなくなるため。
-  const L = (k: string) => BREATH_LINES.find((x) => x.key === k)?.text ?? "";
-  const inhaleInstr = emotion ? `一気に、強く吸う（未来からの「${emotion}」を）` : "一気に、強く吸う";
-  const inhaleSay = emotion ? `いっきに、みらいからの、${emotion}を、つよく、すってー` : "いっきに、つよく、すってー";
-  const introSay = emotion
-    ? `じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてね。未来からの「${emotion}」を、これから吸って身体に入れていくよ。`
-    : "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。";
+  const L = (k: string) => lineOf(k)?.text ?? "";
+  const S = (k: string) => lineOf(k)?.screen ?? "";
 
   const steps: Step[] = [
-    { instr: emotion ? `立って、体を軽くゆらそう（未来の「${emotion}」を入れる準備）` : "立って、体を軽くゆらそう", say: L("intro"), count: SETTLE, scale: 1, voice: "intro" },
+    {
+      instr: emotion ? `${S("intro")}
+（未来からの「${emotion}」を入れる準備）` : S("intro"),
+      say: L("intro"), count: T.intro, scale: 1, voice: ["intro"],
+    },
   ];
-  /**
-   * 吐く回数は **3回**。
-   *
-   * 以前は「3回まわしたあと、最後にもう一度」を足していたので、
-   * 実際には4回吐くことになっていた。締めの一言は、3回目の整えに寄せる。
-   */
+
   const ROUNDS = 3;
-  for (let i = 0; i < ROUNDS; i++) {
+  for (let i = 0; i < ROUNDS; i += 1) {
+    const n = i + 1;
     const last = i === ROUNDS - 1;
     steps.push(
-      { instr: `${i + 1}回目：口をすぼめて、細く強く吐ききる（ろうそくを消すように）`, round: i + 1, say: L(`ex${i + 1}`), count: EXHALE, scale: 0.35, img: IMG_EXHALE, voice: `ex${i + 1}` },
-      { instr: `吐ききったら、少し止める（真空を作る・${HOLD}秒）`, round: i + 1, say: L(last ? "lasthold" : "hold"), count: HOLD, scale: last ? 0.24 : 0.28, img: IMG_HOLD, voice: last ? "lasthold" : "hold" },
-      { instr: last && emotion ? `一気に、強く吸う（「${emotion}」を満たす）` : inhaleInstr,
-        say: L("inhale"), count: INHALE, scale: last ? 1.12 : 1.1, img: IMG_INHALE, voice: "inhale" },
-      last
-        ? { instr: emotion ? `ゆっくり整えて、「${emotion}」を身体に馴染ませる` : "ゆっくり、呼吸を整えて、目を開ける", say: L("lastsettle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "lastsettle" }
-        : { instr: "ゆっくり、呼吸を整える", say: L("settle"), count: SETTLE, scale: 1, img: IMG_SETTLE, voice: "settle" },
+      // 掛け声（1回目…）を先に鳴らしてから「口を閉じます」
+      // 口を閉じる・口の中に圧をかける … 合う絵が無いので光の玉
+      { instr: S("closemouth"), say: L("closemouth"), count: T.closemouth, scale: 0.95,
+        voice: [`r${n}`, "closemouth"], round: n },
+      { instr: S("press"), say: L("press"), count: T.press, scale: 0.88,
+        voice: ["press"], round: n },
+      // 細く長く吐く … 玉がゆっくり縮んでいくほうが伝わる
+      { instr: S("exhale"), say: L("exhale"), count: T.exhale, scale: 0.45,
+        voice: ["exhale"], round: n },
+      { instr: S("burst"), say: L("burst"), count: T.burst, scale: 0.2,
+        img: IMG_BURST, voice: ["burst"], round: n },
+      { instr: S("hold"), say: L("hold"), count: T.hold, scale: 0.18,
+        img: IMG_HOLD, voice: ["hold"], round: n },
+      {
+        instr: emotion ? `${S("inhale")}
+（未来からの「${emotion}」を）` : S("inhale"),
+        say: L("inhale"), count: T.inhale, scale: last ? 1.15 : 1.1,
+        img: IMG_INHALE, voice: ["inhale"], round: n,
+      },
+      {
+        instr: emotion && last ? `${S("settle")}
+（「${emotion}」が、体に入っていく）` : S("settle"),
+        say: L("settle"), count: T.settle, scale: 1,
+        img: IMG_SETTLE, voice: ["settle"], round: n,
+      },
     );
   }
   return steps;
@@ -109,18 +169,58 @@ async function loadBaked() {
   } catch { bakedMap = null; }
 }
 
-async function speakStep(step: { say: string; voice?: string }) {
-  // ① 焼き込み済み（0円・全員同じ音）
-  if (step.voice) {
+/**
+ * ひとこと喋る。
+ *
+ * ① 淳くんが録った声（/breath/*.mp3）… 料金0。ふつうはここで決まる
+ * ② 焼き込み済み（合成）… 録音が無いキーのときだけ
+ * ③ その場で生成 → ④ 同梱mp3 → ⑤ ブラウザ読み上げ
+ *
+ * voice に2つ以上書いてあれば、**その順に続けて鳴らす**
+ * （「1回目」→「口を閉じます」のように、掛け声を頭に付けるため）。
+ */
+async function speakStep(step: { say: string; voice?: string[] }) {
+  const keys = step.voice ?? [];
+  if (keys.length) {
+    // ① 淳くんの声。1つでも鳴らせたら、そのまま順番に鳴らしきる
+    let played = false;
+    for (const k of keys) {
+      if (await playFileToEnd(voiceFile(k))) played = true;
+      else break;
+    }
+    if (played) return;
+
+    // ② 焼き込み済み（合成）
     await loadBaked();
-    const url = bakedMap?.[step.voice];
-    if (url && await playFile(url)) return;
+    for (const k of keys) {
+      const url = bakedMap?.[k];
+      if (url && await playFileToEnd(url)) played = true;
+      else break;
+    }
+    if (played) return;
   }
-  // ② その場で生成（料金がかかる。焼いていないときだけ）
+  // ③ その場で生成（料金がかかる。録音も焼き込みも無いときだけ）
   if (await speakApi(step.say)) return;
-  // ③ 同梱mp3 → ④ ブラウザ読み上げ
-  if (step.voice && await playFile(`/voice/breath-${step.voice}.mp3`)) return;
+  // ④ 同梱mp3 → ⑤ ブラウザ読み上げ
+  if (keys[0] && await playFile(`/voice/breath-${keys[0]}.mp3`)) return;
   speakFallback(step.say);
+}
+
+/** 鳴らして、鳴り終わるまで待つ（続けて鳴らすときに重ならないように） */
+async function playFileToEnd(src: string): Promise<boolean> {
+  stopVoice();
+  try {
+    const a = new Audio(src);
+    currentAudio = a;
+    await a.play();
+    await new Promise<void>((res) => {
+      a.onended = () => res();
+      a.onerror = () => res();
+      // 万一 onended が来なくても止まらないように、長さ＋1秒で先へ
+      setTimeout(() => res(), Math.max(1500, (a.duration || 8) * 1000 + 800));
+    });
+    return true;
+  } catch { return false; }
 }
 
 async function playFile(src: string): Promise<boolean> {
@@ -239,15 +339,31 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
 
       <div className="breath-instr">
         {cur?.round && <span className="breath-round">{cur.round} / 3 巡目</span>}
-        {cur ? cur.instr : "はじめると、声とカウントが導きます"}
+        {/* 渡されたテロップの改行をそのまま出す（読む間が変わるので大事） */}
+        <span className="breath-text">{cur ? cur.instr : "はじめると、声とカウントが導きます"}</span>
       </div>
 
       {!started ? (
         <div className="breath-start-wrap">
-          {!imgFailed["/breath-overview.png"] && (
-            <img className="breath-overview" src="/breath-overview.png" alt="呼吸の流れ"
-              onError={() => setImgFailed((p) => ({ ...p, "/breath-overview.png": true }))} />
-          )}
+          {/*
+            全体図（breath-overview.png）はいったん出していない。
+            あの絵も「前のやり方」の流れが描かれているので、
+            新しい流れ（口の中に圧をかける）と食い違ってしまう。
+            描き直したら、またここに戻す。
+          */}
+          <div className="breath-flow">
+            <div className="bf-t">今日の流れ</div>
+            <ol>
+              <li>目を閉じて、体を左右にゆらゆら</li>
+              <li>口を閉じて、口の中にやさしく空気の圧をかける</li>
+              <li>唇をストローのように少し開いて、細く長く吐く</li>
+              <li>苦しくなったら、勢いよく全部吐き切る</li>
+              <li>吐き切ったら、そのまま一度キープ</li>
+              <li>一気に、吸い込む</li>
+              <li>ゆったり呼吸して、体に馴染ませる</li>
+            </ol>
+            <div className="bf-n">この 2〜7 を、<b>3回</b>くり返すよ</div>
+          </div>
           {emo && (
             <div className="breath-install">
               未来からの「<b>{emo}</b>」を、吸ってインストールするよ

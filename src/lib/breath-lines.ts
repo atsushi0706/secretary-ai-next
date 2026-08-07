@@ -1,45 +1,81 @@
 /**
- * 呼吸ガイドで喋る言葉。ここが唯一の正（画面も焼き込みもここを見る）。
+ * ピークステート（呼吸）で流れる言葉と音声。ここが唯一の正（画面もここを見る）。
  *
- * 【お金の話・重要】
- * このセリフは全ユーザー共通で、内容が毎回まったく同じ。
- * だから1回だけ音声を作ってファイルにしておけば、以後は何人使っても料金は0になる。
- * ユーザーごとに毎回生成すると、人が増えた瞬間にクレジットが枯れる。
+ * 【声は淳くん本人】
+ * 2026-08-07 から、呼吸の誘導は**淳くんが録った声**を使う（`public/breath/*.mp3`）。
+ * デスクトップの「音声改.mp4」（48秒）を、音の切れ目を測って11個に切り分けたもの。
+ * 切ったあと1つずつ書き起こし直して、言葉が途切れていないことを確かめてある。
+ *   → 合成音声の料金は0。誰が何回使っても増えない。
  *
- * ※ 感情（未来からの「充足」など）は画面の文字で見せる。音声には入れない。
- *   入れるとユーザーごとに違う音になり、焼き込みができなくなるため。
+ * `text` は、音が鳴らなかったときの読み上げ用（最後の砦）。
+ * `screen` は画面に出す文。**改行はそのまま出す**（淳くんが渡したテロップの形）。
  *
- * 【読みかたの注意】
- * 音声合成は数字を素直に読む。「1かいめ」は「いち・かいめ」になってしまう。
- * だから喋らせる文では、数字を使わず**読みをそのままかなで書く**（いっかいめ）。
- * 画面に出す文字（BreathGuide の instr）は「1回目」のままでよい。ここは耳のための文。
+ * 【流れが変わった】
+ * 前は「口をすぼめてろうそくを消すように吐ききる」の1段階だった。
+ * いまは **口を閉じて口の中に圧をかけ → 唇を少しだけ開いて細く吐く →
+ * 苦しくなったら勢いよく吐き切る** の2段階。
+ * そして「圧をかける〜馴染ませる」までを**丸ごと3回**繰り返す。
  */
 
-export type BreathLine = { key: string; text: string };
+export type BreathLine = {
+  key: string;
+  /** 音が出せないときの読み上げ用 */
+  text: string;
+  /** 画面に出す文（改行はそのまま出す） */
+  screen: string;
+};
 
 export const BREATH_LINES: BreathLine[] = [
-  { key: "intro", text: "じゃあ、はじめよっか。立てるなら立って、体をゆらゆらしてみてね。" },
-  { key: "ex1", text: "いっかいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね" },
-  { key: "ex2", text: "にかいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね" },
-  { key: "ex3", text: "さんかいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね" },
-  { key: "hold", text: "そのまま、すこし止めてね。からっぽの真空をつくるよ" },
-  // 「いっきに」は「いつきに」と読まれてしまう（お客様から指摘）。
-  // 小さい「っ」は音声合成が「つ」と読むことがあるので、促音を使わない言い方にする。
-  { key: "inhale", text: "はい、ふかく、つよく、すってー" },
-  { key: "settle", text: "目をとじて、ゆっくり呼吸を整えてね" },
-  { key: "lastex", text: "さいごに、もういっかい。お口をすぼめて、ぜんぶ吐いてー" },
-  { key: "lasthold", text: "そのまま、すこし止めて、真空をつくってね" },
-  { key: "lastsettle", text: "いいね。ゆっくり呼吸を整えて、目をあけてね。" },
+  {
+    key: "intro",
+    text: "まず目を閉じて、体を左右にゆらゆら揺らそう。",
+    screen: "まず目を閉じて、\n体を左右にゆらゆら揺らそう。",
+  },
+  {
+    key: "closemouth",
+    text: "口を閉じます。",
+    screen: "まず、口を閉じます。",
+  },
+  {
+    key: "press",
+    text: "そのまま口の中にやさしく空気の圧をかけてね。",
+    screen: "そのまま、\n口の中にやさしく空気の圧をかけてください。",
+  },
+  {
+    key: "exhale",
+    text: "口の中に圧がかかったら、唇をほんの少しだけ開き、ゆっくり息を吐いていきます。",
+    screen: "口の中に少し圧がかかったら、\n唇を、ストローのようにほんの少しだけ開き\n息を吐きだしていきます。",
+  },
+  {
+    key: "burst",
+    text: "苦しくなってきたら、勢いよく全部吐き出して。",
+    screen: "苦しくなってきたら\n勢いよく全部吐き切ってください。",
+  },
+  {
+    key: "hold",
+    text: "吐き切ったら、一度そこでキープして。",
+    screen: "吐き切ったら、\nそのまま一度キープ。",
+  },
+  {
+    key: "inhale",
+    text: "一気に吸い込んで。",
+    screen: "一気に、吸い込んで。",
+  },
+  {
+    key: "settle",
+    text: "そのまま目を閉じながらゆったり呼吸して、今の体の感覚を体に馴染ませて。",
+    screen: "そのまま目を閉じながら、\nゆったり呼吸して\nいまの体の感覚を、体に馴染ませて。",
+  },
+  // 何回目かの掛け声。その回の頭で、次の言葉の前に続けて鳴る
+  { key: "r1", text: "1回目。", screen: "1回目" },
+  { key: "r2", text: "2回目。", screen: "2回目" },
+  { key: "r3", text: "3回目。", screen: "3回目" },
 ];
 
-/** 焼き込みにかかる文字数（＝ElevenLabsのクレジット）。1回きり */
-export function totalChars(): number {
-  return BREATH_LINES.reduce((a, l) => a + l.text.length, 0);
-}
+export const lineOf = (key: string) => BREATH_LINES.find((l) => l.key === key);
 
-/** 保存先（Supabase Storage の公開バケット内） */
-export const BAKE_BUCKET = "avatars";
-export const bakePath = (voiceId: string, key: string) => `_voice/${voiceId}/${key}.mp3`;
+/** 淳くんの声のファイル。public に置いてあるので、料金も通信の心配もない */
+export const voiceFile = (key: string) => `/breath/${key}.mp3`;
 
 /**
  * セリフごとの版（URLの後ろに付ける）。
@@ -53,3 +89,12 @@ export function lineVersion(text: string): string {
   for (let i = 0; i < text.length; i += 1) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
   return h.toString(36);
 }
+
+/** 焼き込みにかかる文字数（＝ElevenLabsのクレジット）。1回きり */
+export function totalChars(): number {
+  return BREATH_LINES.reduce((a, l) => a + l.text.length, 0);
+}
+
+/** 保存先（Supabase Storage の公開バケット内） */
+export const BAKE_BUCKET = "avatars";
+export const bakePath = (voiceId: string, key: string) => `_voice/${voiceId}/${key}.mp3`;

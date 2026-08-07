@@ -194,6 +194,9 @@ export function ShingaWorld({
   const [face, setFace] = useState<Face>("neutral");
   const [sending, setSending] = useState(false);
   const [typing, setTyping] = useState(false);
+  /** 「書き直す」で入力欄に戻す文章 */
+  const [refill, setRefill] = useState<{ text: string; n: number }>({ text: "", n: 0 });
+  const [undoing, setUndoing] = useState(false);
   const [moving, setMoving] = useState(false);
   const [panelOpen, setPanelOpen] = useState(true);
   // 今日を閉じる板（ワールドリプレイの部屋の中でひらく）
@@ -730,6 +733,26 @@ export function ShingaWorld({
     setView("talk");
     setMessages([{ role: "assistant", content: greetLine() }]);
     await talk(text, false, null, "peak");
+  }
+
+  /**
+   * 送ったメッセージを書き直す。
+   * 履歴を書き換えるのではなく、最後のひと往復を取り消して入力欄に戻す。
+   * （途中だけ書き換えると、そのあとの会話と噛み合わなくなる）
+   */
+  async function rewriteLast() {
+    if (undoing || sending) return;
+    setUndoing(true);
+    try {
+      const r = await fetch("/api/shinga/chat", { method: "DELETE" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) return;
+      setMessages((prev) => {
+        const back = [...prev].reverse().findIndex((x) => x.role === "user");
+        return back < 0 ? prev : prev.slice(0, prev.length - 1 - back);
+      });
+      setRefill({ text: String(d.text ?? ""), n: Date.now() });
+    } finally { setUndoing(false); }
   }
 
   async function talk(textIn: string, greet = false, m: ModeKey | null = mode, p: PlaceKey = place) {
@@ -1443,6 +1466,7 @@ export function ShingaWorld({
           <div ref={scrollRef} className="singa-talk" style={partsIntro || shadowGate || todayManual ? { display: "none" } : undefined}>
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
+              const lastMine = messages.reduce((acc, x, k) => (x.role === "user" ? k : acc), -1);
               const showDots = m.role === "assistant" && isLast && typing && !m.content;
               return (
                 <div key={i} className={m.role === "user" ? "singa-line is-me" : "singa-line"}>
@@ -1471,6 +1495,17 @@ export function ShingaWorld({
                       ? <span className="typing-dots"><span /><span /><span /></span>
                       : m.content}
                   </p>
+                  )}
+                  {/* 送ったあとで直せるように。自分の最後の発言だけ */}
+                  {m.role === "user" && i === lastMine && !typing && !sending && (
+                    <button
+                      type="button"
+                      className="singa-rewrite"
+                      onClick={() => void rewriteLast()}
+                      disabled={undoing}
+                    >
+                      {undoing ? "もどしてる…" : "✏️ 書き直す"}
+                    </button>
                   )}
                   </div>
                 </div>
@@ -1608,7 +1643,7 @@ export function ShingaWorld({
 
           {/* 音声入力バー */}
           {/* 入口（安全のたしかめ）を出している間は、入力欄を出さない（ゲートを飛ばして話し始めない） */}
-          {!shadowGate && !partsGate && !todayManual && <VoiceBar onSend={(t) => talk(t)} disabled={sending} />}
+          {!shadowGate && !partsGate && !todayManual && <VoiceBar onSend={(t) => talk(t)} disabled={sending} refill={refill} />}
 
           {/* その場所のパネル（ゾーンに応じて中身が変わる） */}
           {hasPanel && panelOpen && (

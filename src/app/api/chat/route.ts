@@ -7,6 +7,7 @@ import {
 } from "@/lib/supabase";
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask, jstDayOfWeekJa, deleteCalendarEventsByCriteria } from "@/lib/google";
 import { clearManualLabel } from "@/lib/supabase";
+import { undoLastTurn } from "@/lib/undo-turn";
 
 const ADD_INTENT_KEYWORDS = [
   "入れといて", "入れておいて", "入れとい", "追加しといて", "追加しておいて",
@@ -483,4 +484,26 @@ JSONのみ:
       "X-Accel-Buffering": "no",
     },
   });
+}
+
+/**
+ * 送ったメッセージを書き直す。
+ * 最後のひと往復（自分の発言＋そのあとの返事）を消して、文章を返す。
+ * ?mode=morning|evening&date=YYYY-MM-DD で、どの会話のことかを指定する。
+ */
+export async function DELETE(req: Request) {
+  const session = await auth();
+  const userId = (session?.user as any)?.id;
+  if (!userId) return Response.json({ error: "unauthenticated" }, { status: 401 });
+  try {
+    const sp = new URL(req.url).searchParams;
+    const mode = sp.get("mode") === "morning" ? "morning" : "evening";
+    const date = sp.get("date") || jstDateStr();
+    const r = await undoLastTurn("conversations", userId, { mode, date });
+    if (!r) return Response.json({ error: "取り消せる発言が見つからなかった" }, { status: 404 });
+    return Response.json({ text: r.text, removed: r.removed });
+  } catch (e: any) {
+    await logError(userId, "/api/chat DELETE", e);
+    return Response.json({ error: String(e?.message ?? e) }, { status: 500 });
+  }
 }

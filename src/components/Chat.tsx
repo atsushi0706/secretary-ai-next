@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import { useDictation } from "@/components/useDictation";
+import { handleEnter, isTouchDevice } from "@/lib/enter-key";
 
 type Message = { role: "user" | "assistant"; content: string };
 
@@ -160,6 +161,30 @@ export function Chat({
   const isHttpAvatar = sAvatar.startsWith("http");
   const [messages, setMessages] = useState<Message[]>(initialMessages);
   const [input, setInput] = useState("");
+  const [touch, setTouch] = useState(false);
+  const [undoing, setUndoing] = useState(false);
+  useEffect(() => { setTouch(isTouchDevice()); }, []);
+
+  /**
+   * 送ったメッセージを書き直す。
+   * 履歴を書き換えるのではなく、最後のひと往復を取り消して入力欄に戻す。
+   * こうすれば直して送り直せるし、記録と画面が食い違わない。
+   */
+  async function rewriteLast() {
+    if (undoing || sending) return;
+    setUndoing(true);
+    try {
+      const r = await fetch(`/api/chat?isMorning=${isMorning}&mode=${isMorning ? "morning" : "evening"}`, { method: "DELETE" });
+      const d = await r.json().catch(() => ({}));
+      if (!r.ok) return;
+      // 画面からも、最後の自分の発言とそれ以降を外す
+      setMessages((prev) => {
+        const last = [...prev].reverse().findIndex((m) => m.role === "user");
+        return last < 0 ? prev : prev.slice(0, prev.length - 1 - last);
+      });
+      setInput(String(d.text ?? ""));
+    } finally { setUndoing(false); }
+  }
   const [file, setFile] = useState<File | null>(null);
   const [sending, setSending] = useState(false);
   const [searching, setSearching] = useState(false);
@@ -454,12 +479,14 @@ export function Chat({
 
       {/* メッセージリスト */}
       <div ref={scroller} className="stage-messages space-y-3">
+        {/* 「書き直す」を出すのは、自分の最後の発言だけ */}
         {messages.length === 0 && (
           <div className="text-center text-gray-500 text-sm pt-8 drop-shadow-sm">
             {sName}との会話がここに表示されます
           </div>
         )}
         {messages.map((m, i) => {
+          const lastMine = messages.reduce((acc, x, k) => (x.role === "user" ? k : acc), -1);
           const extractedSchedule = m.role === "assistant" ? extractScheduleFromReply(m.content) : "";
           const slotCount = extractedSchedule ? extractedSchedule.split("\n").length : 0;
           return (
@@ -484,6 +511,17 @@ export function Chat({
                   }}
                 />
               </div>
+              {/* 送ったあとで直せるように。自分の最後の発言だけ */}
+              {m.role === "user" && i === lastMine && !sending && (
+                <button
+                  type="button"
+                  onClick={() => void rewriteLast()}
+                  disabled={undoing}
+                  className="text-[11px] text-purple-600 bg-white/80 border border-purple-200 rounded-full px-2 py-0.5"
+                >
+                  {undoing ? "もどしてる…" : "✏️ 書き直す"}
+                </button>
+              )}
               {/* 時間割が3スロット以上含まれていれば「拡張機能に送る」ボタン */}
               {slotCount >= 3 && (
                 <SendToExtensionButton scheduleText={extractedSchedule} slotCount={slotCount} />
@@ -551,6 +589,8 @@ export function Chat({
       {(recError || dict.error) && (
         <div className="bg-red-50 border border-red-200 rounded-lg mx-2 px-3 py-2 text-xs text-red-700">
           {recError || dict.error}
+          {/* うまく入らない人が、その場で原因を見に行けるように */}
+          <a href="/voice-check" className="ml-2 font-bold underline text-red-800">マイクの調子をみる →</a>
         </div>
       )}
       {dict.phase === "recording" && (
@@ -558,6 +598,11 @@ export function Chat({
           <span className="inline-block w-2 h-2 rounded-full bg-red-500 animate-pulse" />
           録音中 {Math.floor(dict.seconds / 60)}:{String(dict.seconds % 60).padStart(2, "0")} — 小声でもOK
           <span className="flex-1 h-1.5 rounded bg-red-100 overflow-hidden"><span className="block h-full bg-red-400 transition-all" style={{ width: `${Math.round(dict.level * 100)}%` }} /></span>
+        </div>
+      )}
+      {touch && !!input && (
+        <div className="text-[11px] text-purple-700 bg-white/70 rounded-lg px-2 py-1 mb-1">
+          改行してOK。送るときだけ <b>送信</b> を押してね
         </div>
       )}
       <div className="stage-input">
@@ -571,11 +616,7 @@ export function Chat({
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-              e.preventDefault(); send();
-            }
-          }}
+          onKeyDown={(e) => handleEnter(e, send)}
           placeholder={dict.phase === "recording"
             ? `聞いています… 小声でもOK（🎤で確定）`
             : isMorning ? "話しかける…（タスク追加、入れといて、相談）" : "明日のことを話そう…"}

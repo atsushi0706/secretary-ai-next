@@ -105,7 +105,13 @@ export function useDictation() {
       const rec = mime ? new MediaRecorder(stream, { mimeType: mime }) : new MediaRecorder(stream);
       chunksRef.current = [];
       rec.ondataavailable = (e) => { if (e.data.size > 0) chunksRef.current.push(e.data); };
-      rec.start(1000);
+      /**
+       * 細切れ（timeslice）にしない。
+       * iPhone の Safari は mp4 を「断片つなぎ」で吐くので、
+       * 細切れにしたものをつなぐと、書き起こし側が開けないファイルになることがある。
+       * こちらは途中のデータを使っていないので、止めたときに一度で受け取れば足りる。
+       */
+      rec.start();
       recRef.current = rec;
 
       setSeconds(0);
@@ -139,7 +145,12 @@ export function useDictation() {
     });
     cleanup();
 
-    if (blob.size < 1200) { setPhase("idle"); return null; } // 実質無音
+    // 音が入っていないとき。黙って戻ると「押しても反応しない」ように見えるので必ず言う
+    if (blob.size < 1200) {
+      setError("音がほとんど入っていませんでした。マイクの許可と、口との距離（10〜15cm）を確かめてみて。うまくいかないときは /voice-check で調べられるよ。");
+      setPhase("idle");
+      return null;
+    }
 
     try {
       const fd = new FormData();
@@ -154,6 +165,10 @@ export function useDictation() {
         return null;
       }
       const text = String(d.text ?? "").trim();
+      if (!text) {
+        setError("音は届いたけれど、言葉として聞き取れなかった。もう少しはっきり、近くで話してみて。");
+        return null;
+      }
       // 最後の砦：万一AIへの指示文がそのまま返ってきても、入力欄には絶対に入れない
       if (looksLikePrompt(text)) {
         setError("うまく聞き取れなかった。もう一度、少しはっきり話してみて。");

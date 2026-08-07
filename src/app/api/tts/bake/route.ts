@@ -12,7 +12,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { supabaseAdmin } from "@/lib/supabase";
-import { BREATH_LINES, BAKE_BUCKET, bakePath, totalChars } from "@/lib/breath-lines";
+import { BREATH_LINES, BAKE_BUCKET, bakePath, totalChars, lineVersion } from "@/lib/breath-lines";
 import { toYomi } from "@/lib/yomi";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +51,10 @@ export async function GET() {
     const have = new Set((data ?? []).map((f) => f.name));
     const baked: Record<string, string> = {};
     for (const l of BREATH_LINES) {
-      if (have.has(`${l.key}.mp3`)) baked[l.key] = publicUrl(bakePath(voiceId, l.key));
+      // 版を付ける。セリフを直して焼き直したとき、古い音が端末に残らないように
+      if (have.has(`${l.key}.mp3`)) {
+        baked[l.key] = `${publicUrl(bakePath(voiceId, l.key))}?v=${lineVersion(l.text)}`;
+      }
     }
     return NextResponse.json({ voiceId, baked, total: BREATH_LINES.length });
   } catch {

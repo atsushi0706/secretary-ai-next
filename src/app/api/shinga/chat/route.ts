@@ -22,6 +22,7 @@ import {
 import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type HeroDomain } from "@/lib/hero";
 import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@/lib/parts";
 import { releaseGuardian } from "@/lib/parts-db";
+import { undoLastTurn } from "@/lib/undo-turn";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
@@ -902,5 +903,28 @@ export async function GET() {
       return Response.json({ messages: [], needsMigration: true });
     }
     return Response.json({ messages: [], error: String(e?.message ?? e) });
+  }
+}
+
+/**
+ * 送ったメッセージを書き直す。
+ * 最後のひと往復（自分の発言＋そのあとの返事）を消して、文章を返す。
+ * 画面はその文章を入力欄に戻すので、直して送り直せる。
+ */
+export async function DELETE() {
+  const session = await auth();
+  const userId = (session?.user as any)?.id;
+  if (!userId) {
+    return new Response(JSON.stringify({ error: "unauthenticated" }), {
+      status: 401, headers: { "Content-Type": "application/json" },
+    });
+  }
+  try {
+    const r = await undoLastTurn("shinga_conversations", userId);
+    if (!r) return Response.json({ error: "取り消せる発言が見つからなかった" }, { status: 404 });
+    return Response.json({ text: r.text, removed: r.removed });
+  } catch (e: any) {
+    if (isMissingTable(e)) return Response.json({ error: "保存先がまだ作られていません" }, { status: 503 });
+    return Response.json({ error: String(e?.message ?? e) }, { status: 500 });
   }
 }

@@ -6659,3 +6659,78 @@ body:has(.realverse-bg) { background: transparent; }
 .mmp-bar-btns .go:disabled { opacity: .5; }
 .mmp-rec { font-size: 10px; color: #dc2626; margin-top: 5px; }
 .mmp-rec.is-err { color: #b91c1c; }
+
+/* ── 改行の案内と「書き直す」──────────────────────────────
+ * スマホには Shift が無いので、改行キーが送信になっていた。
+ * 改行できることを書いておき、送ったあとでも直せるようにする。
+ * button は既定で白背景なので、必ず background を指定する（何度も踏んだ）。
+ */
+.vbar-nl {
+  font-size: .66rem; color: #cbb98a; margin-bottom: 6px;
+  background: rgba(0,0,0,.24); border: 1px solid rgba(201,165,94,.28);
+  border-radius: 8px; padding: 4px 8px;
+}
+.vbar-nl b { color: var(--singa-gold); }
+.singa-rewrite {
+  display: inline-block; margin-top: 4px; padding: 2px 9px;
+  font-size: .64rem; font-weight: 700; color: #cbb98a;
+  background: rgba(0,0,0,.26); border: 1px solid rgba(201,165,94,.3);
+  border-radius: 999px;
+}
+.singa-rewrite:disabled { opacity: .5; }
+
+/* ── マイクの調子をみる画面（/voice-check）─────────────────
+ * お客様に渡す画面。明るい背景の上に置くので、文字は濃い色で書く。
+ * button は既定で白背景なので、必ず background を指定する。
+ */
+.vc { display: flex; flex-direction: column; gap: 12px; }
+.vc-h { font-size: 1.02rem; font-weight: 800; color: #3b2d6e; }
+.vc-lead { font-size: .78rem; line-height: 1.8; color: #4b4266; background: rgba(255,255,255,.85);
+  border: 1px solid #e3dcf5; border-radius: 12px; padding: 10px 12px; }
+
+.vc-steps { list-style: none; display: flex; flex-direction: column; gap: 6px; margin: 0; padding: 0; }
+.vc-steps li { display: grid; grid-template-columns: 20px 1fr; gap: 2px 8px; align-items: start;
+  background: rgba(255,255,255,.9); border: 1px solid #e3dcf5; border-radius: 11px; padding: 9px 11px; }
+.vc-steps .mk { grid-row: span 2; font-weight: 800; color: #7a6fa8; font-size: .9rem; }
+.vc-steps .nm { font-size: .78rem; font-weight: 700; color: #372e5c; }
+.vc-steps .nt { font-size: .72rem; line-height: 1.75; color: #5c5478; }
+.vc-steps li.is-ok .mk { color: #2f9e6a; }
+.vc-steps li.is-ng { border-color: #f0b4ae; background: #fff5f4; }
+.vc-steps li.is-ng .mk { color: #d0554a; }
+.vc-steps li.is-ng .nt { color: #8c3d35; }
+
+.vc-rec { background: rgba(255,255,255,.92); border: 1px solid #e3dcf5; border-radius: 14px; padding: 12px; }
+.vc-rec-t { font-size: .84rem; font-weight: 800; color: #3b2d6e; margin-bottom: 4px; }
+.vc-rec-p { font-size: .74rem; line-height: 1.8; color: #5c5478; margin-bottom: 10px; }
+.vc-rec-p b { color: #3b2d6e; }
+.vc-bar { height: 10px; border-radius: 6px; background: #ece7fa; overflow: hidden; margin-bottom: 6px; }
+.vc-bar span { display: block; height: 100%; background: linear-gradient(90deg,#8b7ae0,#d05a8e); transition: width .08s; }
+.vc-secs { font-size: .7rem; color: #6b6390; margin-bottom: 10px; }
+.vc-go, .vc-stop {
+  width: 100%; padding: 13px; border-radius: 12px; font-weight: 800; font-size: .88rem; color: #fff;
+  background: linear-gradient(160deg,#8b6fe0,#6c4fd0);
+}
+.vc-stop { background: linear-gradient(160deg,#e0625a,#c4423c); }
+.vc-go:disabled { opacity: .6; }
+
+.vc-out { background: rgba(255,255,255,.92); border: 1px solid #e3dcf5; border-radius: 14px; padding: 12px;
+  display: flex; flex-direction: column; gap: 7px; }
+.vc-row { display: flex; justify-content: space-between; gap: 10px; font-size: .76rem; color: #5c5478; }
+.vc-row b { color: #372e5c; }
+.vc-warn { font-size: .74rem; line-height: 1.8; color: #8a5a20; background: #fff8ec;
+  border: 1px solid #f0d9ac; border-radius: 10px; padding: 9px 11px; }
+.vc-said .k { font-size: .68rem; font-weight: 700; color: #7a6fa8; margin-top: 6px; }
+.vc-said p { font-size: .8rem; line-height: 1.85; color: #2f2748; }
+.vc-err { font-size: .76rem; line-height: 1.8; color: #8c3d35; background: #fff5f4;
+  border: 1px solid #f0b4ae; border-radius: 11px; padding: 10px 12px; }
+
+.vc-send { background: rgba(255,255,255,.85); border: 1px solid #e3dcf5; border-radius: 14px; padding: 12px; }
+.vc-send p { font-size: .74rem; line-height: 1.8; color: #5c5478; margin-bottom: 8px; }
+.vc-copy { width: 100%; padding: 11px; border-radius: 11px; font-weight: 700; font-size: .8rem;
+  color: #3b2d6e; background: #efeaff; border: 1px solid #d9d0f5; margin-bottom: 8px; }
+.vc-report { font-size: .64rem; line-height: 1.7; color: #4b4266; background: #f7f5ff;
+  border: 1px solid #e3dcf5; border-radius: 10px; padding: 9px; white-space: pre-wrap;
+  word-break: break-all; max-height: 210px; overflow: auto; -webkit-user-select: all; user-select: all; }
+
+.vbar-err-a { display: inline-block; margin-left: 8px; font-weight: 700;
+  color: var(--singa-gold); text-decoration: underline; }

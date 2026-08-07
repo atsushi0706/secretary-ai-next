@@ -23,7 +23,9 @@ export const BREATH_LINES: BreathLine[] = [
   { key: "ex2", text: "にかいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね" },
   { key: "ex3", text: "さんかいめ。お口をすぼめて、ほそーく強く、ふーって少しずつ吐ききってね" },
   { key: "hold", text: "そのまま、すこし止めてね。からっぽの真空をつくるよ" },
-  { key: "inhale", text: "いっきに、つよく、すってー" },
+  // 「いっきに」は「いつきに」と読まれてしまう（お客様から指摘）。
+  // 小さい「っ」は音声合成が「つ」と読むことがあるので、促音を使わない言い方にする。
+  { key: "inhale", text: "はい、ふかく、つよく、すってー" },
   { key: "settle", text: "目をとじて、ゆっくり呼吸を整えてね" },
   { key: "lastex", text: "さいごに、もういっかい。お口をすぼめて、ぜんぶ吐いてー" },
   { key: "lasthold", text: "そのまま、すこし止めて、真空をつくってね" },
@@ -38,3 +40,16 @@ export function totalChars(): number {
 /** 保存先（Supabase Storage の公開バケット内） */
 export const BAKE_BUCKET = "avatars";
 export const bakePath = (voiceId: string, key: string) => `_voice/${voiceId}/${key}.mp3`;
+
+/**
+ * セリフごとの版（URLの後ろに付ける）。
+ *
+ * 焼いた音声は1年キャッシュにしてある（料金と速さのため）。
+ * だからセリフを直して焼き直しても、**すでに聞いた人の端末には古い音が残る**。
+ * 文が変わればURLも変わるようにして、それを避ける。
+ */
+export function lineVersion(text: string): string {
+  let h = 5381;
+  for (let i = 0; i < text.length; i += 1) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+  return h.toString(36);
+}

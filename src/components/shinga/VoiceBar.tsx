@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useDictation } from "@/components/useDictation";
+import { handleEnter, isTouchDevice } from "@/lib/enter-key";
 
 /**
  * 入力バー（テキスト＋Typeless級の音声入力＋送信）。
@@ -14,14 +15,28 @@ export function VoiceBar({
   onSend,
   disabled,
   placeholder = "🎙 マイクを押して、話してみて",
+  refill,
 }: {
   onSend: (text: string) => void | Promise<void>;
   disabled?: boolean;
   placeholder?: string;
+  /** 「書き直す」で戻ってきた文章。n を変えると同じ文章でも入り直す */
+  refill?: { text: string; n: number };
 }) {
   const [text, setText] = useState("");
   const taRef = useRef<HTMLTextAreaElement>(null);
   const d = useDictation();
+  // スマホかどうかは画面が出てから調べる（サーバ側では分からない）
+  const [touch, setTouch] = useState(false);
+  useEffect(() => { setTouch(isTouchDevice()); }, []);
+
+  // 「書き直す」で戻ってきた文章を入力欄に入れて、そこにカーソルを置く
+  useEffect(() => {
+    if (!refill?.text) return;
+    setText(refill.text);
+    const el = taRef.current;
+    if (el) { el.focus(); el.setSelectionRange(refill.text.length, refill.text.length); }
+  }, [refill?.n, refill?.text]);
 
   // 入力量に合わせて高さを伸ばす（画面の4割まで）
   const autosize = useCallback(() => {
@@ -67,7 +82,17 @@ export function VoiceBar({
           )}
         </div>
       )}
-      {d.error && <div className="vbar-err">{d.error}</div>}
+      {d.error && (
+        <div className="vbar-err">
+          {d.error}
+          {/* うまく入らない人が、その場で原因を見に行けるように */}
+          <a href="/voice-check" className="vbar-err-a">マイクの調子をみる →</a>
+        </div>
+      )}
+      {/* 「まだ書きたかったのに送信された」を無くす。スマホはEnterが改行だと明言する */}
+      {touch && !!text && d.phase === "idle" && (
+        <div className="vbar-nl">改行してOK。送るときだけ <b>▶</b> を押してね</div>
+      )}
 
       {/*
         打つと、頭で整えてから出すことになる。話すと、整う前のものがそのまま出る。
@@ -86,12 +111,7 @@ export function VoiceBar({
           value={text}
           onChange={(e) => setText(e.target.value)}
           onInput={autosize}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing && d.phase === "idle") {
-              e.preventDefault();
-              void submit();
-            }
-          }}
+          onKeyDown={(e) => { if (d.phase === "idle") handleEnter(e, () => void submit()); }}
           placeholder={d.phase === "recording" ? "話してね…（あとで文字になるよ）" : placeholder}
           className="vbar-text"
           rows={1}

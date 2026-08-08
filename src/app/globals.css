@@ -6825,3 +6825,170 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .78rem; font-weight: 700; color: var(--singa-ink-soft);
   background: rgba(0,0,0,.22); border: 1px dashed rgba(201,165,94,.28);
 }
+
+/* ══════════════════════════════════════════════════════════
+   ドリームキラー（パラレルウォークの途中に、バンと現れる）
+   ・逃げ道を必ず見えるところに置く（追い詰めない）
+   ・button は既定で白背景なので、必ず background を指定する
+   ══════════════════════════════════════════════════════════ */
+.dk {
+  position: fixed; inset: 0; z-index: 80;
+  /*
+   * 中身が長くなっても下が切れないよう、**外側がスクロールする**。
+   * カードの高さを画面いっぱい（dvh）で切るやり方は使わない
+   * （スマホのアドレスバーぶんがずれて下が切れる。過去にやって直した）。
+   * align-items: flex-start ＋ 子に margin:auto で、
+   * 短いときは中央、長いときは上から並んでスクロールできる。
+   */
+  display: flex; align-items: flex-start; justify-content: center;
+  overflow-y: auto; overscroll-behavior: contain;
+  padding: 14px;
+  animation: dk-in .28s ease-out both;
+}
+@keyframes dk-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* 背景が暗くなる */
+.dk-bg {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(120% 90% at 50% 25%, rgba(120,70,190,.42), transparent 60%),
+    rgba(6, 4, 14, .93);
+  backdrop-filter: blur(7px);
+}
+
+/* バン！ */
+.dk-bang {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  pointer-events: none;
+}
+.dk-bang span {
+  font-size: clamp(6rem, 34vw, 15rem); font-weight: 900; color: #fff;
+  text-shadow: 0 0 40px rgba(190,140,255,.95), 0 0 90px rgba(120,70,190,.75);
+  animation: dk-bang .9s cubic-bezier(.16,1,.3,1) both;
+}
+@keyframes dk-bang {
+  0%   { transform: scale(.2) rotate(-14deg); opacity: 0; }
+  35%  { transform: scale(1.25) rotate(4deg); opacity: 1; }
+  60%  { transform: scale(1) rotate(0deg); opacity: 1; }
+  100% { transform: scale(1.9); opacity: 0; }
+}
+.dk.is-burst .dk-card { animation: dk-drop .8s cubic-bezier(.2,1.4,.4,1) both; }
+@keyframes dk-drop {
+  0%   { transform: translateY(-60vh) scale(.7); opacity: 0; }
+  60%  { transform: translateY(14px) scale(1.03); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+
+.dk-card {
+  position: relative; width: 100%; max-width: 460px;
+  margin: auto;
+  display: flex; flex-direction: column; gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: linear-gradient(170deg, rgba(38,24,64,.96), rgba(18,12,32,.97));
+  border: 1px solid rgba(190,150,255,.34);
+  box-shadow: 0 26px 70px rgba(0,0,0,.66);
+}
+.dk-card.is-shake { animation: dk-shake .46s ease-in-out; }
+@keyframes dk-shake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-9px) rotate(-.7deg); }
+  45% { transform: translateX(8px) rotate(.6deg); }
+  70% { transform: translateX(-5px); }
+}
+
+.dk-face-wrap { position: relative; display: flex; justify-content: center; }
+.dk-face {
+  width: 100%; max-width: 260px; border-radius: 16px;
+  box-shadow: 0 10px 34px rgba(0,0,0,.5);
+}
+.dk-dmg {
+  position: absolute; top: 12%; right: 10%;
+  font-size: 2.1rem; font-weight: 900; color: #ffd76b;
+  text-shadow: 0 3px 14px rgba(0,0,0,.8);
+  animation: dk-dmg 1.3s ease-out both; pointer-events: none;
+}
+@keyframes dk-dmg {
+  0% { transform: translateY(10px) scale(.7); opacity: 0; }
+  25% { transform: translateY(-8px) scale(1.2); opacity: 1; }
+  100% { transform: translateY(-46px) scale(1); opacity: 0; }
+}
+
+.dk-hp { position: relative; }
+.dk-hp-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 5px; }
+.dk-hp-top .nm { font-size: .74rem; font-weight: 800; color: #d9c7ff; }
+.dk-hp-top .v { font-size: .7rem; color: #a89ac9; }
+.dk-hp-bar { height: 11px; border-radius: 7px; background: rgba(255,255,255,.1); overflow: hidden; }
+.dk-hp-bar span {
+  display: block; height: 100%; border-radius: 7px;
+  background: linear-gradient(90deg, #b06ce8, #e2648f);
+  transition: width .5s cubic-bezier(.2,.9,.3,1);
+}
+/* HPが残っている間だけ、そばにふわっと出る応援 */
+.dk-cheer {
+  position: absolute; right: 4px; top: -6px;
+  font-size: .72rem; font-weight: 800; color: #ffe9a8;
+  text-shadow: 0 2px 10px rgba(0,0,0,.7);
+  animation: dk-cheer 4.6s ease-out both; pointer-events: none;
+}
+@keyframes dk-cheer {
+  0% { transform: translateY(8px); opacity: 0; }
+  14% { transform: translateY(-2px); opacity: 1; }
+  70% { opacity: 1; }
+  100% { transform: translateY(-16px); opacity: 0; }
+}
+
+.dk-log {
+  max-height: 34vh; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 9px;
+  padding: 10px; border-radius: 13px;
+  background: rgba(0,0,0,.3); border: 1px solid rgba(255,255,255,.08);
+}
+.dk-line { max-width: 92%; }
+.dk-line .who { display: block; font-size: .62rem; font-weight: 700; color: #c0a8f0; margin-bottom: 2px; }
+.dk-line p {
+  font-size: .82rem; line-height: 1.85; color: #efe8ff; white-space: pre-line;
+  -webkit-user-select: text; user-select: text;
+}
+.dk-line.is-me { align-self: flex-end; text-align: right; }
+.dk-line.is-me p { color: #ffe9a8; }
+
+.dk-err { font-size: .72rem; color: #ffb3ab; }
+
+.dk-choose { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.dk-choose .go, .dk-end .go, .dk-btns .go {
+  padding: 13px; border-radius: 13px; font-weight: 800; font-size: .86rem;
+  color: #fff; background: linear-gradient(160deg, #a061e0, #7a3fd0);
+}
+.dk-choose .no {
+  padding: 13px; border-radius: 13px; font-weight: 700; font-size: .82rem;
+  color: #cbbde8; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+}
+
+.dk-input { display: flex; flex-direction: column; gap: 8px; }
+.dk-input textarea {
+  width: 100%; resize: none; padding: 11px 12px; border-radius: 13px;
+  font-size: .86rem; line-height: 1.7; color: #f2ecff;
+  background: rgba(0,0,0,.35); border: 1px solid rgba(190,150,255,.28);
+}
+.dk-input textarea::placeholder { color: #8d80ad; }
+.dk-btns { display: flex; gap: 8px; }
+.dk-btns .mic {
+  width: 52px; border-radius: 13px; font-size: 1.05rem;
+  color: #e6dcff; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.18);
+}
+.dk-btns .mic.on { background: #d8484a; color: #fff; border-color: #d8484a; }
+.dk-btns .go { flex: 1; }
+.dk-btns .go:disabled { opacity: .45; }
+/* 途中でも抜けられることを、いつも見えるところに置く */
+.dk-quit {
+  align-self: center; padding: 7px 14px; border-radius: 999px;
+  font-size: .7rem; color: #a99cc6; background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.12);
+}
+
+.dk-end { display: flex; flex-direction: column; gap: 9px; }
+.dk-won {
+  text-align: center; font-size: .92rem; font-weight: 800; color: #ffe9a8;
+  text-shadow: 0 2px 14px rgba(255,200,90,.4);
+}

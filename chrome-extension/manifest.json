@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Focus Secretary - 集中モード＋モンスター退治タイマー",
   "short_name": "Focus Secretary",
-  "version": "1.2.1",
+  "version": "1.2.2",
   "description": "集中モード（タブ上限・サイトブロック）と、時間を決めてモンスターを退治するタイマー。タブをまたいでカードが出る。",
   "permissions": [
     "tabs",

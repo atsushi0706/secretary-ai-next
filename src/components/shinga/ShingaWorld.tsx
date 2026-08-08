@@ -37,6 +37,7 @@ import { WorkMaker, CardDrawOverlay } from "./WorkMaker";
 import { WeightPanel } from "./WeightPanel";
 import { type CustomWork, type OwnCard } from "@/lib/custom-work-types";
 import type { PartColor, PartsStep } from "@/lib/parts";
+import { DreamKiller } from "./DreamKiller";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -152,6 +153,13 @@ export function ShingaWorld({
   const [wallDug, setWallDug] = useState(0);    // ウォールブレイク：陰の側から掘り出せた個数（7個で次の段階へ）
   const [travelStage, setTravelStage] = useState(1); // パラレルトラベル：高度(1=目の前 〜 10=すべてがつながる)
   const [walkStage, setWalkStage] = useState(1);     // パラレルウォーク：どこまで歩いたか(1=門 〜 10=理想郷)
+  /**
+   * ドリームキラー（淳くん専用・お試し中）。
+   * 歩いている途中に一度だけバンと現れる。何度も出ると歩く邪魔になるので、
+   * **1回のウォークにつき1回まで**。出たかどうかは入り直すと戻る。
+   */
+  const [dreamKiller, setDreamKiller] = useState<{ theme: string; seed: number } | null>(null);
+  const dkDoneRef = useRef(false);
   // 内なる子の神殿：入口(gate)で守り手を選ぶ → ワーク中は色と段階を持つ
   const [partsGate, setPartsGate] = useState(false);
   // 守り手を選んだ直後、会話の前に「幻獣を見せてしくみを渡す」導入画面を挟む
@@ -634,6 +642,7 @@ export function ShingaWorld({
     if (m !== "crystal") carryRef.current = "";
     // パラレルウォークに入り直したら、結晶化の誘いはまた一度できる
     if (m === "walk" && !resume) crystalOfferedRef.current = false;
+    if (m === "walk" && !resume) dkDoneRef.current = false;   // ドリームキラーも、また一度だけ
     resetWorkState();
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (mode === "walk" && m !== "walk") void finishSteps();
@@ -936,7 +945,26 @@ export function ShingaWorld({
     } finally {
       finalRef.current = true;
       setSending(false);
+      maybeDreamKiller(m);
     }
+  }
+
+  /**
+   * ドリームキラーを出すかどうか。
+   *
+   * ・パラレルウォークの中だけ
+   * ・淳くんだけ（お試し中）
+   * ・**1回のウォークにつき1回**（何度も出ると、歩くほうの邪魔になる）
+   * ・本人が3回しゃべったころ＝話が乗ってきたあたりで出す
+   */
+  function maybeDreamKiller(m: ModeKey | null) {
+    if (m !== "walk" || !isAdmin || dkDoneRef.current) return;
+    const mine = messages.filter((x) => x.role === "user" && x.content.trim());
+    if (mine.length < 3) return;
+    dkDoneRef.current = true;
+    // いま歩いている理想を渡す（何に茶々を入れるのかが分からないと、ただの悪口になる）
+    const theme = mine.slice(-3).map((x) => x.content).join(String.fromCharCode(10)).slice(-800);
+    setTimeout(() => setDreamKiller({ theme, seed: theme.length + mine.length }), 1100);
   }
 
   function pickChoice(c: Choice) {
@@ -1144,6 +1172,24 @@ export function ShingaWorld({
         「やっている時に発信スタジオというのが出てきた」の原因はこれだった。
         大元のスイッチが off のときは、通知も出さない。
       */}
+      {/* ドリームキラー（淳くん専用・お試し中）。歩いている上にバンとかぶさる */}
+      {dreamKiller && (
+        <DreamKiller
+          theme={dreamKiller.theme}
+          seed={dreamKiller.seed}
+          onClose={(result) => {
+            setDreamKiller(null);
+            // 言い切ったときだけ、歩いている流れに一言だけ残す（会話の邪魔をしない）
+            if (result === "won") {
+              setMessages((prev) => [...prev, {
+                role: "assistant",
+                content: "[[care]]いま、自分の言葉で言い切ったね。……その感じのまま、歩こう。",
+              }]);
+            }
+          }}
+        />
+      )}
+
       {flags.broadcast && materialToast && (
         <div className="material-toast">
           <div className="mt-body">

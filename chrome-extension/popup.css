@@ -171,6 +171,7 @@ button:hover { opacity: 0.9; }
   border: 1px solid #ddd8ee; border-radius: 8px; background: #fff; color: #555;
 }
 .min-btn:hover { background: #f3efff; border-color: #7b61c9; }
+.min-btn.on { background: #7b61c9; border-color: #7b61c9; color: #fff; font-weight: 700; }
 .mins input { width: 52px; padding: 6px; font-size: 12px; border: 1px solid #d8d3ea; border-radius: 8px; }
 
 #questName {
@@ -178,6 +179,20 @@ button:hover { opacity: 0.9; }
   border: 1px solid #d8d3ea; border-radius: 8px; outline: none;
 }
 #questName:focus { border-color: #7b61c9; }
+
+/* 退治中の表示。ボタンのすぐ下に出す（下の時計は画面外で見えないため） */
+.quest-running {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  margin-top: 8px; padding: 8px 10px; border-radius: 8px;
+  background: linear-gradient(135deg, #7a6dd6, #6358c5); color: #fff;
+  font-size: 12px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.quest-running[hidden] { display: none; }
+.btn-mini {
+  flex: 0 0 auto; padding: 4px 10px; font-size: 11px;
+  border-radius: 999px; background: rgba(255,255,255,.9); color: #5a4ab8;
+}
 
 /* 入れ替えが終わっていないときの案内（黙って壊れないように） */
 .broken {

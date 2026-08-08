@@ -137,12 +137,16 @@ function renderMode(mode) {
   $("forcePane").style.display = mode === "force" ? "block" : "none";
 }
 
+/** 何も渡ってこなかったとき用の候補。ここが空だと「名前を書く」以外の入り口が無くなる */
+const FALLBACK_MONSTERS = ["メールの返信", "原稿を書く", "動画をつくる", "資料の整理"];
+
 /** 前に退治したモンスターを、1タップで選べるように並べる */
 function renderMonsters(list) {
   const box = $("monsterList");
   if (!box) return;
   box.innerHTML = "";
-  for (const name of list) {
+  const names = (list && list.length) ? list : FALLBACK_MONSTERS;
+  for (const name of names) {
     const b = document.createElement("button");
     b.className = "monster";
     b.textContent = name;
@@ -150,6 +154,13 @@ function renderMonsters(list) {
     b.addEventListener("click", () => { $("questName").value = name; });
     box.appendChild(b);
   }
+}
+
+/** どの長さを選んでいるか、見て分かるようにする */
+function renderMins(v) {
+  document.querySelectorAll(".min-btn").forEach((b) => {
+    b.classList.toggle("on", Number(b.dataset.min) === Number(v));
+  });
 }
 
 async function render() {
@@ -172,6 +183,7 @@ async function render() {
   // タイマーのモード
   renderMode(s.timerMode || "quest");
   $("questMin").value = s.questMin || 30;
+  renderMins($("questMin").value);
   renderMonsters(s.monsters || []);
 
   // 設定
@@ -208,18 +220,7 @@ async function render() {
   $("todayDefeated").textContent = String(s.todayDefeated || 0);
 
   // ポモドーロ状態
-  if (s.pomoState === "quest") {
-    $("pomoState").textContent = `⚔ ${s.questName || "退治"}中`;
-  } else if (s.pomoState === "work") {
-    $("pomoState").textContent = "🍅 集中タイム";
-  } else if (s.pomoState === "prep") {
-    $("pomoState").textContent = "✋ 休む準備";
-  } else if (s.pomoState === "break") {
-    $("pomoState").textContent = "☕ 休憩タイム";
-  } else {
-    $("pomoState").textContent = "待機中";
-  }
-  updatePomoTimer(s);
+  applyPomoUi(s);
 
   // いま動いている版。入れ替えができているかを、見れば分かるようにする
   const vEl = document.getElementById("verTag");
@@ -236,13 +237,34 @@ async function render() {
   $("todayFocus").textContent = h > 0 ? `${h}h ${m}分` : `${m}分`;
 }
 
-function updatePomoTimer(s) {
-  if (s.pomoState === "idle" || !s.pomoEndAt) {
-    $("pomoTimer").textContent = "--:--";
-    return;
+function stateLabel(s) {
+  if (s.pomoState === "quest") return `⚔ ${s.questName || "退治"}中`;
+  if (s.pomoState === "work") return "🍅 集中タイム";
+  if (s.pomoState === "prep") return "✋ 休む準備";
+  if (s.pomoState === "break") return "☕ 休憩タイム";
+  return "待機中";
+}
+
+/**
+ * いまの状態を画面に反映する。
+ *
+ * 時計のカードはポップアップのずっと下にあって、開いた時点では画面の外にいる。
+ * ボタンのすぐ下にも同じことを出さないと、始まっていても「押しても反応しない」ように見える。
+ */
+function applyPomoUi(s) {
+  const running = s.pomoState !== "idle" && !!s.pomoEndAt;
+  const left = running ? Math.max(0, Math.ceil((s.pomoEndAt - Date.now()) / 1000)) : 0;
+
+  $("pomoState").textContent = stateLabel(s);
+  $("pomoTimer").textContent = running ? fmtTime(left) : "--:--";
+
+  const box = $("questRunning");
+  if (box) {
+    box.hidden = !running;
+    if (running) $("questRunningText").textContent = `${stateLabel(s)}　残り ${fmtTime(left)}`;
   }
-  const left = Math.max(0, Math.ceil((s.pomoEndAt - Date.now()) / 1000));
-  $("pomoTimer").textContent = fmtTime(left);
+  const btn = $("startQuest");
+  if (btn) btn.textContent = running ? "⚔ 別のを退治しなおす" : "⚔ 退治をはじめる";
 }
 
 // 1秒ごとにポモドーロ表示更新（popup 開いている時のみ）
@@ -251,12 +273,7 @@ function startTicker() {
   timerInterval = setInterval(async () => {
     const s = await send("getState");
     if (!s) return;
-    updatePomoTimer(s);
-    if (s.pomoState === "quest") $("pomoState").textContent = `⚔ ${s.questName || "退治"}中`;
-    else if (s.pomoState === "work") $("pomoState").textContent = "🍅 集中タイム";
-    else if (s.pomoState === "prep") $("pomoState").textContent = "✋ 休む準備";
-    else if (s.pomoState === "break") $("pomoState").textContent = "☕ 休憩タイム";
-    else $("pomoState").textContent = "待機中";
+    applyPomoUi(s);
   }, 1000);
 }
 
@@ -340,13 +357,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // 時間のボタン
   document.querySelectorAll(".min-btn").forEach((b) => {
-    b.addEventListener("click", () => { $("questMin").value = b.dataset.min; });
+    b.addEventListener("click", () => {
+      $("questMin").value = b.dataset.min;
+      renderMins(b.dataset.min);
+    });
   });
+  $("questMin").addEventListener("input", () => renderMins($("questMin").value));
 
   // モンスター退治を始める
   $("startQuest").addEventListener("click", async () => {
-    const name = $("questName").value.trim();
-    if (!name) { $("questName").focus(); return; }
+    // 名前が空でも始める。
+    // 前は空だと黙って何もしなかったので、「押しても反応しない」ように見えていた。
+    const name = $("questName").value.trim()
+      || $("nowLabel").value.trim()
+      || "名もなきモンスター";
     const btn = $("startQuest");
     const label = btn.textContent;
     btn.disabled = true; btn.textContent = "はじめてる…";
@@ -358,6 +382,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     } else if (res) {
       showBroken("退治を始められませんでした（裏側の状態が変わっていません）");
     }
+    await render();
+    // 押した直後だけ、退治中の行まで寄せる（毎秒やると鬱陶しいのでここだけ）
+    $("questRunning")?.scrollIntoView({ block: "nearest" });
+  });
+
+  // 退治中の行にある「やめる」。下の■やめるは画面外なので、ここにも置く
+  $("questStop").addEventListener("click", async () => {
+    await send("stopPomo");
     await render();
   });
   $("questName").addEventListener("keydown", (e) => {

@@ -55,6 +55,11 @@
         <input type="number" id="questMin" min="1" max="180" />
       </div>
       <button id="startQuest" class="btn-primary" style="width:100%;">⚔ 退治をはじめる</button>
+      <!-- 押した結果がその場で見えるようにする。下の時計は画面外にあって見えない -->
+      <div id="questRunning" class="quest-running" hidden>
+        <span id="questRunningText"></span>
+        <button id="questStop" class="btn-mini">■ やめる</button>
+      </div>
       <div class="hint">終わったら止まる。勝手に次は始まらない。</div>
     </div>
 

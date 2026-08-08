@@ -6692,8 +6692,13 @@ body:has(.realverse-bg) { background: transparent; }
   border-radius: 8px; padding: 4px 8px;
 }
 .vbar-nl b { color: var(--singa-gold); }
+/*
+ * 「書き直す」は、吹き出しの**下**に置く。
+ * inline-block のままだと、同じく inline-block の吹き出しと横に並んでしまい、
+ * 自分の発言の右にはみ出して重なった（スマホで実際に起きた）。
+ */
 .singa-rewrite {
-  display: inline-block; margin-top: 4px; padding: 2px 9px;
+  display: block; width: fit-content; margin: 4px 0 0 auto; padding: 2px 9px;
   font-size: .64rem; font-weight: 700; color: #cbb98a;
   background: rgba(0,0,0,.26); border: 1px solid rgba(201,165,94,.3);
   border-radius: 999px;

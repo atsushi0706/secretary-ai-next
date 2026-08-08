@@ -962,9 +962,33 @@ export function ShingaWorld({
     const mine = messages.filter((x) => x.role === "user" && x.content.trim());
     if (mine.length < 3) return;
     dkDoneRef.current = true;
-    // いま歩いている理想を渡す（何に茶々を入れるのかが分からないと、ただの悪口になる）
-    const theme = mine.slice(-3).map((x) => x.content).join(String.fromCharCode(10)).slice(-800);
+    /*
+     * いま歩いている話を渡す。何に茶々を入れるのかが分からないと、ただの雑音になる。
+     *
+     * 本人の発言だけでは足りない。清瀬リンクの返しも入れて、**流れのまま**渡す。
+     * （本人の言葉だけを抜き出して渡していたら、「あさから筋トレ」の話をしているのに
+     *   「きみじゃなくてもよくない？」と噛み合わないことを言ってきた）
+     */
+    const theme = messages
+      .filter((x) => x.content && !x.content.startsWith("[["))
+      .slice(-6)
+      .map((x) => `${x.role === "user" ? "本人" : guideName}：${x.content}`)
+      .join(String.fromCharCode(10))
+      .slice(-1200);
     setTimeout(() => setDreamKiller({ theme, seed: theme.length + mine.length }), 1100);
+  }
+
+  /**
+   * 画面にだけ出した清瀬リンクの一言を、会話の記録にも残す。
+   * 残さないと、次のやり取りでAIが「自分がそれを言った」ことを知らないままになる。
+   */
+  async function saveGuideLine(text: string) {
+    try {
+      await fetch("/api/shinga/chat", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ saveOnly: true, role: "assistant", text, place }),
+      });
+    } catch { /* 残せなくても会話は続く */ }
   }
 
   function pickChoice(c: Choice) {
@@ -1177,14 +1201,17 @@ export function ShingaWorld({
         <DreamKiller
           theme={dreamKiller.theme}
           seed={dreamKiller.seed}
-          onClose={(result) => {
+          onClose={(result, guideSay) => {
             setDreamKiller(null);
-            // 言い切ったときだけ、歩いている流れに一言だけ残す（会話の邪魔をしない）
-            if (result === "won") {
-              setMessages((prev) => [...prev, {
-                role: "assistant",
-                content: "[[care]]いま、自分の言葉で言い切ったね。……その感じのまま、歩こう。",
-              }]);
+            if (result === "skip") return;
+            /*
+             * 戻ってきたら、清瀬リンクが**先に**口を開く。
+             * 「急にいなくなったな」とは思っているが、どこへ行っていたかは知らない。
+             * 言い方は毎回ちがう（サーバで作っている）。
+             */
+            if (guideSay) {
+              setMessages((prev) => [...prev, { role: "assistant", content: guideSay }]);
+              void saveGuideLine(guideSay);
             }
           }}
         />

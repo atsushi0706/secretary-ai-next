@@ -45,6 +45,22 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json().catch(() => ({}));
+
+  /*
+   * 画面側だけで出した一言を、会話の記録にも残すだけの呼び出し。
+   * （ドリームキラーから戻ったときの、清瀬リンクの第一声など）
+   * 残さないと、次のやり取りでAIが「自分がそれを言った」ことを知らないままになる。
+   */
+  if (body.saveOnly) {
+    const t = String(body.text ?? "").trim().slice(0, 2000);
+    const role = body.role === "user" ? "user" : "assistant";
+    if (t) {
+      await saveShingaMessage(userId, jstDateStr(), role, t, isPlaceKey(body.place) ? body.place : null)
+        .catch(() => {});
+    }
+    return Response.json({ ok: true });
+  }
+
   const text = String(body.text ?? "").trim();
   const place: PlaceKey = isPlaceKey(body.place) ? body.place : "map";
   const mode: ModeKey | undefined = isModeKey(body.mode) ? body.mode : undefined;

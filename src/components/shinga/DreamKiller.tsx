@@ -18,6 +18,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useDictation } from "@/components/useDictation";
 import { handleEnter } from "@/lib/enter-key";
 import { CHEERS, DK_MAX_HP, DK_LEFT } from "@/lib/dreamkiller";
+import { Gem, hueFor } from "./Gem";
 
 type Line = { who: "dk" | "me"; text: string };
 type Phase = "burst" | "choose" | "fight" | "left" | "won";
@@ -28,7 +29,8 @@ export function DreamKiller({
   /** いま歩いている理想（ドリームキラーが茶々を入れる相手） */
   theme: string;
   seed: number;
-  onClose: (result: "won" | "left" | "skip") => void;
+  /** 戻るときに、清瀬リンクの第一声も一緒に渡す（歩きの画面がそれを出す） */
+  onClose: (result: "won" | "left" | "skip", guideSay?: string) => void;
 }) {
   const [phase, setPhase] = useState<Phase>("burst");
   const [face, setFace] = useState("/dk/dk-1.jpg");
@@ -40,6 +42,8 @@ export function DreamKiller({
   const [cheer, setCheer] = useState("");
   const [shake, setShake] = useState(false);
   const [dmg, setDmg] = useState<number | null>(null);
+  /** 倒れたあと、姿がほどけてクリスタルになる */
+  const [crystal, setCrystal] = useState(false);
   const d = useDictation();
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -106,7 +110,11 @@ export function DreamKiller({
       setTimeout(() => setDmg(null), 1400);
       setHp(j.hp ?? 0);
       setLog((p) => [...p, { who: "dk", text: j.say }]);
-      if (j.defeated) setTimeout(() => setPhase("won"), 700);
+      if (j.defeated) {
+        // 姿がほどけて、クリスタルになる。そのあと締めの言葉が出る
+        setTimeout(() => setCrystal(true), 500);
+        setTimeout(() => setPhase("won"), 1500);
+      }
     } catch (e: any) {
       setErr(String(e?.message ?? e));
     } finally { setBusy(false); }
@@ -117,6 +125,25 @@ export function DreamKiller({
       const t = await d.stop("ドリームキラーに言い返している");
       if (t) setSaid((p) => (p ? `${p} ${t}` : t));
     } else if (d.phase === "idle") { await d.start(); }
+  }
+
+  /**
+   * パラレルウォークへ戻る。
+   *
+   * 戻ったとき、清瀬リンクが**先に**口を開く。
+   * 「急にいなくなったな」とは思っているが、どこへ行っていたかは知らない。
+   * その一声をここで取ってから、上（歩いている画面）に渡す。
+   */
+  async function goBack(won: boolean) {
+    if (busy) return;
+    setBusy(true);
+    let say = "";
+    try {
+      const j = await post({ action: "back", theme, won });
+      say = String(j.say ?? "");
+    } catch { /* 取れなくても戻る。歩きを止めない */ }
+    setBusy(false);
+    onClose(won ? "won" : "left", say);
   }
 
   function leave() {
@@ -132,8 +159,12 @@ export function DreamKiller({
       {phase === "burst" && <div className="dk-bang" aria-hidden><span>！</span></div>}
 
       <div className={`dk-card ${shake ? "is-shake" : ""}`}>
-        <div className="dk-face-wrap">
-          <img className="dk-face" src={face} alt="ドリームキラー" />
+        <div className={`dk-face-wrap ${crystal ? "is-crystal" : ""}`}>
+          {crystal ? (
+            <div className="dk-gem"><Gem hue={hueFor(theme || "dreamkiller")} size={150} sparkle /></div>
+          ) : (
+            <img className="dk-face" src={face} alt="ドリームキラー" />
+          )}
           {dmg != null && dmg > 0 && <div className="dk-dmg">-{dmg}</div>}
         </div>
 
@@ -198,18 +229,22 @@ export function DreamKiller({
           </div>
         )}
 
-        {/* 倒した */}
+        {/* 倒した。クリスタルになったのを見届けて、歩きへ戻る */}
         {phase === "won" && (
           <div className="dk-end">
             <div className="dk-won">言い切ったね</div>
-            <button className="go" onClick={() => onClose("won")}>歩きにもどる</button>
+            <button className="go" disabled={busy} onClick={() => void goBack(true)}>
+              {busy ? "もどってる…" : "パラレルにもどる"}
+            </button>
           </div>
         )}
 
         {/* 戦わなかった／途中でやめた */}
         {phase === "left" && (
           <div className="dk-end">
-            <button className="go" onClick={() => onClose("left")}>歩きにもどる</button>
+            <button className="go" disabled={busy} onClick={() => void goBack(false)}>
+              {busy ? "もどってる…" : "パラレルにもどる"}
+            </button>
           </div>
         )}
       </div>

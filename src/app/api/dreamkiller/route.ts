@@ -15,10 +15,10 @@ import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { complete } from "@/lib/ai";
-import { logError } from "@/lib/supabase";
+import { logError, getUserSettings } from "@/lib/supabase";
 import {
-  dkPersona, dkJudgePrompt, DAMAGE, DK_MAX_HP, DK_FACES,
-  DK_OPENERS, DK_SURRENDER, type DkHit,
+  dkPersona, dkJudgePrompt, dkOpenerPrompt, dkSurrenderPrompt, dkWelcomeBackPrompt, hasCore,
+  DAMAGE, DK_MAX_HP, DK_FACES, DK_OPENERS, DK_SURRENDER, DK_BACK_FALLBACK, type DkHit,
 } from "@/lib/dreamkiller";
 
 export const dynamic = "force-dynamic";
@@ -47,11 +47,18 @@ export async function POST(req: Request) {
     /* ── 現れる ── */
     if (b.action === "appear") {
       const seed = Number(b.seed) || theme.length || 1;
-      return NextResponse.json({
-        face: pickBy(seed, DK_FACES),
-        say: pickBy(seed * 7 + 3, DK_OPENERS),
-        hp: DK_MAX_HP,
-      });
+      // 第一声は、その場の話に合わせて作る（固定文だと話に噛み合わない）
+      let say = "";
+      try {
+        say = (await complete({
+          userId: g.userId,
+          prompt: dkOpenerPrompt(theme),
+          maxTokens: 140,
+          temperature: 1,
+        })).trim();
+      } catch { /* 下で保険に落ちる */ }
+      if (!say || say.length > 90) say = pickBy(seed * 7 + 3, DK_OPENERS);
+      return NextResponse.json({ face: pickBy(seed, DK_FACES), say, hp: DK_MAX_HP });
     }
 
     /* ── 言い返しを受ける ── */
@@ -82,16 +89,34 @@ export async function POST(req: Request) {
 
       const hp = Math.max(0, hpNow - DAMAGE[hit]);
 
-      // ② 倒れたなら、決まった言葉を残して消える（AIに書かせない。ここが芯だから）
-      if (hp <= 0) {
-        return NextResponse.json({ hp: 0, hit, why, say: DK_SURRENDER, defeated: true });
-      }
-
-      // ③ まだ立っている。食い下がる
       const log = (Array.isArray(b.log) ? b.log : [])
         .slice(-6)
         .map((x: any) => `${x.who === "dk" ? "ドリームキラー" : "相手"}：${String(x.text ?? "").slice(0, 300)}`)
         .join("\n");
+
+      /*
+       * ② 倒れた。負けを認めて消える。
+       *
+       * **言い方は毎回変える**（同じ文が続くと、演出ではなく仕掛けに見える）。
+       * ただし言う中身＝芯は変えない。芯（うつし・信じている・ありがとう）が
+       * 1つでも抜けていたら、決まった文に差し替える。
+       * 生成にまかせきると、この機能でいちばん大事な一言が消えることがある。
+       */
+      if (hp <= 0) {
+        let bye = "";
+        try {
+          bye = (await complete({
+            userId: g.userId,
+            prompt: dkSurrenderPrompt(theme, [log, `相手：${said}`].join(String.fromCharCode(10))),
+            maxTokens: 420,
+            temperature: 1,
+          })).trim();
+        } catch { /* 下で保険に落ちる */ }
+        if (!bye || !hasCore(bye)) bye = DK_SURRENDER;
+        return NextResponse.json({ hp: 0, hit, why, say: bye, defeated: true });
+      }
+
+      // ③ まだ立っている。食い下がる
       let say = "";
       try {
         say = (await complete({
@@ -107,6 +132,24 @@ export async function POST(req: Request) {
       if (!say) say = "ふーん。……で？";
 
       return NextResponse.json({ hp, hit, why, say, defeated: false });
+    }
+
+    /* ── 消えたあと、パラレルウォークに戻る。清瀬リンクが先に口を開く ── */
+    if (b.action === "back") {
+      const settings = await getUserSettings(g.userId).catch(() => null) as any;
+      const guideName = String(settings?.secretary_name || "清瀬リンク");
+      let say = "";
+      try {
+        say = (await complete({
+          userId: g.userId,
+          prompt: dkWelcomeBackPrompt(guideName, theme, b.won === true),
+          maxTokens: 260,
+          temperature: 1,
+        })).trim();
+      } catch { /* 下で保険に落ちる */ }
+      // 知らないはずのことを言っていたら使わない（世界観が壊れる）
+      if (!say || /ドリームキラー|戦っ|たたかっ|勝っ|倒し/.test(say)) say = DK_BACK_FALLBACK;
+      return NextResponse.json({ say });
     }
 
     return NextResponse.json({ error: "何をするのか分からなかった" }, { status: 400 });

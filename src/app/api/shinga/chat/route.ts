@@ -23,6 +23,7 @@ import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type H
 import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@/lib/parts";
 import { releaseGuardian } from "@/lib/parts-db";
 import { undoLastTurn } from "@/lib/undo-turn";
+import { DIRECTION_FINDING, DIRECTION_DONE } from "@/lib/ideal-ask";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
@@ -125,6 +126,8 @@ export async function POST(req: Request) {
         }
 
         const settings = await getUserSettings(userId).catch(() => null) as any;
+        // この部屋で本人が何回しゃべったか（パラレルウォークの方向探しを1回で終わらせる）
+        const saidInWalk = sessionHistory.filter((m) => m.role === "user").length;
         // 主人公レベル：会話で増減させるため、実際の対話（greet以外）のときだけ読み込んで渡す
         let hero: HeroRow | null = null;
         if (!greet) hero = await getHero(userId).catch(() => null);
@@ -144,7 +147,20 @@ export async function POST(req: Request) {
                * 「僕だったらそこで◯◯しちゃうけどな」といった返し方が、
                * **一度もAIに届いていなかった**。ここで必ず渡す。
                */
-              + `\n\n${MODES.walk.flow}\n\n${WALK_SCENERY_PROMPT}`
+              /**
+               * 方向探しは入口の1回だけ渡す。
+               * 毎回渡していたら、AIが方向を話の中心にしてしまった
+               *（「東北東」と答えたら「いまその東北東の世界を歩いていて」と引っ張り続けた）。
+               */
+              + `
+
+${MODES.walk.flow}`
+              + `
+
+${saidInWalk < 2 ? DIRECTION_FINDING : DIRECTION_DONE}`
+              + `
+
+${WALK_SCENERY_PROMPT}`
           : buildGuidePersona({
               guideName: settings?.secretary_name,
               userCallName: settings?.user_call_name,
@@ -157,6 +173,7 @@ export async function POST(req: Request) {
               hero,
               // 段階制のワークは、いま立っている段階の指示だけを渡す（先を見せない）
               stage: mode === "breakthrough" ? (progress.wallStage ?? 1) : null,
+              turns: saidInWalk,
             });
 
         // 会話履歴は「今日ぶんだけ」に絞る（何日も前の話が混ざって時間軸が壊れるのを防ぐ）。

@@ -9,7 +9,7 @@
  */
 import type { PlaceKey } from "./places";
 import { SHADOW_FLOW } from "./shadow";
-import { IDEAL_ASK, DIRECTION_FINDING, usesIdealAsk } from "./ideal-ask";
+import { IDEAL_ASK, DIRECTION_FINDING, DIRECTION_DONE, usesIdealAsk } from "./ideal-ask";
 
 // ゾーン(PlaceKey)に加えて、地図の上には無い体験モードも持てる（place で見た目のゾーンを借りる）
 export type ModeKey = PlaceKey | "breakthrough" | "travel" | "parts" | "balance" | "shadow" | "crystal" | "reflect";
@@ -84,8 +84,6 @@ export const MODES: Record<ModeKey, Mode> = {
     flow: `
 # ここは：パラレルウォーク（可能性の道を歩く）
 整った状態で、望む世界＝もう一つの可能性を歩きながら言葉にしていく。
-
-${DIRECTION_FINDING}
 
 ## この場の距離感（いちばん大事）
 **このワークだけで完結させる。** 他のワークで話したこと、生まれ持った傾向、過去の話は
@@ -818,7 +816,12 @@ const GUIDANCE = `
  * 5段階ぶんをまとめて渡すと、AIは終わりまで見えてしまうので、
  * 陰を2〜3個聞いたところで統合点まで走ってしまう。それではこのワークは効かない。
  */
-export function buildModePrompt(mode: ModeKey, stage?: number | null): string {
+export function buildModePrompt(
+  mode: ModeKey,
+  stage?: number | null,
+  /** この部屋で本人が何回しゃべったか。方向探しを1回で終わらせるのに使う */
+  turns?: number,
+): string {
   const m = MODES[mode];
   if (!m) return "";
   const parts = [m.flow];
@@ -830,6 +833,14 @@ export function buildModePrompt(mode: ModeKey, stage?: number | null): string {
   // 理想の世界に立たせるワークには、問いかけの決まりを必ず配る
   // （「見える？」で聞かない・自分の顔は聞かない・動きを聞く）
   if (usesIdealAsk(mode)) parts.push(IDEAL_ASK);
+  /**
+   * 方向探しは**入口の1回だけ**。
+   *
+   * 毎回渡していたら、AIが方向を話の中心にしてしまった（「東北東の世界」と呼び続けた）。
+   * 本人が2回しゃべったあとはもう方向は決まっているので、
+   * 探す手順ではなく「もう出さない」ほうを渡す。言葉での禁止だけに頼らない。
+   */
+  if (mode === "walk") parts.push((turns ?? 0) < 2 ? DIRECTION_FINDING : DIRECTION_DONE);
   parts.push(GUIDANCE);
   return parts.join("\n\n");
 }

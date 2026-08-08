@@ -23,6 +23,16 @@ type Step = {
   /** 鳴らす音声。複数書くと、その順に続けて鳴る（「1回目」→「口を閉じます」など） */
   voice?: string[];
   round?: number;
+  /**
+   * 「流れにまかせる」でも、ここだけは押して進む。
+   *
+   * 吐き切るところを勝手に飛ばすと、**吐き切れていないのに次へ行ってしまう**。
+   * 細く吐いている途中は時間で流していいが、「全部吐き切った」だけは本人しか知らない。
+   * はじめの一歩（体をゆらす→1回目に入る）も、心の準備のために1回だけ止める。
+   */
+  waitForPerson?: boolean;
+  /** 押すボタンの言葉（何を待っているのかが分かるように） */
+  waitLabel?: string;
 };
 
 /**
@@ -55,13 +65,13 @@ const IMG_SETTLE = "/breath-step4.png"; // なじませる（約15秒）
  *     hold 2.6 / inhale 1.6 / settle 6.6 秒
  */
 const T = {
-  intro: 16,       // 体をゆらす
+  intro: 10,       // 体をゆらす（淳くんの指定）
   closemouth: 5,   // 口を閉じる（掛け声＋この一言＝実測3.6秒。間をとって5秒）
   press: 5,        // 口の中に圧をかける（淳くんの指定）
   exhale: 10,      // 細く長く吐く（淳くんの指定。16秒は長すぎた）
   burst: 3,        // 勢いよく吐き切る（淳くんの指定）
-  hold: 5,         // キープ（絵に「5秒」と書いてあるので5秒にそろえる）
-  inhale: 4,       // 一気に吸う
+  hold: 3,         // キープ（淳くんの指定。ボタンなしで流す）
+  inhale: 3,       // 一気に吸う（淳くんの指定。ボタンなしで流す）
   settle: 15,      // 馴染ませる（絵に「約15秒」と書いてあるのでそろえる）
 };
 
@@ -90,6 +100,8 @@ function buildSteps(emotionRaw?: string): Step[] {
       instr: emotion ? `${S("intro")}
 （未来からの「${emotion}」を入れる準備）` : S("intro"),
       say: L("intro"), count: T.intro, scale: 1, voice: ["intro"],
+      // 最初の一歩だけは、自分で押して入る
+      waitForPerson: true, waitLabel: "はじめる ▶",
     },
   ];
 
@@ -107,8 +119,10 @@ function buildSteps(emotionRaw?: string): Step[] {
       // 細く長く吐く … 玉がゆっくり縮んでいくほうが伝わる
       { instr: S("exhale"), say: L("exhale"), count: T.exhale, scale: 0.45,
         voice: ["exhale"], round: n },
+      // ここだけは必ず押して進む。飛ばすと吐き切れていないまま次へ行ってしまう
       { instr: S("burst"), say: L("burst"), count: T.burst, scale: 0.2,
-        img: IMG_BURST, voice: ["burst"], round: n },
+        img: IMG_BURST, voice: ["burst"], round: n,
+        waitForPerson: true, waitLabel: "吐き切った ▶" },
       { instr: S("hold"), say: L("hold"), count: T.hold, scale: 0.18,
         img: IMG_HOLD, voice: ["hold"], round: n },
       {
@@ -285,6 +299,26 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
   const [emo, setEmo] = useState("");
   const [imgFailed, setImgFailed] = useState<Record<string, boolean>>({}); // 画像未配置ならオーブに戻す
 
+  /**
+   * 進み方。既定は「流れにまかせる」（押さずに進む）。
+   *
+   * 押して進む形だと、一連でバーッと通したい人が毎回止められる。
+   * かわりに **吐き切るところと、最初の一歩だけ** は押してもらう（Step.waitForPerson）。
+   * 選んだほうはこの端末に覚えておく（毎回選び直させない）。
+   */
+  const [auto, setAuto] = useState(true);
+  useEffect(() => {
+    try { if (localStorage.getItem("breath-pace") === "manual") setAuto(false); } catch { /* ignore */ }
+  }, []);
+  const pickPace = (v: boolean) => {
+    setAuto(v);
+    try { localStorage.setItem("breath-pace", v ? "auto" : "manual"); } catch { /* ignore */ }
+  };
+
+  /** この段の声が鳴り終わったか（秒数が来ても、言葉の途中では進めない） */
+  const [spoken, setSpoken] = useState(false);
+  const idxRef = useRef(0);
+
   useEffect(() => () => { clearInterval(tickRef.current); stopVoice(); }, []);
 
   // その日の手紙の感情を取り込む（吸ってインストールする対象）
@@ -311,9 +345,14 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
     }
     const s = steps[i];
     setIdx(i);
+    idxRef.current = i;
     setScale(s.scale);
     setRemain(s.count);
-    void speakStep(s);
+    // 声が鳴り終わったら印を付ける。秒数が来ても、言葉の途中では次へ行かせない
+    setSpoken(false);
+    void speakStep(s).then(() => {
+      if (idxRef.current === i) setSpoken(true);
+    });
     tickRef.current = setInterval(() => {
       setRemain((r) => {
         if (r <= 1) { clearInterval(tickRef.current); return 0; }
@@ -324,6 +363,20 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
 
   const steps = stepsRef.current;
   const cur = started ? steps[idx] : null;
+
+  /**
+   * 「流れにまかせる」のとき、秒数が来て、声も鳴り終わったら次へ。
+   * 押してもらう段（吐き切る・最初の一歩）では止まる。
+   */
+  useEffect(() => {
+    if (!started || !auto) return;
+    const s = stepsRef.current[idx];
+    if (!s || s.waitForPerson) return;
+    if (remain > 0 || !spoken) return;
+    const t = setTimeout(() => goto(idx + 1), 350);   // 少しだけ間をとる
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [started, auto, idx, remain, spoken]);
   const ready = remain === 0;         // カウント終了＝次へ進める
   const isLast = started && idx >= steps.length - 1;
 
@@ -383,6 +436,18 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
               })()}
             </div>
           )}
+          {/* 進み方。押して進みたい人もいるので選べるようにする（選択は端末に覚える） */}
+          <div className="breath-pace">
+            <div className="bp-t">進み方</div>
+            <div className="bp-row">
+              <button className={auto ? "on" : ""} onClick={() => pickPace(true)}>
+                流れにまかせる<span>押さずに進む。吐き切るところだけ押す</span>
+              </button>
+              <button className={!auto ? "on" : ""} onClick={() => pickPace(false)}>
+                自分で押して進む<span>ひとつずつ、自分のペースで</span>
+              </button>
+            </div>
+          </div>
           <div className="breath-row">
             <button className="vbar-go breath-start" onClick={begin}>🌬 はじめる</button>
             <button className="breath-skip" onClick={onDone}>スキップ</button>
@@ -390,12 +455,21 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
         </div>
       ) : (
         <div className="breath-row">
-          <button
-            className={`breath-next ${ready ? "is-ready" : ""}`}
-            onClick={() => goto(idx + 1)}
-          >
-            {isLast ? "おわる" : ready ? "次へ ▶" : "次へ（早く進む）"}
-          </button>
+          {auto && !cur?.waitForPerson ? (
+            // 流れにまかせているとき。押す必要はないので、いま何を待っているかだけ出す
+            <div className="breath-flowing">
+              {isLast ? "もうすぐ終わるよ" : spoken && remain === 0 ? "次へいくね…" : "そのまま、流れにのって"}
+            </div>
+          ) : (
+            <button
+              className={`breath-next ${ready || cur?.waitForPerson ? "is-ready" : ""}`}
+              onClick={() => goto(idx + 1)}
+            >
+              {isLast ? "おわる"
+                : cur?.waitForPerson ? (cur.waitLabel ?? "次へ ▶")
+                  : ready ? "次へ ▶" : "次へ（早く進む）"}
+            </button>
+          )}
         </div>
       )}
     </div>

@@ -19,6 +19,7 @@ import { complete } from "@/lib/ai";
 import { logError, getUserSettings } from "@/lib/supabase";
 import {
   dkPersona, dkJudgePrompt, dkOpenerPrompt, dkSurrenderPrompt, dkWelcomeBackPrompt, hasCore,
+  afterFeelingPrompt, saidFeeling, AFTER_FEELING_CORE, AFTER_FEELING_FALLBACK,
   DAMAGE, DK_MAX_HP, DK_FACES, DK_OPENERS, DK_SURRENDER, DK_BACK_FALLBACK, type DkHit,
 } from "@/lib/dreamkiller";
 
@@ -153,6 +154,34 @@ export async function POST(req: Request) {
       } catch { /* 下で保険に落ちる */ }
       // 知らないはずのことを言っていたら使わない（世界観が壊れる）
       if (!say || /ドリームキラー|戦っ|たたかっ|勝っ|倒し/.test(say)) say = DK_BACK_FALLBACK;
+      return NextResponse.json({ say });
+    }
+
+    /*
+     * ── 戻ったあと、相手が苛立ちや不安を口にしたとき ──
+     *
+     * 淳くん自身が、言われてめちゃくちゃイラッとして、少し不安にもなった。
+     * そこで放り出さない。**でも、気持ちを口にしたときだけ**返す。
+     * 言っていないのに解説を始めると、ただのお説教になる。
+     */
+    if (b.action === "feeling") {
+      const said = String(b.said ?? "").trim().slice(0, 1200);
+      if (!said || !saidFeeling(said)) return NextResponse.json({ say: "" });
+
+      const settings = await getUserSettings(g.userId).catch(() => null) as any;
+      const guideName = String(settings?.secretary_name || "清瀬リンク");
+      let say = "";
+      try {
+        say = (await complete({
+          userId: g.userId,
+          prompt: afterFeelingPrompt(guideName, said, theme),
+          maxTokens: 420,
+          temperature: 1,
+        })).trim();
+      } catch { /* 下で保険に落ちる */ }
+      // 筋（まだ叶っていない／叶っていたら響かない／それでも行きたい）が抜けたら、決まった文に
+      const 筋あり = AFTER_FEELING_CORE.filter((c) => c.re.test(say)).length >= 2;
+      if (!say || !筋あり) say = AFTER_FEELING_FALLBACK;
       return NextResponse.json({ say });
     }
 

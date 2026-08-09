@@ -160,6 +160,13 @@ export function ShingaWorld({
    */
   const [dreamKiller, setDreamKiller] = useState<{ theme: string; seed: number } | null>(null);
   const dkDoneRef = useRef(false);
+  /**
+   * ドリームキラーから戻った直後かどうか。
+   * 「どこ行ってたの？」に答えた**その1回だけ**、気持ちを見る。
+   * 苛立ちや不安を口にしていたら、そこで受け取る言葉を返す。
+   * （ずっと見ていると、関係ない話にも解説を始めてしまう）
+   */
+  const dkBackRef = useRef<{ theme: string } | null>(null);
   // 内なる子の神殿：入口(gate)で守り手を選ぶ → ワーク中は色と段階を持つ
   const [partsGate, setPartsGate] = useState(false);
   // 守り手を選んだ直後、会話の前に「幻獣を見せてしくみを渡す」導入画面を挟む
@@ -965,8 +972,34 @@ export function ShingaWorld({
     } finally {
       finalRef.current = true;
       setSending(false);
+      void afterDreamKiller(body);
       maybeDreamKiller(m);
     }
+  }
+
+  /**
+   * ドリームキラーから戻ったあと、「どこ行ってたの？」への答えに
+   * 苛立ちや不安が出ていたら、そこで受け取る言葉を返す。
+   *
+   * 淳くん自身が、言われてめちゃくちゃイラッとして、少し不安にもなった。
+   * その気持ちは「まだ叶っていない」印であって、悪いものではない。
+   * **ただし、気持ちを口にしたときだけ。**言っていないのに解説は始めない。
+   */
+  async function afterDreamKiller(said: string) {
+    const back = dkBackRef.current;
+    dkBackRef.current = null;          // 見るのはこの1回だけ
+    if (!back || !said.trim()) return;
+    try {
+      const r = await fetch("/api/dreamkiller", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "feeling", said, theme: back.theme }),
+      });
+      const d = await r.json().catch(() => ({}));
+      const say = String(d?.say ?? "").trim();
+      if (!say) return;                // 気持ちが出ていなければ、何もしない
+      setMessages((prev) => [...prev, { role: "assistant", content: say }]);
+      void saveGuideLine(say);
+    } catch { /* 返せなくても、歩きは続く */ }
   }
 
   /**
@@ -1257,6 +1290,8 @@ export function ShingaWorld({
               setMessages((prev) => [...prev, { role: "assistant", content: guideSay }]);
               void saveGuideLine(guideSay);
             }
+            // 次の1回だけ、気持ちが出ていないかを見る
+            dkBackRef.current = { theme: dreamKiller.theme };
           }}
         />
       )}

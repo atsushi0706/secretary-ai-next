@@ -7004,3 +7004,31 @@ body:has(.realverse-bg) { background: transparent; }
   border: 1px solid #f0d9ac; border-radius: 10px; padding: 9px 11px;
 }
 .vc-notyet b { color: #7a4a10; }
+
+/* ── 書き起こしが使えないとき（Geminiキー未登録）─────────────
+ * 「使ったしくみ：なし」で止まる人の、いちばんの原因。
+ * 文字で説明するだけでは動けないので、押すところをはっきり出す。
+ */
+.vc-nokey {
+  background: #fff8ec; border: 2px solid #f0c97a; border-radius: 14px; padding: 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.vc-nokey .t { font-size: .86rem; font-weight: 800; color: #8a5a20; }
+.vc-nokey p { font-size: .78rem; line-height: 1.85; color: #6b5230; }
+.vc-nokey p b { color: #8a5a20; }
+.vc-nokey .go {
+  display: block; text-align: center; padding: 14px; border-radius: 12px;
+  font-size: .88rem; font-weight: 800; color: #fff; text-decoration: none;
+  background: linear-gradient(160deg, #e8a33c, #cf7d1c);
+  box-shadow: 0 8px 22px rgba(207,125,28,.3);
+}
+.vc-nokey .sub {
+  display: block; text-align: center; padding: 11px; border-radius: 11px;
+  font-size: .8rem; font-weight: 700; color: #8a5a20; text-decoration: none;
+  background: #fff; border: 1px solid #e8cfa0;
+}
+.vc-nokey-steps { background: #fffdf8; border: 1px solid #f0e0c0; border-radius: 11px; padding: 10px 12px; }
+.vc-nokey-steps .k { font-size: .72rem; font-weight: 800; color: #8a5a20; margin-bottom: 6px; }
+.vc-nokey-steps ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 5px; }
+.vc-nokey-steps li { font-size: .74rem; line-height: 1.8; color: #6b5230; }
+.vc-nokey-steps .note { font-size: .7rem; color: #8a7a58; margin-top: 8px; }

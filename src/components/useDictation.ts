@@ -41,6 +41,8 @@ export function useDictation() {
   const [seconds, setSeconds] = useState(0);
   const [level, setLevel] = useState(0);       // 0..1 入力レベル（小声でも拾えてるかの可視化）
   const [error, setError] = useState("");
+  /** 鍵（Gemini APIキー）が無くて失敗した。画面に設定への入口を出すのに使う */
+  const [needsKey, setNeedsKey] = useState(false);
 
   const recRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -169,6 +171,17 @@ export function useDictation() {
       const r = await fetch("/api/stt", { method: "POST", body: fd });
       const d = await r.json();
       if (!r.ok) {
+        /*
+         * キーが無い／効かないのが原因なら、それをはっきり言う。
+         * 「文字化に失敗しました」だけでは、何をすればいいのか分からないまま終わる
+         *（実際に、そこで止まったままのお客様がいた）。
+         */
+        const why = `${d?.error ?? ""}${d?.detail ?? ""}`;
+        if (r.status === 503 || /キー|API key|401|403|PERMISSION/i.test(why)) {
+          setNeedsKey(true);
+          setError("声を文字にするための鍵（Gemini APIキー）が、まだ入っていません。設定画面で登録すると使えるようになるよ。");
+          return null;
+        }
         // 原因が分かるよう、サーバーが返した詳細も添える
         setError(d?.detail ? `${d.error}（${String(d.detail).slice(0, 90)}）` : (d?.error || "文字化に失敗しました"));
         return null;
@@ -198,5 +211,5 @@ export function useDictation() {
     setPhase("idle");
   }, [cleanup]);
 
-  return { phase, seconds, level, error, start, stop, cancel, supported: typeof navigator !== "undefined" && !!navigator.mediaDevices };
+  return { phase, seconds, level, error, needsKey, start, stop, cancel, supported: typeof navigator !== "undefined" && !!navigator.mediaDevices };
 }

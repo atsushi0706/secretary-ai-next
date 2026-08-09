@@ -143,6 +143,12 @@ export function VoiceCheck() {
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState(false);
   const [showHow, setShowHow] = useState(false);
+  /**
+   * 書き起こしが使えない（＝Geminiキーが無い）。
+   * 「使ったしくみ：なし」で終わってしまう人は、ここが原因。
+   * 気づけるように、設定画面へのボタンをはっきり出す。
+   */
+  const [noKey, setNoKey] = useState(false);
   const [urlCopied, setUrlCopied] = useState(false);
 
   const recRef = useRef<MediaRecorder | null>(null);
@@ -211,12 +217,13 @@ export function VoiceCheck() {
         const r = await fetch("/api/stt");
         const j = await r.json().catch(() => ({}));
         if (r.status === 401) return;   // ログインしていないだけ
+        setNoKey(!j.ready);
         setSteps((p) => [...p, {
           name: "文字にするしくみ",
           ok: !!j.ready,
           note: j.ready
             ? `使えます（${j.source}）`
-            : "まだ使えません。設定画面で Gemini API キーを登録してください",
+            : "まだ使えません。Gemini API キーの登録がいります（下のボタンから）",
         }]);
       } catch { /* 聞けなくても、録るところまでは進める */ }
     })();
@@ -341,6 +348,10 @@ export function VoiceCheck() {
       const d = await r.json().catch(() => ({}));
       if (!r.ok) {
         setErr(d?.detail ? `${d.error}（${String(d.detail).slice(0, 200)}）` : (d?.error || "書き起こしに失敗しました"));
+        // キーまわりで落ちているなら、設定へ促す
+        if (r.status === 503 || /キー|API key|401|403|PERMISSION/i.test(`${d?.error ?? ""}${d?.detail ?? ""}`)) {
+          setNoKey(true);
+        }
       } else {
         setRaw(String(d.raw ?? ""));
         setText(String(d.text ?? ""));
@@ -465,6 +476,36 @@ export function VoiceCheck() {
       )}
 
       {err && phase !== "done" && <div className="vc-err">{err}</div>}
+
+      {/*
+        書き起こしが使えないとき。
+        ここが「使ったしくみ：なし」で終わる人の、いちばんの原因。
+        文字で説明するだけでは動けないので、**押すところ**を出す。
+      */}
+      {noKey && (
+        <div className="vc-nokey">
+          <div className="t">🔑 あと1つだけ：Gemini API キーの登録がいります</div>
+          <p>
+            声を文字にするところで、AIを使っています。<br />
+            そのための鍵（キー）が、まだこのアカウントに入っていません。
+            <b>無料で、3分ほどで取れます。</b>
+          </p>
+          <a className="go" href="/settings">⚙ 設定画面をひらいて登録する</a>
+          <a className="sub" href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer">
+            先にキーを取りにいく（Google AI Studio）→
+          </a>
+          <div className="vc-nokey-steps">
+            <div className="k">かんたんな流れ</div>
+            <ol>
+              <li>「先にキーを取りにいく」を押して、Googleでログイン</li>
+              <li>「Create API key」を押す</li>
+              <li>出てきた長い文字をコピー</li>
+              <li>この画面にもどって「設定画面をひらいて登録する」に貼る</li>
+            </ol>
+            <p className="note">1日1,000回まで無料。お金はかかりません。</p>
+          </div>
+        </div>
+      )}
 
       {/* マイクを許可するやりかた（端末で出し分ける）。断られたときは自動で開く */}
       {(() => {

@@ -589,8 +589,12 @@ export function Chat({
       {(recError || dict.error) && (
         <div className="bg-red-50 border border-red-200 rounded-lg mx-2 px-3 py-2 text-xs text-red-700">
           {recError || dict.error}
-          {/* うまく入らない人が、その場で原因を見に行けるように */}
-          <a href="/voice-check" className="ml-2 font-bold underline text-red-800">マイクの調子をみる →</a>
+          {/* 鍵が無いのが原因なら、まっすぐ設定へ。それ以外は調子をみる画面へ */}
+          {dict.needsKey ? (
+            <a href="/settings" className="ml-2 font-bold underline text-red-800">⚙ キーを登録する →</a>
+          ) : (
+            <a href="/voice-check" className="ml-2 font-bold underline text-red-800">マイクの調子をみる →</a>
+          )}
         </div>
       )}
       {dict.phase === "recording" && (

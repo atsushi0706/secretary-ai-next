@@ -85,8 +85,12 @@ export function VoiceBar({
       {d.error && (
         <div className="vbar-err">
           {d.error}
-          {/* うまく入らない人が、その場で原因を見に行けるように */}
-          <a href="/voice-check" className="vbar-err-a">マイクの調子をみる →</a>
+          {/* 鍵が無いのが原因なら、まっすぐ設定へ。それ以外は調子をみる画面へ */}
+          {d.needsKey ? (
+            <a href="/settings" className="vbar-err-a">⚙ キーを登録する →</a>
+          ) : (
+            <a href="/voice-check" className="vbar-err-a">マイクの調子をみる →</a>
+          )}
         </div>
       )}
       {/* 「まだ書きたかったのに送信された」を無くす。スマホはEnterが改行だと明言する */}

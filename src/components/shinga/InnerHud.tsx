@@ -46,10 +46,30 @@ export function InnerHud({ guideName, onTalkBalance }: {
     if (d.lean !== undefined) setLean(d.lean ?? null);
   }
 
+  /**
+   * この端末で前に見た中身を、開いた瞬間に出す。
+   *
+   * 前は取ってくるまで何も出さなかったので、開くたび・入れ直すたびに
+   * メーターが遅れて出ていた（「メーターの反映がすごく遅い」）。
+   * 先に前回の姿を出して、新しいのが届いたら静かに差し替える。
+   */
+  const CACHE = "ihud-last";
   useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CACHE);
+      if (raw) { apply(JSON.parse(raw)); setReady(true); }
+    } catch { /* 無くても、届いてから出せばいい */ }
+
     // まず速い読み込み（所見はキャッシュ）。画面を待たせない
     fetch("/api/inner-hud").then((r) => r.json()).then((d) => {
-      if (!d.error) apply(d);
+      if (!d.error) {
+        apply(d);
+        try {
+          localStorage.setItem(CACHE, JSON.stringify({
+            grounding: d.grounding, balance: d.balance, quest: d.quest, level: d.level, lean: d.lean,
+          }));
+        } catch { /* 覚えられなくても動く */ }
+      }
     }).catch(() => {}).finally(() => setReady(true));
     // 所見の作り直しは裏で。できたら差し替える（できなくても画面はそのまま）
     fetch("/api/inner-hud", {
@@ -60,18 +80,41 @@ export function InnerHud({ guideName, onTalkBalance }: {
     }).catch(() => {});
   }, []);
 
+  /**
+   * サーバに送る。
+   *
+   * 「できた」は**押した瞬間に画面を変える**。
+   * 前はサーバの返事を待ってから✓を付けていたので、押しても何も起きない時間があった
+   *（「チェックしてから反映されるまでが遅い」）。
+   * うまくいかなかったら元に戻す。
+   */
   async function post(body: any) {
-    const r = await fetch("/api/inner-hud", {
-      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
-    });
-    const d = await r.json();
-    if (!r.ok) return;
-    apply(d);
-    // ✓を付けた＝現実化。目に見える形で返す
-    if (body.action === "done" && body.done) {
-      setBurst("🔨 現実化 +1 ── 針が右へ動いた");
-      if (burstTimer.current) clearTimeout(burstTimer.current);
-      burstTimer.current = setTimeout(() => setBurst(null), 3000);
+    const 巻き戻し = quest;
+    if (body.action === "done") {
+      setQuest((q) => ({
+        ...q,
+        items: q.items.map((it, i) => (i === body.index ? { ...it, done: !!body.done } : it)),
+      }));
+      if (body.done) {
+        setBurst("🔨 現実化 +1 ── 針が右へ動いた");
+        if (burstTimer.current) clearTimeout(burstTimer.current);
+        burstTimer.current = setTimeout(() => setBurst(null), 3000);
+      }
+    }
+    try {
+      const r = await fetch("/api/inner-hud", {
+        method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+      });
+      const d = await r.json();
+      if (!r.ok) { setQuest(巻き戻し); return; }
+      apply(d);
+      try {
+        localStorage.setItem(CACHE, JSON.stringify({
+          grounding: d.grounding, balance: d.balance, quest: d.quest, level: d.level, lean: d.lean,
+        }));
+      } catch { /* 覚えられなくても動く */ }
+    } catch {
+      setQuest(巻き戻し);
     }
   }
 
@@ -101,7 +144,7 @@ export function InnerHud({ guideName, onTalkBalance }: {
         </div>
 
         {quest.items.length > 0 && !solvedToday && (
-          <p className="q-check-hint">👉 できたら左の <b>○</b> をタップ。それが<b>「現実化」</b>＝上のメーターの針が<b>右（中央のゾーン）</b>へ動くよ。</p>
+          <p className="q-check-hint">👉 やれたら <b>「できた」</b> を押す。それだけ。</p>
         )}
         {solvedToday && (
           <p className="q-check-hint done">✓ 今日、現実におろせた。メーターが中央（ゾーン）に近づいたよ😌</p>
@@ -111,11 +154,18 @@ export function InnerHud({ guideName, onTalkBalance }: {
           <ul className="q-list">
             {quest.items.map((it, i) => (
               <li key={i} className={it.done ? "done" : ""}>
-                <button className={`q-chk ${it.done ? "is-done" : ""}`} onClick={() => post({ action: "done", index: i, done: !it.done })} title={it.done ? "できた（現実化ずみ）" : "できたらタップ＝現実化"}>
-                  {it.done ? "✓" : "○"}
-                </button>
+                {/*
+                  押すところは「できた」だけ。
+                  前は左の丸と「できた」の2つがあって、どちらを押すのか分からなかった。
+                  済んだものは✓の印だけ（押すものではない）。取り消したいときは印を押す。
+                */}
+                {it.done
+                  ? <span className="q-chk is-done" aria-hidden>✓</span>
+                  : <span className="q-chk" aria-hidden />}
                 <span className="q-text">{it.text}</span>
-                {!it.done && <button className="q-doneb" onClick={() => post({ action: "done", index: i, done: true })}>できた</button>}
+                {it.done
+                  ? <button className="q-undo" onClick={() => post({ action: "done", index: i, done: false })}>もどす</button>
+                  : <button className="q-doneb" onClick={() => post({ action: "done", index: i, done: true })}>できた</button>}
                 {/* 未来から届いたクエストは、やってもやらなくても消さずに残す（記録として） */}
               </li>
             ))}

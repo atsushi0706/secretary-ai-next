@@ -7032,3 +7032,24 @@ body:has(.realverse-bg) { background: transparent; }
 .vc-nokey-steps ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 5px; }
 .vc-nokey-steps li { font-size: .74rem; line-height: 1.8; color: #6b5230; }
 .vc-nokey-steps .note { font-size: .7rem; color: #8a7a58; margin-top: 8px; }
+
+/* ── ハイヤークエスト：押すところは「できた」だけ ──────────
+ * 左の丸と「できた」の2つがあって、どちらを押すのか分からなかった。
+ * 丸は**印**にして、押せるのは「できた」だけにする。
+ */
+.ihud-quest .q-chk {
+  display: inline-flex; align-items: center; justify-content: center;
+  background: transparent;      /* 印なので、押せそうな見た目にしない */
+  cursor: default;
+}
+.ihud-quest .q-list li.done .q-chk,
+.ihud-quest .q-chk.is-done {
+  background: linear-gradient(160deg,#8fd07a,#5aa04a);
+  border-color: transparent; color: #0e1a0b;
+}
+/* 済んだものを取り消す。目立たせない */
+.ihud-quest .q-undo {
+  flex-shrink: 0; font-size: .64rem; font-weight: 700;
+  color: #b9ab88; background: rgba(0,0,0,.24);
+  border: 1px solid rgba(238,214,155,.24); border-radius: 8px; padding: 4px 9px;
+}

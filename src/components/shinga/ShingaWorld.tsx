@@ -958,7 +958,8 @@ export function ShingaWorld({
    * ・本人が3回しゃべったころ＝話が乗ってきたあたりで出す
    */
   function maybeDreamKiller(m: ModeKey | null) {
-    if (m !== "walk" || !isAdmin || dkDoneRef.current) return;
+    // 管理者か、管理画面で開けてもらった人（お試しスイッチ）
+    if (m !== "walk" || !(isAdmin || features.dreamkiller) || dkDoneRef.current) return;
     const mine = messages.filter((x) => x.role === "user" && x.content.trim());
     if (mine.length < 3) return;
     dkDoneRef.current = true;

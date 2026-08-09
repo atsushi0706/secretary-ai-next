@@ -41,9 +41,11 @@ export async function setLockedWorks(locked: string[]): Promise<void> {
 const GRANTS_KEY = "feature_grants";
 
 /** ひとりずつ開ける対象の機能 */
-export type FeatureKey = "broadcast";
+export type FeatureKey = "broadcast" | "dreamkiller" | "mindmap";
 export const GRANTABLE: { key: FeatureKey; label: string; note: string }[] = [
   { key: "broadcast", label: "発信スタジオ", note: "SNS用の文章をつくる部屋。" },
+  { key: "dreamkiller", label: "ドリームキラー", note: "パラレルウォークの途中に現れて、言い返す相手。" },
+  { key: "mindmap", label: "マインドマップ", note: "話した内容を整理して、30分の粒まで割る道具。" },
 ];
 export const isFeatureKey = (v: unknown): v is FeatureKey =>
   typeof v === "string" && GRANTABLE.some((g) => g.key === v);

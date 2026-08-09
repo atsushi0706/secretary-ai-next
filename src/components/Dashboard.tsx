@@ -24,6 +24,8 @@ type Bootstrap = {
   isMorning: boolean;
   /** 優先順位の分解を出すかどうか（まだ管理者だけ） */
   isAdmin?: boolean;
+  /** お試しスイッチで開けてもらった機能（管理画面から人ごとに配れる） */
+  features?: Record<string, boolean>;
   events: any[];
   tasks: any[];
   schedule: any;
@@ -302,7 +304,7 @@ export function Dashboard({ userName }: { userName: string }) {
             わーっと話した内容を構造にして、30分の粒まで割って、ロードマップに組む道具。
             チャットの中に埋めず、ボタンで別画面へ——マップは場所を取るので。
           */}
-          {data.isAdmin && (
+          {(data.isAdmin || data.features?.mindmap) && (
             <Link href="/mindmap"
               className="card border-l-4 border-violet-500 flex items-center gap-3 hover:bg-violet-50/40">
               <span className="text-xl">🧠</span>

@@ -9,6 +9,7 @@ import Link from "next/link";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { isAdmin } from "@/lib/admin";
+import { hasFeature } from "@/lib/app-config";
 import { MindMapTool } from "@/components/MindMapTool";
 
 export const dynamic = "force-dynamic";
@@ -17,8 +18,8 @@ export default async function MindMapPage() {
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) redirect("/login");
-  // 淳くん専用（試して良ければ、お試しスイッチ方式で配れるようにする）
-  if (!isAdmin(userId)) redirect("/");
+  // 管理者か、管理画面で開けてもらった人（お試しスイッチ）
+  if (!isAdmin(userId) && !(await hasFeature(userId, "mindmap"))) redirect("/");
 
   return (
     <main className="min-h-screen">

@@ -11,6 +11,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
+import { hasFeature } from "@/lib/app-config";
 import { logError } from "@/lib/supabase";
 import { isMissingTable } from "@/lib/shinga";
 import {
@@ -34,7 +35,10 @@ async function gate() {
   const session = await auth();
   const userId = (session?.user as any)?.id;
   if (!userId) return { err: NextResponse.json({ error: "ログインしてね" }, { status: 401 }) };
-  if (!isAdmin(userId)) return { err: NextResponse.json({ error: "この道具はまだ準備中です" }, { status: 403 }) };
+  // 管理者か、管理画面で開けてもらった人（お試しスイッチ）
+  if (!isAdmin(userId) && !(await hasFeature(userId, "mindmap"))) {
+    return { err: NextResponse.json({ error: "この道具はまだ準備中です" }, { status: 403 }) };
+  }
   return { userId };
 }
 

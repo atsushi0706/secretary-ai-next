@@ -202,6 +202,25 @@ export function VoiceCheck() {
 
     setSteps(list);
 
+    /*
+     * 書き起こしの準備（キー）を、録る前に見る。
+     * ここが無いと「マイクは全部○なのに文字にならない」の原因が分からない。
+     */
+    (async () => {
+      try {
+        const r = await fetch("/api/stt");
+        const j = await r.json().catch(() => ({}));
+        if (r.status === 401) return;   // ログインしていないだけ
+        setSteps((p) => [...p, {
+          name: "文字にするしくみ",
+          ok: !!j.ready,
+          note: j.ready
+            ? `使えます（${j.source}）`
+            : "まだ使えません。設定画面で Gemini API キーを登録してください",
+        }]);
+      } catch { /* 聞けなくても、録るところまでは進める */ }
+    })();
+
     // マイクが1本も見えないときは、ブラウザではなくパソコン側で止められている
     (async () => {
       try {
@@ -340,6 +359,22 @@ export function VoiceCheck() {
   /** この画面の内容をまるごと文字にする（送ってもらうため） */
   function report(): string {
     const l = steps.map((s) => `${s.ok === false ? "×" : s.ok === true ? "○" : "?"} ${s.name}：${s.note}`);
+    /*
+     * 録らずにコピーして送られると、いちばん知りたいところが全部「なし」になり、
+     * こちらでは何も分からない（実際にそれが届いた）。だから先頭に大きく書く。
+     */
+    if (phase !== "done") {
+      return [
+        "【マイクの調子】",
+        "",
+        "★★ まだ「録ってみる」を押していません ★★",
+        "　この紙だけでは、声が届いているか・文字になるかが分かりません。",
+        "　下の「🎤 録ってみる」を押して5秒ほど話してから、もう一度コピーしてください。",
+        "",
+        ...l,
+        `端末の情報：${ua}`,
+      ].join(String.fromCharCode(10));
+    }
     return [
       "【マイクの調子】",
       ...l,
@@ -465,7 +500,14 @@ export function VoiceCheck() {
       })()}
 
       <div className="vc-send">
-        <p>うまくいかないときは、この下の内容をコピーして送ってください。原因を調べます。</p>
+        {phase === "done" ? (
+          <p>うまくいかないときは、この下の内容をコピーして送ってください。原因を調べます。</p>
+        ) : (
+          <p className="vc-notyet">
+            <b>先に「🎤 録ってみる」を押してください。</b><br />
+            録らずに送ると、声が届いているか・文字になるかが分からないままになります。
+          </p>
+        )}
         <button className="vc-copy" onClick={() => void copy()}>{copied ? "コピーしました" : "まるごとコピー"}</button>
         <pre className="vc-report">{report()}</pre>
       </div>

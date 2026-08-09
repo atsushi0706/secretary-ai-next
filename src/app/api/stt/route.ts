@@ -189,3 +189,32 @@ export async function POST(req: Request) {
     return json({ error: String(e?.message ?? e).slice(0, 300) }, 500);
   }
 }
+
+/**
+ * 書き起こしの準備ができているかだけを見る（音声は送らない）。
+ *
+ * 【なぜ要るか】
+ * お客様から届いた「マイクの調子」に、マイクは全部○なのに
+ * 「文字におこすところで失敗する」と書かれていた。
+ * ところがその紙には、書き起こしが動くのかどうかがどこにも出ていない。
+ * キーが無いのか、キーが枯れているのか、そもそも録れていないのかが分からなかった。
+ * だからここで、**音声を送る前に**準備の状態だけ返す。
+ * キーそのものは返さない（あるかどうかだけ）。
+ */
+export async function GET() {
+  const session = await auth();
+  const userId = (session?.user as any)?.id;
+  if (!userId) return json({ error: "unauthenticated" }, 401);
+
+  const s: any = await getUserSettings(userId).catch(() => null);
+  const mine = !!(s?.gemini_api_key && String(s.gemini_api_key).trim());
+  const owner = !!process.env.GEMINI_API_KEY;
+  const openai = !!process.env.OPENAI_API_KEY;
+
+  return json({
+    ready: mine || owner || openai,
+    // どれで動くのか（お客様に説明できるように、日本語で返す）
+    source: mine ? "自分のGeminiキー" : owner ? "こちらで用意したキー" : openai ? "予備のしくみ" : "なし",
+    mine, owner, openai,
+  });
+}

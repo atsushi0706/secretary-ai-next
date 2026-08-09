@@ -6997,3 +6997,10 @@ body:has(.realverse-bg) { background: transparent; }
   text-align: center; font-size: .92rem; font-weight: 800; color: #ffe9a8;
   text-shadow: 0 2px 14px rgba(255,200,90,.4);
 }
+
+/* まだ録っていないのに送られると、いちばん知りたいところが全部「なし」になる */
+.vc-notyet {
+  color: #8a5a20 !important; background: #fff8ec;
+  border: 1px solid #f0d9ac; border-radius: 10px; padding: 9px 11px;
+}
+.vc-notyet b { color: #7a4a10; }

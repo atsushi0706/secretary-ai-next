@@ -346,6 +346,10 @@ body:has(.realverse-bg) { background: transparent; }
   z-index: 0;
   transition: transform 1.1s cubic-bezier(.3,.7,.2,1);
   transform-origin: center;
+  /* 絵が読めなかったときの下地。その部屋の色（--place-hue）でぼんやり光らせる */
+  background:
+    radial-gradient(120% 80% at 50% 20%, color-mix(in srgb, var(--place-hue, #e0bd72) 26%, transparent), transparent 70%),
+    linear-gradient(180deg, #1d1810, #12100c 60%, #0d0b08);
 }
 .singa-map-img {
   position: absolute; inset: 0;
@@ -353,7 +357,14 @@ body:has(.realverse-bg) { background: transparent; }
   background-size: cover;
   background-position: center top;   /* 上（SINGA WORLDのタイトル）を優先して見せる */
   background-repeat: no-repeat;
-  background-color: #17140f;
+  /*
+   * 絵が読めなかったとき、真っ黒にしない。
+   *
+   * 通信が一瞬つまると背景の絵が落ちる。CSSの背景は落ちても読み直さないので、
+   * そのまま真っ暗のまま残る（実際にピークステートで起きた）。
+   * ここを透明にして、下（.singa-map）に敷いた**その部屋の色**を見せる。
+   */
+  background-color: transparent;
 }
 /* 背景の切り替え：前の絵を上に重ねて、ゆっくり消す（＝新しい絵がふわっと現れる）。
    background-image は CSS のトランジションが効かないので、この方法で滑らかにする。 */
@@ -7052,4 +7063,12 @@ body:has(.realverse-bg) { background: transparent; }
   flex-shrink: 0; font-size: .64rem; font-weight: 700;
   color: #b9ab88; background: rgba(0,0,0,.24);
   border: 1px solid rgba(238,214,155,.24); border-radius: 8px; padding: 4px 9px;
+}
+
+/* 顔の絵が出せないときの、頭文字の丸（壊れた印を出さないため） */
+.singa-face.is-letter {
+  display: inline-flex; align-items: center; justify-content: center;
+  font-size: .82rem; font-weight: 800; color: #1a1208;
+  background: linear-gradient(160deg, #f0dca8, #c9a55e);
+  border-color: rgba(224,189,114,.7);
 }

@@ -414,7 +414,27 @@ export function ShingaWorld({
 
   const here = PLACES[place];
   const isDefaultFace = avatarUrl === "/kiyose.png";
+  /*
+   * 相棒の顔。
+   *
+   * 前は失敗しても avatarUrl に差し替えるだけで、**元と同じものに戻していた**。
+   * だから一度落ちると、そのまま壊れた印と代替文字が出たままになっていた
+   *（実際にピークステートで「清」と壊れアイコンが出た）。
+   *   1回目の失敗 … 既定の絵に替える
+   *   2回目の失敗 … 絵をあきらめて、頭文字の丸を出す（壊れた印は出さない）
+   */
   const [faceSrc, setFaceSrc] = useState(avatarUrl);
+  const [faceGone, setFaceGone] = useState(false);
+  function onFaceError() {
+    if (faceSrc !== "/kiyose.png") { setFaceSrc("/kiyose.png"); return; }
+    setFaceGone(true);
+  }
+  /** 顔が出せないときの、頭文字の丸 */
+  const FaceMark = ({ className = "" }: { className?: string }) => (
+    <span className={`singa-face is-letter ${className}`} aria-label={guideName}>
+      {(guideName || "リ").trim().slice(0, 1)}
+    </span>
+  );
 
   useEffect(() => {
     // カスタムアバターを使っている人は表情差し替えをしない（画像が無いので）
@@ -1146,9 +1166,32 @@ export function ShingaWorld({
    * CSSは複数の背景を書けて、上のものが読めなければ下が見えるので、
    * 絵が置かれた瞬間に自然と切り替わる。
    */
+  /*
+   * 絵が落ちたら、いちど読み直す。
+   *
+   * 通信が一瞬つまると絵が落ちる。CSSの背景は落ちても自分から読み直さないので、
+   * そのまま出ないままになる（「最近たまに画像が壊れる」）。
+   * 先に読んでみて、駄目なら3秒待ってURLを変えて（?r=1）もう一度だけ頼む。
+   * それでも駄目なら、下に敷いた部屋の色がそのまま見える。
+   */
+  const [bgRetry, setBgRetry] = useState(0);
+  useEffect(() => {
+    setBgRetry(0);
+    if (typeof window === "undefined") return;
+    let alive = true;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const img = new window.Image();
+    img.onerror = () => {
+      timer = setTimeout(() => { if (alive) setBgRetry(1); }, 3000);
+    };
+    img.src = bgUrl;
+    return () => { alive = false; if (timer) clearTimeout(timer); };
+  }, [bgUrl]);
+  const bgSrc = bgRetry ? `${bgUrl}?r=${bgRetry}` : bgUrl;
+
   const bgCss = /^\/(zone-crystal|crystal-done)\.jpg$/.test(bgUrl)
-    ? `url(${bgUrl}), url(/zone-breakthrough.jpg)`
-    : `url(${bgUrl})`;
+    ? `url(${bgSrc}), url(/zone-breakthrough.jpg)`
+    : `url(${bgSrc})`;
 
   /**
    * ゾーンのパネル（呼吸／流れを読む）を出すか。
@@ -1545,12 +1588,16 @@ export function ShingaWorld({
               return (
                 <div key={i} className={m.role === "user" ? "singa-line is-me" : "singa-line"}>
                   {m.role === "assistant" && (
-                    <img
-                      className={`singa-face ${isLast && typing ? "is-talking" : ""}`}
-                      src={faceSrc}
-                      alt={guideName}
-                      onError={() => setFaceSrc(avatarUrl)}
-                    />
+                    faceGone
+                      ? <FaceMark className={isLast && typing ? "is-talking" : ""} />
+                      : (
+                        <img
+                          className={`singa-face ${isLast && typing ? "is-talking" : ""}`}
+                          src={faceSrc}
+                          alt=""
+                          onError={onFaceError}
+                        />
+                      )
                   )}
                   <div className="singa-line-body">
                   {m.role === "assistant" && !m.content.startsWith("[[") && <span className="who">{guideName}</span>}

@@ -240,6 +240,23 @@ export default function AdminPage() {
     finally { setFlagBusy(""); }
   }
 
+  /** 最近のエラー（お客様がつまずいた理由を、こちらで読めるように） */
+  const [errs, setErrs] = useState<{
+    rows: { id: number; at: string; route: string; who: string; message: string; meta: any }[];
+    byRoute: Record<string, number>;
+  } | null>(null);
+  const [errRoute, setErrRoute] = useState("/api/stt");
+  const [errBusy, setErrBusy] = useState(false);
+  async function loadErrors(route: string) {
+    setErrBusy(true);
+    try {
+      const r = await fetch(`/api/admin/errors?limit=50${route ? `&route=${encodeURIComponent(route)}` : ""}`);
+      const d = await r.json();
+      setErrs(r.ok ? d : { rows: [], byRoute: {} });
+    } catch { setErrs({ rows: [], byRoute: {} }); }
+    finally { setErrBusy(false); }
+  }
+
   /** 呼吸ガイドの音声を焼き直す */
   async function rebake() {
     if (!confirm("呼吸ガイドの音声を、いまの読み・いまの声で焼き直します。1分ほどかかります。よろしいですか？")) return;
@@ -637,6 +654,69 @@ export default function AdminPage() {
           {bakeBusy ? "焼いています…" : "🎧 音声を焼き直す"}
         </button>
         {bakeMsg && <div className="text-xs text-gray-700 mt-2 leading-relaxed">{bakeMsg}</div>}
+      </div>
+
+      {/*
+        最近のエラー。
+        「文字におこすところで失敗する」と言われても、読む画面が無くて確かめられなかった。
+        音声の中身は残していない。何が起きたかと、そのときの条件だけ。
+      */}
+      <div className="border rounded-xl p-4 bg-white mb-4">
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-bold">🚨 最近のエラー</div>
+          <button
+            onClick={() => void loadErrors(errRoute)}
+            disabled={errBusy}
+            className="text-xs bg-gray-100 border border-gray-300 rounded-lg px-3 py-1.5 disabled:opacity-50"
+          >
+            {errBusy ? "読んでいます…" : "読み込む"}
+          </button>
+        </div>
+        <p className="text-xs text-gray-500 mt-1 leading-relaxed">
+          お客様がつまずいたとき、ここに理由が残る。音声や会話の中身は残していない。
+        </p>
+        <div className="flex gap-1.5 mt-2 flex-wrap">
+          {[["", "ぜんぶ"], ["/api/stt", "音声→文字"], ["/api/shinga/chat", "会話"], ["/api/meal", "食事"]].map(([r, label]) => (
+            <button
+              key={r}
+              onClick={() => { setErrRoute(r); void loadErrors(r); }}
+              className={`text-xs rounded-full px-3 py-1 border ${errRoute === r ? "bg-sky-600 text-white border-sky-600" : "bg-white text-gray-700 border-gray-300"}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        {errs && (
+          <div className="mt-3">
+            {Object.keys(errs.byRoute).length > 0 && (
+              <div className="text-xs text-gray-600 mb-2">
+                {Object.entries(errs.byRoute).map(([r, n]) => (
+                  <span key={r} className="inline-block mr-3">{r}：<b>{n as number}</b>件</span>
+                ))}
+              </div>
+            )}
+            {errs.rows.length === 0 ? (
+              <div className="text-xs text-gray-500">この範囲では、まだ出ていない。</div>
+            ) : (
+              <div className="space-y-2 max-h-80 overflow-y-auto">
+                {errs.rows.map((e) => (
+                  <div key={e.id} className="border border-gray-200 rounded-lg p-2.5">
+                    <div className="flex justify-between text-[11px] text-gray-500">
+                      <span>{e.route}　{e.who}</span>
+                      <span>{new Date(e.at).toLocaleString("ja-JP")}</span>
+                    </div>
+                    <div className="text-xs text-gray-900 mt-1 leading-relaxed">{e.message}</div>
+                    {e.meta && (
+                      <pre className="text-[10px] text-gray-600 mt-1 whitespace-pre-wrap break-all">
+                        {JSON.stringify(e.meta, null, 1)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 発信スタジオ：まず全員まとめて、必要なら個別に */}

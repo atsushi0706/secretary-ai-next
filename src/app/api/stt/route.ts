@@ -19,7 +19,7 @@
  *   - 音声は保存しない（メモリ上で処理して破棄）
  */
 import { auth } from "@/auth";
-import { getUserSettings } from "@/lib/supabase";
+import { getUserSettings, logError } from "@/lib/supabase";
 import { polishSpeech, looksLikePromptEcho } from "@/lib/polish";
 
 export const maxDuration = 60;
@@ -184,8 +184,22 @@ export async function POST(req: Request) {
     }
     else if (/API key not valid|401|403|PERMISSION/i.test(all)) msg = "Gemini APIキーが無効かも。設定画面で入れ直してみて。";
     else if (/not found|不明|404|not supported|INVALID_ARGUMENT|400/i.test(all)) msg = "この音声形式に対応できなかった。もう一度短く話してみて。";
+
+    /*
+     * 失敗を記録する。
+     *
+     * ここが無かったせいで、お客様が「文字におこすところで失敗する」と言っても、
+     * こちらには何も残っておらず、原因を確かめる手立てがまったく無かった。
+     * 音声の中身は残さない。**なぜ失敗したかと、どういう条件だったか**だけ。
+     */
+    await logError(userId, "/api/stt", new Error(msg), {
+      detail: all.slice(0, 600),
+      mime, sizeKB: Math.round(buf.length / 1024),
+      キー: geminiKey ? "本人" : ownerKey ? "運営" : openaiKey ? "予備" : "なし",
+    }).catch(() => {});
     return json({ error: msg, detail: all.slice(0, 300) }, 502);
   } catch (e: any) {
+    await logError(userId, "/api/stt", e).catch(() => {});
     return json({ error: String(e?.message ?? e).slice(0, 300) }, 500);
   }
 }

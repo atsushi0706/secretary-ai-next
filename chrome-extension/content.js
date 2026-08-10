@@ -13,6 +13,7 @@
   let dragOffset = null;
   let lastPomoState = null;
   let lastCurrentSlotTask = null;
+  let lastDefeated = null;
   const POS_KEY = "kiyose_timer_pos";
   const BEEP_LOCK_KEY = "kiyose_beep_lock";
 
@@ -23,36 +24,83 @@
   }
 
   // ─── 音 (Web Audio API でピピッ) ───
-  function beep(freq, duration, gainVal = 0.25) {
+  //
+  // Chrome は「そのページを一度も触っていない」うちは音を出させない決まりがある。
+  // 前は鳴らすたびに音の器を作り直していたので、止められた状態のまま音を流し込んで、
+  // 何も聞こえないまま終わっていた。器は1つを使い回して、止められていたら起こしてから鳴らす。
+  let audioCtx = null;
+
+  function getCtx() {
     try {
       const Ctor = window.AudioContext || window.webkitAudioContext;
-      if (!Ctor) return;
-      const ctx = new Ctor();
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.connect(g); g.connect(ctx.destination);
-      o.type = "sine";
-      o.frequency.value = freq;
-      g.gain.setValueAtTime(0.0001, ctx.currentTime);
-      g.gain.exponentialRampToValueAtTime(gainVal, ctx.currentTime + 0.01);
-      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + duration / 1000);
-      o.start();
-      o.stop(ctx.currentTime + duration / 1000 + 0.02);
-      setTimeout(() => ctx.close(), duration + 200);
-    } catch (e) { /* ignore */ }
+      if (!Ctor) return null;
+      if (!audioCtx || audioCtx.state === "closed") audioCtx = new Ctor();
+      return audioCtx;
+    } catch { return null; }
   }
 
-  function pipi() {
-    // 複数タブで一斉に鳴るのを防ぐためのロック (1秒以内の重複は無視)
+  /** ページを触った瞬間に音の器を起こしておく。ここを通っておかないと後で鳴らない */
+  function unlockAudio() {
+    const ctx = getCtx();
+    if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+  }
+  ["pointerdown", "keydown"].forEach((ev) => {
+    window.addEventListener(ev, unlockAudio, { capture: true, passive: true });
+  });
+
+  /** delaySec 秒後に1音鳴らす */
+  function beep(freq, duration, gainVal = 0.25, delaySec = 0) {
+    const ctx = getCtx();
+    if (!ctx) return;
+    const fire = () => {
+      try {
+        const at = ctx.currentTime + delaySec;
+        const o = ctx.createOscillator();
+        const g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = "sine";
+        o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, at);
+        g.gain.exponentialRampToValueAtTime(gainVal, at + 0.01);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + duration / 1000);
+        o.start(at);
+        o.stop(at + duration / 1000 + 0.02);
+      } catch (e) { console.warn(`${DEBUG_TAG} beep failed:`, e); }
+    };
+    // 止められていたら起こしてから鳴らす。起こす前に流すと無音のまま終わる
+    if (ctx.state === "suspended") {
+      ctx.resume().then(fire).catch((e) => {
+        console.warn(`${DEBUG_TAG} 音が止められています。このページを一度クリックすると鳴るようになります`, e);
+      });
+    } else {
+      fire();
+    }
+  }
+
+  /** 複数タブで一斉に鳴るのを防ぐ。鳴らしていいなら true */
+  function takeBeepLock() {
     try {
       const last = parseInt(localStorage.getItem(BEEP_LOCK_KEY) || "0", 10);
-      if (Date.now() - last < 1500) return;
+      if (Date.now() - last < 1500) return false;
       localStorage.setItem(BEEP_LOCK_KEY, String(Date.now()));
     } catch { /* ignore */ }
     // タブが見えてないなら鳴らさない (アクティブタブだけ)
-    if (document.visibilityState !== "visible") return;
+    return document.visibilityState === "visible";
+  }
+
+  /** 区切りの合図。ピピッ */
+  function pipi(force = false) {
+    if (!force && !takeBeepLock()) return;
     beep(880, 150);
-    setTimeout(() => beep(1320, 220), 200);
+    beep(1320, 220, 0.25, 0.2);
+  }
+
+  /** モンスターを倒したときのファンファーレ。区切り音とは別物にする */
+  function victory(force = false) {
+    if (!force && !takeBeepLock()) return;
+    [[784, 0], [988, 0.12], [1175, 0.24], [1568, 0.38]].forEach(([f, d]) => {
+      beep(f, d === 0.38 ? 420 : 160, 0.28, d);
+    });
   }
 
   // ─── 時間割パース ───
@@ -105,6 +153,30 @@
     return `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
   }
 
+  /**
+   * いまの区切りの「まるまる何秒か」。HPゲージの満タンにあたる。
+   * 裏側は残り時間(pomoEndAt)しか持っていないので、状態ごとの設定値から割り出す。
+   */
+  function totalSec(s) {
+    if (s.pomoState === "quest") return Math.max(1, (s.questMin || 30) * 60);
+    if (s.pomoState === "work") return Math.max(1, (s.pomoWorkMin || 30) * 60);
+    if (s.pomoState === "prep") return Math.max(1, s.pomoPrepSec || 30);
+    if (s.pomoState === "break") return Math.max(1, (s.pomoBreakMin || 5) * 60);
+    return 0;
+  }
+
+  /**
+   * HPゲージを塗る。残り時間 = モンスターの残りHP。
+   * 減るほど緑→黄→赤。赤はもうすぐ倒せる合図なので、点滅させて煽る。
+   */
+  function paintHp(fillEl, left, total) {
+    if (!fillEl) return;
+    const ratio = total > 0 ? Math.max(0, Math.min(1, left / total)) : 0;
+    fillEl.style.width = `${(ratio * 100).toFixed(2)}%`;
+    fillEl.classList.toggle("mid", ratio <= 0.5 && ratio > 0.2);
+    fillEl.classList.toggle("low", ratio <= 0.2);
+  }
+
   function avatarSrc(state) {
     if (state?.secretaryAvatarUrl && /^https?:\/\//.test(state.secretaryAvatarUrl)) {
       return state.secretaryAvatarUrl;
@@ -113,7 +185,10 @@
   }
 
   function createBadge() {
-    if (badge) return;
+    if (badge && badge.isConnected) return;
+    // 拡張を更新すると、前に入れたぶんが死んだまま画面に残る。
+    // そこへ新しいのを足すとカードが2枚重なるので、先に古いのを片付ける
+    document.querySelectorAll("#kiyose-timer-badge").forEach((el) => el.remove());
     badge = document.createElement("div");
     badge.id = "kiyose-timer-badge";
     badge.innerHTML = `
@@ -122,8 +197,10 @@
         <div class="ktb-now"></div>
         <div class="ktb-state">--</div>
         <div class="ktb-time">--:--</div>
+        <div class="ktb-hp"><div class="ktb-hp-fill"></div></div>
       </div>
       <div class="ktb-actions">
+        <button class="ktb-sound" title="音をためす">🔊</button>
         <button class="ktb-pip" title="別ウィンドウで表示">📺</button>
         <button class="ktb-min" title="最小化">_</button>
         <button class="ktb-close" title="非表示">×</button>
@@ -167,6 +244,12 @@
       } catch { /* ignore */ }
     });
 
+    // 音の確認。ここを押すこと自体が「ページを触った」ことになるので、
+    // これ以降は終了時の音も鳴るようになる
+    badge.querySelector(".ktb-sound").addEventListener("click", () => {
+      unlockAudio();
+      victory(true);   // タブ間ロックを無視して必ず鳴らす
+    });
     badge.querySelector(".ktb-pip").addEventListener("click", openPip);
     badge.querySelector(".ktb-min").addEventListener("click", () => {
       badge.classList.toggle("minimized");
@@ -178,6 +261,31 @@
 
   function removeBadge() {
     if (badge) { badge.remove(); badge = null; }
+  }
+
+  /**
+   * 別ウィンドウ(📺)の中身を組み立てる。
+   *
+   * HTMLを文字列で流し込む(innerHTML)のをやめて、部品を1つずつ作る。
+   * サイトによっては、文字列からのHTML生成と style="" の直書きを
+   * セキュリティ設定で禁止していて、そこで止まることがあるため。
+   */
+  function buildPipRoot(doc) {
+    const mk = (cls, text) => {
+      const el = doc.createElement("div");
+      el.className = cls;
+      if (text != null) el.textContent = text;
+      return el;
+    };
+    const root = mk("kiyose-pip-root");
+    root.appendChild(mk("kiyose-pip-now"));
+    root.appendChild(mk("kiyose-pip-state", "--"));
+    root.appendChild(mk("kiyose-pip-time", "--:--"));
+    const hp = mk("kiyose-pip-hp");
+    hp.appendChild(mk("ktb-hp-fill"));
+    root.appendChild(hp);
+    root.appendChild(mk("kiyose-pip-hint", "右下バッジと同期"));
+    return root;
   }
 
   async function openPip() {
@@ -194,14 +302,7 @@
       link.href = chrome.runtime.getURL("content.css");
       pipWindow.document.head.appendChild(link);
 
-      const root = pipWindow.document.createElement("div");
-      root.className = "kiyose-pip-root";
-      root.innerHTML = `
-        <div class="kiyose-pip-now" style="font-size:13px;opacity:.95;margin-bottom:4px;"></div>
-        <div class="kiyose-pip-state">--</div>
-        <div class="kiyose-pip-time">--:--</div>
-        <div class="kiyose-pip-hint">右下バッジと同期</div>
-      `;
+      const root = buildPipRoot(pipWindow.document);
       pipWindow.document.body.style.margin = "0";
       pipWindow.document.body.appendChild(root);
 
@@ -248,6 +349,13 @@
       if (transitionFromActive) pipi();
     }
     lastPomoState = s.pomoState;
+
+    // 倒した瞬間のファンファーレ。
+    // 退治(quest)は状態が quest→idle に落ちるだけで、これは「途中でやめた」ときも同じ。
+    // 倒した数が増えたかどうかで見分ける（やめただけなら増えない）。
+    const defeated = s.todayDefeated || 0;
+    if (lastDefeated !== null && defeated > lastDefeated) victory();
+    lastDefeated = defeated;
 
     const questRunning = s.pomoState === "quest";
     const pomoRunning = questRunning || s.pomoState === "work" || s.pomoState === "prep" || s.pomoState === "break";
@@ -297,6 +405,7 @@
     // ─ ポモドーロ欄 ─
     const stateEl = badge.querySelector(".ktb-state");
     const timeEl = badge.querySelector(".ktb-time");
+    const hpEl = badge.querySelector(".ktb-hp");
     if (pomoRunning) {
       const left = Math.max(0, Math.ceil((s.pomoEndAt - Date.now()) / 1000));
       const stateLabel =
@@ -308,6 +417,10 @@
       stateEl.style.display = "";
       timeEl.textContent = fmt(left);
       timeEl.style.display = "";
+      if (hpEl) {
+        hpEl.style.display = "";
+        paintHp(hpEl.querySelector(".ktb-hp-fill"), left, totalSec(s));
+      }
       badge.classList.toggle("quest", s.pomoState === "quest");
       badge.classList.toggle("work", s.pomoState === "work");
       badge.classList.toggle("prep", s.pomoState === "prep");
@@ -315,6 +428,7 @@
     } else {
       stateEl.style.display = "none";
       timeEl.style.display = "none";
+      if (hpEl) hpEl.style.display = "none";
       badge.classList.remove("quest", "work", "prep", "break");
     }
 
@@ -326,6 +440,7 @@
         const pipNow = root.querySelector(".kiyose-pip-now");
         const pipState = root.querySelector(".kiyose-pip-state");
         const pipTime = root.querySelector(".kiyose-pip-time");
+        const pipHp = root.querySelector(".kiyose-pip-hp");
         if (nowLabel) pipNow.textContent = `いま: ${nowLabel}`;
         else if (cur) pipNow.textContent = `いま: ${cur.task}（〜${fmtMinHHMM(cur.endMin)}）`;
         else if (nxt) pipNow.textContent = `次: ${nxt.task}（${fmtMinHHMM(nxt.startMin)}〜）`;
@@ -338,9 +453,14 @@
             s.pomoState === "prep" ? "✋ 休む準備" :
             "☕ 休憩中";
           pipTime.textContent = fmt(left);
+          if (pipHp) {
+            pipHp.style.display = "";
+            paintHp(pipHp.querySelector(".ktb-hp-fill"), left, totalSec(s));
+          }
         } else {
           pipState.textContent = "";
           pipTime.textContent = "";
+          if (pipHp) pipHp.style.display = "none";
         }
       }
     }

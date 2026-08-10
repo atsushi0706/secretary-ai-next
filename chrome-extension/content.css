@@ -57,6 +57,53 @@
   font-size: 18px; font-weight: 800; letter-spacing: 0.03em;
   font-variant-numeric: tabular-nums;
 }
+/* ── HPゲージ（残り時間 = モンスターの残りHP） ── */
+#kiyose-timer-badge .ktb-hp {
+  position: relative;
+  height: 8px;
+  width: 100%;
+  min-width: 110px;
+  margin-top: 4px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .3);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, .35);
+  border: 1px solid rgba(255, 255, 255, .28);
+  overflow: hidden;
+}
+/* 目盛り。RPGのHPバーっぽい刻みを薄く重ねる */
+#kiyose-timer-badge .ktb-hp::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    rgba(0,0,0,.22) 0 1px,
+    transparent 1px 10px
+  );
+  pointer-events: none;
+}
+.ktb-hp-fill {
+  height: 100%;
+  width: 100%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #8fe8b0 0%, #3fb27f 60%, #2f9869 100%);
+  box-shadow: 0 0 6px rgba(120, 235, 170, .55);
+  /* 1秒ごとに更新するので、1秒かけて動かすと目には連続して減って見える */
+  transition: width 1s linear, background .4s ease;
+}
+.ktb-hp-fill.mid {
+  background: linear-gradient(180deg, #ffe08a 0%, #f2b021 60%, #dd9505 100%);
+  box-shadow: 0 0 6px rgba(255, 205, 90, .55);
+}
+.ktb-hp-fill.low {
+  background: linear-gradient(180deg, #ffa3a3 0%, #e8524f 60%, #cf3b38 100%);
+  box-shadow: 0 0 8px rgba(255, 110, 110, .7);
+  animation: ktb-hp-pulse .9s ease-in-out infinite;
+}
+@keyframes ktb-hp-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+
 #kiyose-timer-badge .ktb-actions {
   display: flex; gap: 4px; margin-left: 6px;
 }
@@ -95,16 +142,35 @@
   background: linear-gradient(160deg, #7a6dd6 0%, #6358c5 50%, #2c2c2e 100%);
   color: #fff;
   font-family: -apple-system, "Hiragino Sans", "Noto Sans JP", sans-serif;
-  padding: 20px;
+  padding: 14px;
 }
 .kiyose-pip-root.break {
   background: linear-gradient(160deg, #3fb27f 0%, #2f9869 50%, #1a4e36 100%);
 }
+/* 以前は style="" で直書きしていたぶん。CSS側に移した */
+.kiyose-pip-now { font-size: 13px; opacity: .95; margin-bottom: 4px; }
 .kiyose-pip-state { font-size: 13px; opacity: .9; margin-bottom: 4px; }
 .kiyose-pip-time {
   font-size: 56px; font-weight: 900;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.04em;
+}
+.kiyose-pip-hp {
+  position: relative;
+  /* 小窓は高さが足りないと縦に潰される。ゲージだけは縮ませない */
+  flex: 0 0 14px;
+  width: 80%; height: 14px; margin-top: 12px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, .32);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, .4);
+  border: 1px solid rgba(255, 255, 255, .3);
+  overflow: hidden;
+}
+.kiyose-pip-hp::after {
+  content: "";
+  position: absolute; inset: 0;
+  background: repeating-linear-gradient(90deg, rgba(0,0,0,.22) 0 1px, transparent 1px 14px);
+  pointer-events: none;
 }
 .kiyose-pip-hint { font-size: 11px; opacity: .55; margin-top: 8px; }
 

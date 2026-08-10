@@ -59,6 +59,27 @@ export function ChatCard({ data, at }: { data: ChatCardData; at?: string }) {
             <span>{lit ? (data.own || pair.light.desc) : pair.shadow.desc}</span>
           </div>
         </div>
+        {/*
+          幻獣が出た瞬間に、**どういう幻獣なのか**を一緒に残す。
+          これが無いと、あとで会話をさかのぼっても
+          「何の幻獣だったか」が分からず、振り返れない（淳くんの指摘）。
+        */}
+        {!lit && (
+          <div className="cc-traits">
+            <div className="cc-trait">
+              <b>出かた</b>
+              <span>{pair.shadow.signals.join("／")}</span>
+            </div>
+            <div className="cc-trait">
+              <b>奥にある力</b>
+              <span>{pair.core.join("・")}</span>
+            </div>
+            <div className="cc-trait">
+              <b>取り戻すと</b>
+              <span>{pair.light.label}——{pair.light.desc}</span>
+            </div>
+          </div>
+        )}
       </div>
     );
   }

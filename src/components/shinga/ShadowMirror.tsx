@@ -164,8 +164,12 @@ export function ShadowCardReveal({ card, onClose }: { card: ShadowCard; onClose:
         {card.ownership && <p className="sm-own">“{card.ownership}”</p>}
         <div className="sm-card-rows">
           {card.otherResp && <div className="sm-row"><b>相手に返す責任</b><span>{card.otherResp}</span></div>}
-          {card.boundary && <div className="sm-row"><b>今回の境界線</b><span>{card.boundary}</span></div>}
-          {card.action24h && <div className="sm-row"><b>24時間の一歩</b><span>{card.action24h}</span></div>}
+          {/*
+            前は「今回の境界線」だった。相手を自分の影として扱ってきたのに、
+            最後に線を引かせると話が真逆になる。ここは**自分に許すこと**を出す。
+          */}
+          {card.boundary && <div className="sm-row"><b>自分に許すこと</b><span>{card.boundary}</span></div>}
+          {card.action24h && <div className="sm-row"><b>明日ためすこと</b><span>{card.action24h}</span></div>}
           {(card.before != null || card.after != null) && (
             <div className="sm-row"><b>感情の強さ</b>
               <span>{card.before ?? "—"} → {card.after ?? "—"}{card.after != null && card.before != null && card.after >= card.before ? "（下がらなくても、前進は前進）" : ""}</span>

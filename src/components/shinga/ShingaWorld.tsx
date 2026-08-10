@@ -167,6 +167,8 @@ export function ShingaWorld({
    * （ずっと見ていると、関係ない話にも解説を始めてしまう）
    */
   const dkBackRef = useRef<{ theme: string } | null>(null);
+  /** 光のカードは、1回のワークで1回だけ出す（同じものが何度も出ていた） */
+  const shadowCardShownRef = useRef(false);
   // 内なる子の神殿：入口(gate)で守り手を選ぶ → ワーク中は色と段階を持つ
   const [partsGate, setPartsGate] = useState(false);
   // 守り手を選んだ直後、会話の前に「幻獣を見せてしくみを渡す」導入画面を挟む
@@ -670,6 +672,7 @@ export function ShingaWorld({
     // パラレルウォークに入り直したら、結晶化の誘いはまた一度できる
     if (m === "walk" && !resume) crystalOfferedRef.current = false;
     if (m === "walk" && !resume) dkDoneRef.current = false;   // ドリームキラーも、また一度だけ
+    if (m === "shadow" && !resume) shadowCardShownRef.current = false;   // 鏡に入り直したら、また1枚
     resetWorkState();
     // 別のワークへ移るときも、いま終えたぶんを素材として残しておく
     if (mode === "walk" && m !== "walk") void finishSteps();
@@ -916,8 +919,13 @@ export function ShingaWorld({
             shadowPairRef.current = next;
           }
         } else if (name === "shadow_card") {
-          // 光の回収が完了。カードの演出を出す
-          if (data?.card) {
+          /*
+           * 光の回収が完了。カードの演出を出す。
+           * **1回のワークで1回だけ。** AIが毎回 <shadow_light> を付けてしまうことがあり、
+           * 同じカードが何度も出ていた（淳くんの指摘）。
+           */
+          if (data?.card && !shadowCardShownRef.current) {
+            shadowCardShownRef.current = true;
             const c = data.card as ShadowCard;
             setShadowCard(c); setShadowStep(9);
             dropCard({ t: "light", pair: c.pairId, own: c.ownership });

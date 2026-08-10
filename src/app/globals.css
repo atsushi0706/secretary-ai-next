@@ -7072,3 +7072,13 @@ body:has(.realverse-bg) { background: transparent; }
   background: linear-gradient(160deg, #f0dca8, #c9a55e);
   border-color: rgba(224,189,114,.7);
 }
+
+/* 幻獣カードに、どういう幻獣かを残す（あとで振り返れるように） */
+.cc-traits {
+  margin-top: 9px; padding-top: 9px;
+  border-top: 1px solid rgba(255,255,255,.1);
+  display: flex; flex-direction: column; gap: 5px;
+}
+.cc-trait { display: grid; grid-template-columns: 68px 1fr; gap: 8px; align-items: start; }
+.cc-trait b { font-size: .6rem; font-weight: 700; color: var(--cc, #cbb98a); opacity: .9; }
+.cc-trait span { font-size: .66rem; line-height: 1.7; color: rgba(244,231,200,.82); }

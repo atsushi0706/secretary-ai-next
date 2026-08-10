@@ -373,12 +373,30 @@ const HEAVY = /死に?た|しにた|消えた|きえた|居なくなりた|い�
 /** こころが重い日の言葉（これも出さない） */
 const HARD = /しんど|辛い|つらい|苦しい|くるしい|きつい|キツ[イい]|落ち込|凹[んむ]|へこ[んむ]|不安で|こわい|怖い|さみし|寂し|孤独|虚し|むなし|やる気(が)?(出ない|ない)|動けな|何も(したく|できな)|自信(が)?(ない|なくな)|価値(が)?ない|要らない人間|嫌になる|嫌気|疲れ(た|きっ|果て)|もう嫌|もういや/;
 
-/** 会話の中身から、いまの状態を見る */
-export function moodFromTalk(text: string): DkMood {
-  const t = String(text ?? "");
-  if (!t.trim()) return "steady";
-  if (HEAVY.test(t)) return "tough";     // 出さない
-  if (HARD.test(t)) return "tough";      // ここも出さない（淳くんの指定）
+/**
+ * どこまで遡って見るか。
+ *
+ * 【なぜ2つに分けるか】
+ * 「今日だけ」だと、昨日「消えたい」と言った人に今日出してしまう。
+ * かといって「しんどい」を1か月引きずると、いつまでも出せない。
+ * **重さによって、見る長さを変える。**
+ */
+export const HEAVY_DAYS = 14;   // 命・こころの重いところ … 2週間は見る
+export const HARD_DAYS = 2;     // その日の重さ … 今日と昨日
+
+/**
+ * 会話の中身から、いまの状態を見る。
+ *
+ * @param recent 直近 HARD_DAYS ぶんの言葉（いま歩いている話も含む）
+ * @param older  それより前、HEAVY_DAYS ぶんまでの言葉
+ */
+export function moodFromTalk(recent: string, older = ""): DkMood {
+  const r = String(recent ?? "");
+  const o = String(older ?? "");
+  // 命・こころの重いところは、少し前のものでも出さない
+  if (HEAVY.test(r) || HEAVY.test(o)) return "tough";
+  // その日の重さは、直近だけ見る（いつまでも引きずらない）
+  if (HARD.test(r)) return "tough";
   return "steady";
 }
 

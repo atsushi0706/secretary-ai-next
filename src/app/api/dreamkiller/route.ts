@@ -23,7 +23,8 @@ import {
   dkPersona, dkJudgePrompt, dkOpenerPrompt, dkSurrenderPrompt, dkWelcomeBackPrompt, hasCore,
   afterFeelingPrompt, saidFeeling, AFTER_FEELING_CORE, AFTER_FEELING_FALLBACK,
   DAMAGE, DK_MAX_HP, DK_FACES, DK_OPENERS, DK_SURRENDER, DK_BACK_FALLBACK,
-  DK_COOLDOWN_DAYS, moodFrom, moodFromTalk, worseMood, type DkHit, type DkMood,
+  DK_COOLDOWN_DAYS, HEAVY_DAYS, HARD_DAYS, moodFrom, moodFromTalk, worseMood,
+  type DkHit, type DkMood,
 } from "@/lib/dreamkiller";
 
 export const dynamic = "force-dynamic";
@@ -38,6 +39,11 @@ async function gate() {
     return { err: NextResponse.json({ error: "まだ準備中です" }, { status: 403 }) };
   }
   return { userId };
+}
+
+/** 何日前の日付（JST） */
+function daysAgoStr(n: number): string {
+  return jstDateStr(new Date(Date.now() - n * 86400000));
 }
 
 /**
@@ -71,12 +77,20 @@ async function markAppeared(userId: string): Promise<void> {
  * 気分メーターは押さない人もいるし、押したあとに話が重くなることもある。
  * いま歩いている話と、今日ここで話したことの両方を見る。
  */
-async function todayTalkMood(userId: string, theme: string): Promise<DkMood> {
+async function talkMood(userId: string, theme: string): Promise<DkMood> {
+  const NL = String.fromCharCode(10);
   try {
-    const rows = await loadShingaMessages(userId, 40, jstDateStr());
-    const NL = String.fromCharCode(10);
-    const mine = rows.filter((m) => m.role === "user").map((m) => m.content).join(NL);
-    return moodFromTalk([theme, mine].join(NL));
+    const supa = supabaseAdmin();
+    const since = daysAgoStr(HEAVY_DAYS - 1);
+    const hardFrom = daysAgoStr(HARD_DAYS - 1);
+    const { data } = await supa.from("shinga_conversations")
+      .select("date, content").eq("user_id", userId).eq("role", "user")
+      .gte("date", since).order("id", { ascending: false }).limit(300);
+    const rows = (data ?? []) as { date: string; content: string }[];
+    // 直近（今日と昨日）＝ いま歩いている話も入れる／それより前 ＝ 重い言葉だけ見る
+    const recent = [theme, ...rows.filter((r) => r.date >= hardFrom).map((r) => r.content)].join(NL);
+    const older = rows.filter((r) => r.date < hardFrom).map((r) => r.content).join(NL);
+    return moodFromTalk(recent, older);
   } catch {
     // 履歴が読めなくても、いま歩いている話だけは見る
     return moodFromTalk(theme);
@@ -119,11 +133,11 @@ export async function POST(req: Request) {
        *  ② かなりしんどい日は、そもそも出さない。少ししんどい日は、圧を下げる
        * 出さないときは skip を返す（画面は静かに引っ込む）。
        */
-      const [last, meterMood, talkMood] = await Promise.all([
-        lastAppearedAt(g.userId), todayMood(g.userId), todayTalkMood(g.userId, theme),
+      const [last, fromMeter, fromTalk] = await Promise.all([
+        lastAppearedAt(g.userId), todayMood(g.userId), talkMood(g.userId, theme),
       ]);
       // メーターと会話、どちらかが重ければ重いほうを採る（迷ったら出さない側へ）
-      const mood = worseMood(meterMood, talkMood);
+      const mood = worseMood(fromMeter, fromTalk);
       if (last != null && last < DK_COOLDOWN_DAYS) {
         return NextResponse.json({ skip: true, why: `まだ${last}日しか経っていない` });
       }

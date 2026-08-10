@@ -65,7 +65,7 @@ const IMG_SETTLE = "/breath-step4.png"; // なじませる（約15秒）
  *     hold 2.6 / inhale 1.6 / settle 6.6 秒
  */
 const T = {
-  intro: 10,       // 体をゆらす（淳くんの指定）
+  intro: 20,       // 胸に入れる呼吸（淳くんの指定：20秒）
   closemouth: 3,   // 口を閉じる（淳くんの指定。掛け声＋この一言で実測2.2秒）
   press: 4,        // 口の中に圧をかける（淳くんの指定。声は実測3.5秒）
   exhale: 10,      // 細く長く吐く（淳くんの指定。16秒は長すぎた）
@@ -97,9 +97,31 @@ function buildSteps(emotionRaw?: string): Step[] {
 
   const steps: Step[] = [
     {
-      instr: emotion ? `${S("intro")}
-（未来からの「${emotion}」を入れる準備）` : S("intro"),
-      say: L("intro"), count: T.intro, scale: 1, voice: ["intro"],
+      /*
+       * はじめの一歩（2026-08-10 に入れ替え／淳くんの指定）。
+       * 体をゆらすのをやめて、**吸ったものが全身にめぐる呼吸**にする。
+       * テーマ（未来からの手紙の感情）があれば、その言葉を混ぜる。
+       *
+       * 音は鳴らさない。録ってある intro.mp3 は「体を左右にゆらゆら」の声で、
+       * 中身と食い違ってしまうため（録り直したら voice: ["intro"] に戻す）。
+       */
+      instr: [
+        emotion
+          ? `胸に「${emotion}」が入ってくる呼吸を、20秒。`
+          : "胸に何かが入ってくる呼吸を、20秒。",
+        "",
+        "① 真正面から15〜20度、少しだけ斜め上に視線を上げる。",
+        "　 背筋をととのえて、自然に深呼吸。",
+        "",
+        "② 肩を無理に上げない。吸った息で、肩が自然に少し上がる。",
+        "　 吐きながら、肩を落とす。（吸って、吐いて、をくりかえす）",
+        "",
+        emotion
+          ? `③ 吸うと、いまの自分に必要な「${emotion}」が胸にすーっと入ってくる。`
+          : "③ 吸うと、いまの自分に必要なものが胸にすーっと入ってくる。",
+        "　 吐くと、その感じが全身にいきわたる。めぐらせるイメージで。",
+      ].join(String.fromCharCode(10)),
+      say: L("intro"), count: T.intro, scale: 1,
       // 最初の一歩だけは、自分で押して入る
       waitForPerson: true, waitLabel: "はじめる ▶",
     },
@@ -111,11 +133,22 @@ function buildSteps(emotionRaw?: string): Step[] {
     const last = i === ROUNDS - 1;
     steps.push(
       // 掛け声（1回目…）を先に鳴らしてから「口を閉じます」
-      // 口を閉じる・口の中に圧をかける … 合う絵が無いので光の玉
-      { instr: S("closemouth"), say: L("closemouth"), count: T.closemouth, scale: 0.95,
-        voice: [`r${n}`, "closemouth"], round: n },
-      { instr: S("press"), say: L("press"), count: T.press, scale: 0.88,
-        voice: ["press"], round: n },
+      /*
+       * 1巡目だけ「口を閉じます」を鳴らす。
+       * 2巡目からは、もう口は閉じているので言わない。
+       * そのぶん「**そのまま**口の中に圧を…」の「そのまま」も外す
+       * （受ける言葉が無くなるので、変に聞こえる／淳くんの指摘）。
+       */
+      ...(n === 1
+        ? [{
+          instr: S("closemouth"), say: L("closemouth"), count: T.closemouth, scale: 0.95,
+          voice: ["r1", "closemouth"], round: n,
+        }]
+        : []),
+      { instr: n === 1 ? S("press") : S("press2"),
+        say: n === 1 ? L("press") : L("press2"),
+        count: T.press, scale: 0.88,
+        voice: n === 1 ? ["press"] : [`r${n}`, "press2"], round: n },
       // 細く長く吐く … 玉がゆっくり縮んでいくほうが伝わる
       { instr: S("exhale"), say: L("exhale"), count: T.exhale, scale: 0.45,
         voice: ["exhale"], round: n },

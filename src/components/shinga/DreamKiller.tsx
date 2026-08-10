@@ -32,6 +32,12 @@ export function DreamKiller({
   /** 戻るときに、清瀬リンクの第一声も一緒に渡す（歩きの画面がそれを出す） */
   onClose: (result: "won" | "left" | "skip", guideSay?: string) => void;
 }) {
+  /*
+   * 出していいかが分かるまで、**何も描かない**。
+   * 前は先に画面を出してから聞きに行っていたので、
+   * 出さない日は「うっすら出て、すぐ消える」ちらつきになっていた（淳くんの指摘）。
+   */
+  const [ready, setReady] = useState(false);
   const [phase, setPhase] = useState<Phase>("burst");
   const [face, setFace] = useState("/dk/dk-1.jpg");
   const [hp, setHp] = useState(DK_MAX_HP);
@@ -74,6 +80,7 @@ export function DreamKiller({
         setFace(j.face);
         setHp(j.hp ?? DK_MAX_HP);
         setLog([{ who: "dk", text: j.say }]);
+        setReady(true);   // ここではじめて姿を見せる
         setTimeout(() => alive && setPhase("choose"), 900);
       } catch (e: any) {
         // 出てこられないなら、静かに引っ込む（歩いている邪魔をしない）
@@ -157,6 +164,9 @@ export function DreamKiller({
   }
 
   const pct = Math.round((hp / DK_MAX_HP) * 100);
+
+  // 出していいか分かるまで、何も描かない（ちらつかせない）
+  if (!ready) return null;
 
   return (
     <div className={`dk ${phase === "burst" ? "is-burst" : ""}`}>

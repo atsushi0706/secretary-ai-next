@@ -5730,7 +5730,12 @@ body:has(.realverse-bg) { background: transparent; }
 @keyframes qo-in { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
 .quest-offer .qo-head { font-size: .78rem; font-weight: 800; color: var(--singa-gold); margin-bottom: 10px; }
 .quest-offer .qo-title {
-  font-size: .95rem; font-weight: 700; line-height: 1.7; color: var(--singa-ink);
+  /*
+   * 色に必ず控えを付ける。
+   * --singa-ink は .singa-stage の中でしか定義されていないので、
+   * 外に出た瞬間に色が効かなくなり、**文字が読めなくなっていた**（実際に起きた）。
+   */
+  font-size: .95rem; font-weight: 700; line-height: 1.7; color: var(--singa-ink, #f4e7c8);
   padding: 12px 12px; border-radius: 12px; margin-bottom: 14px;
   background: rgba(255,255,255,.06); border: 1px solid rgba(232,189,114,.22);
 }
@@ -7109,3 +7114,30 @@ body:has(.realverse-bg) { background: transparent; }
 .cc-trait { display: grid; grid-template-columns: 68px 1fr; gap: 8px; align-items: start; }
 .cc-trait b { font-size: .6rem; font-weight: 700; color: var(--cc, #cbb98a); opacity: .9; }
 .cc-trait span { font-size: .66rem; line-height: 1.7; color: rgba(244,231,200,.82); }
+
+/* クエストの札は、枠の外に出ても色が効くようにしておく */
+.quest-offer { color: var(--singa-ink, #f4e7c8); }
+.quest-offer .qo-head { color: var(--singa-gold, #e0bd72); }
+.quest-offer .qo-note { color: var(--singa-ink-soft, rgba(244,231,200,.78)); }
+.quest-offer .qo-title::placeholder { color: var(--singa-ink-soft, rgba(244,231,200,.6)); }
+
+/* 進む前に、もう一度たしかめる（間違って押したときに戻れるように） */
+.rc-confirm {
+  margin-top: 4px; padding: 13px;
+  background: rgba(0,0,0,.42); border: 1px solid rgba(232,189,114,.34);
+  border-radius: 14px;
+}
+.rc-confirm-t {
+  font-size: .82rem; font-weight: 700; line-height: 1.8;
+  color: var(--singa-ink, #f4e7c8); margin-bottom: 10px; text-align: center;
+}
+.rc-confirm-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.rc-confirm-btns .go {
+  padding: 12px; border-radius: 12px; font-size: .82rem; font-weight: 800;
+  color: #1a1208; background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}
+.rc-confirm-btns .back {
+  padding: 12px; border-radius: 12px; font-size: .8rem; font-weight: 700;
+  color: var(--singa-ink-soft, rgba(244,231,200,.78));
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.16);
+}

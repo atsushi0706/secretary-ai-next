@@ -144,6 +144,9 @@ export function ShingaWorld({
   // 部屋の歩き方。初めて入った部屋では必ず出す。あとは「？」からいつでも
   const [tutorial, setTutorial] = useState<{ mode: ModeKey; first: boolean } | null>(null);
   const [crystallizing, setCrystallizing] = useState(false);
+  /** 結晶化・今日を閉じる、の前に一度たしかめる（間違って押したときに戻れるように） */
+  const [crystalAsk, setCrystalAsk] = useState(false);
+  const [reflectAsk, setReflectAsk] = useState(false);
   /**
    * AIが「そろそろ形になった」と言ってきたか。
    * 画面を切り替えるためではなく、**ボタンを光らせるため**だけに使う。
@@ -1707,7 +1710,12 @@ export function ShingaWorld({
 
             {/* 「これ、クエストに置いとく？」
                 会話の吹き出しに混ぜると見落とすので、独立したカードで、これだけを出す。 */}
-            {questOffer && (
+            {/*
+              クリスタルルームでは出さない。
+              ここは形にする部屋なので、途中で「クエストに置いとく？」が割り込むと
+              話が切れる（淳くんの指摘：ここに出てはいけない）。
+            */}
+            {questOffer && mode !== "crystal" && (
               <div className="quest-offer">
                 <div className="qo-head">🔨 これ、クエストに置いとく？</div>
                 {/* 案はこちらから出すが、**中身は本人が決める**。そのまま書き換えられる */}
@@ -1781,18 +1789,51 @@ export function ShingaWorld({
             押すかどうかを決めるのは本人。
           */}
           {mode === "crystal" && !crystallizing && messages.some((m) => m.role === "user") && (
-            <button className={`rc-open ${crystalReady ? "is-ready" : ""}`}
-              onClick={() => setCrystallizing(true)}>
-              💎 結晶化する{crystalReady ? "（そろそろ形になってきたよ）" : "（ここまでを、かたちにして残す）"}
-            </button>
+            crystalAsk ? (
+              /*
+               * 押した瞬間に始めない。
+               * 話の途中で間違って押すと、そのまま結晶化が始まってしまっていた。
+               * 「まだ途中」で必ず戻れるようにする（淳くんの指摘）。
+               */
+              <div className="rc-confirm">
+                <div className="rc-confirm-t">ここまで話したことを、かたちにして残すよ。いい？</div>
+                <div className="rc-confirm-btns">
+                  <button className="go" onClick={() => { setCrystalAsk(false); setCrystallizing(true); }}>
+                    うん、結晶化する
+                  </button>
+                  <button className="back" onClick={() => setCrystalAsk(false)}>
+                    ← まだ途中（戻る）
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className={`rc-open ${crystalReady ? "is-ready" : ""}`}
+                onClick={() => setCrystalAsk(true)}>
+                💎 結晶化する{crystalReady ? "（そろそろ形になってきたよ）" : "（ここまでを、かたちにして残す）"}
+              </button>
+            )
           )}
 
           {/* ワールドリプレイ：ひとこと話したら「今日を閉じる」を出す。
               明日のことを聞き出すのはAIではなく、このボタン。話した内容から起こす。 */}
           {mode === "reflect" && !closing && messages.some((m) => m.role === "user") && (
-            <button className="rc-open" onClick={() => setClosing(true)}>
-              🌙 今日を閉じる（話したことから明日を決める）
-            </button>
+            reflectAsk ? (
+              <div className="rc-confirm">
+                <div className="rc-confirm-t">今日を閉じて、明日へ渡す準備をするよ。いい？</div>
+                <div className="rc-confirm-btns">
+                  <button className="go" onClick={() => { setReflectAsk(false); setClosing(true); }}>
+                    うん、閉じる
+                  </button>
+                  <button className="back" onClick={() => setReflectAsk(false)}>
+                    ← まだ話す（戻る）
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <button className="rc-open" onClick={() => setReflectAsk(true)}>
+                🌙 今日を閉じる（話したことから明日を決める）
+              </button>
+            )
           )}
           {mode === "reflect" && closing && (
             <ReflectClose

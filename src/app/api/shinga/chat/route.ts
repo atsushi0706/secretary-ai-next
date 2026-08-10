@@ -35,6 +35,28 @@ function sseEvent(name: string, data: any): Uint8Array {
   return new TextEncoder().encode(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
+/**
+ * ウォールブレイクで、いまどの段階にいるか。
+ *
+ * 【なぜコードで決めるか】
+ * 前は「陰を7個掘ったら次へ」とAIに数えさせていた。AIは数えきれず、
+ * **いつまでも「それがあると何が良いの？」を繰り返していた**（淳くんの指摘）。
+ * 反対側（なりたい自分）にも、統合点にも、いつまでも辿り着かない。
+ * だから**しゃべった回数**で下限を決めて、こちらから進める。
+ * AIが先へ行きたがっているなら、そちらを尊重する（早い分には止めない）。
+ *
+ *   〜2回 … 【1】2人を確かめる
+ *   〜7回 … 【2】陰を掘る（ここがいちばん長い）
+ *    8回 … 【3】いったん受け止める
+ *   〜12回… 【4】陽を掘る
+ *   13回〜… 【5】統合点、そして着地
+ */
+export function wallStageNow(fromScreen: number | null | undefined, said: number): number {
+  const floor = said <= 2 ? 1 : said <= 7 ? 2 : said === 8 ? 3 : said <= 12 ? 4 : 5;
+  const now = Number(fromScreen) || 1;
+  return Math.max(1, Math.min(5, Math.max(now, floor)));
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
@@ -188,7 +210,7 @@ ${WALK_SCENERY_PROMPT}`
               todayStr: today,
               hero,
               // 段階制のワークは、いま立っている段階の指示だけを渡す（先を見せない）
-              stage: mode === "breakthrough" ? (progress.wallStage ?? 1) : null,
+              stage: mode === "breakthrough" ? wallStageNow(progress.wallStage, saidInWalk) : null,
               turns: saidInWalk,
             });
 
@@ -403,8 +425,16 @@ ${WALK_SCENERY_PROMPT}`
          * ただし **開いている部屋にしか誘導しない**。
          * 鍵のかかった部屋を出すと、押しても開かなくて白ける。
          */
+        /*
+         * 別の部屋への誘い。
+         *
+         * **ウォールブレイクの途中では出さない。**
+         * 陰を掘っている最中に「クリスタルルームへ行く？」が出て、
+         * 統合まで行かずに連れ出されてしまっていた（淳くんの指摘）。
+         * このワークは最後まで通ってはじめて意味があるので、途中で他所へ渡さない。
+         */
         let guideCtx = "";
-        if (!greet && openWorks.length > 0) {
+        if (!greet && openWorks.length > 0 && mode !== "breakthrough") {
           const open = openWorks.filter((k) => k !== mode);
           if (open.length) {
             guideCtx = [

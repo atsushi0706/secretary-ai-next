@@ -5428,8 +5428,35 @@ body:has(.realverse-bg) { background: transparent; }
   background: transparent; border: none; }
 
 .rc-emorow { display: flex; align-items: center; gap: 11px; }
-.rc-emoval { flex: 1; font-size: .95rem; font-weight: 700; color: var(--singa-gold); }
-.rc-emoval.is-empty { font-size: .76rem; font-weight: 400; color: var(--singa-ink-soft); }
+/* 決まった言葉は、そのまま打ち直せる（声でも、打っても） */
+.rc-emoval {
+  flex: 1; min-width: 0;
+  font-size: .95rem; font-weight: 700; color: var(--singa-gold);
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(201,165,94,.26); border-radius: 10px;
+  padding: 9px 11px;
+}
+.rc-emoval::placeholder { font-size: .78rem; font-weight: 400; color: var(--singa-ink-soft); }
+.rc-emoval:focus { border-color: rgba(232,189,114,.6); outline: none; }
+
+/* 打って足す（話せない場所にいることもある） */
+.rc-type { display: flex; gap: 7px; margin-top: 7px; }
+.rc-type input {
+  flex: 1; min-width: 0;
+  font-size: .82rem; color: var(--singa-ink);
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(201,165,94,.24); border-radius: 10px;
+  padding: 9px 11px;
+}
+.rc-type input::placeholder { color: var(--singa-ink-soft); opacity: .7; }
+.rc-type input:focus { border-color: rgba(232,189,114,.55); outline: none; }
+.rc-type input:disabled { opacity: .5; }
+.rc-type button {
+  flex-shrink: 0; padding: 0 15px; border-radius: 10px;
+  font-size: .78rem; font-weight: 700; color: #1a1208;
+  background: linear-gradient(160deg,#f0dca8,#c9a55e);
+}
+.rc-type button:disabled { opacity: .4; }
 
 .rc-go {
   margin-top: 2px; padding: 13px; border-radius: 13px;

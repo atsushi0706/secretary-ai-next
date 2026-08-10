@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { VoiceInput } from "./VoiceInput";
+import { handleEnter } from "@/lib/enter-key";
 
 /**
  * 「今日はどんな一日だったか」の8種類。
@@ -67,6 +68,14 @@ export function ReflectClose({
    * 切らずに、話した単位のまま持つ。
    */
   const [extra, setExtra] = useState<string[]>([]);
+  /** 打って足すぶん（話すのが難しい場所にいることもある） */
+  const [typed, setTyped] = useState("");
+  function addTyped() {
+    const t = typed.trim();
+    if (!t) return;
+    setExtra((p) => [...p, t].filter(Boolean).slice(0, 3));
+    setTyped("");
+  }
   const [emo, setEmo] = useState("");
   const [kind, setKind] = useState("");
   const [handing, setHanding] = useState(false);
@@ -209,12 +218,29 @@ export function ReflectClose({
               ) : (
                 <div className="rc-none">今日の話からは起こせなかった。話して足してもいいよ。</div>
               )}
+              {/*
+                話すのを勧めるのは変えない。ただし**打っても足せる**ようにする。
+                声を出せない場所にいることもあるし、
+                短い一言はそのまま打ったほうが早いこともある。
+              */}
               <div className="rc-add">
                 <VoiceInput mode="quest" compact
                   onText={(t) => setExtra((p) => [...p, t.trim()].filter(Boolean).slice(0, 3))} />
                 <span className="rc-addlabel">
-                  {extra.length ? "足したぶん↓" : "足したいことがあれば、マイクで話して（1回にひとつ）"}
+                  {extra.length ? "足したぶん↓" : "足したいことがあれば、話すか、下に打ってね（1回にひとつ）"}
                 </span>
+              </div>
+              <div className="rc-type">
+                <input
+                  type="text"
+                  value={typed}
+                  onChange={(e) => setTyped(e.target.value)}
+                  onKeyDown={(e) => handleEnter(e, addTyped)}
+                  placeholder="打って足す（例：朝いちで◯◯する）"
+                  maxLength={60}
+                  disabled={extra.length >= 3}
+                />
+                <button onClick={addTyped} disabled={!typed.trim() || extra.length >= 3}>足す</button>
               </div>
               {extra.map((x, i) => (
                 <div key={i} className="rc-extra">
@@ -229,12 +255,17 @@ export function ReflectClose({
             <div className="rc-sec">
               <div className="rc-q">明日の夜、こうなっていたい？</div>
               <div className="rc-emorow">
-                <span className={`rc-emoval ${emo ? "" : "is-empty"}`}>
-                  {emo || "（まだ決まってない）"}
-                </span>
+                {/* 決まった言葉は、そのまま打ち直せる（声で言い直すのも、これまで通りできる） */}
+                <input
+                  className={`rc-emoval ${emo ? "" : "is-empty"}`}
+                  value={emo}
+                  onChange={(e) => setEmo(e.target.value.slice(0, 20))}
+                  placeholder="（まだ決まってない）"
+                  maxLength={20}
+                />
                 <VoiceInput mode="quest" compact onText={(t) => setEmo(t.slice(0, 20))} />
               </div>
-              <div className="rc-hint">違ったら、マイクで言い直してね。</div>
+              <div className="rc-hint">違ったら、話すか、そのまま打ち直してね。</div>
             </div>
 
             <button className="rc-go" disabled={handing || (!emo.trim() && !Object.values(picked).some(Boolean) && extra.length === 0)}

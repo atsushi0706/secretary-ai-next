@@ -17,13 +17,13 @@ import { isAdmin } from "@/lib/admin";
 import { hasFeature } from "@/lib/app-config";
 import { complete } from "@/lib/ai";
 import { logError, getUserSettings, supabaseAdmin } from "@/lib/supabase";
-import { saveShingaMessage } from "@/lib/shinga";
+import { saveShingaMessage, loadShingaMessages } from "@/lib/shinga";
 import { jstDateStr } from "@/lib/google";
 import {
   dkPersona, dkJudgePrompt, dkOpenerPrompt, dkSurrenderPrompt, dkWelcomeBackPrompt, hasCore,
   afterFeelingPrompt, saidFeeling, AFTER_FEELING_CORE, AFTER_FEELING_FALLBACK,
   DAMAGE, DK_MAX_HP, DK_FACES, DK_OPENERS, DK_SURRENDER, DK_BACK_FALLBACK,
-  DK_COOLDOWN_DAYS, moodFrom, type DkHit, type DkMood,
+  DK_COOLDOWN_DAYS, moodFrom, moodFromTalk, worseMood, type DkHit, type DkMood,
 } from "@/lib/dreamkiller";
 
 export const dynamic = "force-dynamic";
@@ -66,6 +66,24 @@ async function markAppeared(userId: string): Promise<void> {
 }
 
 /**
+ * 今日**話していること**から、いまの状態を見る。ここが本命。
+ *
+ * 気分メーターは押さない人もいるし、押したあとに話が重くなることもある。
+ * いま歩いている話と、今日ここで話したことの両方を見る。
+ */
+async function todayTalkMood(userId: string, theme: string): Promise<DkMood> {
+  try {
+    const rows = await loadShingaMessages(userId, 40, jstDateStr());
+    const NL = String.fromCharCode(10);
+    const mine = rows.filter((m) => m.role === "user").map((m) => m.content).join(NL);
+    return moodFromTalk([theme, mine].join(NL));
+  } catch {
+    // 履歴が読めなくても、いま歩いている話だけは見る
+    return moodFromTalk(theme);
+  }
+}
+
+/**
  * 今日の気分から、いまの相手の状態を見る。
  * **1＝すごく穏やか／10＝もう限界**（数字が大きいほどしんどい）。
  */
@@ -101,7 +119,11 @@ export async function POST(req: Request) {
        *  ② かなりしんどい日は、そもそも出さない。少ししんどい日は、圧を下げる
        * 出さないときは skip を返す（画面は静かに引っ込む）。
        */
-      const [last, mood] = await Promise.all([lastAppearedAt(g.userId), todayMood(g.userId)]);
+      const [last, meterMood, talkMood] = await Promise.all([
+        lastAppearedAt(g.userId), todayMood(g.userId), todayTalkMood(g.userId, theme),
+      ]);
+      // メーターと会話、どちらかが重ければ重いほうを採る（迷ったら出さない側へ）
+      const mood = worseMood(meterMood, talkMood);
       if (last != null && last < DK_COOLDOWN_DAYS) {
         return NextResponse.json({ skip: true, why: `まだ${last}日しか経っていない` });
       }

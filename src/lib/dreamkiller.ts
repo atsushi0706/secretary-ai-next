@@ -356,6 +356,38 @@ export const DK_COOLDOWN_DAYS = 3;
  */
 export type DkMood = "tough" | "tender" | "steady";
 
+/**
+ * 話している中身から、しんどさを見る。**ここが本命。**
+ *
+ * 気分メーターは押さない人もいる。押していても、そのあと話が重くなることもある。
+ * だから**その人が実際に話している言葉**を見る。
+ * 淳くん：「心がしんどいとか話してる人にはドリームキラー出さない」
+ *
+ * 迷ったら出さない側に倒す。出さなくても誰も困らないが、
+ * しんどい人に茶々を入れたら、この機能は害になる。
+ */
+
+/** これがあったら、絶対に出さない（命・こころの重いところ） */
+const HEAVY = /死に?た|しにた|消えた|きえた|居なくなりた|いなくなりた|生きて(いても|ても)|自傷|リスカ|限界|もう(むり|無理|だめ|ダメ)|助けて|たすけて|涙が?止ま|ずっと泣|眠れ(ない|なく)|寝られ(ない|なく)|うつ|鬱|パニック|過呼吸|通院|薬(を|が|も)?(飲|のm)|休職|退職(したい|しよ)|逃げ(たい|出したい)/;
+
+/** こころが重い日の言葉（これも出さない） */
+const HARD = /しんど|辛い|つらい|苦しい|くるしい|きつい|キツ[イい]|落ち込|凹[んむ]|へこ[んむ]|不安で|こわい|怖い|さみし|寂し|孤独|虚し|むなし|やる気(が)?(出ない|ない)|動けな|何も(したく|できな)|自信(が)?(ない|なくな)|価値(が)?ない|要らない人間|嫌になる|嫌気|疲れ(た|きっ|果て)|もう嫌|もういや/;
+
+/** 会話の中身から、いまの状態を見る */
+export function moodFromTalk(text: string): DkMood {
+  const t = String(text ?? "");
+  if (!t.trim()) return "steady";
+  if (HEAVY.test(t)) return "tough";     // 出さない
+  if (HARD.test(t)) return "tough";      // ここも出さない（淳くんの指定）
+  return "steady";
+}
+
+/** メーターと会話、どちらかが重ければ、重いほうを採る（安全側に倒す） */
+export function worseMood(a: DkMood, b: DkMood): DkMood {
+  const rank = { tough: 2, tender: 1, steady: 0 } as const;
+  return rank[a] >= rank[b] ? a : b;
+}
+
 export function moodFrom(level: number | null | undefined): DkMood {
   const v = Number(level);
   if (!Number.isFinite(v) || v <= 0) return "steady";   // 分からないときは、いつも通り

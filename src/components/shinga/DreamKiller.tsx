@@ -44,6 +44,8 @@ export function DreamKiller({
   const [dmg, setDmg] = useState<number | null>(null);
   /** 倒れたあと、姿がほどけてクリスタルになる */
   const [crystal, setCrystal] = useState(false);
+  /** 今日は少し疲れている人。圧を下げて相手をする */
+  const [tender, setTender] = useState(false);
   const d = useDictation();
   const boxRef = useRef<HTMLDivElement>(null);
 
@@ -66,6 +68,9 @@ export function DreamKiller({
       try {
         const j = await post({ action: "appear", theme, seed });
         if (!alive) return;
+        // 3日経っていない／今日はしんどそう → 何も出さずに引っ込む
+        if (j.skip) { onClose("skip"); return; }
+        setTender(!!j.tender);
         setFace(j.face);
         setHp(j.hp ?? DK_MAX_HP);
         setLog([{ who: "dk", text: j.say }]);
@@ -100,7 +105,7 @@ export function DreamKiller({
     try {
       const before = hp;
       const j = await post({
-        action: "hit", theme, said: t, hp,
+        action: "hit", theme, said: t, hp, tender,
         dkSaid: [...log].reverse().find((l) => l.who === "dk")?.text ?? "",
         log: log.slice(-6),
       });

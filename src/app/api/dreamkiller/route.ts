@@ -16,11 +16,14 @@ import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
 import { hasFeature } from "@/lib/app-config";
 import { complete } from "@/lib/ai";
-import { logError, getUserSettings } from "@/lib/supabase";
+import { logError, getUserSettings, supabaseAdmin } from "@/lib/supabase";
+import { saveShingaMessage } from "@/lib/shinga";
+import { jstDateStr } from "@/lib/google";
 import {
   dkPersona, dkJudgePrompt, dkOpenerPrompt, dkSurrenderPrompt, dkWelcomeBackPrompt, hasCore,
   afterFeelingPrompt, saidFeeling, AFTER_FEELING_CORE, AFTER_FEELING_FALLBACK,
-  DAMAGE, DK_MAX_HP, DK_FACES, DK_OPENERS, DK_SURRENDER, DK_BACK_FALLBACK, type DkHit,
+  DAMAGE, DK_MAX_HP, DK_FACES, DK_OPENERS, DK_SURRENDER, DK_BACK_FALLBACK,
+  DK_COOLDOWN_DAYS, moodFrom, type DkHit, type DkMood,
 } from "@/lib/dreamkiller";
 
 export const dynamic = "force-dynamic";
@@ -35,6 +38,45 @@ async function gate() {
     return { err: NextResponse.json({ error: "まだ準備中です" }, { status: 403 }) };
   }
   return { userId };
+}
+
+/**
+ * 最後に出したのは何日前か（まだ一度も出していなければ null）。
+ *
+ * 表を増やさずに済ませるため、会話の記録に place="dreamkiller" の1行を残して、
+ * その日付を見ている。
+ */
+async function lastAppearedAt(userId: string): Promise<number | null> {
+  try {
+    const supa = supabaseAdmin();
+    const { data } = await supa.from("shinga_conversations")
+      .select("date").eq("user_id", userId).eq("place", "dreamkiller")
+      .order("id", { ascending: false }).limit(1);
+    const d = (data ?? [])[0]?.date;
+    if (!d) return null;
+    const ms = new Date(`${jstDateStr()}T00:00:00+09:00`).getTime()
+      - new Date(`${d}T00:00:00+09:00`).getTime();
+    return Math.max(0, Math.round(ms / 86400000));
+  } catch { return null; }
+}
+
+/** 出したことを残す（会話には出さない印だけ） */
+async function markAppeared(userId: string): Promise<void> {
+  await saveShingaMessage(userId, jstDateStr(), "assistant", "[[dk]]", "dreamkiller");
+}
+
+/**
+ * 今日の気分から、いまの相手の状態を見る。
+ * **1＝すごく穏やか／10＝もう限界**（数字が大きいほどしんどい）。
+ */
+async function todayMood(userId: string): Promise<DkMood> {
+  try {
+    const supa = supabaseAdmin();
+    const { data } = await supa.from("emotion_logs")
+      .select("level").eq("user_id", userId).eq("date", jstDateStr())
+      .order("id", { ascending: false }).limit(1);
+    return moodFrom((data ?? [])[0]?.level);
+  } catch { return "steady"; }
 }
 
 /** 同じものが続けて出ないように、種から選ぶ（Math.random を使わない） */
@@ -52,18 +94,37 @@ export async function POST(req: Request) {
     /* ── 現れる ── */
     if (b.action === "appear") {
       const seed = Number(b.seed) || theme.length || 1;
+
+      /*
+       * 出していいか、ここで決める。理由は2つ。
+       *  ① 毎回のウォークで出ると、歩くほうが邪魔になるし、圧が続く → **3日に1回くらい**
+       *  ② かなりしんどい日は、そもそも出さない。少ししんどい日は、圧を下げる
+       * 出さないときは skip を返す（画面は静かに引っ込む）。
+       */
+      const [last, mood] = await Promise.all([lastAppearedAt(g.userId), todayMood(g.userId)]);
+      if (last != null && last < DK_COOLDOWN_DAYS) {
+        return NextResponse.json({ skip: true, why: `まだ${last}日しか経っていない` });
+      }
+      if (mood === "tough") {
+        return NextResponse.json({ skip: true, why: "今日はしんどそうなので出さない" });
+      }
+      const tender = mood === "tender";
+
       // 第一声は、その場の話に合わせて作る（固定文だと話に噛み合わない）
       let say = "";
       try {
         say = (await complete({
           userId: g.userId,
-          prompt: dkOpenerPrompt(theme),
+          prompt: dkOpenerPrompt(theme, tender),
           maxTokens: 140,
           temperature: 1,
         })).trim();
       } catch { /* 下で保険に落ちる */ }
       if (!say || say.length > 90) say = pickBy(seed * 7 + 3, DK_OPENERS);
-      return NextResponse.json({ face: pickBy(seed, DK_FACES), say, hp: DK_MAX_HP });
+
+      // 出したことを残す（次に出せるのがいつかを決めるため）
+      await markAppeared(g.userId).catch(() => {});
+      return NextResponse.json({ face: pickBy(seed, DK_FACES), say, hp: DK_MAX_HP, tender });
     }
 
     /* ── 言い返しを受ける ── */
@@ -126,7 +187,7 @@ export async function POST(req: Request) {
       try {
         say = (await complete({
           userId: g.userId,
-          system: dkPersona(theme),
+          system: dkPersona(theme, b.tender === true),
           prompt: `${log ? `# ここまでのやり取り\n${log}\n\n` : ""}`
             + `# 相手がいま言い返してきたこと\n${said}\n\n`
             + `これに食い下がってください。2〜4文。共感しない。説教しない。`,

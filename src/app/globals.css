@@ -7215,3 +7215,85 @@ body:has(.realverse-bg) { background: transparent; }
     animation: none;
   }
 }
+
+/* ══════════════════════════════════════════════════════════
+   チャットの記録（/history）。読むだけの保管庫。
+   ChatGPTのサイドバーの形：広い画面は 一覧｜中身、スマホは1画面ずつ。
+   枠（.singa-stage）の外なので、色は**すべて直に書く**（変数に頼らない）。
+   ══════════════════════════════════════════════════════════ */
+.chx {
+  display: grid; grid-template-columns: 1fr; gap: 10px;
+  min-height: 70vh;
+}
+@media (min-width: 760px) {
+  .chx { grid-template-columns: 300px 1fr; }
+  /* 広い画面では、一覧と中身を常に並べる（選んでいない側も隠さない） */
+  .chx .chx-list, .chx .chx-view { display: flex !important; }
+}
+/* スマホ：選ぶ前は一覧だけ、選んだら中身だけ */
+.chx .chx-view { display: none; }
+.chx.has-sel .chx-list { display: none; }
+.chx.has-sel .chx-view { display: flex; }
+
+.chx-list {
+  display: flex; flex-direction: column; gap: 10px;
+  max-height: 76vh; overflow-y: auto;
+  padding: 10px; border-radius: 16px;
+  background: rgba(24, 19, 34, .92); border: 1px solid rgba(190,150,255,.22);
+}
+.chx-day-h {
+  font-size: .68rem; font-weight: 800; letter-spacing: .08em;
+  color: #b9a8e0; margin: 4px 4px 6px;
+}
+.chx-item {
+  width: 100%; display: grid; grid-template-columns: 1fr auto; gap: 2px 8px;
+  text-align: left; padding: 9px 11px; margin-bottom: 6px; border-radius: 11px;
+  background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.09);
+  transition: background .15s ease, border-color .15s ease;
+}
+.chx-item:hover { background: rgba(255,255,255,.1); }
+.chx-item.is-on { background: rgba(160,97,224,.2); border-color: rgba(190,150,255,.5); }
+.chx-item .room { font-size: .72rem; font-weight: 800; color: #d9c7ff; }
+.chx-item .title {
+  grid-column: 1 / -1; font-size: .74rem; line-height: 1.6; color: rgba(240,234,255,.82);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.chx-item .cnt {
+  font-size: .64rem; color: #a89ac9; align-self: start;
+  background: rgba(255,255,255,.07); border-radius: 999px; padding: 1px 8px;
+}
+
+.chx-view {
+  flex-direction: column; gap: 10px;
+  max-height: 76vh;
+  padding: 12px; border-radius: 16px;
+  background: rgba(24, 19, 34, .92); border: 1px solid rgba(190,150,255,.22);
+}
+.chx-view-h { display: flex; align-items: center; gap: 10px; }
+.chx-back {
+  flex-shrink: 0; font-size: .74rem; font-weight: 700; color: #d9c7ff;
+  background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.16);
+  border-radius: 999px; padding: 6px 12px;
+}
+@media (min-width: 760px) { .chx-back { display: none; } }  /* 並んでいる画面では要らない */
+.chx-view-h .t { display: flex; flex-direction: column; }
+.chx-view-h .t b { font-size: .86rem; color: #f0eaff; }
+.chx-view-h .t span { font-size: .68rem; color: #a89ac9; }
+
+.chx-msgs { overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding: 4px 2px; }
+.chx-line { max-width: 92%; }
+.chx-line p {
+  font-size: .84rem; line-height: 1.9; color: #efe8ff; white-space: pre-wrap;
+  background: rgba(0,0,0,.32); border: 1px solid rgba(255,255,255,.09);
+  border-radius: 4px 14px 14px 14px; padding: 9px 13px;
+  -webkit-user-select: text; user-select: text;   /* 読み返す場所なので、コピーできる */
+}
+.chx-line.is-me { align-self: flex-end; }
+.chx-line.is-me p {
+  color: #ffe9b8; background: rgba(96,78,44,.5);
+  border-color: rgba(224,189,114,.3); border-radius: 14px 4px 14px 14px;
+}
+.chx-empty, .chx-note {
+  font-size: .78rem; line-height: 2; color: #a89ac9; text-align: center; padding: 26px 10px;
+}
+.chx-err { font-size: .74rem; color: #ffb3ab; }

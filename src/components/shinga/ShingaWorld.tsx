@@ -2267,6 +2267,11 @@ function Home({
                 note: "週ごとの記憶。悩み→どう見たか→進んだこと",
                 onOpen: onWeekly, badge: unreadWeekly,
               },
+              {
+                key: "chat", emoji: "💬", label: "チャットの記録",
+                note: "どの部屋で、何を話したか。読み返せる",
+                onOpen: () => { try { window.location.href = "/history"; } catch { /* ignore */ } },
+              },
               { key: "cards", emoji: "🃏", label: "カード保管庫", note: "手に入れた力", onOpen: onVault },
               { key: "crystals", emoji: "💎", label: "クリスタル保管庫", note: "かたちにしたもの", onOpen: onCrystalVault },
               ...(onManual

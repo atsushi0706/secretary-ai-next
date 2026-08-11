@@ -30,6 +30,10 @@ export async function POST(req: Request) {
 
     await saveTomorrow(userId, { emotion: String(b.emotion ?? ""), why: String(b.why ?? ""), actions });
 
+    // 今日を閉じるついでに、記憶の整理（覚える・上書き・忘れる）を1回まわす。
+    // 返事は待たない（閉じるのを遅くしない）。1日1回しか動かない作りになっている
+    void import("@/lib/memory").then((m) => m.extractMemories(userId)).catch(() => {});
+
     // 決めた「明日やること」は、明日づけのタスクとして本当に置く。
     // ここを飛ばすと「話し合ったのに何も残らない」になる。
     const placed: string[] = [];

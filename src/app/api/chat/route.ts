@@ -8,6 +8,7 @@ import {
 import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, formatJstDateTime, addTask, addCalendarEvent, completeTask, deleteTask, jstDayOfWeekJa, deleteCalendarEventsByCriteria } from "@/lib/google";
 import { clearManualLabel } from "@/lib/supabase";
 import { undoLastTurn } from "@/lib/undo-turn";
+import { listMemories, memoryBlock } from "@/lib/memory";
 
 const ADD_INTENT_KEYWORDS = [
   "入れといて", "入れておいて", "入れとい", "追加しといて", "追加しておいて",
@@ -262,8 +263,11 @@ JSONのみ:
           secretaryName: (settings as any)?.secretary_name,
           userCallName: (settings as any)?.user_call_name,
         });
-        const systemText = persona + "\n\n# いまの状況\n" + ctxLines.join("\n\n");
-
+        // 記憶（全部屋で共有・時間で更新）。使い方の歯止めは memoryBlock の中
+        const mems = await listMemories(userId).catch(() => []);
+        const memBlock = memoryBlock(mems, settings?.user_call_name || "きみ");
+        const NL2 = String.fromCharCode(10) + String.fromCharCode(10);
+        const systemText = persona + (memBlock ? NL2 + memBlock : "") + NL2 + "# いまの状況" + String.fromCharCode(10) + ctxLines.join(NL2);
         // AI streaming (Gemini or Claude を自動選択) + web_search (Claude時のみ)
         let fullReply = "";
         for await (const ev of streamChat({

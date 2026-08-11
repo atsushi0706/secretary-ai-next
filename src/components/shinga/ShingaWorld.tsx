@@ -2268,6 +2268,11 @@ function Home({
                 onOpen: onWeekly, badge: unreadWeekly,
               },
               {
+                key: "memory", emoji: "🧠", label: "おぼえていること",
+                note: "会話から覚えた、続くこと。見られる・消せる",
+                onOpen: () => { try { window.location.href = "/memory"; } catch { /* ignore */ } },
+              },
+              {
                 key: "chat", emoji: "💬", label: "チャットの記録",
                 note: "どの部屋で、何を話したか。読み返せる",
                 onOpen: () => { try { window.location.href = "/history"; } catch { /* ignore */ } },

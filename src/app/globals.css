@@ -7297,3 +7297,34 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .78rem; line-height: 2; color: #a89ac9; text-align: center; padding: 26px 10px;
 }
 .chx-err { font-size: .74rem; color: #ffb3ab; }
+
+/* ── おぼえていること（/memory）。枠の外なので色は直に書く ── */
+.mem { display: flex; flex-direction: column; gap: 10px; }
+.mem-lead {
+  font-size: .78rem; line-height: 1.9; color: #4b4266;
+  background: rgba(255,255,255,.85); border: 1px solid #e3dcf5; border-radius: 12px; padding: 10px 12px;
+}
+.mem-lead b { color: #3b2d6e; }
+.mem-refresh {
+  padding: 12px; border-radius: 12px; font-size: .84rem; font-weight: 800;
+  color: #fff; background: linear-gradient(160deg, #8b6fe0, #6c4fd0);
+}
+.mem-refresh:disabled { opacity: .55; }
+.mem-note { font-size: .74rem; color: #3b6e46; background: #eefaf1; border: 1px solid #bfe5cb; border-radius: 10px; padding: 8px 11px; }
+.mem-err { font-size: .74rem; color: #8c3d35; background: #fff5f4; border: 1px solid #f0b4ae; border-radius: 10px; padding: 8px 11px; }
+.mem-err pre { font-size: .62rem; white-space: pre-wrap; margin-top: 6px; }
+.mem-empty { font-size: .78rem; color: #6b6390; text-align: center; padding: 22px 8px; }
+.mem-list { display: flex; flex-direction: column; gap: 7px; }
+.mem-item {
+  display: grid; grid-template-columns: auto 1fr auto; gap: 9px; align-items: center;
+  background: rgba(255,255,255,.92); border: 1px solid #e3dcf5; border-radius: 11px; padding: 9px 11px;
+}
+.mem-item .kind {
+  font-size: .62rem; font-weight: 800; color: #6c4fd0;
+  background: #efeaff; border-radius: 999px; padding: 2px 9px; white-space: nowrap;
+}
+.mem-item .fact { font-size: .8rem; line-height: 1.7; color: #2f2748; }
+.mem-item .del {
+  font-size: .66rem; font-weight: 700; color: #8c6a5a;
+  background: #fff; border: 1px solid #e8d5cc; border-radius: 8px; padding: 4px 9px;
+}

@@ -24,6 +24,7 @@ import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@
 import { releaseGuardian } from "@/lib/parts-db";
 import { undoLastTurn } from "@/lib/undo-turn";
 import { DIRECTION_FINDING, DIRECTION_DONE } from "@/lib/ideal-ask";
+import { listMemories, memoryBlock } from "@/lib/memory";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
@@ -213,6 +214,18 @@ ${WALK_SCENERY_PROMPT}`
               stage: mode === "breakthrough" ? wallStageNow(progress.wallStage, saidInWalk) : null,
               turns: saidInWalk,
             });
+
+        /*
+         * 記憶（GPTのような、時間で更新されるもの）。
+         * これまでの「この部屋は過去を持ち込まない」という仕切りをやめ、
+         * **全部屋で一本の記憶**を共有する（淳くんの指定）。
+         * 使い方の歯止め（関係あるときだけ・いまの発言が優先）は memoryBlock の中にある。
+         */
+        const mems = await listMemories(userId).catch(() => []);
+        const memBlock = memoryBlock(mems, settings?.user_call_name || "きみ");
+        const systemWithMemory = memBlock ? `${system}
+
+${memBlock}` : system;
 
         // 会話履歴は「今日ぶんだけ」に絞る（何日も前の話が混ざって時間軸が壊れるのを防ぐ）。
         // さらに、特定のワークを greet で始めるときは、そのワークだけの新しいスレッドにする
@@ -480,7 +493,7 @@ ${WALK_SCENERY_PROMPT}`
         ].join("\n");
 
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
-        const systemBase = [system, honestyCtx, guideCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
+        const systemBase = [systemWithMemory, honestyCtx, guideCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
         const systemFull = mode !== "parts" ? systemBase : [
           systemBase,
           partColor

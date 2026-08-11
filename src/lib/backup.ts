@@ -74,6 +74,7 @@ const TABLES = [
   // その他
   "quickmemo",
   "notifications",
+  "user_memories",
   "classify_cache",
 ] as const;
 

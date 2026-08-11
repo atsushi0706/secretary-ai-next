@@ -434,7 +434,14 @@ ${WALK_SCENERY_PROMPT}`
          * このワークは最後まで通ってはじめて意味があるので、途中で他所へ渡さない。
          */
         let guideCtx = "";
-        if (!greet && openWorks.length > 0 && mode !== "breakthrough") {
+        /*
+         * ウォールブレイクとワールドリプレイの最中は、他の部屋へ渡さない。
+         * ・ウォールブレイク … 統合まで通ってはじめて意味がある
+         * ・ワールドリプレイ … 今日を閉じる場所。途中で「真ん中に戻す？」などが
+         *   割り込むと、閉じる流れが切れる（淳くんの指摘）
+         */
+        const noInvite = mode === "breakthrough" || mode === "reflect";
+        if (!greet && openWorks.length > 0 && !noInvite) {
           const open = openWorks.filter((k) => k !== mode);
           if (open.length) {
             guideCtx = [

@@ -204,7 +204,7 @@ export function ReflectClose({
 
             {/* 明日の一手（今日の話から起こしたもの。外すのは本人） */}
             <div className="rc-sec">
-              <div className="rc-q">明日の朝いち、これでいい？</div>
+              <div className="rc-q">① 明日やること（理想に近づく、ひとつ）</div>
               {rep.tomorrow.length > 0 ? (
                 <div className="rc-picks">
                   {rep.tomorrow.map((t) => (
@@ -236,7 +236,7 @@ export function ReflectClose({
                   value={typed}
                   onChange={(e) => setTyped(e.target.value)}
                   onKeyDown={(e) => handleEnter(e, addTyped)}
-                  placeholder="打って足す（例：朝いちで◯◯する）"
+                  placeholder="打って足す（例：◯◯を15分だけ調べる）"
                   maxLength={60}
                   disabled={extra.length >= 3}
                 />
@@ -253,7 +253,7 @@ export function ReflectClose({
 
             {/* 明日の感情（これも今日の話から起こす） */}
             <div className="rc-sec">
-              <div className="rc-q">明日の夜、こうなっていたい？</div>
+              <div className="rc-q">② 明日の1日を、どんな感じで終えたい？</div>
               <div className="rc-emorow">
                 {/* 決まった言葉は、そのまま打ち直せる（声で言い直すのも、これまで通りできる） */}
                 <input

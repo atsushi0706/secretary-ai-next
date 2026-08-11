@@ -23,6 +23,8 @@ type Step = {
   /** 鳴らす音声。複数書くと、その順に続けて鳴る（「1回目」→「口を閉じます」など） */
   voice?: string[];
   round?: number;
+  /** はじめの一歩はカウントを見せない（秒数で急かさない。進むのは「はじめる ▶」だけ） */
+  hideCount?: boolean;
   /**
    * 「流れにまかせる」でも、ここだけは押して進む。
    *
@@ -96,40 +98,19 @@ function buildSteps(emotionRaw?: string): Step[] {
   const S = (k: string) => lineOf(k)?.screen ?? "";
 
   const steps: Step[] = [
-    {
       /*
-       * はじめの一歩（2026-08-10 に入れ替え／淳くんの指定）。
-       * 体をゆらすのをやめて、**吸ったものが全身にめぐる呼吸**にする。
-       * テーマ（未来からの手紙の感情）があれば、その言葉を混ぜる。
-       *
-       * 音は鳴らさない。録ってある intro.mp3 は「体を左右にゆらゆら」の声で、
-       * 中身と食い違ってしまうため（録り直したら voice: ["intro"] に戻す）。
+       * はじめの一歩（2026-08-12）。
+       * 説明は**絵**（淳くんが作った呼吸ガイド）にした。前の文字の壁は読ませすぎだった。
+       * 声も淳くんが録り直したもの（0807.mp4）に差し替えて、鳴らすように戻した。
+       * カウントは出さない（秒数で急かさない。「はじめる ▶」で自分から入る）。
        */
-      instr: [
-        emotion
-          ? `胸に「${emotion}」が入ってくる呼吸を、20秒。`
-          : "胸に何かが入ってくる呼吸を、20秒。",
-        "",
-        "① 真正面から15〜20度、少しだけ斜め上に視線を上げる。",
-        "　 背筋をととのえて、自然に深呼吸。",
-        "",
-        "② 肩を無理に上げない。吸った息で、肩が自然に少し上がる。",
-        "　 吐きながら、肩を落とす。（吸って、吐いて、をくりかえす）",
-        "",
-        emotion
-          ? `③ 吸うと、いまの自分に必要な「${emotion}」が胸にすーっと入ってくる。`
-          : "③ 吸うと、いまの自分に必要なものが胸にすーっと入ってくる。",
-        "　 吐くと、その感じが全身にいきわたる。めぐらせるイメージで。",
-      ].join(String.fromCharCode(10)),
-      /*
-       * say は空にする。voice が無いと speakStep は合成音声（API→ブラウザ読み上げ）に
-       * 落ちる作りなので、say を渡すと「音を鳴らさない」つもりが**別人の声で喋っていた**。
-       * 空なら speakApi が何もせず true を返すので、完全に無音になる。
-       */
-      say: "", count: T.intro, scale: 1,
-      // 最初の一歩だけは、自分で押して入る
-      waitForPerson: true, waitLabel: "はじめる ▶",
-    },
+      {
+        instr: emotion ? `胸に「${emotion}」が入ってくる呼吸を。` : "",
+        say: L("intro"), count: T.intro, scale: 1,
+        img: "/breath-intro.jpg", voice: ["intro"],
+        hideCount: true,
+        waitForPerson: true, waitLabel: "はじめる ▶",
+      },
   ];
 
   const ROUNDS = 3;
@@ -429,7 +410,7 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
             style={{ transform: `scale(${scale})`, transitionDuration: cur ? `${cur.count}s` : ".4s" }}
           />
         )}
-        {started && <div className="breath-count">{remain > 0 ? remain : "○"}</div>}
+        {started && !cur?.hideCount && <div className="breath-count">{remain > 0 ? remain : "○"}</div>}
       </div>
 
       <div className="breath-instr">

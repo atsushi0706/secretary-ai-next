@@ -105,11 +105,19 @@ function buildSteps(emotionRaw?: string): Step[] {
        * カウントは出さない（秒数で急かさない。「はじめる ▶」で自分から入る）。
        */
       {
-        instr: emotion ? `胸に「${emotion}」が入ってくる呼吸を。` : "",
+        /*
+         * ボタンは「終わったら押す」形にする。
+         * 「はじめる ▶」だと、押したら準備運動が始まるように読める。
+         * 実際は**この画面がもう準備運動**（絵を見ながら、声に合わせてやる）なので、
+         * 見出しで「準備運動をしよう」と言い、終わってから押してもらう（淳くんの指定）。
+         */
+        instr: emotion
+          ? `準備運動をしよう${String.fromCharCode(10)}胸に「${emotion}」が入ってくる呼吸を。`
+          : "準備運動をしよう",
         say: L("intro"), count: T.intro, scale: 1,
         img: "/breath-intro.jpg", voice: ["intro"],
         hideCount: true,
-        waitForPerson: true, waitLabel: "はじめる ▶",
+        waitForPerson: true, waitLabel: "準備運動おわり！ 次へ ▶",
       },
   ];
 

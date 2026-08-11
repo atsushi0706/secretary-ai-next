@@ -51,6 +51,40 @@ function innateFromName(birthName: string, who: string): string {
 
 export type FutureLetter = { date: string; body: string; emotion: string; hasIdeal: boolean; needsSetup?: boolean };
 
+/**
+ * 本人の、ふだんの言葉づかいの見本を作る。
+ *
+ * 【なぜ要るか】
+ * 手紙の差出人は「10年後の本人」。なのに文体がAIの敬語だと、
+ * 別人からの説教めいた手紙になる（淳くん：固すぎる。友人のような感じに）。
+ * 本人がこのアプリで実際に打った・話した言葉から、
+ * 一人称・語尾・くだけ具合を引き継がせる。**内容は使わない。文体だけ。**
+ */
+export function styleSampleBlock(lines: string[], who: string, gender: "male" | "female" | null): string {
+  const samples = [...new Set(
+    lines
+      .map((l) => String(l ?? "").split(/\s+/).join(" ").trim())
+      .filter((l) => l && !l.startsWith("[[") && l.length >= 8 && l.length <= 120),
+  )].slice(0, 12).map((l) => `- ${l.slice(0, 70)}`);
+
+  const firstPerson = gender === "male"
+    ? "「僕」か「俺」のうち、見本の雰囲気に近いほう"
+    : "「私」";
+
+  if (!samples.length) {
+    return `## 文体（見本がまだ無い場合）
+まだ ${who} の言葉が溜まっていない。友だちに送るメッセージの距離で、話し言葉で書く。
+一人称は ${firstPerson}。`;
+  }
+  return `## ${who} 本人の、ふだんの言葉（文体の見本。**内容は写さない。声だけ借りる**）
+${samples.join(String.fromCharCode(10))}
+
+この手紙の差出人は ${who} 自身。だから**この見本と同じ声**で書く。
+- 一人称・語尾・くだけ具合・テンション・絵文字の量を、見本から引き継ぐ
+- 見本に一人称が出てくるなら、必ずそれを使う。出てこなければ ${firstPerson}
+- 見本の固有名詞・出来事は書かない（借りるのは文体だけ）`;
+}
+
 export async function getTodayLetter(userId: string, mood?: number, perf?: number): Promise<FutureLetter> {
   const date = jstDateStr();
   const supa = supabaseAdmin();
@@ -128,6 +162,22 @@ ${quests.length ? `- やってみたいこと：${quests.slice(0, 4).map((q: any
 これらから、${who} が"今どのあたりにいるか"を感じ取り、手紙の温度をそっと今のリアルに寄せる。`
     : "";
 
+  // 本人のふだんの言葉（文体の見本）。インナーワールドと、足りなければリアルバースから
+  let saidLines: string[] = [];
+  try {
+    const iw = await supa.from("shinga_conversations")
+      .select("content").eq("user_id", userId).eq("role", "user")
+      .order("id", { ascending: false }).limit(60);
+    saidLines = ((iw.data ?? []) as { content: string }[]).map((r) => r.content);
+    if (saidLines.length < 6) {
+      const rv = await supa.from("conversations")
+        .select("content").eq("user_id", userId).eq("role", "user")
+        .order("id", { ascending: false }).limit(40);
+      saidLines = saidLines.concat(((rv.data ?? []) as { content: string }[]).map((r) => r.content));
+    }
+  } catch { /* 見本が無くても手紙は書ける */ }
+  const styleBlock = styleSampleBlock(saidLines, who, gender);
+
   // 過去に伝えた感情（被り防止）
   const past = await supa.from("link_letter").select("source, date").eq("user_id", userId).order("date", { ascending: false }).limit(20);
   const pastEmotions = ((past.data ?? []) as { source: string }[]).map((r) => (r.source ?? "").trim()).filter(Boolean);
@@ -162,6 +212,8 @@ ${stageBlock}
 
 ${moodBlock}
 
+${styleBlock}
+
 ${recentBlock}
 
 ${avoidBlock}
@@ -175,6 +227,18 @@ ${who} は「${ideal}」という理想を書いている。ただ、書いた�
 本来の性質に沿った"叶い方"へ、そっと寄せる（サブリミナルに戻す）。星の性質にかなった満ち方の手触りを感じさせる。
 理想と本来の性質が合っているなら、そのまま満ち足りた実感として書く。
 
+# 距離感（固くしない・最重要）
+手紙というより、**いちばん近い友だちに送る、長めのメッセージ**。
+- 「〜でしょう」「〜に違いありません」「〜なのです」のような講釈・文語調は使わない
+- あいさつの定型（「元気にしていますか」等）から始めない。見本の口語のまま、すっと入る
+- きれいにまとめようとしない。本人が書きそうな、少し崩れた文のほうが正しい
+
+# 10年の熟成（ふけるのではない）
+同じ声のまま、10年ぶんの余裕だけがある。
+- 力みが抜けている。急いで説得しない。短く言い切れる
+- 今の ${who} なら慌てて書くところを、ひと呼吸おいて書ける。その差だけで10年を感じさせる
+- 老いた言い回し（「〜じゃよ」「〜だのう」等）・説教・上から目線は禁止。あくまで**同じ人の、少し先の声**
+
 # 手紙全体の温度（最重要・冒頭から）
 - 重く沈ませない。今日のしんどさを冒頭でなぞって長く留まらない（触れても一文まで）。
 - 差出人は"もう乗り越えた側"にいる本来の私。だから読んだあとに静かに湧くのは、この2つ：
@@ -183,7 +247,7 @@ ${who} は「${ideal}」という理想を書いている。ただ、書いた�
 - 慰めで下に降りるのではなく、あたたかさで少し上へ引き上げる。「あの頃があったから今がある」という肯定の眼差しで。
 
 # 手紙のルール（厳守）
-- 一人称は「私」。ただし「未来の私」「本来の私」などの自称ラベルや署名は書かない。本文だけ。
+- 一人称は、上の文体の見本に合わせる（見本に無ければ、見本の節にある指定で）。「未来の私」「本来の私」などの自称ラベルや署名は書かない。本文だけ。
 - 用語（算命学・命式・星の名前・大運・姓名判断・画数 など）は絶対に出さない。
 - 【前提】理想はもう叶っている。願望ではなく、叶った側からの"実感"。満ち足りた事実として。
 - 【最重要】具体的な場面は描写しない（カフェ・仕事・場所・人・出来事など"何をしているか"は書かない）。

@@ -121,7 +121,12 @@ function buildSteps(emotionRaw?: string): Step[] {
           : "③ 吸うと、いまの自分に必要なものが胸にすーっと入ってくる。",
         "　 吐くと、その感じが全身にいきわたる。めぐらせるイメージで。",
       ].join(String.fromCharCode(10)),
-      say: L("intro"), count: T.intro, scale: 1,
+      /*
+       * say は空にする。voice が無いと speakStep は合成音声（API→ブラウザ読み上げ）に
+       * 落ちる作りなので、say を渡すと「音を鳴らさない」つもりが**別人の声で喋っていた**。
+       * 空なら speakApi が何もせず true を返すので、完全に無音になる。
+       */
+      say: "", count: T.intro, scale: 1,
       // 最初の一歩だけは、自分で押して入る
       waitForPerson: true, waitLabel: "はじめる ▶",
     },

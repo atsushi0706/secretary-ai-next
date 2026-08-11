@@ -584,6 +584,7 @@ export function ShingaWorld({
     shadowPairRef.current = null; shadowSafetyRef.current = "normal";
     setTodayManual(false);
     setClosing(false);          // 夜の「今日を閉じる」板を持ち越さない
+    setCrystalAsk(false); setReflectAsk(false);   // 「いい？」の確認も持ち越さない
     childShownRef.current = false;
   }
 

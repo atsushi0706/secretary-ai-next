@@ -32,7 +32,8 @@ const SLOT_PROMPT: Record<Slot, string> = {
   afternoon: `いまJST15時半前後。17時稼働終了まで残り90分。あと1個進めるならどれ？という尻押しメッセージ。
 60〜100文字。優先タスク1個を具体名で挙げて「ここから30〜60分で1個だけ片付ける？」のような提案。`,
   evening: `いまJST20時。1日のレポート。今日やれたことを具体的に拾って渡す（できなかったことを責めない）。
-60〜100文字。完了数を踏まえて「お疲れさま。今日は◯個片づいたね」から入り、
+60〜100文字。**下の「■ 今日、実際に片づいたもの」にあるものだけ**を労う。
+1個も無ければ、完了の数や「片づいたね」の話は**しない**（「お疲れさま。今日はゆっくり休も」の方向でいい）。
 最後に「振り返り、開いてみる？」と1日の振り返りへ誘う。`,
 };
 
@@ -151,13 +152,27 @@ async function generateMessage(userId: string, slot: Slot, hasGoogle: boolean): 
     try {
       const today = jstDateStr();
       const targetDate = new Date(today + "T00:00:00+09:00");
+      /*
+       * 夜は完了ずみも取る。
+       * 前は未完了のタスクしか渡していないのに、指示だけ「◯個片づいたね」だったので、
+       * **AIが完了数をでっち上げて「やってないのに終わったね」の通知が届いていた。**
+       * 労っていいのは、実際に今日完了になったものだけ。
+       */
       const [events, tasks] = await Promise.all([
         getCalendarEvents(userId, 0),
-        getTasks(userId),
+        getTasks(userId, slot === "evening"),
       ]);
       const sched = computeSchedule(events, targetDate, 9, 17, jstNow());
-      const top = tasks.slice(0, 5).map((t: any) => `- ${t.title}（〆${t.due ?? "なし"}）`).join("\n");
-      ctx = `■ 現在のタスクトップ:\n${top || "(なし)"}\n■ 残空き時間: ${sched.free_minutes}分`;
+      const open = tasks.filter((t: any) => t.status !== "completed");
+      const doneToday = tasks.filter((t: any) =>
+        t.status === "completed" && String(t.completed ?? t.updated ?? "").slice(0, 10) === today);
+      const NL = String.fromCharCode(10);
+      const top = open.slice(0, 5).map((t: any) => `- ${t.title}（〆${t.due ?? "なし"}）`).join(NL);
+      const doneList = doneToday.slice(0, 5).map((t: any) => `- ${t.title}`).join(NL);
+      ctx = slot === "evening"
+        ? `■ 今日、実際に片づいたもの（${doneToday.length}個）:${NL}${doneList || "(なし)"}${NL}`
+          + `■ まだ残っているもの:${NL}${top || "(なし)"}`
+        : `■ 現在のタスクトップ:${NL}${top || "(なし)"}${NL}■ 残空き時間: ${sched.free_minutes}分`;
     } catch (e) {
       ctx = "（カレンダー/タスク取得失敗）";
     }
@@ -166,7 +181,8 @@ async function generateMessage(userId: string, slot: Slot, hasGoogle: boolean): 
   const client = getClaude(); // ユーザーキーは push 側では参照しない（共通鍵）
   const system = `あなたは「清瀬リンク」。淳くんの秘書AI。
 タメ口寄り、ドライだけど押しつけがましくない。茶化しはOK、煽り・お説教・キラキラ禁止。
-プッシュ通知で読まれるので短く（60〜100文字）。改行は1〜2回まで。絵文字は1個まで。`;
+プッシュ通知で読まれるので短く（60〜100文字）。改行は1〜2回まで。絵文字は1個まで。
+**渡された記録に無い完了・進捗を作らない。**やっていないことを「やったね」と言わない。`;
   const userPrompt = `${SLOT_PROMPT[slot]}
 
 ${ctx}

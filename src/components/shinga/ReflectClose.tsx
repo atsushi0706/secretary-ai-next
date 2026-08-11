@@ -110,6 +110,22 @@ export function ReflectClose({
         ...(rep?.tomorrow ?? []).filter((t) => picked[t]),
         ...extra,                       // 話した単位のまま。読点で切らない
       ].map((a) => a.trim()).filter(Boolean).slice(0, 3);
+      /*
+       * 何も無くても、今日は閉じられる。
+       * AIの起こしが空振りして（tomorrow=[]・emotion=""）、本人も何も打たなかったとき、
+       * 前はボタンが押せないまま**閉じる手段が無くなっていた**（「先にいかない」）。
+       * 渡すものが無いなら渡さないだけ。閉じることまで止めない。
+       */
+      if (actions.length === 0 && !emo.trim()) {
+        if (kind) {
+          void fetch("/api/daily", {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ kind }),
+          }).catch(() => {});
+        }
+        setDone({ placed: [] });
+        return;
+      }
       const r = await fetch("/api/tomorrow", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -268,9 +284,12 @@ export function ReflectClose({
               <div className="rc-hint">違ったら、話すか、そのまま打ち直してね。</div>
             </div>
 
-            <button className="rc-go" disabled={handing || (!emo.trim() && !Object.values(picked).some(Boolean) && extra.length === 0)}
+            <button className="rc-go" disabled={handing}
               onClick={() => void handOver()}>
-              {handing ? "渡してる…" : "明日へ渡して、今日を閉じる"}
+              {handing ? "渡してる…"
+                : (!emo.trim() && !Object.values(picked).some(Boolean) && extra.length === 0)
+                  ? "今日を閉じる（明日ぶんは、なしでいい）"
+                  : "明日へ渡して、今日を閉じる"}
             </button>
           </>
         )}

@@ -142,6 +142,8 @@ export async function getTasks(userId: string, includeCompleted = false) {
         title: String(t.title ?? "").trim() || "（名前のないタスク）",
         notes: t.notes ?? "",
         due: t.due ?? null, status: t.status ?? "needsAction",
+        // いつ完了にしたか（未完了なら null）。夜の声かけが「実際に片づいたもの」だけを労うのに使う
+        completed: t.completed ?? null,
         updated: t.updated ?? "",
       });
     }

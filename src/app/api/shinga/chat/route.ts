@@ -23,7 +23,7 @@ import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type H
 import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@/lib/parts";
 import { releaseGuardian } from "@/lib/parts-db";
 import { undoLastTurn } from "@/lib/undo-turn";
-import { DIRECTION_FINDING, DIRECTION_DONE, fixCloser, usesIdealAsk } from "@/lib/ideal-ask";
+import { DIRECTION_BY_SCREEN, DIRECTION_DONE, fixCloser, usesIdealAsk } from "@/lib/ideal-ask";
 import { listMemories, memoryBlock } from "@/lib/memory";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
@@ -227,7 +227,7 @@ export async function POST(req: Request) {
 ${MODES.walk.flow}`
               + `
 
-${saidInWalk < 2 ? DIRECTION_FINDING : DIRECTION_DONE}`
+${saidInWalk < 3 ? DIRECTION_BY_SCREEN : DIRECTION_DONE}`
               + `
 
 ${WALK_SCENERY_PROMPT}`

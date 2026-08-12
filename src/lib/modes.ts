@@ -9,7 +9,7 @@
  */
 import type { PlaceKey } from "./places";
 import { SHADOW_FLOW } from "./shadow";
-import { IDEAL_ASK, DIRECTION_FINDING, DIRECTION_DONE, usesIdealAsk } from "./ideal-ask";
+import { IDEAL_ASK, DIRECTION_BY_SCREEN, DIRECTION_DONE, usesIdealAsk } from "./ideal-ask";
 
 // ゾーン(PlaceKey)に加えて、地図の上には無い体験モードも持てる（place で見た目のゾーンを借りる）
 export type ModeKey = PlaceKey | "breakthrough" | "travel" | "parts" | "balance" | "shadow" | "crystal" | "reflect";
@@ -863,7 +863,11 @@ export function buildModePrompt(
    * 本人が2回しゃべったあとはもう方向は決まっているので、
    * 探す手順ではなく「もう出さない」ほうを渡す。言葉での禁止だけに頼らない。
    */
-  if (mode === "walk") parts.push((turns ?? 0) < 2 ? DIRECTION_FINDING : DIRECTION_DONE);
+  /*
+   * 方向さがしは画面のレーダーがやる（言葉で誘導しない）。
+   * 序盤＝レーダーの答えを受け取る側の心得、そのあと＝方向の話をもう出さない。
+   */
+  if (mode === "walk") parts.push((turns ?? 0) < 3 ? DIRECTION_BY_SCREEN : DIRECTION_DONE);
   parts.push(GUIDANCE);
   return parts.join("\n\n");
 }

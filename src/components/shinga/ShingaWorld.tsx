@@ -752,7 +752,7 @@ export function ShingaWorld({
     if (fresh && flags.tutorial && !tutorialSeen(m)) setTutorial({ mode: m, first: true });
     if (m === "travel" && fresh) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
     if (m === "walk" && fresh) setWalkStage(1);         // 歩きは門のほとりから始まる
-    if (m === "walk" && fresh) { radarDoneRef.current = false; setRadar(true); }
+    if (m === "walk" && fresh) radarDoneRef.current = false;   // 出すのは、理想が出てきてから
     if (m !== "walk") setRadar(false);
     if (!resume) setMessages([]);
 
@@ -997,6 +997,8 @@ export function ShingaWorld({
       finalRef.current = true;
       setSending(false);
       void afterDreamKiller(body);
+      // 理想が言葉になったあとで、方向さがし（レーダー）を出す
+      maybeRadar(m, [...messages, { role: "user", content: body } as Message]);
       maybeDreamKiller(m);
     }
   }
@@ -1034,6 +1036,26 @@ export function ShingaWorld({
    * ・**1回のウォークにつき1回**（何度も出ると、歩くほうの邪魔になる）
    * ・本人が3回しゃべったころ＝話が乗ってきたあたりで出す
    */
+  /**
+   * 理想の方向さがし（レーダー）を出すかどうか。
+   *
+   * 淳くん：「歩き出す前じゃないよ！ はなして、これが理想だ！みたいなのが出てきてから」
+   *
+   * 順番が逆だと、何に向かうのかが無いまま方向だけ探すことになって、体が決まらない。
+   * だから**本人が理想を言葉にしたあと**に出す。目安はコードで持つ：
+   *   ・ひとことでも中身のあることを話した（12文字以上）＝もう理想が出ている
+   *   ・短い返事が続いても、2回話したら出す（「うん」「そう」で止めない）
+   * 1回のウォークにつき1回だけ。
+   */
+  function maybeRadar(m: ModeKey | null, msgs: Message[]) {
+    if (m !== "walk" || radarDoneRef.current) return;
+    const mine = msgs.filter((x) => x.role === "user" && x.content.trim() && !x.content.startsWith("[["));
+    const said = mine[mine.length - 1]?.content.trim() ?? "";
+    if (!(mine.length >= 2 || said.length >= 12)) return;
+    radarDoneRef.current = true;   // 出したら、このウォークではもう出さない
+    setTimeout(() => setRadar(true), 700);
+  }
+
   function maybeDreamKiller(m: ModeKey | null) {
     // 管理者か、管理画面で開けてもらった人（お試しスイッチ）
     if (m !== "walk" || !(isAdmin || features.dreamkiller) || dkDoneRef.current) return;

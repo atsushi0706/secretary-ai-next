@@ -7584,3 +7584,71 @@ body:has(.realverse-bg) { background: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .fs, .fs * { animation: none !important; }
 }
+
+/* ══════════════════════════════════════════════════════════
+   理想の方向をさがすレーダー（パラレルウォークの入口だけ）。
+   「アンテナみたいに体を動かして探して」を、目に見える形にしたもの。
+   .singa-stage の中に出るが、色は直に書く（変数に頼らない）。
+   ══════════════════════════════════════════════════════════ */
+.rdr {
+  margin: 8px auto 10px; max-width: 340px;
+  display: flex; flex-direction: column; align-items: center; gap: 10px;
+  background: rgba(22, 17, 32, .92); border: 1px solid rgba(224, 189, 114, .3);
+  border-radius: 16px; padding: 14px 12px;
+}
+.rdr-lead {
+  font-size: .8rem; line-height: 1.95; color: #efe6ff; text-align: center;
+}
+.rdr-lead b { color: #ffd899; }
+
+.rdr-dial { width: 100%; display: flex; flex-direction: column; align-items: center; }
+.rdr-dial svg { width: 100%; max-width: 250px; height: auto; overflow: visible; }
+.rdr-ring { fill: none; stroke: rgba(224, 189, 114, .32); stroke-width: 1.2; }
+.rdr-ring2 { stroke: rgba(224, 189, 114, .2); }
+.rdr-ring3 { stroke: rgba(224, 189, 114, .14); }
+.rdr-cross { stroke: rgba(224, 189, 114, .18); stroke-width: 1; }
+
+/* ゆっくり回る光。探しているあいだだけ */
+.rdr-sweep { animation: rdrSweep 5.5s linear infinite; }
+.rdr-sweep path { fill: rgba(255, 216, 153, .16); }
+@keyframes rdrSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+.rdr-dot {
+  fill: rgba(255, 216, 153, .35); stroke: rgba(255, 216, 153, .55); stroke-width: 1.2;
+  cursor: pointer; transition: fill .15s ease, r .15s ease;
+}
+.rdr-dot.is-on { fill: #ffd899; stroke: #fff1cc; }
+.rdr-me { fill: #fff1cc; }
+.rdr-front { fill: #c9b48d; font-size: 10px; letter-spacing: .1em; }
+
+.rdr-now {
+  margin-top: 2px; font-size: .78rem; font-weight: 700; color: #ffd899;
+  min-height: 1.4em; text-align: center;
+}
+
+/* 平面で決まらない人へ。上下も360度のうち */
+.rdr-vert { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+.rdr-vert button {
+  font-size: .72rem; font-weight: 700; color: #efe6ff; padding: 8px 2px; border-radius: 10px;
+  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 216, 153, .28);
+}
+.rdr-vert button:hover { background: rgba(255, 216, 153, .18); }
+
+.rdr-beam path { stroke: #ffd899; stroke-width: 2.4; stroke-linecap: round; fill: none; }
+.rdr-vert button.is-on { background: rgba(255, 216, 153, .3); border-color: #ffd899; color: #fff6e2; }
+/* 決めるのは、この一手だけ（誤タップで歩き出さない） */
+.rdr-go {
+  width: 100%; padding: 12px; border-radius: 12px; font-size: .85rem; font-weight: 800;
+  color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72);
+}
+.rdr-go:disabled { color: #8d84a8; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); }
+
+.rdr-foot { width: 100%; display: flex; justify-content: center; }
+.rdr-skip {
+  font-size: .74rem; color: #b6accd; padding: 7px 14px; border-radius: 999px;
+  background: transparent; border: 1px solid rgba(255, 255, 255, .16);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rdr-sweep { animation: none; }
+}

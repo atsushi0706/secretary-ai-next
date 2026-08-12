@@ -23,7 +23,7 @@ import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type H
 import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@/lib/parts";
 import { releaseGuardian } from "@/lib/parts-db";
 import { undoLastTurn } from "@/lib/undo-turn";
-import { DIRECTION_FINDING, DIRECTION_DONE } from "@/lib/ideal-ask";
+import { DIRECTION_FINDING, DIRECTION_DONE, fixCloser, usesIdealAsk } from "@/lib/ideal-ask";
 import { listMemories, memoryBlock } from "@/lib/memory";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
@@ -805,6 +805,20 @@ ${memBlock}` : system;
           .replace(/<[a-z][a-z0-9_-]{1,22}\s*\/?>/g, "")
           .trim();
 
+        /*
+         * 締めの問いの見張り。
+         *
+         * 淳くん：「『どんなふうに見えてる？』みたいに、方向を勝手に決められるのが嫌。
+         *   問いかけられると、その方向の答えを見ちゃう。大体は捏造になっちゃう」
+         *
+         * 決まりはずっとプロンプトに書いてある。それでもAIは戻ってしまう。
+         * だから**返事を検査して、駄目な締めは動きの問いに置き換える**。
+         * （こういうものは、お願いではなくコードで止める）
+         */
+        const cleanQ = usesIdealAsk(String(mode ?? ""))
+          ? fixCloser(clean, history.length + (text?.length ?? 0))
+          : clean;
+
         // タグが本文に混じっていたら、削り直した本文で置き換える
         /*
          * 【ここも穴だった】
@@ -813,8 +827,8 @@ ${memBlock}` : system;
          * タグがそのまま画面に出た。
          * 削って形が変わったなら、理由に関係なく差し替える。
          */
-        if (clean !== full.trim()) {
-          send("replace", { text: clean });
+        if (cleanQ !== full.trim()) {
+          send("replace", { text: cleanQ });
         }
         if (face) send("face", { face });
         if (wantEmotion) send("emotion", {});
@@ -1009,8 +1023,8 @@ ${talked}`,
         if (offerQuests.length > 0) send("quest_offer", { quests: offerQuests });
         if (heroChanges.length > 0) send("hero", { changes: heroChanges });
 
-        if (clean) {
-          await saveShingaMessage(userId, today, "assistant", clean, moveTo ?? place);
+        if (cleanQ) {
+          await saveShingaMessage(userId, today, "assistant", cleanQ, moveTo ?? place);
         }
         // 可視化：AIの生レスポンス（タグ込み）と、抽出したもの
         if (debug) {

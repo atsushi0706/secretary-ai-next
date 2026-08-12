@@ -38,6 +38,7 @@ import { WeightPanel } from "./WeightPanel";
 import { type CustomWork, type OwnCard } from "@/lib/custom-work-types";
 import type { PartColor, PartsStep } from "@/lib/parts";
 import { DreamKiller } from "./DreamKiller";
+import { DirectionRadar, dirSentence, type DirPick } from "./DirectionRadar";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -156,6 +157,13 @@ export function ShingaWorld({
   const [wallDug, setWallDug] = useState(0);    // ウォールブレイク：陰の側から掘り出せた個数（7個で次の段階へ）
   const [travelStage, setTravelStage] = useState(1); // パラレルトラベル：高度(1=目の前 〜 10=すべてがつながる)
   const [walkStage, setWalkStage] = useState(1);     // パラレルウォーク：どこまで歩いたか(1=門 〜 10=理想郷)
+  /*
+   * 理想の方向さがし（レーダー）。
+   * 歩き出す前に**一度だけ**出す。決めたら、もう方向の話はしない
+   *（前は「東北東の世界」と延々ひきずった）。
+   */
+  const [radar, setRadar] = useState(false);
+  const radarDoneRef = useRef(false);
   /**
    * ドリームキラー（淳くん専用・お試し中）。
    * 歩いている途中に一度だけバンと現れる。何度も出ると歩く邪魔になるので、
@@ -744,6 +752,8 @@ export function ShingaWorld({
     if (fresh && flags.tutorial && !tutorialSeen(m)) setTutorial({ mode: m, first: true });
     if (m === "travel" && fresh) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
     if (m === "walk" && fresh) setWalkStage(1);         // 歩きは門のほとりから始まる
+    if (m === "walk" && fresh) { radarDoneRef.current = false; setRadar(true); }
+    if (m !== "walk") setRadar(false);
     if (!resume) setMessages([]);
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
@@ -1559,6 +1569,28 @@ export function ShingaWorld({
           )}
           {mode === "shadow" && !shadowGate && (
             <ShadowProgress step={shadowStep} safety={shadowSafetyRef.current} />
+          )}
+
+          {/*
+            パラレルウォーク：歩き出す前に、理想の方向を体で探す。
+            言葉だけだと「アンテナみたいに探して」が伝わらなかったので、
+            レーダーを出して、押せるようにした。
+            決めたら二度と出さない（方向は歩き出す合図であって、話の中身ではない）。
+          */}
+          {mode === "walk" && radar && (
+            <DirectionRadar
+              onPick={(p: DirPick) => {
+                radarDoneRef.current = true;
+                setRadar(false);
+                // 方向は、最初の一言としてだけ渡す（意味は読み解かせない）
+                void talk(dirSentence(p));
+              }}
+              onSkip={() => {
+                radarDoneRef.current = true;
+                setRadar(false);
+                void talk("方向はわからなかった。このまま歩き出したい");
+              }}
+            />
           )}
           {beastReveal && !typing && <BeastReveal pairId={beastReveal} onClose={() => setBeastReveal(null)} />}
           {shadowCard && <ShadowCardReveal card={shadowCard} onClose={() => setShadowCard(null)} />}

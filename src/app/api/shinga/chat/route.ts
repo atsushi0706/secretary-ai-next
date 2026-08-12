@@ -58,6 +58,36 @@ export function wallStageNow(fromScreen: number | null | undefined, said: number
   return Math.max(1, Math.min(5, Math.max(now, floor)));
 }
 
+/**
+ * ミラーオブワールドと内なる子の神殿の「いま何段目か」。
+ *
+ * 【なぜコードで数えるか】
+ * 両方とも9段。**最後の段に着いて初めてカードが出る**作りなのに、
+ * 段を進めるのはAIの自己申告だった。だから途中で止まると、
+ * 何度やってもカードが出ない（淳くん：カードがこない！全然こない）。
+ * ウォールブレイクで同じことが起きて、そこは数えて直した。ここも同じにする。
+ *
+ * やり方はウォールブレイクと同じ：本人が何回しゃべったかで**下限**を決め、
+ * AIがそれより先に進んでいるならAIを尊重する（先に進むのは止めない・戻さない）。
+ */
+export function stepFloorBySaid(said: number, table: number[]): number {
+  let floor = 1;
+  for (let i = 0; i < table.length; i += 1) if (said >= table[i]) floor = i + 2;
+  return Math.min(9, floor);
+}
+
+/** ミラーオブワールド：1〜9。序盤（聴く）はゆっくり、後半は詰まらせない */
+export const SHADOW_FLOOR = [3, 4, 6, 7, 9, 11, 13, 15];
+/** 内なる子の神殿：1〜9 */
+export const PARTS_FLOOR = [2, 4, 6, 8, 10, 12, 14, 16];
+
+export function shadowStepNow(fromScreen: number | null | undefined, said: number): number {
+  return Math.max(1, Math.min(9, Math.max(Number(fromScreen) || 1, stepFloorBySaid(said, SHADOW_FLOOR))));
+}
+export function partsStepNow(fromScreen: number | null | undefined, said: number): number {
+  return Math.max(1, Math.min(9, Math.max(Number(fromScreen) || 1, stepFloorBySaid(said, PARTS_FLOOR))));
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   const userId = (session?.user as any)?.id;
@@ -148,6 +178,7 @@ export async function POST(req: Request) {
   const { isShadowPairId, shadowPair } = await import("@/lib/shadow");
   const shadowSafety: "normal" | "boundary" = body.shadowSafety === "boundary" ? "boundary" : "normal";
   const shadowPicked = isShadowPairId(body.shadowPair) ? body.shadowPair : null;
+  const shadowCardDone = body.shadowCardDone === true;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -343,9 +374,15 @@ ${memBlock}` : system;
         if (!greet) {
           const lines: string[] = [];
           if (mode === "parts" && progress.partsStep) {
-            lines.push(`- 内なる子の神殿：いま段階 ${progress.partsStep}/9（画面に表示中）。`);
+            // 段はコードで数える（AIの自己申告だけだと途中で止まり、最後のカードまで着かない）
+            const pStep = partsStepNow(progress.partsStep, sessionHistory.filter((m) => m.role === "user").length);
+            lines.push(`- 内なる子の神殿：いま段階 ${pStep}/9（画面に表示中）。`);
+            if (pStep >= 9) {
+              lines.push(`  **もう最後の段。** ここで締める。今日の一歩をひとつ決めて、`
+                + `返事の最後に <guardian>${partColor ?? "red"}</guardian> を必ず付ける（説明はしない）。`);
+            }
             lines.push(`  この段階の問いにはもう答えをもらっている前提で進める。**同じ質問を二度しない。**`);
-            lines.push(`  答えを受け取ったら次の段階へ進み、<parts_step>${Math.min(9, progress.partsStep + 1)}</parts_step> 以上を付ける。`);
+            lines.push(`  答えを受け取ったら次の段階へ進み、<parts_step>${Math.min(9, pStep + 1)}</parts_step> 以上を付ける。`);
             lines.push(`  同じ数字を3回続けて出してはいけない（進むか、進めない理由の"新しい"問いを出す）。`);
           }
           if (mode === "walk") {
@@ -393,7 +430,14 @@ ${memBlock}` : system;
           }
           if (mode === "shadow") {
             if (progress.shadowStep) {
-              lines.push(`- ミラーオブワールド：いま段階 ${progress.shadowStep}/9（画面に表示中）。同じ質問を二度しない。答えを受け取ったら進める。`);
+              const sStep = shadowStepNow(progress.shadowStep, sessionHistory.filter((m) => m.role === "user").length);
+              lines.push(`- ミラーオブワールド：いま段階 ${sStep}/9（画面に表示中）。同じ質問を二度しない。答えを受け取ったら進める。`);
+              lines.push(`  次の返事には <shadow_step>${Math.min(9, sStep + 1)}</shadow_step> 以上を付ける（止まらない）。`);
+              if (sStep >= 8 && shadowPicked && shadowSafety !== "boundary") {
+                lines.push(`  **もう終わりが近い。** ${sStep >= 9 ? "この返事で締める。" : "次かその次で締める。"}`
+                  + `締めるときは【9】の形（明日の一歩＋いまの強さ）で言い切り、`
+                  + `返事の最後に <shadow_light>${shadowPicked}</shadow_light> を必ず付ける（説明はしない）。`);
+              }
             }
             if (shadowPicked) {
               const p = shadowPair(shadowPicked);
@@ -777,16 +821,41 @@ ${memBlock}` : system;
         if (wantBreath) send("breath", {});
         if (wallStage) send("wall", { stage: wallStage, dug: wallDug });
         if (wantCrystallize) send("crystallize", {});
-        if (partsStep) send("parts_step", { step: partsStep });
+        /*
+         * 段階は、AIが数字を書かなくても**必ず**画面へ返す。
+         * 書かないと画面は1/9のまま止まり、最後の段に着かない＝カードが出ない。
+         */
+        const saidNow = sessionHistory.filter((m) => m.role === "user").length;
+        const partsAt = mode === "parts" ? partsStepNow(Math.max(progress.partsStep ?? 1, partsStep ?? 1), saidNow) : 0;
+        const shadowAt = mode === "shadow" ? shadowStepNow(Math.max(progress.shadowStep ?? 1, shadowStep ?? 1), saidNow) : 0;
+        if (partsAt) send("parts_step", { step: partsAt });
+        else if (partsStep) send("parts_step", { step: partsStep });
         if (travelStage) send("travel", { stage: travelStage });
         if (walkStage) send("walk", { stage: walkStage });
-        if (shadowStep) send("shadow_step", { step: shadowStep });
+        if (shadowAt) send("shadow_step", { step: shadowAt });
+        else if (shadowStep) send("shadow_step", { step: shadowStep });
         if (shadowPick) send("shadow_pick", { pair: shadowPick });
 
+        /*
+         * 最後の段まで来たのに、AIが <shadow_light> を書き忘れた場合の拾い直し。
+         * このワークは**カードが出て初めて終わる**のに、締めの合図がAI任せだった。
+         * だから何度やってもカードが来ないことがあった（淳くんの指摘）。
+         *
+         * 条件は厳しくしてある：
+         *   ・幻獣が選ばれている（＝鏡の筋をちゃんと通ってきた）
+         *   ・境界線優先モードではない（そちらは光の回収をしないのが正しい）
+         *   ・9段目がもう画面に出ていて、そのうえで本人がもう一度答えた
+         *   ・まだ1枚も出していない
+         */
+        const lightNow = shadowLight
+          ?? (mode === "shadow" && !shadowCardDone && shadowPicked && shadowSafety !== "boundary"
+            && (progress.shadowStep ?? 0) >= 9 && shadowAt >= 9
+            ? shadowPicked : null);
+
         // 光の回収が完了 → 会話からカードを抽出して保存し、演出を出す
-        if (shadowLight) {
+        if (lightNow) {
           try {
-            const pair = shadowPair(shadowLight);
+            const pair = shadowPair(lightNow);
             const { complete } = await import("@/lib/ai");
             const talked = [...history.map((h) => `${h.role === "user" ? "本人" : "案内役"}：${h.content}`), `案内役：${clean}`]
               .join("\n").slice(-3600);
@@ -841,15 +910,24 @@ ${talked}`,
           }
         }
 
+        /*
+         * 神殿も同じ拾い直し。9段目が出たあと、本人がもう一度答えたのに
+         * <guardian> が無いなら、選ばれている守り手の色で解放する。
+         * （色は入口で本人が選んでいるので、こちらが勝手に決めるわけではない）
+         */
+        const releasedNow = releasedColor
+          ?? (mode === "parts" && partColor && (progress.partsStep ?? 0) >= 9 && partsAt >= 9
+            ? partColor : null);
+
         // ガーディアン解放：守り手が役割を降り、才能として開いた瞬間
-        if (releasedColor) {
+        if (releasedNow) {
           try {
-            const trio = PARTS[releasedColor];
+            const trio = PARTS[releasedNow];
             // 「本当はどうしたい？」の答えを、その人の言葉のまま記録に残す
             const said = history.filter((h) => h.role === "user").slice(-4).map((h) => h.content).join(" / ").slice(0, 300);
-            const { first, total } = await releaseGuardian(userId, releasedColor, said);
+            const { first, total } = await releaseGuardian(userId, releasedNow, said);
             send("guardian", {
-              color: releasedColor, first, total,
+              color: releasedNow, first, total,
               name: trio.guardian.name, title: trio.guardian.title,
               from: `${trio.defense.name}（${trio.defense.title}）`,
               message: trio.guardian.message,
@@ -859,7 +937,7 @@ ${talked}`,
             if (first) {
               const { grantSkillCard } = await import("@/lib/awaken");
               await grantSkillCard(userId, {
-                key: `guardian-${releasedColor}`,
+                key: `guardian-${releasedNow}`,
                 title: `${trio.guardian.name}（${trio.guardian.title}）`,
                 body: `${trio.defense.name}が役割を降りて、${trio.guardian.acts.slice(0, 3).join("・")}力になった。${trio.guardian.message}`,
                 rarity: "gold",

@@ -855,6 +855,8 @@ export function ShingaWorld({
           shadowStep: m === "shadow" ? shadowStep : undefined,
           shadowPair: m === "shadow" ? shadowPairRef.current ?? undefined : undefined,
           shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
+          // もう光のカードが出たか（サーバが締めを取りこぼしても、二枚目は出さない）
+          shadowCardDone: m === "shadow" ? shadowCardShownRef.current : undefined,
           debug: debugAvailable && debug,
         }),
       });

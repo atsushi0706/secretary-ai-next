@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { lineOf, voiceFile } from "@/lib/breath-lines";
 import { feelGuide } from "@/lib/feelGuide";
+import { FeelScene } from "./FeelScene";
 
 /**
  * 波動を高める呼吸トレーニング（誘導音声＋カウントダウン＋自分のペースで進む）。
@@ -456,6 +457,8 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
                 return g ? (
                   <span className="bi-feel">
                     <span className="k">どんな感覚？</span>
+                    {/* 文章のとおりの絵。読み流させないための、静かな動き */}
+                    <FeelScene scene={g.scene} label={g.image} />
                     <span className="v">{g.body}</span>
                     <span className="im">{g.image}</span>
                   </span>

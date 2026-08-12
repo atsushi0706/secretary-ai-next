@@ -7328,3 +7328,259 @@ body:has(.realverse-bg) { background: transparent; }
   font-size: .66rem; font-weight: 700; color: #8c6a5a;
   background: #fff; border: 1px solid #e8d5cc; border-radius: 8px; padding: 4px 9px;
 }
+
+/* ══════════════════════════════════════════════════════════
+   「どんな感覚？」の絵（FeelScene）。
+   その日インストールする感情の文章を、そのまま動く絵にしたもの。
+
+   【書き方の決まり】
+   ・**止まっている状態＝完成形**にする。動きは keyframes の「はじまり」側に置く。
+     こうしておくと、動きを減らす設定の人には animation:none を当てるだけで、
+     絵は消えずに「満ちきったコップ」が静かに残る。
+   ・色は直に書く（.singa-stage の外でも使うので変数に頼らない）。
+   ══════════════════════════════════════════════════════════ */
+.fs {
+  display: block; width: 100%; max-width: 208px; height: auto;
+  margin: 2px auto 6px; overflow: visible;
+}
+.fs * { vector-effect: non-scaling-stroke; }
+.fs .fs-line, .fs .fs-body { fill: none; stroke: #d9c39a; stroke-width: 1.6; stroke-linecap: round; }
+.fs .fs-body { opacity: .5; }
+
+/* ── 充足：コップに水が静かに満ちる ───────────────────── */
+.fs-fill .fs-line { stroke: #e6d2ac; stroke-width: 2; }
+.fs-fill .fs-rim { opacity: .75; }
+.fs-water { fill: rgba(126, 178, 214, .5); animation: fsRise 7s ease-in-out infinite; }
+.fs-water-top { fill: rgba(198, 231, 255, .95); animation: fsRise 7s ease-in-out infinite; }
+@keyframes fsRise { 0% { transform: translateY(70px); } 62%, 100% { transform: translateY(0); } }
+.fs-done { fill: #ffe9b0; transform-origin: 100px 24px; animation: fsDone 7s ease-in-out infinite; }
+@keyframes fsDone { 0%, 62% { opacity: 0; transform: scale(.4); } 78%, 100% { opacity: .9; transform: scale(1); } }
+
+/* ── 感謝：受け取ってきたものが胸に集まり、満ちる ─────── */
+.fs-chest-fill { fill: rgba(255, 214, 140, .16); animation: fsChestFill 7s ease-in-out infinite; }
+.fs-chest-core { fill: #ffe0a8; animation: fsChestFill 7s ease-in-out infinite; }
+@keyframes fsChestFill { 0%, 16% { opacity: 0; } 90%, 100% { opacity: 1; } }
+.fs-mote { fill: #fff0cc; animation: fsGatherIn 7s ease-in infinite; }
+.fs-m0 { animation-delay: 0s;   --fx: -74px; --fy: -36px; }
+.fs-m1 { animation-delay: .5s;  --fx: 74px;  --fy: -32px; }
+.fs-m2 { animation-delay: 1s;   --fx: -82px; --fy: 20px; }
+.fs-m3 { animation-delay: 1.5s; --fx: 82px;  --fy: 24px; }
+.fs-m4 { animation-delay: 2s;   --fx: -32px; --fy: -50px; }
+.fs-m5 { animation-delay: 2.5s; --fx: 36px;  --fy: 50px; }
+@keyframes fsGatherIn {
+  0% { opacity: 0; transform: translate(var(--fx), var(--fy)); }
+  12%, 62% { opacity: 1; }
+  76%, 100% { opacity: 0; transform: translate(0, 0); }
+}
+
+/* ── 解放：握っていた手を開いて、風が通り抜ける ─────────
+   手のひらと指はひと続きの輪郭。握っている＝指がたたまれている状態から、
+   ひらいて伸びる。（台形＋棒だと桶に見えたので描き直した） */
+.fs-s-openHand .fs-line { stroke: #e6cfa6; stroke-width: 2; stroke-linejoin: round; }
+.fs-hand-out { fill: rgba(224,189,114,.13); transform-origin: 100px 112px; animation: fsOpen 7s ease-in-out infinite; }
+@keyframes fsOpen { 0%, 10% { transform: scaleY(.52); } 44%, 100% { transform: scaleY(1); } }
+.fs-s-openHand .fs-f0 { transform-origin: 83px 92px; animation: fsThumb 7s ease-in-out infinite; }
+@keyframes fsThumb { 0%, 10% { transform: rotate(38deg); } 44%, 100% { transform: rotate(0deg); } }
+.fs-wind { fill: none; stroke: #cfe6f2; stroke-width: 1.5; opacity: 0; }
+.fs-s-openHand .fs-wind { animation: fsWind 7s ease-in-out infinite; }
+.fs-s-openHand .fs-w0 { transform: translate(0, 20px); animation-delay: 2.7s; }
+.fs-s-openHand .fs-w1 { transform: translate(0, 36px); animation-delay: 3.1s; }
+.fs-s-openHand .fs-w2 { transform: translate(0, 52px); animation-delay: 3.5s; }
+@keyframes fsWind { 0%, 30% { opacity: 0; } 44% { opacity: .9; } 70%, 100% { opacity: 0; } }
+
+/* ── 慈愛・愛：胸から光が放たれて、まわりを包む ───────── */
+.fs-ring { fill: none; stroke: #ffd899; stroke-width: 1.6; opacity: 0; transform-origin: 100px 58px; animation: fsRing 5.4s ease-out infinite; }
+.fs-r0 { animation-delay: 0s; } .fs-r1 { animation-delay: 1.8s; } .fs-r2 { animation-delay: 3.6s; }
+@keyframes fsRing { 0% { opacity: .85; transform: scale(.35); } 100% { opacity: 0; transform: scale(2.5); } }
+.fs-chest { fill: #ffd899; transform-origin: 100px 58px; animation: fsPulse 5.4s ease-in-out infinite; }
+@keyframes fsPulse { 0%, 100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.22); opacity: 1; } }
+
+/* ── 安心：足の裏が地面につき、背中を支えられている ─────
+   支えは「大きな手」。弧だけだと何の絵か分からなかったので描き直した。 */
+.fs-ground { fill: none; stroke: #b9a583; stroke-width: 1.8; opacity: .85; }
+.fs-support { fill: rgba(232, 200, 138, .14); stroke: #e8c88a; stroke-width: 3; stroke-linejoin: round; animation: fsSupport 6s ease-in-out infinite; }
+@keyframes fsSupport { 0% { opacity: 0; transform: translateX(16px); } 42%, 100% { opacity: .95; transform: translateX(0); } }
+.fs-sole { fill: none; stroke: #ffd899; stroke-width: 4; stroke-linecap: round; animation: fsSole 6s ease-in-out infinite; }
+.fs-sole2 { animation-delay: .3s; }
+@keyframes fsSole { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.fs-soleglow { fill: rgba(255, 216, 153, .2); animation: fsSoleGlow 6s ease-in-out infinite; }
+@keyframes fsSoleGlow { 0%, 100% { opacity: .35; } 50% { opacity: .85; } }
+
+/* ── 自由：雲の帯が左右に割れて、空がひらけ、道が見える ── */
+.fs-lane { fill: none; stroke: #fff1cc; stroke-width: 1.4; stroke-dasharray: 7 8; opacity: .75; }
+@keyframes fsBright { 0%, 20% { opacity: .2; } 70%, 100% { opacity: 1; } }
+.fs-cloud { fill: none; stroke: #b8c4d6; stroke-width: 3.4; stroke-linecap: round; opacity: .55; animation: fsPart 8s ease-in-out infinite; }
+.fs-s-sky .fs-cL { --dx: -40px; }
+.fs-s-sky .fs-cR { --dx: 40px; }
+@keyframes fsPart { 0%, 12% { transform: translateX(0); } 62%, 100% { transform: translateX(var(--dx)); } }
+.fs-horizon { fill: none; stroke: #b9a583; stroke-width: 1.4; opacity: .7; }
+.fs-road { fill: none; stroke: #e0bd72; stroke-width: 1.6; stroke-linecap: round; animation: fsPath 8s ease-out infinite; }
+.fs-tiny { opacity: .75; }
+@keyframes fsPath { 0%, 30% { opacity: .12; } 72%, 100% { opacity: 1; } }
+.fs-far { fill: #fff6dd; animation: fsFar 8s ease-in-out infinite; }
+@keyframes fsFar { 0%, 62% { opacity: 0; } 82%, 100% { opacity: 1; } }
+
+/* ── 歓び：内側から小さな泡が次々のぼる ───────────────── */
+.fs-bub { fill: #d6efff; opacity: 0; animation: fsBub 4.2s ease-in infinite; }
+.fs-b0 { animation-delay: 0s; }   .fs-b1 { animation-delay: .45s; }
+.fs-b2 { animation-delay: .9s; }  .fs-b3 { animation-delay: 1.35s; }
+.fs-b4 { animation-delay: 1.8s; } .fs-b5 { animation-delay: 2.25s; }
+.fs-b6 { animation-delay: 2.7s; } .fs-b7 { animation-delay: 3.15s; }
+@keyframes fsBub {
+  0% { opacity: 0; transform: translateY(0) scale(.5); }
+  15% { opacity: 1; }
+  70% { opacity: 1; }
+  100% { opacity: 0; transform: translateY(-58px) scale(1.25); }
+}
+
+/* ── 静けさ：波が立たない水面 ─────────────────────────── */
+.fs-surface { fill: none; stroke: #cfe6f2; stroke-width: 1.8; opacity: .9; }
+.fs-still-glow { fill: rgba(160, 205, 232, .18); }
+.fs-reflect { fill: none; stroke: #9fc2d8; stroke-width: 1.2; opacity: .35; }
+.fs-calm { fill: none; stroke: #cfe6f2; stroke-width: 1.2; opacity: 0; transform-origin: 100px 70px; animation: fsCalm 9s ease-out infinite; }
+.fs-cm1 { animation-delay: 4.5s; }
+@keyframes fsCalm { 0% { opacity: 0; transform: scale(.3); } 6% { opacity: .5; } 22%, 100% { opacity: 0; transform: scale(1.6); } }
+
+/* ── 誇り：足の裏から頭のてっぺんまで1本 ──────────────── */
+.fs-axis {
+  fill: none; stroke: #ffd899; stroke-width: 2.4; stroke-linecap: round;
+  stroke-dasharray: 104; stroke-dashoffset: 0; animation: fsAxis 6.5s ease-in-out infinite;
+}
+@keyframes fsAxis { 0%, 6% { stroke-dashoffset: 104; } 55%, 100% { stroke-dashoffset: 0; } }
+.fs-crown { fill: #fff1cc; transform-origin: 100px 12px; animation: fsCrown 6.5s ease-in-out infinite; }
+@keyframes fsCrown { 0%, 55% { opacity: 0; transform: scale(.3); } 72%, 100% { opacity: 1; transform: scale(1); } }
+
+/* ── 自信：体の中心に太い柱 ───────────────────────────── */
+.fs-pillar { fill: rgba(224,189,114,.34); stroke: #e0bd72; stroke-width: 1.4; transform-origin: 100px 110px; animation: fsPillar 6.5s ease-out infinite; }
+@keyframes fsPillar { 0%, 8% { transform: scaleY(0); opacity: 0; } 55%, 100% { transform: scaleY(1); opacity: 1; } }
+.fs-base { fill: none; stroke: #b9a583; stroke-width: 2; opacity: .8; }
+
+/* ── 信頼：倒れても、後ろの手が受け止めてくれる ───────── */
+.fs-fall { transform-origin: 100px 112px; animation: fsFall 6.5s ease-in-out infinite; }
+@keyframes fsFall { 0%, 10% { transform: rotate(0deg); } 48%, 76% { transform: rotate(20deg); } 100% { transform: rotate(0deg); } }
+.fs-hands { fill: rgba(255, 216, 153, .16); stroke: #ffd899; stroke-width: 3; stroke-linejoin: round;
+  opacity: 0; animation: fsHands 6.5s ease-out infinite; }
+@keyframes fsHands { 0%, 22% { opacity: 0; } 44%, 80% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ── 希望：夜明け前の空が明るくなる ───────────────────── */
+.fs-nightsky { fill: rgba(120, 150, 205, .3); animation: fsDawnSky 9s ease-in-out infinite; }
+@keyframes fsDawnSky { 0% { fill: rgba(28, 32, 62, .85); } 60%, 100% { fill: rgba(120, 150, 205, .3); } }
+.fs-sun { fill: #ffcf87; animation: fsSunUp 9s ease-out infinite; }
+@keyframes fsSunUp { 0%, 15% { transform: translateY(16px); opacity: .25; } 70%, 100% { transform: translateY(0); opacity: 1; } }
+.fs-star { fill: #fff; animation: fsStar 9s ease-in-out infinite; }
+.fs-s1 { animation-delay: .3s; } .fs-s2 { animation-delay: .6s; }
+@keyframes fsStar { 0% { opacity: .9; } 55%, 100% { opacity: 0; } }
+
+/* ── 情熱：静かな炎が中心で燃える ─────────────────────── */
+.fs-flame { fill: rgba(255, 150, 70, .4); stroke: #ffab5e; stroke-width: 1.4; transform-origin: 100px 84px; animation: fsFlame 2.8s ease-in-out infinite; }
+.fs-flame-in { fill: rgba(255, 226, 160, .85); stroke: none; transform-origin: 100px 80px; animation: fsFlame 2.8s ease-in-out infinite reverse; }
+@keyframes fsFlame {
+  0%, 100% { transform: scaleY(1) scaleX(1); }
+  30% { transform: scaleY(1.14) scaleX(.93); }
+  62% { transform: scaleY(.94) scaleX(1.05); }
+}
+
+/* ── 軽さ：荷物は地面に置いた。人だけが、ふわりと浮く ── */
+.fs-float { animation: fsFloat 6s ease-in-out infinite; }
+@keyframes fsFloat { 0%, 14% { transform: translateY(0); } 56% { transform: translateY(-11px); } 100% { transform: translateY(-6px); } }
+.fs-shadow { fill: rgba(0,0,0,.3); transform-origin: 86px 116px; animation: fsShadow 6s ease-in-out infinite; }
+@keyframes fsShadow { 0%, 14% { transform: scale(1); opacity: .45; } 56% { transform: scale(.72); opacity: .25; } 100% { transform: scale(.84); opacity: .32; } }
+.fs-bag { fill: rgba(170,146,112,.45); stroke: #b9a583; stroke-width: 1.4; }
+.fs-bag-h { fill: none; stroke: #b9a583; stroke-width: 1.4; }
+.fs-s-lift .fs-wind { animation: fsWind 6s ease-in-out infinite; }
+.fs-s-lift .fs-w0 { transform: translate(0, 4px); animation-delay: 2.2s; }
+.fs-s-lift .fs-w1 { transform: translate(0, 18px); animation-delay: 2.6s; }
+
+/* ── 余裕：世界は遠いまま。あいだの空間がゆっくり呼吸する ─ */
+.fs-bound { fill: none; stroke: #e0bd72; stroke-width: 1.3; stroke-dasharray: 5 6; transform-origin: 100px 64px; animation: fsBound 7s ease-in-out infinite; }
+.fs-bd1 { animation-delay: .6s; }
+@keyframes fsBound { 0%, 100% { transform: scale(.82); opacity: .3; } 50% { transform: scale(1); opacity: .7; } }
+.fs-world { fill: none; stroke: #8d84a8; stroke-width: 2.6; opacity: .5; }
+.fs-world-in { fill: none; stroke: #8d84a8; stroke-width: 1.2; opacity: .22; }
+
+/* ── つながり：光が大切な人へ静かに繋がる ─────────────── */
+.fs-thread { fill: none; stroke: #ffd899; stroke-width: 1.8; stroke-linecap: round;
+  stroke-dasharray: 82; stroke-dashoffset: 0; animation: fsThread 7s ease-in-out infinite; }
+@keyframes fsThread { 0%, 8% { stroke-dashoffset: 82; } 58%, 100% { stroke-dashoffset: 0; } }
+.fs-spark { fill: #fff1cc; animation: fsSpark 7s ease-in-out infinite; }
+@keyframes fsSpark { 0%, 8% { transform: translate(0, 0); } 58%, 100% { transform: translate(76px, 0); } }
+.fs-you { animation: fsYou 7s ease-in-out infinite; }
+@keyframes fsYou { 0%, 50% { opacity: .3; } 78%, 100% { opacity: 1; } }
+
+/* ── 幸福：陽だまりの中で、時間がゆっくり ─────────────── */
+.fs-beam { fill: rgba(255, 226, 160, .2); animation: fsBeam 9s ease-in-out infinite; }
+@keyframes fsBeam { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+.fs-pool { fill: rgba(255, 226, 160, .35); }
+.fs-dust { fill: #ffeec4; opacity: .8; animation: fsDust 11s linear infinite; }
+.fs-d1 { animation-delay: 3.6s; } .fs-d2 { animation-delay: 7.2s; }
+@keyframes fsDust { 0% { transform: translateY(-46px); opacity: 0; } 20% { opacity: .8; } 80% { opacity: .8; } 100% { transform: translateY(44px); opacity: 0; } }
+
+/* ── 安らぎ：枕に頭をあずけて、上掛けがゆっくり上下する ──
+   前は頭が枕にめり込んで、体が平たい餅に見えた。横から見た姿に描き直し。 */
+.fs-pillow { fill: rgba(220, 210, 240, .3); stroke: #b6accd; stroke-width: 1.4; }
+.fs-head { fill: none; stroke: #d9c39a; stroke-width: 1.8; }
+.fs-lash { fill: none; stroke: #d9c39a; stroke-width: 1.6; stroke-linecap: round; }
+.fs-quilt { fill: rgba(198, 186, 226, .3); stroke: #b6accd; stroke-width: 1.5; }
+.fs-bed { fill: none; stroke: #9a91b5; stroke-width: 1.6; opacity: .7; }
+.fs-breathe { transform-origin: 116px 104px; animation: fsBreathe 6.5s ease-in-out infinite; }
+@keyframes fsBreathe { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(1.1); } }
+.fs-zzz { fill: #d9cff0; opacity: 0; animation: fsZzz 6.5s ease-out infinite; }
+.fs-z1 { animation-delay: .9s; } .fs-z2 { animation-delay: 1.8s; }
+@keyframes fsZzz { 0% { opacity: 0; transform: translateY(0) scale(.5); } 25% { opacity: .85; } 100% { opacity: 0; transform: translateY(-28px) scale(1.2); } }
+
+/* ── 勇気：扉に手をかけ、ひらくと向こうから光がさす ────
+   前は細い柱に見えた。枠を大きくして、光と腕を足した。 */
+.fs-frame { fill: none; stroke: #b9a583; stroke-width: 2.2; }
+.fs-beyond { fill: #fff3d4; animation: fsBeyond 7s ease-in-out infinite; }
+@keyframes fsBeyond { 0%, 22% { opacity: .1; } 72%, 100% { opacity: 1; } }
+.fs-door { transform-origin: 61px 63px; animation: fsDoor 7s ease-in-out infinite; }
+@keyframes fsDoor { 0%, 22% { transform: scaleX(1); } 72%, 100% { transform: scaleX(.3); } }
+.fs-panel { fill: rgba(126, 100, 64, .95); stroke: #b9a583; stroke-width: 1.3; }
+.fs-panel-in { fill: none; stroke: rgba(224,189,114,.5); stroke-width: 1.1; }
+.fs-knob { fill: #e0bd72; }
+.fs-arm { fill: none; stroke: #d9c39a; stroke-width: 2.4; stroke-linecap: round; }
+.fs-fingers { stroke-width: 1.8; }
+.fs-spill { fill: rgba(255, 243, 212, .35); animation: fsBeyond 7s ease-in-out infinite; }
+
+/* ── 誠実：覆いが左右にひらいて、姿がぜんぶ見える ──────
+   前はただの青い丸で、何も伝わらなかった。 */
+.fs-veil { fill: rgba(46, 39, 64, .97); stroke: rgba(224,189,114,.35); stroke-width: 1.2; animation: fsVeil 7s ease-in-out infinite; }
+.fs-s-clear .fs-vL { transform-origin: 12px 62px; }
+.fs-s-clear .fs-vR { transform-origin: 188px 62px; }
+/* 端に少し残す（0 まで消すと、ひらいたことが伝わらない） */
+@keyframes fsVeil { 0%, 18% { transform: scaleX(1); } 68%, 100% { transform: scaleX(.12); } }
+.fs-shown { animation: fsShown 7s ease-in-out infinite; }
+@keyframes fsShown { 0%, 30% { opacity: .5; } 76%, 100% { opacity: 1; } }
+.fs-s-clear .fs-chest { animation: fsShown 7s ease-in-out infinite; }
+
+/* ── 創造：何もない場所に、線が1本引かれる ────────────── */
+.fs-canvas { fill: rgba(255,255,255,.05); stroke: #6f6788; stroke-width: 1.2; }
+.fs-stroke { fill: none; stroke: #ffd899; stroke-width: 2.2; stroke-linecap: round;
+  stroke-dasharray: 210; stroke-dashoffset: 0; animation: fsDraw 6.5s ease-in-out infinite; }
+@keyframes fsDraw { 0%, 10% { stroke-dashoffset: 210; } 72%, 100% { stroke-dashoffset: 0; } }
+.fs-pen { fill: #fff1cc; offset-path: path("M46 88 q34 -56 62 -28 q22 22 46 -22"); offset-distance: 100%; offset-rotate: 0deg;
+  animation: fsPen 6.5s ease-in-out infinite; }
+@keyframes fsPen { 0%, 10% { offset-distance: 0%; } 72%, 100% { offset-distance: 100%; } }
+
+/* ── 豊かさ：実がたわわに実った木の下 ─────────────────── */
+.fs-trunk, .fs-branch { fill: none; stroke: #a58a63; stroke-width: 2.4; stroke-linecap: round; }
+.fs-branch { stroke-width: 1.6; }
+.fs-crownleaf { fill: rgba(126, 168, 118, .28); stroke: #8fb583; stroke-width: 1.3; transform-origin: 100px 60px; animation: fsSway 8s ease-in-out infinite; }
+@keyframes fsSway { 0%, 100% { transform: rotate(-1.4deg); } 50% { transform: rotate(1.4deg); } }
+.fs-fruit { fill: #e5825f; animation: fsFruit 8s ease-out infinite; }
+.fs-ft0 { animation-delay: 0s;    transform-origin: 74px 40px; }
+.fs-ft1 { animation-delay: .35s;  transform-origin: 87px 52px; }
+.fs-ft2 { animation-delay: .7s;   transform-origin: 100px 64px; }
+.fs-ft3 { animation-delay: 1.05s; transform-origin: 113px 40px; }
+.fs-ft4 { animation-delay: 1.4s;  transform-origin: 126px 52px; }
+@keyframes fsFruit { 0%, 8% { opacity: 0; transform: scale(0); } 34%, 100% { opacity: 1; transform: scale(1); } }
+
+/* ── 辞書に無い感情：胸にじんわり広がる ───────────────── */
+.fs-warm { fill: rgba(255, 196, 128, .3); transform-origin: 100px 58px; animation: fsWarm 5.4s ease-out infinite; }
+.fs-wm1 { animation-delay: 2.7s; }
+@keyframes fsWarm { 0% { opacity: .8; transform: scale(.4); } 100% { opacity: 0; transform: scale(2.2); } }
+
+/* 動きを減らしている人には、動かない完成形を見せる（絵は消さない） */
+@media (prefers-reduced-motion: reduce) {
+  .fs, .fs * { animation: none !important; }
+}

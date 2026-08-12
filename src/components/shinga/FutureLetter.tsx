@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ArrivalFx } from "./ArrivalFx";
 import { feelGuide } from "@/lib/feelGuide";
+import { FeelScene } from "./FeelScene";
 
 /**
  * 未来からの手紙（全画面）。アプリを開いた最初は、これだけを見せる。
@@ -51,6 +52,8 @@ export function FutureLetter({
               const g = feelGuide(letter.emotion);
               return g ? (
                 <div className="fletter-feel">
+                  {/* 手紙の時点でも、その感覚の絵を見せておく（呼吸で同じ絵に再会する） */}
+                  <FeelScene scene={g.scene} label={g.image} />
                   <div className="ff-body">{g.body}</div>
                   <div className="ff-img">{g.image}</div>
                 </div>

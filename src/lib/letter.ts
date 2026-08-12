@@ -181,8 +181,18 @@ ${quests.length ? `- やってみたいこと：${quests.slice(0, 4).map((q: any
   // 過去に伝えた感情（被り防止）
   const past = await supa.from("link_letter").select("source, date").eq("user_id", userId).order("date", { ascending: false }).limit(20);
   const pastEmotions = ((past.data ?? []) as { source: string }[]).map((r) => (r.source ?? "").trim()).filter(Boolean);
+  /*
+   * 同じ感情ばかり届く問題（淳くん：僕のは充足ばっかり出る）。
+   * 以前は「違う角度・違う粒度にする」という**お願い**だったので、
+   * AIは平気で同じ言葉を返してきた。直近5回は**禁止**にする。
+   * それでも同じものが返ってきたら、この下で書き直させる。
+   */
+  const recentEmotions = [...new Set(pastEmotions)].slice(0, 5);
   const avoidBlock = pastEmotions.length
-    ? `## 最近すでに伝えた感情（今日はこれと"違う角度・違う粒度"にする）\n${[...new Set(pastEmotions)].slice(0, 10).join(" / ")}`
+    ? `## 【禁止】直近で届けた感情（この言葉は今日は**使わない**）
+${recentEmotions.join(" / ")}
+これらと似た言い換え（例：充足↔満ち足り）も避ける。まったく別の面から、今日の感情を選ぶ。
+それより前に届けた感情：${[...new Set(pastEmotions)].slice(5, 14).join(" / ") || "（なし）"}`
     : "";
 
   // 今日の"切り口"（日付で回す＝毎日変わる）
@@ -260,6 +270,28 @@ ${who} は「${ideal}」という理想を書いている。ただ、書いた�
 
   let raw = "";
   try { raw = String(await complete({ userId, prompt, maxTokens: 3000, temperature: 0.9 }) ?? "").trim(); } catch { /* fallback below */ }
+
+  /*
+   * 禁止した感情がそのまま返ってきたら、1回だけ書き直させる。
+   * （プロンプトで禁じても、AIは同じ言葉に戻りやすい。**返事を検査して止める**）
+   * 手紙は1日1通なので、多くても1回ぶんの追加で済む。
+   */
+  if (recentEmotions.length) {
+    const said = raw.match(/<\s*感情\s*>\s*([^<]+?)\s*<\s*\/\s*感情\s*>/)?.[1]?.trim() ?? "";
+    if (said && recentEmotions.some((e) => e === said || said.includes(e) || e.includes(said))) {
+      try {
+        const again = String(await complete({
+          userId, maxTokens: 3000, temperature: 1,
+          prompt: `${prompt}
+
+# 書き直し（重要）
+さきほど「${said}」で書いたが、それは直近で届けたものと同じ（または近すぎる）。
+**${recentEmotions.join("・")} とは別の感情**で、手紙ごと書き直す。感情の言葉を先に決めてから本文を書くこと。`,
+        }) ?? "").trim();
+        if (again) raw = again;
+      } catch { /* 書き直せなくても、届かないよりはいい */ }
+    }
+  }
 
   // 感情を取り出して本文から除く（複数の書き方に耐える）
   let emotion = "";

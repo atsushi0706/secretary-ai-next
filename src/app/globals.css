@@ -7590,19 +7590,37 @@ body:has(.realverse-bg) { background: transparent; }
    「アンテナみたいに体を動かして探して」を、目に見える形にしたもの。
    .singa-stage の中に出るが、色は直に書く（変数に頼らない）。
    ══════════════════════════════════════════════════════════ */
+/*
+ * 【やらかしたこと】
+ * 最初これを、会話と同じ流れの中に置いた。レーダーの高さが 581px あって、
+ * 枠（738px）の中で会話が 20px に潰れ、入力欄は枠の外へ押し出されて消えた。
+ * 「返事は来るのに、そのあとチャットが消える」の正体はこれ。
+ *
+ * だから**上にかぶせる**。流れの中に置かない。高さは枠の中に必ず収める。
+ */
 .rdr {
-  margin: 8px auto 10px; max-width: 340px;
-  display: flex; flex-direction: column; align-items: center; gap: 10px;
-  background: rgba(22, 17, 32, .92); border: 1px solid rgba(224, 189, 114, .3);
-  border-radius: 16px; padding: 14px 12px;
+  position: absolute; z-index: 30;
+  left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(340px, calc(100% - 24px));
+  max-height: min(92%, var(--stage-h, 780px));
+  overflow-y: auto;
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  background: rgba(22, 17, 32, .96); border: 1px solid rgba(224, 189, 114, .38);
+  border-radius: 16px; padding: 12px;
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
+}
+/* 後ろを少し暗くして、いまここを選ぶ場面だと分かるように */
+.rdr::before {
+  content: ""; position: fixed; inset: 0; z-index: -1;
+  background: rgba(8, 6, 14, .5);
 }
 .rdr-lead {
-  font-size: .8rem; line-height: 1.95; color: #efe6ff; text-align: center;
+  font-size: .74rem; line-height: 1.8; color: #efe6ff; text-align: center;
 }
 .rdr-lead b { color: #ffd899; }
 
 .rdr-dial { width: 100%; display: flex; flex-direction: column; align-items: center; }
-.rdr-dial svg { width: 100%; max-width: 250px; height: auto; overflow: visible; }
+.rdr-dial svg { width: 100%; max-width: 196px; height: auto; overflow: visible; }
 .rdr-ring { fill: none; stroke: rgba(224, 189, 114, .32); stroke-width: 1.2; }
 .rdr-ring2 { stroke: rgba(224, 189, 114, .2); }
 .rdr-ring3 { stroke: rgba(224, 189, 114, .14); }
@@ -7629,7 +7647,7 @@ body:has(.realverse-bg) { background: transparent; }
 /* 平面で決まらない人へ。上下も360度のうち */
 .rdr-vert { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
 .rdr-vert button {
-  font-size: .72rem; font-weight: 700; color: #efe6ff; padding: 8px 2px; border-radius: 10px;
+  font-size: .7rem; font-weight: 700; color: #efe6ff; padding: 7px 2px; border-radius: 10px;
   background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 216, 153, .28);
 }
 .rdr-vert button:hover { background: rgba(255, 216, 153, .18); }
@@ -7638,7 +7656,7 @@ body:has(.realverse-bg) { background: transparent; }
 .rdr-vert button.is-on { background: rgba(255, 216, 153, .3); border-color: #ffd899; color: #fff6e2; }
 /* 決めるのは、この一手だけ（誤タップで歩き出さない） */
 .rdr-go {
-  width: 100%; padding: 12px; border-radius: 12px; font-size: .85rem; font-weight: 800;
+  width: 100%; padding: 11px; border-radius: 12px; font-size: .85rem; font-weight: 800;
   color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72);
 }
 .rdr-go:disabled { color: #8d84a8; background: rgba(255, 255, 255, .06); border: 1px solid rgba(255, 255, 255, .12); }

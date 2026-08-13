@@ -151,8 +151,18 @@ export function useDictation() {
     clearInterval(timerRef.current);
 
     const blob: Blob = await new Promise((resolve) => {
-      rec.onstop = () => resolve(new Blob(chunksRef.current, { type: mimeRef.current || "audio/webm" }));
-      try { rec.stop(); } catch { resolve(new Blob(chunksRef.current, { type: mimeRef.current || "audio/webm" })); }
+      /*
+       * 録った音は、ひとつのBlobにまとめたら**すぐ手放す**。
+       * 前は chunksRef に持ったままで、次に録るまでメモリに残っていた。
+       * 背景画像と重なると、スマホのタブが落ちる原因になる。
+       */
+      const take = () => {
+        const b = new Blob(chunksRef.current, { type: mimeRef.current || "audio/webm" });
+        chunksRef.current = [];
+        return b;
+      };
+      rec.onstop = () => resolve(take());
+      try { rec.stop(); } catch { resolve(take()); }
     });
     cleanup();
 

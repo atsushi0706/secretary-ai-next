@@ -7652,3 +7652,17 @@ body:has(.realverse-bg) { background: transparent; }
 @media (prefers-reduced-motion: reduce) {
   .rdr-sweep { animation: none; }
 }
+
+/* 会話の表示が壊れたとき（黙って消えないための受け皿） */
+.talkerr {
+  margin: 14px auto; max-width: 320px; text-align: center;
+  background: rgba(28, 22, 40, .94); border: 1px solid rgba(224, 189, 114, .35);
+  border-radius: 14px; padding: 16px 14px;
+}
+.talkerr .t { font-size: .88rem; font-weight: 800; color: #f4e7c8; }
+.talkerr .s { font-size: .76rem; line-height: 1.9; color: rgba(244, 231, 200, .78); margin: 6px 0 12px; }
+.talkerr button {
+  font-size: .82rem; font-weight: 800; color: #2a1f10; padding: 10px 20px; border-radius: 999px;
+  background: linear-gradient(160deg, #ffe3a8, #e0bd72);
+}
+.talkerr .d { font-size: .62rem; color: rgba(244, 231, 200, .4); margin-top: 10px; word-break: break-all; }

@@ -39,6 +39,7 @@ import { type CustomWork, type OwnCard } from "@/lib/custom-work-types";
 import type { PartColor, PartsStep } from "@/lib/parts";
 import { DreamKiller } from "./DreamKiller";
 import { DirectionRadar, dirSentence, type DirPick } from "./DirectionRadar";
+import { TalkBoundary } from "./TalkBoundary";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -491,13 +492,34 @@ export function ShingaWorld({
     }).catch(() => {});
   }, []);
 
-  // ウォールブレイクに入ったら、扉の5段階を先読みしておく（開くとき一瞬のチラつき防止）
+  /*
+   * 背景の先読み。**次に出る1枚だけ**にする。
+   *
+   * 【なぜ直したか】
+   * ここは前まで、ウォールブレイクに入るたびに
+   * 扉5枚＋パラレルトラベル10枚＋パラレルウォーク10枚を**まとめて**読み込んでいた。
+   * 背景は 1600×1200 なので、1枚あたり展開後およそ 7.7MB。
+   * 20枚で **150MB超**。ここに音声録音が乗ると、スマホの一枚のタブとしては重すぎる。
+   *
+   * 実際に届いた声：
+   *   ・iPhoneで、パラレルウォーク中に音声入力すると落ちる
+   *   ・返事は来るのに、そのあとチャットだけ消えて背景の絵だけになる
+   * どちらも「タブがメモリで潰れたとき」に起きる形をしている。
+   *
+   * 先読みは、チラつきを防ぎたい**次の1枚**で足りる。
+   */
   useEffect(() => {
-    if (mode !== "breakthrough") return;
-    for (let i = 1; i <= 5; i++) { const im = new window.Image(); im.src = `/wall-${i}.png`; }
-    for (let i = 1; i <= 10; i++) { const im = new window.Image(); im.src = `/travel-${i}.jpg`; }
-    for (let i = 1; i <= 10; i++) { const im = new window.Image(); im.src = `/walk-${i}.jpg`; }
-  }, [mode]);
+    const next: string[] = [];
+    if (mode === "breakthrough") {
+      // 扉は5段。次の段だけ用意しておけばチラつかない
+      next.push(`/wall-${Math.min(5, wallStage + 1)}.png`);
+    } else if (mode === "walk") {
+      next.push(`/walk-${Math.min(10, walkStage + 1)}.jpg`);
+    } else if (mode === "travel") {
+      next.push(`/travel-${Math.min(10, travelStage + 1)}.jpg`);
+    }
+    for (const src of next) { const im = new window.Image(); im.src = src; }
+  }, [mode, wallStage, walkStage, travelStage]);
 
   // タイプ演出のループ
   useEffect(() => {
@@ -1682,8 +1704,13 @@ export function ShingaWorld({
             </div>
           )}
 
-          {/* 会話（メッセージごとにキヨセリンクの顔アイコンを出す） */}
+          {/*
+            会話（メッセージごとにキヨセリンクの顔アイコンを出す）。
+            描画が壊れても黙って消えないよう、受け皿でくるんである
+           （「返信は来るのに、そのあとチャットだけ消える」という声のため）。
+          */}
           <div ref={scrollRef} className="singa-talk" style={partsIntro || shadowGate || todayManual ? { display: "none" } : undefined}>
+            <TalkBoundary>
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
               const lastMine = messages.reduce((acc, x, k) => (x.role === "user" ? k : acc), -1);
@@ -1827,6 +1854,7 @@ export function ShingaWorld({
                 <BreathGuide onDone={breathDone} />
               </div>
             )}
+            </TalkBoundary>
           </div>
 
           {/* パラレルウォーク：1対1で完結。終わるボタンだけ出す */}

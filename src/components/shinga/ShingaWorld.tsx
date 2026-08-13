@@ -40,6 +40,7 @@ import type { PartColor, PartsStep } from "@/lib/parts";
 import { DreamKiller } from "./DreamKiller";
 import { DirectionRadar, dirSentence, type DirPick } from "./DirectionRadar";
 import { TalkBoundary } from "./TalkBoundary";
+import { reportMicCrash } from "@/components/useDictation";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -484,6 +485,13 @@ export function ShingaWorld({
       scrollRef.current?.querySelector(".rdr")?.scrollIntoView({ behavior: "smooth", block: "start" });
     });
   }, [radar]);
+
+  /*
+   * 前回、録音の途中で画面がいなくなっていたら、一度だけ報告する。
+   * 「iPhoneで音声入力すると落ちる」が本当に起きているのか、
+   * 推測ではなく記録で確かめるため（/admin のエラー一覧に出る）。
+   */
+  useEffect(() => { reportMicCrash(); }, []);
 
   // 通知から来たときは、その画面をそのまま開く
   const openedRef = useRef(false);

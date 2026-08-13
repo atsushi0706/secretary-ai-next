@@ -37,15 +37,54 @@ function looksLikePrompt(s: string): boolean {
 }
 
 /**
- * マイクの入り切りを、画面全体に知らせる。
+ * 「いま録音している」の目印。
  *
- * 歩数計（パラレルウォーク）は、これを聞いて端末のゆれを受け取るのをやめる。
- * iOSでは「ゆれの受信」と「マイク」が重なると不安定になりやすいため。
- * ここで配っておけば、マイクを使う場所が増えても勝手に効く
- *（音声バー・ドリームキラー・ワールドリプレイ…足すたびに書き足さなくていい）。
+ * 【なぜ要るか】
+ * 「iPhoneで、パラレルウォーク中に音声入力すると強制終了する」という声が届いた。
+ * ただ、**本当に落ちているのか、こちらでは確かめようがなかった。**
+ * タブごと消えるので、その場で何かを送ることもできない。
+ *
+ * だから、録りはじめに目印を置き、ちゃんと録り終わったら消す。
+ * 次にアプリを開いたとき目印が残っていれば、
+ * 「録音の途中で、画面がいなくなった」ということ。それを一度だけ報告する。
+ *
+ * 推測で手当てをするのをやめて、まず**起きているかどうかを確かめる**ためのもの。
  */
-function tellMic(on: boolean) {
-  try { window.dispatchEvent(new CustomEvent("singa-mic", { detail: { on } })); } catch { /* ignore */ }
+const CRUMB = "singa-mic-crumb";
+
+function crumbOn(where: string) {
+  try {
+    localStorage.setItem(CRUMB, JSON.stringify({
+      at: Date.now(), where,
+      ua: typeof navigator !== "undefined" ? navigator.userAgent.slice(0, 200) : "",
+    }));
+  } catch { /* 置けなくても録音はできる */ }
+}
+function crumbOff() {
+  try { localStorage.removeItem(CRUMB); } catch { /* ignore */ }
+}
+
+/**
+ * 前回、録音の途中で画面がいなくなっていたら、一度だけ報告する。
+ * アプリを開いたときに1回呼ぶ。
+ */
+export function reportMicCrash(): void {
+  try {
+    const raw = localStorage.getItem(CRUMB);
+    if (!raw) return;
+    localStorage.removeItem(CRUMB);
+    const k = JSON.parse(raw);
+    // 1日以上前のものは、もう手がかりにならない
+    if (!k?.at || Date.now() - Number(k.at) > 86400000) return;
+    void fetch("/api/client-error", {
+      method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
+      body: JSON.stringify({
+        where: "mic-interrupted",
+        message: `録音の途中で画面がいなくなった（${k.where ?? "?"}）`,
+        stack: "", componentStack: "", ua: k.ua ?? "",
+      }),
+    }).catch(() => {});
+  } catch { /* ignore */ }
 }
 
 export function useDictation() {
@@ -76,7 +115,7 @@ export function useDictation() {
     wakeLockRef.current = null;
     recRef.current = null;
     setLevel(0);
-    tellMic(false);      // 何で終わっても（途中でこけても）必ず戻す
+    crumbOff();          // ちゃんと終わったので、目印を消す
   }, []);
   useEffect(() => () => cleanup(), [cleanup]);
 
@@ -85,12 +124,8 @@ export function useDictation() {
     setError("");
     try {
       // 小声設定：AGCで持ち上げ、強いNSは切る（小声がノイズとして消えるのを防ぐ）
-      /*
-       * マイクを開ける**前**に知らせる。
-       * 歩数計はこれを聞いて、端末のゆれを受け取るのをやめる。
-       * （iOSでは、ゆれの受信とマイクが重なると不安定になりやすい）
-       */
-      tellMic(true);
+      // 録りはじめの目印（ちゃんと終われば消える。残っていたら＝途中で落ちた）
+      crumbOn(typeof location !== "undefined" ? location.pathname : "");
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,

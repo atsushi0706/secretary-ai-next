@@ -36,6 +36,18 @@ function looksLikePrompt(s: string): boolean {
   return PROMPT_MARKERS.filter((m) => s.includes(m)).length >= 2;
 }
 
+/**
+ * マイクの入り切りを、画面全体に知らせる。
+ *
+ * 歩数計（パラレルウォーク）は、これを聞いて端末のゆれを受け取るのをやめる。
+ * iOSでは「ゆれの受信」と「マイク」が重なると不安定になりやすいため。
+ * ここで配っておけば、マイクを使う場所が増えても勝手に効く
+ *（音声バー・ドリームキラー・ワールドリプレイ…足すたびに書き足さなくていい）。
+ */
+function tellMic(on: boolean) {
+  try { window.dispatchEvent(new CustomEvent("singa-mic", { detail: { on } })); } catch { /* ignore */ }
+}
+
 export function useDictation() {
   const [phase, setPhase] = useState<DictPhase>("idle");
   const [seconds, setSeconds] = useState(0);
@@ -64,6 +76,7 @@ export function useDictation() {
     wakeLockRef.current = null;
     recRef.current = null;
     setLevel(0);
+    tellMic(false);      // 何で終わっても（途中でこけても）必ず戻す
   }, []);
   useEffect(() => () => cleanup(), [cleanup]);
 
@@ -72,6 +85,12 @@ export function useDictation() {
     setError("");
     try {
       // 小声設定：AGCで持ち上げ、強いNSは切る（小声がノイズとして消えるのを防ぐ）
+      /*
+       * マイクを開ける**前**に知らせる。
+       * 歩数計はこれを聞いて、端末のゆれを受け取るのをやめる。
+       * （iOSでは、ゆれの受信とマイクが重なると不安定になりやすい）
+       */
+      tellMic(true);
       const stream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: true,

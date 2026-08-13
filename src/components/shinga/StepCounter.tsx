@@ -43,6 +43,8 @@ function StepCounter({ onEarn }, ref) {
   const secRef = useRef(0);
   const timer = useRef<ReturnType<typeof setInterval> | null>(null);
   const handler = useRef<((e: DeviceMotionEvent) => void) | null>(null);
+  /** マイクのために止めたのか（自分で止めたぶんだけ、あとで戻す） */
+  const micPausedRef = useRef(false);
 
   const keep = (on: boolean) => {
     try {
@@ -97,6 +99,41 @@ function StepCounter({ onEarn }, ref) {
       }
       begin();
     } catch { setNeedTap(true); }
+  }, [begin]);
+
+  /**
+   * マイクを使っているあいだは、ゆれを受け取るのをやめる。
+   *
+   * 【なぜ】
+   * 「iPhoneで、パラレルウォーク中に音声入力すると強制終了する」という声が届いた。
+   * パラレルウォークだけで動いているものが、この歩数計。
+   * 端末のゆれ（devicemotion）をずっと受け取り続けているところに、
+   * マイク（getUserMedia＋AudioContext＋MediaRecorder）が重なる。
+   * iOSのSafariでは、この組み合わせが不安定になりやすい。
+   *
+   * 録っているあいだの歩数は数えられないが（話している数十秒ぶん）、
+   * 落ちるよりずっといい。数えた歩数そのものは消えない。
+   *
+   * ※ iPhone実機で確かめたわけではない。**いちばん怪しい重なりを外した**、が正しい。
+   */
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onMic = (e: Event) => {
+      const on = (e as CustomEvent).detail?.on === true;
+      if (on) {
+        if (handler.current) {
+          try { window.removeEventListener("devicemotion", handler.current); } catch { /* ignore */ }
+          handler.current = null;
+        }
+        if (timer.current) { clearInterval(timer.current); timer.current = null; }
+        micPausedRef.current = true;
+      } else if (micPausedRef.current) {
+        micPausedRef.current = false;
+        if (!handler.current) begin();
+      }
+    };
+    window.addEventListener("singa-mic", onMic as EventListener);
+    return () => window.removeEventListener("singa-mic", onMic as EventListener);
   }, [begin]);
 
   // 入ったら勝手に数えはじめる

@@ -7666,3 +7666,19 @@ body:has(.realverse-bg) { background: transparent; }
   background: linear-gradient(160deg, #ffe3a8, #e0bd72);
 }
 .talkerr .d { font-size: .62rem; color: rgba(244, 231, 200, .4); margin-top: 10px; word-break: break-all; }
+
+/* 「さっきの続きが残ってるよ」の帯（落ちた・閉じた あとに開き直したとき） */
+.resume-band {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: 4px 0 10px; padding: 9px 12px; border-radius: 12px;
+  background: rgba(224, 189, 114, .14); border: 1px solid rgba(224, 189, 114, .4);
+}
+.resume-band span { flex: 1 1 auto; font-size: .76rem; color: #f4e7c8; }
+.resume-band button {
+  font-size: .74rem; font-weight: 800; color: #2a1f10; padding: 7px 14px; border-radius: 999px;
+  background: linear-gradient(160deg, #ffe3a8, #e0bd72);
+}
+.resume-band button.no {
+  color: rgba(244, 231, 200, .7); background: transparent;
+  border: 1px solid rgba(255, 255, 255, .2);
+}

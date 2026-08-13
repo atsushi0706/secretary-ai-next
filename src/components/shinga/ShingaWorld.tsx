@@ -471,6 +471,20 @@ export function ShingaWorld({
     });
   }, [messages, typing, choices, widget, partsStep, walkStage, travelStage]);
 
+  /*
+   * レーダーが出たら、その**頭**が見えるところまで送る。
+   *
+   * いちばん下まで送ってしまうと、こんどはレーダーの足元だけが見えて、
+   * 直前の返事がまた画面の外へ行ってしまう。
+   * 頭に合わせれば、返事の終わりとレーダーの始まりが一緒に見える。
+   */
+  useEffect(() => {
+    if (!radar) return;
+    requestAnimationFrame(() => {
+      scrollRef.current?.querySelector(".rdr")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, [radar]);
+
   // 通知から来たときは、その画面をそのまま開く
   const openedRef = useRef(false);
   useEffect(() => {
@@ -1644,30 +1658,6 @@ export function ShingaWorld({
             <ShadowProgress step={shadowStep} safety={shadowSafetyRef.current} />
           )}
 
-          {/*
-            パラレルウォーク：歩き出す前に、理想の方向を体で探す。
-            言葉だけだと「アンテナみたいに探して」が伝わらなかったので、
-            レーダーを出して、押せるようにした。
-            決めたら二度と出さない（方向は歩き出す合図であって、話の中身ではない）。
-          */}
-          {mode === "walk" && radar && (
-            <DirectionRadar
-              onPick={(p: DirPick) => {
-                radarDoneRef.current = true;
-                setRadar(false);
-                // 方向は、最初の一言としてだけ渡す（意味は読み解かせない）
-                void talk(dirSentence(p));
-              }}
-              onSkip={() => {
-                radarDoneRef.current = true;
-                setRadar(false);
-                void talk("方向はわからなかった。このまま歩き出したい");
-              }}
-            />
-          )}
-          {beastReveal && !typing && <BeastReveal pairId={beastReveal} onClose={() => setBeastReveal(null)} />}
-          {shadowCard && <ShadowCardReveal card={shadowCard} onClose={() => setShadowCard(null)} />}
-
           {/* 内なる子の神殿：まず守り手を選ぶ盤面（選んだらワークの会話が始まる） */}
           {mode === "parts" && partsGate && (
             <PartsGate onStart={(c) => {
@@ -1791,6 +1781,32 @@ export function ShingaWorld({
                 </div>
               );
             })}
+
+            {/*
+              パラレルウォーク：理想の方向を体で探すレーダー。
+
+              **会話欄の中に貼る。**上にかぶせない（淳くんの指定）。
+              かぶせていたときは、返事を読んでいる最中にバッと出てきて、
+              案内役が何を言ったのか分からないまま塞がれてしまった。
+              ここに置けば、返事の**続き**として下に出てくる。
+
+              出すのは返事を打ち終わってから（!typing）。
+              打っている最中に出すと、結局同じことになる。
+            */}
+            {mode === "walk" && radar && !typing && (
+              <DirectionRadar
+                onPick={(p: DirPick) => {
+                  radarDoneRef.current = true;
+                  setRadar(false);
+                  void talk(dirSentence(p));
+                }}
+                onSkip={() => {
+                  radarDoneRef.current = true;
+                  setRadar(false);
+                  void talk("方向はわからなかった。このまま歩き出したい");
+                }}
+              />
+            )}
 
             {/* 選択肢ボタン */}
             {choices && !typing && (

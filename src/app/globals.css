@@ -7591,70 +7591,70 @@ body:has(.realverse-bg) { background: transparent; }
    .singa-stage の中に出るが、色は直に書く（変数に頼らない）。
    ══════════════════════════════════════════════════════════ */
 /*
- * 【やらかしたこと】
- * 最初これを、会話と同じ流れの中に置いた。レーダーの高さが 581px あって、
- * 枠（738px）の中で会話が 20px に潰れ、入力欄は枠の外へ押し出されて消えた。
- * 「返事は来るのに、そのあとチャットが消える」の正体はこれ。
- *
- * だから**上にかぶせる**。流れの中に置かない。高さは枠の中に必ず収める。
+ * 【たどり着いた形】
+ * ① 最初：会話と**同じ並び**（会話欄の兄弟）に置いた
+ *    → 枠738pxに対しレーダー581px。会話が20pxに潰れ、入力欄が枠の外へ出て消えた
+ * ② 次：**上にかぶせた**
+ *    → 返事を読んでいる最中にバッと出てきて、何を言われたか分からないまま塞がれた
+ * ③ いま：**会話欄の中に貼る**（淳くんの指定）
+ *    返事の続きとして下に出てくる。会話と一緒にスクロールするので、
+ *    枠の高さを奪わない＝入力欄も消えない。上に何もかぶせない。
  */
 .rdr {
-  position: absolute; z-index: 30;
-  left: 50%; top: 50%; transform: translate(-50%, -50%);
-  width: min(340px, calc(100% - 24px));
-  max-height: min(92%, var(--stage-h, 780px));
-  overflow-y: auto;
+  margin: 6px 0 8px; width: 100%; max-width: 340px; align-self: center;
   display: flex; flex-direction: column; align-items: center; gap: 8px;
-  background: rgba(22, 17, 32, .96); border: 1px solid rgba(224, 189, 114, .38);
+  background: rgba(22, 17, 32, .92); border: 1px solid rgba(224, 189, 114, .38);
   border-radius: 16px; padding: 12px;
-  box-shadow: 0 18px 50px rgba(0, 0, 0, .55);
-}
-/* 後ろを少し暗くして、いまここを選ぶ場面だと分かるように */
-.rdr::before {
-  content: ""; position: fixed; inset: 0; z-index: -1;
-  background: rgba(8, 6, 14, .5);
 }
 .rdr-lead {
   font-size: .74rem; line-height: 1.8; color: #efe6ff; text-align: center;
 }
 .rdr-lead b { color: #ffd899; }
 
-.rdr-dial { width: 100%; display: flex; flex-direction: column; align-items: center; }
-.rdr-dial svg { width: 100%; max-width: 196px; height: auto; overflow: visible; }
+.rdr-dial { width: 100%; display: flex; justify-content: center; }
+.rdr-dial svg { width: 100%; max-width: 132px; height: auto; overflow: visible; }
 .rdr-ring { fill: none; stroke: rgba(224, 189, 114, .32); stroke-width: 1.2; }
-.rdr-ring2 { stroke: rgba(224, 189, 114, .2); }
-.rdr-ring3 { stroke: rgba(224, 189, 114, .14); }
+.rdr-ring2 { stroke: rgba(224, 189, 114, .18); }
 .rdr-cross { stroke: rgba(224, 189, 114, .18); stroke-width: 1; }
-
-/* ゆっくり回る光。探しているあいだだけ */
 .rdr-sweep { animation: rdrSweep 5.5s linear infinite; }
 .rdr-sweep path { fill: rgba(255, 216, 153, .16); }
 @keyframes rdrSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-
-.rdr-dot {
-  fill: rgba(255, 216, 153, .35); stroke: rgba(255, 216, 153, .55); stroke-width: 1.2;
-  cursor: pointer; transition: fill .15s ease, r .15s ease;
-}
-.rdr-dot.is-on { fill: #ffd899; stroke: #fff1cc; }
+.rdr-beam path { stroke: #ffd899; stroke-width: 2.4; stroke-linecap: round; fill: none; }
+.rdr-beam circle { fill: #fff1cc; }
 .rdr-me { fill: #fff1cc; }
 .rdr-front { fill: #c9b48d; font-size: 10px; letter-spacing: .1em; }
 
-.rdr-now {
-  margin-top: 2px; font-size: .78rem; font-weight: 700; color: #ffd899;
-  min-height: 1.4em; text-align: center;
+/*
+ * 押す場所は、**並びがそのまま方向**。
+ * 丸い目盛りに点を並べただけだと、右も左も分からなかった（淳くんの指摘）。
+ * 左上のボタン＝左ななめ前。右下のボタン＝右うしろ。置き場所で分かるようにする。
+ */
+.rdr-grid {
+  width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+}
+.rdr-grid button {
+  font-size: .68rem; font-weight: 700; line-height: 1.3; color: #f0eaff;
+  padding: 7px 2px; border-radius: 10px; min-height: 40px;
+  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 216, 153, .3);
+}
+.rdr-grid button:hover { background: rgba(255, 216, 153, .18); }
+.rdr-grid button.is-on {
+  color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72); border-color: #ffe3a8;
+}
+.rdr-center {
+  display: flex; align-items: center; justify-content: center;
+  font-size: .66rem; color: #a89ac9;
 }
 
-/* 平面で決まらない人へ。上下も360度のうち */
-.rdr-vert { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; width: 100%; }
+/* 上下。「ずっと上」では何のことか分からないので、体の動きで書く */
+.rdr-vert { width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
 .rdr-vert button {
-  font-size: .7rem; font-weight: 700; color: #efe6ff; padding: 7px 2px; border-radius: 10px;
+  font-size: .7rem; font-weight: 700; color: #efe6ff; padding: 9px 2px; border-radius: 10px;
   background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 216, 153, .28);
 }
-.rdr-vert button:hover { background: rgba(255, 216, 153, .18); }
-
-.rdr-beam path { stroke: #ffd899; stroke-width: 2.4; stroke-linecap: round; fill: none; }
-.rdr-vert button.is-on { background: rgba(255, 216, 153, .3); border-color: #ffd899; color: #fff6e2; }
-/* 決めるのは、この一手だけ（誤タップで歩き出さない） */
+.rdr-vert button.is-on {
+  color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72); border-color: #ffe3a8;
+}
 .rdr-go {
   width: 100%; padding: 11px; border-radius: 12px; font-size: .85rem; font-weight: 800;
   color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72);

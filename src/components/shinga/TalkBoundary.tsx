@@ -50,8 +50,8 @@ export class TalkBoundary extends Component<Props, State> {
       <div className="talkerr">
         <p className="t">会話の表示が止まってしまった。</p>
         <p className="s">
-          きみのせいじゃないよ。話した内容はこの端末に控えてあるから、
-          読み込み直すと「さっきの続きが残ってるよ」と出る。そこから戻せる。
+          きみのせいじゃないよ。話したことは記録に残ってる（ワールドメモリーの「チャットの記録」で読める）。
+          読み込み直すと、この部屋はもう一度はじめから。
         </p>
         <button onClick={() => { try { window.location.reload(); } catch { /* ignore */ } }}>
           読み込み直す

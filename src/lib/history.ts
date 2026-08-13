@@ -73,3 +73,56 @@ export function toSessions(iwRows: HistRow[], rvRows: HistRow[]): Session[] {
   out.sort((a, b) => (a.date === b.date ? a.room.localeCompare(b.room) : (a.date < b.date ? 1 : -1)));
   return out;
 }
+
+/* ══ 続きから話す ═══════════════════════════════════════════
+ * 会話の記録には「場所（place）」しか残っていない。
+ * ひとつの場所を複数のワークが借りていることがあるので
+ *（例：ハイヤークエストの場所は、ほかのワークも見た目に使っている）、
+ * **その場所の主のワーク**を1つ決めておく。
+ * 続きを開いたときは、そのワークで、前の会話を持ったまま始まる。
+ */
+export const MODE_BY_PLACE: Record<string, string> = {
+  peak: "peak",
+  walk: "walk",
+  akashic: "akashic",
+  higher: "higher",
+  deep: "deep",
+};
+
+/** その記録から「続きから話す」ができるか（できるなら、どのワークか） */
+export function resumeMode(room: string): string | null {
+  if (room.startsWith("rv:")) return null;      // リアルバースは別の画面
+  return MODE_BY_PLACE[room] ?? null;
+}
+
+/* ══ 探す ══════════════════════════════════════════════════
+ * 「なに話したか」で見つけられるように。
+ * 大文字小文字・全角半角は気にしない。空白で区切れば AND。
+ */
+export function normalize(s: string): string {
+  return String(s ?? "")
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0xfee0))
+    .toLowerCase()
+    .trim();
+}
+
+/** 検索語をばらす（空白区切り。ぜんぶ含むものだけ出す） */
+export function terms(q: string): string[] {
+  return normalize(q).split(/\s+/).filter(Boolean).slice(0, 5);
+}
+
+export function matches(text: string, ts: string[]): boolean {
+  if (!ts.length) return true;
+  const t = normalize(text);
+  return ts.every((w) => t.includes(w));
+}
+
+/** 見つかった場所の前後を切り出して見せる（どこが当たったか分かるように） */
+export function snippet(text: string, ts: string[], len = 46): string {
+  const raw = String(text ?? "").replace(/\s+/g, " ").trim();
+  if (!ts.length) return raw.slice(0, len);
+  const i = normalize(raw).indexOf(ts[0]);
+  if (i < 0) return raw.slice(0, len);
+  const from = Math.max(0, i - Math.floor(len / 3));
+  return (from > 0 ? "…" : "") + raw.slice(from, from + len) + (from + len < raw.length ? "…" : "");
+}

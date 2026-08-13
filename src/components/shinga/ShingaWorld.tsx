@@ -120,13 +120,15 @@ const FACE_SRC: Record<Face, string> = {
 };
 
 export function ShingaWorld({
-  guideName, avatarUrl, initialPlace, openMode, openPanel,
+  guideName, avatarUrl, initialPlace, openMode, openPanel, fromKey,
 }: {
   guideName: string;
   avatarUrl: string;
   initialPlace?: PlaceKey;
   /** 通知やリンクから「このワークで開いてほしい」と指定されたとき */
   openMode?: ModeKey;
+  /** チャットの記録から「この続きから話す」で来たときの、記録の鍵 */
+  fromKey?: string;
   /** 通知から直行する画面（ワークではないもの）：daily=1日の振り返り / weekly=週刊レポート */
   openPanel?: "daily" | "weekly";
 }) {
@@ -250,43 +252,6 @@ export function ShingaWorld({
   const [castOpen, setCastOpen] = useState(false);   // 発信スタジオ
   const [manualOpen, setManualOpen] = useState(false); // 自分の取扱説明書
   const [weightOpen, setWeightOpen] = useState(false); // からだの記録
-  /*
-   * 落ちたとき用の控え（この端末の中だけ）。
-   *
-   * 【なぜ要るか】
-   * 「読み込み直せば続きから話せる」と書いたが、**実際には話せなかった**。
-   * 読み込み直すと部屋は最初から始まる作りだった（会話は記録には残るが、画面には戻らない）。
-   * タブが落ちる人がいる以上、戻れないのは困る。
-   *
-   * 30分以内の同じ部屋のぶんだけ、手元に控えて、開いたときに
-   * 「さっきの続きがあるよ」と出す。押したときだけ戻す（勝手に戻さない）。
-   */
-  const RESUME_KEY = "singa-resume";
-  const [resumeOffer, setResumeOffer] = useState<{ mode: ModeKey; msgs: Message[] } | null>(null);
-
-  // 会話が動くたびに控える（この端末の中だけ。中身はサーバへ送らない）
-  useEffect(() => {
-    if (!mode || view !== "talk" || messages.length < 2) return;
-    try {
-      localStorage.setItem(RESUME_KEY, JSON.stringify({
-        mode, at: Date.now(),
-        msgs: messages.filter((m) => m.content).slice(-40),
-      }));
-    } catch { /* 控えられなくても、話は続けられる */ }
-  }, [mode, view, messages]);
-
-  // 部屋を開いたとき、30分以内の続きがあれば声をかける
-  const offerResume = useCallback((m: ModeKey) => {
-    try {
-      const raw = localStorage.getItem(RESUME_KEY);
-      if (!raw) return;
-      const k = JSON.parse(raw);
-      if (!k || k.mode !== m || !Array.isArray(k.msgs) || k.msgs.length < 2) return;
-      if (Date.now() - Number(k.at ?? 0) > 30 * 60 * 1000) { localStorage.removeItem(RESUME_KEY); return; }
-      setResumeOffer({ mode: m, msgs: k.msgs as Message[] });
-    } catch { /* 壊れていたら、何も出さない */ }
-  }, []);
-
   // 散歩のおとも：入ったら勝手に数え、出るときに確定して保存する
   const stepRef = useRef<StepCounterHandle | null>(null);
   const [stepWon, setStepWon] = useState<string[] | null>(null);
@@ -513,10 +478,37 @@ export function ShingaWorld({
     if (openPanel === "daily") { openedRef.current = true; void enter("reflect"); return; }
     if (openPanel === "weekly") { openedRef.current = true; setWeeklyOpen(true); return; }
     if (!openMode) return;
+    /*
+     * チャットの記録から「この続きから話す」で来たとき。
+     * その日その部屋の会話を読み込んで、**そこから続ける**。
+     *
+     * 落ちたときに毎回「続きある？」と聞く形はやめた（煩わしい・淳くん）。
+     * 続きたいときだけ、記録のほうから選んで入ってくる形にしてある。
+     */
+    if (fromKey) {
+      void (async () => {
+        await enter(openMode);
+        try {
+          const r = await fetch(`/api/history?key=${encodeURIComponent(fromKey)}`);
+          const d = await r.json();
+          const msgs = (Array.isArray(d?.messages) ? d.messages : [])
+            .filter((m: any) => m?.content && (m.role === "user" || m.role === "assistant"))
+            .slice(-40)
+            .map((m: any) => ({ role: m.role, content: String(m.content) } as Message));
+          if (msgs.length) {
+            setMessages([
+              ...msgs,
+              { role: "assistant", content: "——ここまで話したね。じゃあ、この続きから。" },
+            ]);
+          }
+        } catch { /* 読めなければ、ふつうに始める */ }
+      })();
+      return;
+    }
     openedRef.current = true;
     void enter(openMode);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [openMode, openPanel]);
+  }, [openMode, openPanel, fromKey]);
 
   // 鍵がかかっているワークを読む（親アカウントには鍵がかからない）
   useEffect(() => {
@@ -814,7 +806,6 @@ export function ShingaWorld({
     if (m === "walk" && fresh) radarDoneRef.current = false;   // 出すのは、理想が出てきてから
     if (m !== "walk") setRadar(false);
     if (!resume) setMessages([]);
-    if (!resume) offerResume(m);   // 30分以内の続きがあれば、あとで声をかける
 
     // 開始の一言はテンプレで即表示（AIを待たない＝速い）。
     // 頭を使うのは、ユーザーが最初の返事をした"あと"から。
@@ -1749,22 +1740,6 @@ export function ShingaWorld({
           */}
           <div ref={scrollRef} className="singa-talk" style={partsIntro || shadowGate || todayManual ? { display: "none" } : undefined}>
             <TalkBoundary>
-            {/*
-              落ちた・閉じた あとに開き直したとき。勝手に戻さず、押されたときだけ戻す。
-              （「読み込み直せば続きから」と書いておいて戻れないのは駄目なので）
-            */}
-            {resumeOffer && resumeOffer.mode === mode && (
-              <div className="resume-band">
-                <span>さっきの続きが残ってるよ（{resumeOffer.msgs.length}件）</span>
-                <button onClick={() => { setMessages(resumeOffer.msgs); setResumeOffer(null); }}>
-                  続きを出す
-                </button>
-                <button className="no" onClick={() => {
-                  setResumeOffer(null);
-                  try { localStorage.removeItem(RESUME_KEY); } catch { /* ignore */ }
-                }}>いらない</button>
-              </div>
-            )}
             {messages.map((m, i) => {
               const isLast = i === messages.length - 1;
               const lastMine = messages.reduce((acc, x, k) => (x.role === "user" ? k : acc), -1);

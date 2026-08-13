@@ -7667,6 +7667,20 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .talkerr .d { font-size: .62rem; color: rgba(244, 231, 200, .4); margin-top: 10px; word-break: break-all; }
 
+/* 会話の表示が壊れたとき（黙って消えないための受け皿） */
+.talkerr {
+  margin: 14px auto; max-width: 320px; text-align: center;
+  background: rgba(28, 22, 40, .94); border: 1px solid rgba(224, 189, 114, .35);
+  border-radius: 14px; padding: 16px 14px;
+}
+.talkerr .t { font-size: .88rem; font-weight: 800; color: #f4e7c8; }
+.talkerr .s { font-size: .76rem; line-height: 1.9; color: rgba(244, 231, 200, .78); margin: 6px 0 12px; }
+.talkerr button {
+  font-size: .82rem; font-weight: 800; color: #2a1f10; padding: 10px 20px; border-radius: 999px;
+  background: linear-gradient(160deg, #ffe3a8, #e0bd72);
+}
+.talkerr .d { font-size: .62rem; color: rgba(244, 231, 200, .4); margin-top: 10px; word-break: break-all; }
+
 /* 「さっきの続きが残ってるよ」の帯（落ちた・閉じた あとに開き直したとき） */
 .resume-band {
   display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
@@ -7681,4 +7695,22 @@ body:has(.realverse-bg) { background: transparent; }
 .resume-band button.no {
   color: rgba(244, 231, 200, .7); background: transparent;
   border: 1px solid rgba(255, 255, 255, .2);
+}
+
+/* 記録の中を探す／続きから話す */
+.chx-find { position: relative; display: flex; margin-bottom: 8px; }
+.chx-find input {
+  width: 100%; font-size: .78rem; color: #f0eaff; padding: 9px 30px 9px 12px;
+  background: rgba(255,255,255,.06); border: 1px solid rgba(190,150,255,.28); border-radius: 999px;
+}
+.chx-find input::placeholder { color: #8f85ab; }
+.chx-find button {
+  position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+  width: 22px; height: 22px; border-radius: 50%; font-size: .8rem; color: #cbbde8;
+  background: rgba(255,255,255,.1); border: none;
+}
+.chx-go {
+  flex-shrink: 0; font-size: .74rem; font-weight: 800; color: #2a1f10;
+  padding: 8px 14px; border-radius: 999px; margin-left: auto;
+  background: linear-gradient(160deg, #ffe3a8, #e0bd72);
 }

@@ -17,6 +17,7 @@ import { buildStarPrompt } from "./star";
 import { diagnoseSeimei } from "./seimei";
 import { listWalkLogs, listEmotions, listQuests } from "./shinga";
 import { jstDateStr, jstNow } from "./google";
+import { packFeel, unpackFeel } from "./feelGuide";
 
 // 毎日"切り口"を回して被りを防ぐ（10年続けても同じにならないように）。すべて"感情/手触り"で表す。
 const ANGLES = [
@@ -49,7 +50,11 @@ function innateFromName(birthName: string, who: string): string {
 - 人生全体の傾向：${clean(r.soukakuMeaning)}`;
 }
 
-export type FutureLetter = { date: string; body: string; emotion: string; hasIdeal: boolean; needsSetup?: boolean };
+export type FutureLetter = {
+  date: string; body: string; emotion: string; hasIdeal: boolean; needsSetup?: boolean;
+  /** その感情が体でどう感じるか（辞書に無い言葉のために、手紙と一緒に作る） */
+  feel?: { body: string; image: string } | null;
+};
 
 /**
  * 本人の、ふだんの言葉づかいの見本を作る。
@@ -111,7 +116,8 @@ export async function getTodayLetter(userId: string, mood?: number, perf?: numbe
   const cachedBody = String((data as any)?.body ?? "");
   const looksComplete = /[。！？…」』）\)]\s*$/.test(cachedBody.trim());
   if (data && cachedBody.trim().length >= 20 && looksComplete) {
-    return { date, body: cachedBody, emotion: (data as any).source ?? "", hasIdeal: true };
+    const up = unpackFeel((data as any).source);
+    return { date, body: cachedBody, emotion: up.emotion, feel: up.words, hasIdeal: true };
   }
 
   const hero = await getHero(userId).catch(() => null);
@@ -180,7 +186,9 @@ ${quests.length ? `- やってみたいこと：${quests.slice(0, 4).map((q: any
 
   // 過去に伝えた感情（被り防止）
   const past = await supa.from("link_letter").select("source, date").eq("user_id", userId).order("date", { ascending: false }).limit(20);
-  const pastEmotions = ((past.data ?? []) as { source: string }[]).map((r) => (r.source ?? "").trim()).filter(Boolean);
+  // source には言い換えも一緒に入っているので、感情の部分だけを取り出す
+  const pastEmotions = ((past.data ?? []) as { source: string }[])
+    .map((r) => unpackFeel(r.source).emotion).filter(Boolean);
   /*
    * 同じ感情ばかり届く問題（淳くん：僕のは充足ばっかり出る）。
    * 以前は「違う角度・違う粒度にする」という**お願い**だったので、
@@ -266,7 +274,15 @@ ${who} は「${ideal}」という理想を書いている。ただ、書いた�
 - 最後に、今日の ${who} への願いをひとつ：「だから今日、その感情を先に感じてみて。それだけでいい」（言い回しは毎回少し変える）。
 - 【読みやすさ】2〜3の短い段落に分け、段落と段落のあいだは必ず空行（改行2つ）で区切る。
 - 4〜7行で必ず最後まで言い切る。説教しない。前置き・署名・見出しは書かない。
-- 本文の最後に、この叶った世界の中心の感情を"一語"だけ、必ずこの形式で： <感情>◯◯</感情>`;
+- 本文の最後に、この叶った世界の中心の感情を"一語"だけ、必ずこの形式で： <感情>◯◯</感情>
+- そのすぐあとに、**その感情が体でどう感じるか**を、やさしい言葉で必ず2つ：
+    <体感>体のどこが、どうなる感じか（25字以内）</体感>
+    <たとえ>それを思い出すためのイメージ（40字以内）</たとえ>
+  【いちばん大事】**その感情の言葉を、説明の中で使わない。**
+   「清明」なら「清明な感じ」ではなく、「胸の奥が澄んで、視界がひらける感じ」のように、
+   **その言葉を知らない人にも分かる別の言葉**にする。
+   体の場所（胸・みぞおち・肩・喉・お腹・背中・足の裏…）を必ずひとつ入れる。
+   たとえは、目に浮かぶ具体的な情景にする（「コップに水が静かに満ちて…」のように）。`;
 
   let raw = "";
   try { raw = String(await complete({ userId, prompt, maxTokens: 3000, temperature: 0.9 }) ?? "").trim(); } catch { /* fallback below */ }
@@ -292,6 +308,24 @@ ${who} は「${ideal}」という理想を書いている。ただ、書いた�
       } catch { /* 書き直せなくても、届かないよりはいい */ }
     }
   }
+
+  /*
+   * 体感・たとえを取り出して、本文からは外す。
+   * これが無いと「清明」のような言葉が来たとき、画面には
+   * 「胸のあたりに、その『清明』がじんわり広がる感じ」＝同じ言葉の繰り返ししか出せない。
+   */
+  let feel: { body: string; image: string } | null = null;
+  {
+    const fb = raw.match(/<\s*体感\s*>\s*([^<]+?)\s*<\s*\/\s*体感\s*>/);
+    const fi = raw.match(/<\s*たとえ\s*>\s*([^<]+?)\s*<\s*\/\s*たとえ\s*>/);
+    if (fb) raw = raw.replace(fb[0], "").trim();
+    if (fi) raw = raw.replace(fi[0], "").trim();
+    const b = (fb?.[1] ?? "").trim();
+    const i = (fi?.[1] ?? "").trim();
+    if (b && i) feel = { body: b, image: i };
+  }
+  // はぐれたタグが本文に残らないように
+  raw = raw.replace(/<\/?\s*(体感|たとえ)\s*>/g, "").trim();
 
   // 感情を取り出して本文から除く（複数の書き方に耐える）
   let emotion = "";
@@ -324,8 +358,8 @@ ${who} は「${ideal}」という理想を書いている。ただ、書いた�
   }
 
   await supa.from("link_letter").upsert(
-    { user_id: userId, date, kind: "future", body: raw, source: emotion, created_at: new Date().toISOString() },
+    { user_id: userId, date, kind: "future", body: raw, source: packFeel(emotion, feel), created_at: new Date().toISOString() },
     { onConflict: "user_id,date" },
   );
-  return { date, body: raw, emotion, hasIdeal: true };
+  return { date, body: raw, emotion, feel, hasIdeal: true };
 }

@@ -3,7 +3,13 @@
  *
  * 未来からの手紙で届く感情（充足・解放・慈愛…）は、言葉だけでは体に入らない。
  * ピークステートで“吸う”ときに、どこにどんな感覚が起きるかの目安を1行で渡す。
- * ここに無い感情は、字面から近いものを推測し、最後は汎用の言い方に落とす。
+ *
+ * 【辞書に無い言葉のこと】
+ * 手紙は「清明」「生命」のような言葉も返してくる。
+ * 前はここで「胸のあたりに、その『清明』がじんわり広がる感じ」と返していた。
+ * **同じ言葉を繰り返しているだけ**で、何も分からない（淳くんの指摘）。
+ * なので、手紙を書くときに**その言葉の言い換え**も一緒に作らせて、ここへ渡す。
+ * 渡ってこなかったときだけ、最後の逃げ道として汎用の言い方に落ちる。
  */
 
 /**
@@ -47,18 +53,57 @@ const TABLE: Record<string, FeelGuide> = {
   豊かさ: { body: "呼吸が深く広がり、内側にゆとりが増える感じ", image: "実がたわわに実った木の下に立っているのをイメージして", scene: "tree" },
 };
 
-/** 部分一致でひろう（例：「深い安心」→ 安心） */
-export function feelGuide(emotion: string | null | undefined): FeelGuide | null {
+/** 手紙が添えてくれた言い換え（辞書に無い言葉のため） */
+export type FeelWords = { body: string; image: string };
+
+/**
+ * 感情を「体でどう感じるか」に翻訳する。
+ *
+ * @param emotion 手紙が返してきた感情の言葉
+ * @param words   手紙が一緒に作った言い換え（辞書に無い言葉のときに使う）
+ */
+export function feelGuide(emotion: string | null | undefined, words?: FeelWords | null): FeelGuide | null {
   const e = (emotion ?? "").trim();
   if (!e) return null;
   if (TABLE[e]) return TABLE[e];
   for (const key of Object.keys(TABLE)) {
     if (e.includes(key)) return TABLE[key];
   }
+  // 辞書に無い言葉：手紙が作った言い換えがあれば、それを使う
+  if (words?.body?.trim() && words?.image?.trim()) {
+    return { body: words.body.trim(), image: words.image.trim(), scene: "warm" };
+  }
   // 辞書に無い感情：汎用の入り方（それでも体に向かわせる）
   return {
     body: `胸のあたりに、その「${e}」がじんわり広がる感じ`,
     image: `すでに「${e}」を持っている自分が、どんな姿勢で、どんな呼吸をしているかをイメージして`,
     scene: "warm",
+  };
+}
+
+/* ══ 保存の形 ══════════════════════════════════════════════
+ * 言い換えを置く列が無いので、感情と同じ欄に「｜」でつないで入れる。
+ * （列を足すと、それを流すまで動かない。すぐ効くほうを選ぶ）
+ *   例：清明｜胸の奥が澄んで、視界がひらける感じ｜曇りガラスが拭かれて…
+ */
+const SEP = "｜";
+
+export function packFeel(emotion: string, words?: FeelWords | null): string {
+  const e = String(emotion ?? "").trim();
+  if (!e) return "";
+  const b = String(words?.body ?? "").trim();
+  const i = String(words?.image ?? "").trim();
+  if (!b || !i) return e;
+  // 区切りが中に混ざると読めなくなるので、落としておく
+  return [e, b, i].map((x) => x.split(SEP).join(" ")).join(SEP);
+}
+
+export function unpackFeel(source: string | null | undefined): { emotion: string; words: FeelWords | null } {
+  const raw = String(source ?? "").trim();
+  if (!raw) return { emotion: "", words: null };
+  const [e, b, i] = raw.split(SEP);
+  return {
+    emotion: (e ?? "").trim(),
+    words: b?.trim() && i?.trim() ? { body: b.trim(), image: i.trim() } : null,
   };
 }

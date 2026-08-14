@@ -325,6 +325,8 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
   const tickRef = useRef<any>(null);
   const emotionRef = useRef<string>(""); // 未来からの手紙の「理想の感情」を吸う
   const [emo, setEmo] = useState("");
+  /** 手紙が一緒に作った言い換え（辞書に無い言葉のとき、これで説明する） */
+  const [feelWords, setFeelWords] = useState<{ body: string; image: string } | null>(null);
   const [imgFailed, setImgFailed] = useState<Record<string, boolean>>({}); // 画像未配置ならオーブに戻す
 
   /**
@@ -354,6 +356,8 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
     fetch("/api/link-letter").then((r) => r.json()).then((d) => {
       const e = d?.letter?.emotion;
       if (typeof e === "string" && e.trim()) { emotionRef.current = e.trim(); setEmo(e.trim()); }
+      const f = d?.letter?.feel;
+      if (f?.body && f?.image) setFeelWords({ body: String(f.body), image: String(f.image) });
     }).catch(() => {});
   }, []);
 
@@ -453,7 +457,7 @@ export function BreathGuide({ onDone }: { onDone: () => void }) {
             <div className="breath-install">
               未来からの「<b>{emo}</b>」を、吸ってインストールするよ
               {(() => {
-                const g = feelGuide(emo);
+                const g = feelGuide(emo, feelWords);
                 return g ? (
                   <span className="bi-feel">
                     <span className="k">どんな感覚？</span>

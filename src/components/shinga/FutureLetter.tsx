@@ -49,7 +49,7 @@ export function FutureLetter({
             <div className="k">この叶った世界の感情</div>
             <div className="v">「{letter.emotion}」</div>
             {(() => {
-              const g = feelGuide(letter.emotion);
+              const g = feelGuide(letter.emotion, (letter as any).feel);
               return g ? (
                 <div className="fletter-feel">
                   {/* 手紙の時点でも、その感覚の絵を見せておく（呼吸で同じ絵に再会する） */}

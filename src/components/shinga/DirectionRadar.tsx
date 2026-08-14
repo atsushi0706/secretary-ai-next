@@ -96,11 +96,13 @@ export function DirectionRadar({ onPick, onSkip }: {
 
   return (
     <div className="rdr">
-      <div className="rdr-lead">
-        きみの理想が叶っている世界は、<b>この360度のどこか</b>にある。<br />
-        アンテナみたいに体をひねって、<b>いちばん馴染む方向</b>を探して。<br />
-        <span className="rdr-hint">見つかったら、その時刻を押して。（12時＝まっすぐ前）</span>
-      </div>
+      {/*
+        説明は書かない。**清瀬リンクが先に聞いてくれている**から
+       （淳くん：リンクが聞いてから羅針盤が出ないと、前後の流れがおかしくなる）。
+        ここに同じ話をもう一度書くと、盤が縦に伸びて、
+        そのリンクの問いが画面の外へ押し出されてしまう。目印だけ置く。
+      */}
+      <div className="rdr-hint">体をひねって探して。押すのは、いちばん馴染む時刻（12時＝まっすぐ前）</div>
 
       {/* 時計の文字盤。**ここを直接押す** */}
       <div className="rdr-dial">

@@ -7613,7 +7613,7 @@ body:has(.realverse-bg) { background: transparent; }
 
 .rdr-dial { width: 100%; display: flex; justify-content: center; }
 /* 盤は大きく。ここを直接押すので、指の入る大きさが要る */
-.rdr-dial svg { width: 100%; max-width: 268px; height: auto; overflow: visible; }
+.rdr-dial svg { width: 100%; max-width: 252px; height: auto; overflow: visible; }
 .rdr-ring { fill: none; stroke: rgba(224, 189, 114, .3); stroke-width: 1.2; }
 .rdr-ring2 { stroke: rgba(224, 189, 114, .16); }
 .rdr-cross { stroke: rgba(224, 189, 114, .14); stroke-width: 1; }
@@ -7635,7 +7635,7 @@ body:has(.realverse-bg) { background: transparent; }
   transition: fill .15s ease;
 }
 .rdr-h:hover .rdr-h-bg { fill: rgba(255, 216, 153, .2); }
-.rdr-h-n { fill: #efe6ff; font-size: 15px; font-weight: 700; }
+.rdr-h-n { fill: #efe6ff; font-size: 17px; font-weight: 700; }
 .rdr-h.is-on .rdr-h-bg { fill: #ffd899; stroke: #fff1cc; stroke-width: 2; }
 .rdr-check { fill: none; stroke: #2a1f10; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
 .rdr-h:focus-visible .rdr-h-bg { stroke: #fff1cc; stroke-width: 2.4; }
@@ -7643,7 +7643,7 @@ body:has(.realverse-bg) { background: transparent; }
 .rdr-now {
   min-height: 1.5em; font-size: .8rem; font-weight: 700; color: #ffd899; text-align: center;
 }
-.rdr-hint { font-size: .7rem; color: #b6accd; }
+.rdr-hint { font-size: .7rem; line-height: 1.7; color: #b6accd; text-align: center; }
 .rdr-go {
   width: 100%; padding: 11px; border-radius: 12px; font-size: .85rem; font-weight: 800;
   color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72);

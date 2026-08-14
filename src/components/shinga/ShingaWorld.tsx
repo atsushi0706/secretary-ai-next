@@ -168,6 +168,8 @@ export function ShingaWorld({
    */
   const [radar, setRadar] = useState(false);
   const radarDoneRef = useRef(false);
+  /** いま送っている返事が「方向をたずねる番」か（返事が終わったら羅針盤を出す） */
+  const radarAskRef = useRef(false);
   /**
    * ドリームキラー（淳くん専用・お試し中）。
    * 歩いている途中に一度だけバンと現れる。何度も出ると歩く邪魔になるので、
@@ -466,25 +468,50 @@ export function ShingaWorld({
   }, [face, avatarUrl, isDefaultFace]);
 
   useEffect(() => {
+    /*
+     * 羅針盤が出ているあいだは、下まで送らない。
+     * ここが後から走って、せっかく残したリンクの問いを画面の外へ押し出していた
+     *（淳くん：文字が出た瞬間に一番下まで行っちゃって、読み飛ばしちゃう）。
+     */
+    if (radar) return;
     // レイアウト確定後に送る（進行帯などが挟まると1フレーム前の高さで止まるため）
     requestAnimationFrame(() => {
       scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
     });
-  }, [messages, typing, choices, widget, partsStep, walkStage, travelStage]);
+  }, [messages, typing, choices, widget, partsStep, walkStage, travelStage, radar]);
 
   /*
-   * レーダーが出たら、その**頭**が見えるところまで送る。
+   * 羅針盤が出たときのスクロール。**必要な分だけ**動かす（block: "nearest"）。
    *
-   * いちばん下まで送ってしまうと、こんどはレーダーの足元だけが見えて、
-   * 直前の返事がまた画面の外へ行ってしまう。
-   * 頭に合わせれば、返事の終わりとレーダーの始まりが一緒に見える。
+   * 淳くん：「文字が出た瞬間に一番下まで行っちゃって、
+   *   もう羅針盤が出ちゃうから、やっぱり読み飛ばしちゃう」
+   * 下まで飛ばすと、直前の返事が画面の外へ出てしまう。
+   * すでに見えているなら動かさない。隠れているぶんだけ、そっと寄せる。
    */
   useEffect(() => {
-    if (!radar) return;
-    requestAnimationFrame(() => {
-      scrollRef.current?.querySelector(".rdr")?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-  }, [radar]);
+    /*
+     * 盤が画面に出るのは、返事を**打ち終わってから**（描画の条件が !typing）。
+     * 出る前に測っても、まだそこに無い。だから打ち終わりも待つ。
+     */
+    if (!radar || typing) return;
+    /*
+     * すぐ測ると、盤がまだ組み上がっていなくて位置がずれる（実測でずれた）。
+     * ひと呼吸おいてから測って、送る。
+     */
+    const t = setTimeout(() => {
+      const box = scrollRef.current;
+      const el = box?.querySelector(".rdr") as HTMLElement | null;
+      if (!box || !el) return;
+      /*
+       * 盤の頭が、画面の**やや下**に来るところで止める。
+       * 上に会話をひと画面ぶんの4割ほど残すので、
+       * リンクの「どっちの方向？」がそのまま読める。
+       * （盤は会話欄より背が高い。上に詰めると問いが必ず外へ出る）
+       */
+      box.scrollTo({ top: Math.max(0, el.offsetTop - box.clientHeight * 0.42), behavior: "smooth" });
+    }, 120);
+    return () => clearTimeout(t);
+  }, [radar, typing]);
 
   /*
    * 前回、録音の途中で画面がいなくなっていたら、一度だけ報告する。
@@ -688,9 +715,11 @@ export function ShingaWorld({
     const w = runWorkRef.current;
     if (!w || sending) return;
     const body = textIn.trim();
-    if (!body && !greet) return;
+    const askDir = radarAskRef.current && !body && !greet;
+    if (!body && !greet && !askDir) return;
     setSending(true);
-    if (!greet) setMessages((prev) => [...prev, { role: "user", content: body }]);
+    // 方向をたずねる番は、本人が何か言ったわけではないので、発言としては足さない
+    if (!greet && !askDir) setMessages((prev) => [...prev, { role: "user", content: body }]);
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
     targetRef.current = ""; shownRef.current = 0; finalRef.current = false;
     setTyping(true);
@@ -885,13 +914,15 @@ export function ShingaWorld({
     if (runWorkRef.current) { advanceCustom(textIn); return; }
     if (sending) return;
     const body = textIn.trim();
-    if (!body && !greet) return;
+    const askDir = radarAskRef.current && !body && !greet;
+    if (!body && !greet && !askDir) return;
 
     setSending(true);
     setChoices(null);
     setWidget(null);
     if (debug) setDebugTrace([]);
-    if (!greet) setMessages((prev) => [...prev, { role: "user", content: body }]);
+    // 方向をたずねる番は、本人が何か言ったわけではないので、発言としては足さない
+    if (!greet && !askDir) setMessages((prev) => [...prev, { role: "user", content: body }]);
 
     // 新しい assistant 行を用意して、タイプ演出を開始
     setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
@@ -940,6 +971,7 @@ export function ShingaWorld({
           shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
           // もう光のカードが出たか（サーバが締めを取りこぼしても、二枚目は出さない）
           shadowCardDone: m === "shadow" ? shadowCardShownRef.current : undefined,
+          askDirection: askDir || undefined,
           debug: debugAvailable && debug,
         }),
       });
@@ -1070,8 +1102,10 @@ export function ShingaWorld({
       finalRef.current = true;
       setSending(false);
       void afterDreamKiller(body);
-      // 理想が言葉になったあとで、方向さがし（レーダー）を出す
-      maybeRadar(m, [...messages, { role: "user", content: body } as Message]);
+      // リンクが「どっちの方向？」と聞き終わった。ここで羅針盤を出す
+      if (askDir) { radarAskRef.current = false; setRadar(true); }
+      // 理想が言葉になったら、次の番でリンクに方向をたずねてもらう
+      else maybeRadar(m, [...messages, { role: "user", content: body } as Message]);
       maybeDreamKiller(m);
     }
   }
@@ -1125,8 +1159,14 @@ export function ShingaWorld({
     const mine = msgs.filter((x) => x.role === "user" && x.content.trim() && !x.content.startsWith("[["));
     const said = mine[mine.length - 1]?.content.trim() ?? "";
     if (!(mine.length >= 2 || said.length >= 12)) return;
-    radarDoneRef.current = true;   // 出したら、このウォークではもう出さない
-    setTimeout(() => setRadar(true), 700);
+    /*
+     * ここでは羅針盤を出さない。**先に清瀬リンクに聞いてもらう。**
+     * 淳くん：「リンクが聞いてくれないと、どっちの方角にあるって聞いて、
+     *   ボタンを押してから羅針盤が出てくるようにしないと、前後の流れがおかしくなる」
+     */
+    radarDoneRef.current = true;   // 段取りは1回のウォークにつき1回だけ
+    radarAskRef.current = true;
+    setTimeout(() => { void talk(""); }, 400);
   }
 
   function maybeDreamKiller(m: ModeKey | null) {

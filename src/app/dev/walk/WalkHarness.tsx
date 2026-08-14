@@ -37,6 +37,13 @@ export function WalkHarness() {
       const url = String(typeof input === "string" ? input : input?.url ?? "");
       if (url.startsWith("/api/shinga/chat")) {
         turn += 1;
+        // 「方向をたずねる番」で来たら、リンクが聞く返事を返す
+        try {
+          const b = JSON.parse(String(init?.body ?? "{}"));
+          if (b.askDirection) {
+            return sse("いいね、その暮らし。——じゃあ、きみの理想が叶っている世界って、どっちの方向にあると思う？", "plain");
+          }
+        } catch { /* ignore */ }
         const kind = new URLSearchParams(window.location.search).get("case") ?? "plain";
         return sse(`${turn}回目の返事だよ。あさから筋トレね、それ最高だわ。そこで、何がしたくなってくる？`, kind);
       }

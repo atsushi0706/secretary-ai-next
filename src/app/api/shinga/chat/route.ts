@@ -179,6 +179,12 @@ export async function POST(req: Request) {
   const shadowSafety: "normal" | "boundary" = body.shadowSafety === "boundary" ? "boundary" : "normal";
   const shadowPicked = isShadowPairId(body.shadowPair) ? body.shadowPair : null;
   const shadowCardDone = body.shadowCardDone === true;
+  /*
+   * 「いま、方向をたずねる番」。画面から来る。
+   * 羅針盤が突然ひらくのではなく、**先に清瀬リンクが聞く**ようにするため
+   *（淳くん：リンクが聞いてくれないと、前後の流れがおかしくなる）。
+   */
+  const askDirection = body.askDirection === true;
 
   const stream = new ReadableStream({
     async start(controller) {
@@ -537,7 +543,14 @@ ${memBlock}` : system;
         ].join("\n");
 
         // 内なる子の神殿：扱う守り手が決まっていればその設定を、未定なら4色の手がかりを渡す
-        const systemBase = [systemWithMemory, honestyCtx, guideCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
+        const dirAsk = askDirection
+          ? "\n\n# いまは、方向をたずねる番\n"
+            + "ここまで聞いたことを短く受けてから、**自分の言葉で**こう聞いて終わる：\n"
+            + "『きみの理想が叶っている世界は、どっちの方向にあると思う？』\n"
+            + "アンテナみたいに体をひねって探してもらう、という言い方を添えてもいい。\n"
+            + "問いを重ねない。ここで止める（このあと、画面が羅針盤を出す）。"
+          : "";
+        const systemBase = [systemWithMemory + dirAsk, honestyCtx, guideCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
         const systemFull = mode !== "parts" ? systemBase : [
           systemBase,
           partColor

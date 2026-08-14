@@ -7612,49 +7612,38 @@ body:has(.realverse-bg) { background: transparent; }
 .rdr-lead b { color: #ffd899; }
 
 .rdr-dial { width: 100%; display: flex; justify-content: center; }
-.rdr-dial svg { width: 100%; max-width: 132px; height: auto; overflow: visible; }
-.rdr-ring { fill: none; stroke: rgba(224, 189, 114, .32); stroke-width: 1.2; }
-.rdr-ring2 { stroke: rgba(224, 189, 114, .18); }
-.rdr-cross { stroke: rgba(224, 189, 114, .18); stroke-width: 1; }
+/* 盤は大きく。ここを直接押すので、指の入る大きさが要る */
+.rdr-dial svg { width: 100%; max-width: 268px; height: auto; overflow: visible; }
+.rdr-ring { fill: none; stroke: rgba(224, 189, 114, .3); stroke-width: 1.2; }
+.rdr-ring2 { stroke: rgba(224, 189, 114, .16); }
+.rdr-cross { stroke: rgba(224, 189, 114, .14); stroke-width: 1; }
 .rdr-sweep { animation: rdrSweep 5.5s linear infinite; }
-.rdr-sweep path { fill: rgba(255, 216, 153, .16); }
+.rdr-sweep path { fill: rgba(255, 216, 153, .14); }
 @keyframes rdrSweep { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.rdr-beam path { stroke: #ffd899; stroke-width: 2.4; stroke-linecap: round; fill: none; }
-.rdr-beam circle { fill: #fff1cc; }
+.rdr-beam path { stroke: #ffd899; stroke-width: 2.6; stroke-linecap: round; fill: none; }
 .rdr-me { fill: #fff1cc; }
-.rdr-front { fill: #c9b48d; font-size: 10px; letter-spacing: .1em; }
 
 /*
- * 押す場所は、**並びがそのまま方向**。
- * 丸い目盛りに点を並べただけだと、右も左も分からなかった（淳くんの指摘）。
- * 左上のボタン＝左ななめ前。右下のボタン＝右うしろ。置き場所で分かるようにする。
+ * 時刻のひとつぶん。**盤の上を直接押す**（淳くんの指定）。
+ * ・rdr-hit … 見えない当たり判定。指の大きさを確保するために大きめ
+ * ・数字を出しておく。選ぶとチェックに変わる
  */
-.rdr-grid {
-  width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px;
+.rdr-h { cursor: pointer; }
+.rdr-hit { fill: transparent; }
+.rdr-h-bg {
+  fill: rgba(255, 255, 255, .07); stroke: rgba(255, 216, 153, .34); stroke-width: 1.3;
+  transition: fill .15s ease;
 }
-.rdr-grid button {
-  font-size: .68rem; font-weight: 700; line-height: 1.3; color: #f0eaff;
-  padding: 7px 2px; border-radius: 10px; min-height: 40px;
-  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 216, 153, .3);
-}
-.rdr-grid button:hover { background: rgba(255, 216, 153, .18); }
-.rdr-grid button.is-on {
-  color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72); border-color: #ffe3a8;
-}
-.rdr-center {
-  display: flex; align-items: center; justify-content: center;
-  font-size: .66rem; color: #a89ac9;
-}
+.rdr-h:hover .rdr-h-bg { fill: rgba(255, 216, 153, .2); }
+.rdr-h-n { fill: #efe6ff; font-size: 15px; font-weight: 700; }
+.rdr-h.is-on .rdr-h-bg { fill: #ffd899; stroke: #fff1cc; stroke-width: 2; }
+.rdr-check { fill: none; stroke: #2a1f10; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.rdr-h:focus-visible .rdr-h-bg { stroke: #fff1cc; stroke-width: 2.4; }
 
-/* 上下。「ずっと上」では何のことか分からないので、体の動きで書く */
-.rdr-vert { width: 100%; display: grid; grid-template-columns: repeat(2, 1fr); gap: 5px; }
-.rdr-vert button {
-  font-size: .7rem; font-weight: 700; color: #efe6ff; padding: 9px 2px; border-radius: 10px;
-  background: rgba(255, 255, 255, .07); border: 1px solid rgba(255, 216, 153, .28);
+.rdr-now {
+  min-height: 1.5em; font-size: .8rem; font-weight: 700; color: #ffd899; text-align: center;
 }
-.rdr-vert button.is-on {
-  color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72); border-color: #ffe3a8;
-}
+.rdr-hint { font-size: .7rem; color: #b6accd; }
 .rdr-go {
   width: 100%; padding: 11px; border-radius: 12px; font-size: .85rem; font-weight: 800;
   color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72);

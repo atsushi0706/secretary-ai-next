@@ -23,7 +23,7 @@ import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type H
 import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@/lib/parts";
 import { releaseGuardian } from "@/lib/parts-db";
 import { undoLastTurn } from "@/lib/undo-turn";
-import { DIRECTION_BY_SCREEN, DIRECTION_DONE, fixCloser, usesIdealAsk } from "@/lib/ideal-ask";
+import { DIRECTION_BY_SCREEN, DIRECTION_DONE, lastQuestion, isDecorCloser, usesIdealAsk } from "@/lib/ideal-ask";
 import { listMemories, memoryBlock } from "@/lib/memory";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
@@ -819,18 +819,19 @@ ${memBlock}` : system;
           .trim();
 
         /*
-         * 締めの問いの見張り。
+         * 会話は**いじらない**。ここでは見ているだけ。
          *
-         * 淳くん：「『どんなふうに見えてる？』みたいに、方向を勝手に決められるのが嫌。
-         *   問いかけられると、その方向の答えを見ちゃう。大体は捏造になっちゃう」
+         * 前はここで、飾りを聞いて締めていたら書き換えていた。
+         * でもそれも「どの問いが良いか」を僕が決めているということ
+         *（淳くん：問いの方向性は指定しないで。書き換えも指定のうち）。
          *
-         * 決まりはずっとプロンプトに書いてある。それでもAIは戻ってしまう。
-         * だから**返事を検査して、駄目な締めは動きの問いに置き換える**。
-         * （こういうものは、お願いではなくコードで止める）
+         * だから通す。代わりに、起きた回数だけ記録に残す。
+         * 場の渡し方で足りているかを確かめて、**分かってから**直す。
          */
-        const cleanQ = usesIdealAsk(String(mode ?? ""))
-          ? fixCloser(clean, history.length + (text?.length ?? 0))
-          : clean;
+        const cleanQ = clean;
+        if (usesIdealAsk(String(mode ?? "")) && isDecorCloser(lastQuestion(clean))) {
+          void logError(userId, "decor-closer", new Error(lastQuestion(clean).slice(0, 120)), { mode });
+        }
 
         // タグが本文に混じっていたら、削り直した本文で置き換える
         /*

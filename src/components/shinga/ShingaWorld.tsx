@@ -219,6 +219,12 @@ export function ShingaWorld({
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   // 届いているのに、まだ開いていない週次レポートの数（宝箱に印を出す）
   const [unreadWeekly, setUnreadWeekly] = useState(0);
+  /*
+   * 週刊レポートの呼びかけを、いま出すか。
+   * 「あとで」を押したら、この滞在のあいだは引っ込む。
+   * **読んだ印は付けない**ので、次に来たときはまた声をかける（まだ読んでいないから）。
+   */
+  const [weeklyNudge, setWeeklyNudge] = useState(true);
   // お試しスイッチ。新しいものは、まず淳くんの画面にだけ出る
   const [flags, setFlags] = useState<Record<string, boolean>>({});
   // アカシック：開いた最初に「今日のあなたの取扱説明書」を出す
@@ -1642,6 +1648,8 @@ export function ShingaWorld({
           isAdmin={isAdmin}
           features={features}
           unreadWeekly={unreadWeekly}
+          weeklyNudge={weeklyNudge && unreadWeekly > 0}
+          onHideWeekly={() => setWeeklyNudge(false)}
           flags={flags}
           onRunCustom={(w) => enterCustom(w)}
           onEditCustom={(w) => { setEditWork(w); setMakerOpen(true); }}
@@ -2269,7 +2277,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, flags = {},
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, weeklyNudge = false, onHideWeekly, flags = {},
 }: {
   guideName: string;
   avatarUrl: string;
@@ -2283,6 +2291,9 @@ function Home({
   features?: Record<string, boolean>;
   /** まだ開いていない週次レポートの数 */
   unreadWeekly?: number;
+  /** 週刊レポートの呼びかけを出すか（届いていて、まだ読んでいない人にだけ） */
+  weeklyNudge?: boolean;
+  onHideWeekly?: () => void;
   /** お試しスイッチ（新しいものは、まず淳くんだけに出る） */
   flags?: Record<string, boolean>;
   onHero: () => void;
@@ -2327,6 +2338,29 @@ function Home({
           <span className="tx"><b>未来からのクエストが届いてる</b><small>タップして受け取る</small></span>
           <span className="arr">→</span>
         </button>
+      )}
+
+      {/*
+        週刊レポートが届いていて、まだ開いていない人に。
+
+        バッジは前からあったが、ワールドメモリーの引き出しを開けないと見えないので、
+        届いたことに気づけなかった（淳くん：開いた瞬間に「ここにあるよ」と促してほしい）。
+        だから地図に出す。読んだら消える（開いた時点で印が付く）。
+        「あとで」を押したら、この滞在のあいだだけ引っ込む——
+        まだ読んでいないので、次に来たらまた声をかける。
+      */}
+      {weeklyNudge && onWeekly && (
+        <div className="iw-weekly-arrived">
+          <button className="main" onClick={onWeekly}>
+            <span className="ico">📦</span>
+            <span className="tx">
+              <b>今週のレポートが届いてるよ</b>
+              <small>タイムトラベルボックスに入ってる</small>
+            </span>
+            <span className="arr">→</span>
+          </button>
+          <button className="later" onClick={onHideWeekly} aria-label="あとで読む">あとで</button>
+        </div>
       )}
 
       {/* 手紙を読み返す（小さく・じゃまにならない） */}

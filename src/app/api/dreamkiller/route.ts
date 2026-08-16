@@ -19,6 +19,7 @@ import { complete } from "@/lib/ai";
 import { logError, getUserSettings, supabaseAdmin } from "@/lib/supabase";
 import { saveShingaMessage, loadShingaMessages } from "@/lib/shinga";
 import { jstDateStr } from "@/lib/google";
+import { nowLine } from "@/lib/now-line";
 import {
   dkPersona, dkJudgePrompt, dkOpenerPrompt, dkSurrenderPrompt, dkWelcomeBackPrompt, hasCore,
   afterFeelingPrompt, saidFeeling, AFTER_FEELING_CORE, AFTER_FEELING_FALLBACK,
@@ -223,7 +224,9 @@ export async function POST(req: Request) {
       try {
         say = (await complete({
           userId: g.userId,
-          system: dkPersona(theme, b.tender === true),
+          // ドリームキラーにも時間軸を渡す（全員に持たせる）
+          // ドリームキラーにも時間軸を渡す（全員に持たせる）
+          system: [nowLine(), dkPersona(theme, b.tender === true)].join(String.fromCharCode(10, 10)),
           prompt: `${log ? `# ここまでのやり取り\n${log}\n\n` : ""}`
             + `# 相手がいま言い返してきたこと\n${said}\n\n`
             + `これに食い下がってください。2〜4文。共感しない。説教しない。`,

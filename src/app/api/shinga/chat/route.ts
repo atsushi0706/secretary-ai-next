@@ -23,8 +23,9 @@ import { getHero, applyHeroDeltas, labelOf, type HeroRow, type HeroDelta, type H
 import { isPartColor, partPrompt, cuesForPrompt, PARTS, type PartColor } from "@/lib/parts";
 import { releaseGuardian } from "@/lib/parts-db";
 import { undoLastTurn } from "@/lib/undo-turn";
-import { DIRECTION_BY_SCREEN, DIRECTION_DONE, lastQuestion, isDecorCloser, usesIdealAsk } from "@/lib/ideal-ask";
+import { DIRECTION_BY_SCREEN, DIRECTION_DONE, closerToDrop, dropCloser, usesIdealAsk } from "@/lib/ideal-ask";
 import { listMemories, memoryBlock } from "@/lib/memory";
+import { nowLine } from "@/lib/now-line";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
@@ -550,7 +551,8 @@ ${memBlock}` : system;
             + "アンテナみたいに体をひねって探してもらう、という言い方を添えてもいい。\n"
             + "問いを重ねない。ここで止める（このあと、画面が羅針盤を出す）。"
           : "";
-        const systemBase = [systemWithMemory + dirAsk, honestyCtx, guideCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
+        // いま何月何日の何時か。全部屋に渡す（淳くん：全員に時間軸を持たせたい）
+        const systemBase = [nowLine(), systemWithMemory + dirAsk, honestyCtx, guideCtx, progressCtx, balanceCtx, customCtx].filter(Boolean).join("\n\n");
         const systemFull = mode !== "parts" ? systemBase : [
           systemBase,
           partColor
@@ -828,9 +830,23 @@ ${memBlock}` : system;
          * だから通す。代わりに、起きた回数だけ記録に残す。
          * 場の渡し方で足りているかを確かめて、**分かってから**直す。
          */
-        const cleanQ = clean;
-        if (usesIdealAsk(String(mode ?? "")) && isDecorCloser(lastQuestion(clean))) {
-          void logError(userId, "decor-closer", new Error(lastQuestion(clean).slice(0, 120)), { mode });
+        /*
+         * 問いの方向はこちらが決めない（見本も書き換えもやめた）。
+         * ただし淳くんが名指しで、何度も止めてほしいと言った2つだけ落とす。
+         *   ・自分の顔／表情を聞く
+         *   ・前の話題を引っぱり戻す（別の話に移っているのに、また前のものを問いに入れる）
+         * 落とすだけで、置き換えはしない。
+         */
+        let cleanQ = clean;
+        if (usesIdealAsk(String(mode ?? ""))) {
+          const mine = history.filter((h) => h.role === "user");
+          const lastSaid = text || mine[mine.length - 1]?.content || "";
+          const older = mine.slice(0, -1).map((h) => h.content).join(" ");
+          const why = closerToDrop(clean, lastSaid, older);
+          if (why) {
+            cleanQ = dropCloser(clean);
+            void logError(userId, `closer-${why}`, new Error(clean.slice(-120)), { mode });
+          }
         }
 
         // タグが本文に混じっていたら、削り直した本文で置き換える

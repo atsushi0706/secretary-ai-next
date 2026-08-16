@@ -9,6 +9,7 @@ import { getCalendarEvents, getTasks, computeSchedule, jstNow, jstDateStr, forma
 import { clearManualLabel } from "@/lib/supabase";
 import { undoLastTurn } from "@/lib/undo-turn";
 import { listMemories, memoryBlock } from "@/lib/memory";
+import { nowLine } from "@/lib/now-line";
 
 const ADD_INTENT_KEYWORDS = [
   "入れといて", "入れておいて", "入れとい", "追加しといて", "追加しておいて",
@@ -267,7 +268,7 @@ JSONのみ:
         const mems = await listMemories(userId).catch(() => []);
         const memBlock = memoryBlock(mems, settings?.user_call_name || "きみ");
         const NL2 = String.fromCharCode(10) + String.fromCharCode(10);
-        const systemText = persona + (memBlock ? NL2 + memBlock : "") + NL2 + "# いまの状況" + String.fromCharCode(10) + ctxLines.join(NL2);
+        const systemText = persona + NL2 + nowLine() + (memBlock ? NL2 + memBlock : "") + NL2 + "# いまの状況" + String.fromCharCode(10) + ctxLines.join(NL2);
         // AI streaming (Gemini or Claude を自動選択) + web_search (Claude時のみ)
         let fullReply = "";
         for await (const ev of streamChat({

@@ -451,6 +451,15 @@ ${memBlock}` : system;
               lines.push(`  返事の最後に <wall_dug>個数</wall_dug> を必ず付ける。`);
             }
           }
+          if (mode === "money" && progress.moneyStep) {
+            const mStep = progress.moneyStep;
+            lines.push(`- マネーオーダー：いま段階 ${mStep}/4（画面に表示中）。`);
+            if (mStep <= 1) {
+              lines.push(`  **まだ1段目＝資産を出す場。** 掘らない。短く受けて「ほかには？」で出させ続ける。`
+                + `本人が「もう出ない」と言い、宣言（私は…すでにこれだけ持っています）を言い終えるまで、`
+                + `<money_step>2</money_step> は付けない。`);
+            }
+          }
           if (mode === "shadow") {
             if (progress.shadowStep) {
               const sStep = shadowStepNow(progress.shadowStep, sessionHistory.filter((m) => m.role === "user").length);
@@ -639,7 +648,7 @@ ${memBlock}` : system;
         const wantLetGo = /<letgo\s*\/?>/.test(full);
         // マネーオーダー：いま何段目か
         let moneyStep: number | null = null;
-        const mnMatch = full.match(/<money_step>\s*([1-7])\s*<\/money_step>/);
+        const mnMatch = full.match(/<money_step>\s*([1-4])\s*<\/money_step>/);
         if (mnMatch) moneyStep = Number(mnMatch[1]);
 
         // ウォールブレイク：壁（無理）が解けていく度合いを扉の開き具合で見せる。

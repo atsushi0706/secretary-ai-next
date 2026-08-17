@@ -10,9 +10,10 @@
 import type { PlaceKey } from "./places";
 import { SHADOW_FLOW } from "./shadow";
 import { IDEAL_ASK, DIRECTION_BY_SCREEN, DIRECTION_DONE, usesIdealAsk } from "./ideal-ask";
+import { MONEY_FLOW, MONEY_OPENER } from "./money-order";
 
 // ゾーン(PlaceKey)に加えて、地図の上には無い体験モードも持てる（place で見た目のゾーンを借りる）
-export type ModeKey = PlaceKey | "breakthrough" | "travel" | "parts" | "balance" | "shadow" | "crystal" | "reflect";
+export type ModeKey = PlaceKey | "breakthrough" | "travel" | "parts" | "balance" | "shadow" | "crystal" | "reflect" | "money";
 
 export type Mode = {
   key: ModeKey;
@@ -472,6 +473,15 @@ export const MODES: Record<ModeKey, Mode> = {
 ※ まだ形になっていないうちは付けない。焦って締めない。
 `.trim(),
   },
+  money: {
+    key: "money",
+    label: "マネーオーダー",
+    en: "Money Order",
+    desc: "すでに持っている見えない資産を見つけて、受け取りを止めているものを手放す。",
+    place: "higher",   // ゾーンの内部データはハイヤーを借りる
+    tier: "sub",
+    flow: MONEY_FLOW,
+  },
   reflect: {
     key: "reflect",
     label: "ワールドリプレイ",
@@ -768,6 +778,9 @@ export const MODE_OPENERS: Partial<Record<ModeKey, ModeOpener>> = {
   },
   breakthrough: {
     line: "ここは「無理」を超える場所🗝 やりたいこと——でも“やっぱり無理かも”って思ってること、1つ聞かせて。",
+  },
+  money: {
+    line: MONEY_OPENER,
   },
   reflect: {
     line: "おつかれさま🌙 今日を一緒に閉じよう。今日は、どんな1日だった？ ——マイクを押して、話したまま置いていってくれたらいいよ。",

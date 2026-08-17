@@ -7748,3 +7748,18 @@ body:has(.realverse-bg) { background: transparent; }
   padding: 8px 14px; border-radius: 999px; margin-left: auto;
   background: linear-gradient(160deg, #ffe3a8, #e0bd72);
 }
+
+/* マネーオーダー：思い込みを手放す瞬間 */
+.letgo {
+  margin: 8px auto 12px; max-width: 340px; text-align: center;
+  background: rgba(24, 19, 34, .94); border: 1px solid rgba(224, 189, 114, .45);
+  border-radius: 16px; padding: 16px 14px;
+}
+.letgo .lg-lead { font-size: .8rem; line-height: 2; color: #f0eaff; margin-bottom: 12px; }
+.letgo .lg-lead b { color: #ffd899; }
+.letgo .lg-btn {
+  width: 100%; padding: 16px; border-radius: 14px; font-size: 1rem; font-weight: 800;
+  color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72);
+  box-shadow: 0 8px 26px rgba(180, 140, 60, .4);
+}
+.travel-alt.is-money .ta-seg.on { background: #ffd899; }

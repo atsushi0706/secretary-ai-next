@@ -41,6 +41,7 @@ import { DreamKiller } from "./DreamKiller";
 import { DirectionRadar, dirSentence, type DirPick } from "./DirectionRadar";
 import { TalkBoundary } from "./TalkBoundary";
 import { reportMicCrash } from "@/components/useDictation";
+import { MONEY_STEPS } from "@/lib/money-order";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -201,6 +202,9 @@ export function ShingaWorld({
   // 影獣の鏡：入口(gate)で安全をたしかめる → ワーク中は段階・選ばれた影・完成カードを持つ
   const [shadowGate, setShadowGate] = useState(false);
   const [shadowStep, setShadowStep] = useState(1);
+  /* マネーオーダー：いま何段目か（1〜7）と、「手放す」ボタンを出すか */
+  const [moneyStep, setMoneyStep] = useState(1);
+  const [letGo, setLetGo] = useState(false);
   const shadowSafetyRef = useRef<ShadowSafety>("normal");
   const shadowPairRef = useRef<ShadowPairId | null>(null);
   const [beastReveal, setBeastReveal] = useState<ShadowPairId | null>(null);  // 幻獣が現れた演出
@@ -601,9 +605,11 @@ export function ShingaWorld({
       next.push(`/walk-${Math.min(10, walkStage + 1)}.jpg`);
     } else if (mode === "travel") {
       next.push(`/travel-${Math.min(10, travelStage + 1)}.jpg`);
+    } else if (mode === "money") {
+      next.push(`/money-${Math.min(4, moneyStep + 1)}.jpg`);
     }
     for (const src of next) { const im = new window.Image(); im.src = src; }
-  }, [mode, wallStage, walkStage, travelStage]);
+  }, [mode, wallStage, walkStage, travelStage, moneyStep]);
 
   // タイプ演出のループ
   useEffect(() => {
@@ -699,6 +705,7 @@ export function ShingaWorld({
     setTodayManual(false);
     setClosing(false);          // 夜の「今日を閉じる」板を持ち越さない
     setCrystalAsk(false); setReflectAsk(false);   // 「いい？」の確認も持ち越さない
+    setLetGo(false);            // 手放すボタンを持ち越さない
     childShownRef.current = false;
   }
 
@@ -860,6 +867,7 @@ export function ShingaWorld({
     if (fresh && flags.tutorial && !tutorialSeen(m)) setTutorial({ mode: m, first: true });
     if (m === "travel" && fresh) setTravelStage(1);     // 旅は「目の前の出来事」から始まる
     if (m === "walk" && fresh) setWalkStage(1);         // 歩きは門のほとりから始まる
+    if (m === "money" && fresh) { setMoneyStep(1); setLetGo(false); }
     if (m === "walk" && fresh) radarDoneRef.current = false;   // 出すのは、理想が出てきてから
     if (m !== "walk") setRadar(false);
     if (!resume) setMessages([]);
@@ -973,6 +981,7 @@ export function ShingaWorld({
           // もう結晶化に誘ってあるか（誘いを重ねない）
           crystalOffered: m === "walk" ? crystalOfferedRef.current : undefined,
           shadowStep: m === "shadow" ? shadowStep : undefined,
+          moneyStep: m === "money" ? moneyStep : undefined,
           shadowPair: m === "shadow" ? shadowPairRef.current ?? undefined : undefined,
           shadowSafety: m === "shadow" ? shadowSafetyRef.current : undefined,
           // もう光のカードが出たか（サーバが締めを取りこぼしても、二枚目は出さない）
@@ -1031,6 +1040,19 @@ export function ShingaWorld({
               dropCard({ t: "child", color });
             }
           }
+        } else if (name === "money_step") {
+          if (typeof data?.step === "number") setMoneyStep(Math.max(1, Math.min(7, data.step)));
+        } else if (name === "letgo") {
+          /*
+           * 思い込みを落とす場面。**押すのは本人**。
+           * 押した音（ペンが床に落ちる音）まで聞いてもらうので、
+           * こちらは押されたことだけを受け取って、あとは黙る。
+           */
+          setLetGo(true);
+        } else if (name === "task_added") {
+          const ts = Array.isArray(data?.titles) ? data.titles : [];
+          if (ts.length) setMessages((prev) => [...prev,
+            { role: "assistant", content: `リアルバースに置いておいたよ：「${ts.join("」「")}」` }]);
         } else if (name === "shadow_step") {
           const s2 = Number(data?.step);
           if (Number.isFinite(s2)) setShadowStep(Math.max(1, Math.min(9, s2)));
@@ -1334,6 +1356,8 @@ export function ShingaWorld({
     view === "home" ? "/singa-map.jpg"
     : mode === "breakthrough" ? `/wall-${wallStage}.png`
     : mode === "travel" ? `/travel-${travelStage}.jpg`
+    /* マネーオーダー：段が上がると、円陣が満ちていく（4枚） */
+    : mode === "money" ? `/money-${Math.min(4, Math.max(1, moneyStep))}.jpg`
     : mode === "walk" ? `/walk-${walkStage}.jpg`
     // ミラーオブワールドは専用の絵（左＝いまの世界／右＝もう一つの世界／中央に鏡の環）
     : mode === "shadow" ? "/shadow-bg.jpg"
@@ -1629,7 +1653,12 @@ export function ShingaWorld({
         <Home
           guideName={guideName}
           avatarUrl={faceSrc}
-          onPick={(m) => void enter(m)}
+          /*
+            マネーオーダーは、いまは鍵つき（淳くんだけ）。
+            開ける／閉めるは管理画面の「お試しスイッチ」から。
+          */
+          onPick={(m) => { if (m === "money" && !(isAdmin || features.money)) return; void enter(m); }}
+          moneyOpen={isAdmin || !!features.money}
           onTalk={(t) => void enterFree(t)}
           onDaily={() => void enter("reflect")}
           onHero={() => setHeroOpen(true)}
@@ -1712,6 +1741,19 @@ export function ShingaWorld({
           )}
           {mode === "shadow" && !shadowGate && (
             <ShadowProgress step={shadowStep} safety={shadowSafetyRef.current} />
+          )}
+
+          {/* マネーオーダー：いまどこまで来たか */}
+          {mode === "money" && (
+            <div className="travel-alt is-money">
+              <span className="ta-label">💰 マネーオーダー</span>
+              <span className="ta-track">
+                {MONEY_STEPS.map((_, i) => (
+                  <span key={i} className={`ta-seg ${i < moneyStep ? "on" : ""} ${i === moneyStep - 1 ? "now" : ""}`} />
+                ))}
+              </span>
+              <span className="ta-name">{MONEY_STEPS[moneyStep - 1]}</span>
+            </div>
           )}
 
           {/* 内なる子の神殿：まず守り手を選ぶ盤面（選んだらワークの会話が始まる） */}
@@ -1862,6 +1904,24 @@ export function ShingaWorld({
                   void talk("方向はわからなかった。このまま歩き出したい");
                 }}
               />
+            )}
+
+            {/*
+              マネーオーダー：思い込みを手放す瞬間。
+              押すのと同時に息を吐いて、ペンを床に落としてもらう。
+              押したあとは、こちらから急いで話さない（落ちた音を聞く時間）。
+            */}
+            {mode === "money" && letGo && !typing && (
+              <div className="letgo">
+                <p className="lg-lead">
+                  息を「ハッ！」と吐きながら、<b>手の中のペンを床に落として</b>。<br />
+                  落ちた音まで、しっかり聞いてね。
+                </p>
+                <button
+                  className="lg-btn"
+                  onClick={() => { setLetGo(false); void talk("（手放すボタンを押した）"); }}
+                >手放す</button>
+              </div>
             )}
 
             {/* 選択肢ボタン */}
@@ -2196,6 +2256,7 @@ const DOORS_SUB: { key: ModeKey; emoji: string }[] = [
   { key: "shadow", emoji: "🪞" },
   { key: "breakthrough", emoji: "🗝" },
   { key: "travel", emoji: "🚀" },
+  { key: "money", emoji: "💰" },
 ];
 
 // パフォーマンス（今日どれくらい動けそうか）の色：低=青グレー → 高=ゴールド
@@ -2277,7 +2338,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, weeklyNudge = false, onHideWeekly, flags = {},
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, weeklyNudge = false, onHideWeekly, moneyOpen = false, flags = {},
 }: {
   guideName: string;
   avatarUrl: string;
@@ -2291,6 +2352,8 @@ function Home({
   features?: Record<string, boolean>;
   /** まだ開いていない週次レポートの数 */
   unreadWeekly?: number;
+  /** マネーオーダーの鍵が開いているか（いまは淳くんだけ） */
+  moneyOpen?: boolean;
   /** 週刊レポートの呼びかけを出すか（届いていて、まだ読んでいない人にだけ） */
   weeklyNudge?: boolean;
   onHideWeekly?: () => void;
@@ -2416,7 +2479,8 @@ function Home({
             </button>
           );
         })}
-        {DOORS_SUB.map((d) => {
+        {/* 鍵つきの部屋は、開いている人にだけ出す（いまはマネーオーダー） */}
+        {DOORS_SUB.filter((d) => d.key !== "money" || moneyOpen).map((d) => {
           const m = MODES[d.key];
           const locked = lockedWorks.includes(d.key);
           return (

@@ -26,6 +26,7 @@ import { undoLastTurn } from "@/lib/undo-turn";
 import { DIRECTION_BY_SCREEN, DIRECTION_DONE, closerToDrop, dropCloser, usesIdealAsk } from "@/lib/ideal-ask";
 import { listMemories, memoryBlock } from "@/lib/memory";
 import { nowLine } from "@/lib/now-line";
+import { moneyStepNow } from "@/lib/money-order";
 
 const HERO_DOMAINS: HeroDomain[] = ["inner", "embodiment", "relationship", "delivery", "socialization"];
 
@@ -101,6 +102,20 @@ export async function POST(req: Request) {
   const body = await req.json().catch(() => ({}));
 
   /*
+   * マネーオーダーは、いまは鍵つき（淳くんだけ）。
+   * 画面側だけで隠すと、直接叩けば通ってしまうので、ここでも閉じる。
+   */
+  if (body.mode === "money") {
+    const { isAdmin } = await import("@/lib/admin");
+    const { hasFeature } = await import("@/lib/app-config");
+    if (!isAdmin(userId) && !(await hasFeature(userId, "money"))) {
+      return new Response(JSON.stringify({ error: "この部屋はまだ開いていません" }), {
+        status: 403, headers: { "Content-Type": "application/json" },
+      });
+    }
+  }
+
+  /*
    * 画面側だけで出した一言を、会話の記録にも残すだけの呼び出し。
    * （ドリームキラーから戻ったときの、清瀬リンクの第一声など）
    * 残さないと、次のやり取りでAIが「自分がそれを言った」ことを知らないままになる。
@@ -149,6 +164,7 @@ export async function POST(req: Request) {
     travelStage: Number.isFinite(Number(body.travelStage)) ? Number(body.travelStage) : null,
     wallStage: Number.isFinite(Number(body.wallStage)) ? Number(body.wallStage) : null,
     shadowStep: Number.isFinite(Number(body.shadowStep)) ? Number(body.shadowStep) : null,
+    moneyStep: Number.isFinite(Number(body.moneyStep)) ? Number(body.moneyStep) : null,
     /** ウォールブレイクで、陰の側から掘り出せた個数（7個貯まるまで次の段階へ行かせない） */
     wallDug: Number.isFinite(Number(body.wallDug)) ? Number(body.wallDug) : 0,
   };
@@ -619,6 +635,12 @@ ${memBlock}` : system;
         // ピークステートの進行トリガー
         const wantEmotion = /<emotion\s*\/?>/.test(full);
         const wantBreath = /<breath\s*\/?>/.test(full);
+        // マネーオーダー：思い込みを落とす合図（画面に「手放す」ボタンが出る）
+        const wantLetGo = /<letgo\s*\/?>/.test(full);
+        // マネーオーダー：いま何段目か
+        let moneyStep: number | null = null;
+        const mnMatch = full.match(/<money_step>\s*([1-7])\s*<\/money_step>/);
+        if (mnMatch) moneyStep = Number(mnMatch[1]);
 
         // ウォールブレイク：壁（無理）が解けていく度合いを扉の開き具合で見せる。
         // 1=固く閉じた扉 … 5=全開（谷が見える）。回数ではなく、AIが今の状態を判定して出す。
@@ -786,6 +808,9 @@ ${memBlock}` : system;
           .replace(/<hero_delta>[\s\S]*?<\/hero_delta>/g, "")
           .replace(/<emotion\s*\/?>/g, "")
           .replace(/<breath\s*\/?>/g, "")
+          .replace(/<letgo\s*\/?>/g, "")
+          .replace(/<money_step>[\s\S]*?<\/money_step>/g, "")
+          .replace(/<task_to_add>[\s\S]*?<\/task_to_add>/g, "")
           .replace(/<wall>[\s\S]*?<\/wall>/g, "")
           .replace(/<wall_dug>[\s\S]*?<\/wall_dug>/g, "")
           .replace(/<crystallize\s*\/?>/g, "")
@@ -863,6 +888,11 @@ ${memBlock}` : system;
         if (face) send("face", { face });
         if (wantEmotion) send("emotion", {});
         if (wantBreath) send("breath", {});
+        if (wantLetGo) send("letgo", {});
+        if (mode === "money") {
+          const said = sessionHistory.filter((m) => m.role === "user").length;
+          send("money_step", { step: moneyStepNow(Math.max(progress.moneyStep ?? 1, moneyStep ?? 1), said) });
+        }
         if (wallStage) send("wall", { stage: wallStage, dug: wallDug });
         if (wantCrystallize) send("crystallize", {});
         /*
@@ -962,6 +992,28 @@ ${talked}`,
         const releasedNow = releasedColor
           ?? (mode === "parts" && partColor && (progress.partsStep ?? 0) >= 9 && partsAt >= 9
             ? partColor : null);
+
+        /*
+         * マネーオーダー：日常へ持ち帰る一手を、リアルバースのタスクにする。
+         * **本人がはっきり「はい」と言ったときだけ**AIがタグを付ける決まりなので、
+         * ここは付いていたら素直に登録する（勝手には付かない）。
+         */
+        if (mode === "money") {
+          const tm = full.match(/<task_to_add>([\s\S]*?)<\/task_to_add>/);
+          if (tm) {
+            try {
+              const arr = JSON.parse(tm[1].trim());
+              const list = (Array.isArray(arr) ? arr : []).slice(0, 3)
+                .map((t: any) => ({ title: String(t?.title ?? "").trim().slice(0, 60), notes: String(t?.notes ?? "").trim().slice(0, 300) }))
+                .filter((t: any) => t.title);
+              for (const t of list) {
+                const { addTask } = await import("@/lib/google");
+                await addTask(userId, t.title, { notes: t.notes });
+              }
+              if (list.length) send("task_added", { titles: list.map((t: any) => t.title) });
+            } catch (e) { console.error("[shinga/chat] money task failed:", e); }
+          }
+        }
 
         // ガーディアン解放：守り手が役割を降り、才能として開いた瞬間
         if (releasedNow) {

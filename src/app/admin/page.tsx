@@ -17,6 +17,7 @@ const LOCKABLE: { key: string; label: string }[] = [
   { key: "walk", label: "パラレルウォーク" },
   { key: "akashic", label: "アカシックレコーダー" },
   { key: "crystal", label: "クリスタルルーム" },
+  { key: "money", label: "マネーオーダー" },
   { key: "reflect", label: "ワールドリプレイ（夜の振り返り）" },
   { key: "higher", label: "ハイヤークエスト" },
   { key: "deep", label: "ディープアイデンティティ" },

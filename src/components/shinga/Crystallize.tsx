@@ -23,6 +23,14 @@ function endOfWeekJst(): string {
   const toSun = dow === 0 ? 0 : 7 - dow;   // 今週の日曜まで
   return jstDatePlus(toSun);
 }
+/** 「いつやる」だけ押して期限を押さなかったとき、日付に直す。今週中／週末は今週の日曜 */
+function dueFromWhen(when: string): string {
+  if (!when) return "";
+  if (when.startsWith("今日")) return jstDatePlus(0);
+  if (when.startsWith("明日")) return jstDatePlus(1);
+  if (when === "今週中" || when === "週末に") return endOfWeekJst();
+  return "";
+}
 const DUE_CHIPS = [
   { label: "今日", date: () => jstDatePlus(0) },
   { label: "明日", date: () => jstDatePlus(1) },
@@ -104,19 +112,23 @@ export function Crystallize({ lines, onDone, onCancel }: {
     if (!items.length) return;
     setBusy(true); setErr("");
     try {
-      let ok = 0;
+      let ok = 0; let lastErr = "";
+      // 期限を押していなくても「いつやる」から日付が決まるなら、それを期限にする
+      const dueFinal = due || dueFromWhen(when);
       for (const title of items) {
         const r = await fetch("/api/shinga/quest", {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             title,
-            body: [when ? `${when}にやる` : "", due ? `期限：${due}` : "", `（${name}）`].filter(Boolean).join("　"),
-            due: due || undefined,
+            body: [when ? `${when}にやる` : "", `💎 ${name}`].filter(Boolean).join("　"),
+            due: dueFinal || undefined,
           }),
         });
-        if (r.ok) ok++;
+        if (r.ok) ok++; else lastErr = (await r.json().catch(() => ({})))?.error ?? "";
       }
-      setSent(ok > 0 ? `${ok}件、リアルバースに置いたよ${when ? `（${when}）` : ""}` : "置けなかった");
+      setSent(ok > 0
+        ? `${ok}件、リアルバースのタスクに入れたよ${dueFinal ? `（期限 ${dueFinal.replace(/-/g, "/")}）` : ""}`
+        : (lastErr || "置けなかった"));
     } catch { setSent("置けなかった"); }
     finally { setBusy(false); }
   }

@@ -42,6 +42,7 @@ import { DirectionRadar, dirSentence, type DirPick } from "./DirectionRadar";
 import { TalkBoundary } from "./TalkBoundary";
 import { reportMicCrash } from "@/components/useDictation";
 import { MONEY_STEPS } from "@/lib/money-order";
+import { LetGoBurst } from "./LetGoBurst";
 
 type Face = "neutral" | "smile" | "anxious";
 type Choice = { label: string; mode?: ModeKey };
@@ -205,6 +206,8 @@ export function ShingaWorld({
   /* マネーオーダー：いま何段目か（1〜7）と、「手放す」ボタンを出すか */
   const [moneyStep, setMoneyStep] = useState(1);
   const [letGo, setLetGo] = useState(false);
+  /** 押した瞬間の演出（上からヒラヒラ → バリーン）。終わったら消える */
+  const [letGoBurst, setLetGoBurst] = useState(false);
   const shadowSafetyRef = useRef<ShadowSafety>("normal");
   const shadowPairRef = useRef<ShadowPairId | null>(null);
   const [beastReveal, setBeastReveal] = useState<ShadowPairId | null>(null);  // 幻獣が現れた演出
@@ -705,7 +708,7 @@ export function ShingaWorld({
     setTodayManual(false);
     setClosing(false);          // 夜の「今日を閉じる」板を持ち越さない
     setCrystalAsk(false); setReflectAsk(false);   // 「いい？」の確認も持ち越さない
-    setLetGo(false);            // 手放すボタンを持ち越さない
+    setLetGo(false); setLetGoBurst(false);   // 手放すボタンと演出を持ち越さない
     childShownRef.current = false;
   }
 
@@ -1919,7 +1922,7 @@ export function ShingaWorld({
                 </p>
                 <button
                   className="lg-btn"
-                  onClick={() => { setLetGo(false); void talk("（手放すボタンを押した）"); }}
+                  onClick={() => { setLetGo(false); setLetGoBurst(true); }}
                 >手放す</button>
               </div>
             )}
@@ -2017,6 +2020,15 @@ export function ShingaWorld({
             )}
             </TalkBoundary>
           </div>
+
+          {/*
+            マネーオーダー：手放した瞬間。上から落ちてきて、床でバリーンと割れる。
+            演出が終わってから、はじめてリンクに「押した」と伝える
+            （ペンが落ちる音を聞く時間を、こちらの言葉で埋めない）。
+          */}
+          {letGoBurst && (
+            <LetGoBurst onDone={() => { setLetGoBurst(false); void talk("（手放すボタンを押した）"); }} />
+          )}
 
           {/* パラレルウォーク：1対1で完結。終わるボタンだけ出す */}
           {mode === "walk" && (

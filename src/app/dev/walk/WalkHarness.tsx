@@ -21,6 +21,7 @@ function sse(text: string, kind: string): Response {
   if (kind === "choices") parts.push(ev("choices", [{ label: "もう少し歩く" }, { label: "結晶化する", mode: "crystal" }]));
   if (kind === "emotion") parts.push(ev("emotion", {}));
   if (kind === "care") parts.push(ev("care", { text: "無理しないでね" }));
+  if (kind === "letgo") parts.push(ev("letgo", {}));
   if (kind === "walk10") parts.push(ev("walk", { stage: 10 }));
   else parts.push(ev("walk", { stage: 2 }));
   parts.push(ev("done", {}));
@@ -62,7 +63,7 @@ export function WalkHarness() {
   if (!ready) return <div style={{ padding: 20 }}>準備中…</div>;
   return (
     <main className="min-h-screen">
-      <ShingaWorld guideName="清瀬リンク" avatarUrl="/kiyose.png" openMode="walk" />
+      <ShingaWorld guideName="清瀬リンク" avatarUrl="/kiyose.png" openMode={(new URLSearchParams(window.location.search).get("mode") as any) ?? "walk"} />
     </main>
   );
 }

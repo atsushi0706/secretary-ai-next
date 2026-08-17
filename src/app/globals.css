@@ -7763,3 +7763,81 @@ body:has(.realverse-bg) { background: transparent; }
   box-shadow: 0 8px 26px rgba(180, 140, 60, .4);
 }
 .travel-alt.is-money .ta-seg.on { background: #ffd899; }
+
+/* ══════════════════════════════════════════════════════════
+   「手放す」を押した瞬間の演出（LetGoBurst）
+   上からヒラヒラ落ちてきて、床でバリーンと割れる。
+   音は鳴らさない（本物のペンが床に落ちる音を聞く場面）。
+   位置は**枠（.singa-stage）の高さ基準**で書く。vh だと枠の外へ出る（実測で気づいた）。
+   ══════════════════════════════════════════════════════════ */
+.lgb { position: absolute; inset: 0; z-index: 40; pointer-events: none; overflow: hidden; }
+.lgb-veil {
+  position: absolute; inset: 0; background: rgba(8, 6, 14, .34);
+  animation: lgbVeil 3.2s ease-in-out forwards;
+}
+@keyframes lgbVeil { 0% { opacity: 0; } 15% { opacity: 1; } 78% { opacity: 1; } 100% { opacity: 0; } }
+
+/* ① 落ちてくる。ヒラヒラ（左右にゆれながら、少しずつ回る）。着地点は枠の高さの76% */
+.lgb-fall {
+  position: absolute; left: 50%; top: 0; height: 100%; width: 0;
+}
+.lgb-fall > svg {
+  position: absolute; left: 0; top: 0;
+  animation: lgbFall 1.4s cubic-bezier(.4, 0, .9, .4) forwards;
+}
+@keyframes lgbFall {
+  0%   { transform: translate(-50%, -110px) rotate(-14deg); opacity: 0; }
+  10%  { opacity: 1; }
+  30%  { transform: translate(calc(-50% - 44px), 24%) rotate(9deg); }
+  55%  { transform: translate(calc(-50% + 40px), 46%) rotate(-8deg); }
+  80%  { transform: translate(calc(-50% - 22px), 64%) rotate(6deg); }
+  100% { transform: translate(-50%, 76%) rotate(0deg); opacity: 1; }
+}
+/* 落ちる位置の % は要素の高さ基準になるので、svg を枠と同じ高さの箱に入れて計算させる */
+.lgb-fall > svg { height: 100%; width: 96px; overflow: visible; }
+.lgb-crystal polygon { fill: rgba(60, 46, 90, .96); stroke: rgba(210, 180, 250, .9); stroke-width: 2.4; }
+.lgb-crystal polyline { fill: none; stroke: rgba(210, 180, 250, .55); stroke-width: 1.6; }
+.lgb-crystal { filter: drop-shadow(0 0 22px rgba(170, 130, 230, 1)); }
+
+/* ② 当たって割れる。着地点＝枠の高さの76% */
+.lgb-hit { position: absolute; left: 50%; top: 76%; width: 0; height: 0; }
+.lgb-flash {
+  position: absolute; left: -110px; top: -110px; width: 220px; height: 220px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 246, 220, 1) 0%, rgba(255, 216, 153, .85) 28%, rgba(255, 216, 153, 0) 70%);
+  animation: lgbFlash .55s ease-out forwards;
+}
+@keyframes lgbFlash { 0% { transform: scale(.2); opacity: 1; } 100% { transform: scale(2.6); opacity: 0; } }
+.lgb-ring {
+  position: absolute; left: -70px; top: -22px; width: 140px; height: 44px; border-radius: 50%;
+  border: 2.5px solid rgba(255, 216, 153, .95);
+  animation: lgbRing .9s ease-out forwards;
+}
+@keyframes lgbRing { 0% { transform: scale(.3); opacity: 1; } 100% { transform: scale(3.4); opacity: 0; } }
+
+/* 破片。四方へ飛んで、回りながら、光の粒になって消える */
+.lgb-shard {
+  position: absolute; left: -11px; top: -14px; width: 22px; height: 28px;
+  background: linear-gradient(160deg, rgba(220, 200, 250, .98), rgba(120, 96, 160, .95));
+  clip-path: polygon(50% 0, 100% 40%, 70% 100%, 20% 90%, 0 35%);
+  transform-origin: center;
+  filter: drop-shadow(0 0 6px rgba(200, 170, 240, .8));
+  animation: lgbShard 1.6s cubic-bezier(.2, .7, .4, 1) forwards;
+}
+@keyframes lgbShard {
+  0%   { transform: rotate(var(--a)) translateY(0) rotate(0deg) scale(calc(var(--s) * 1.3)); opacity: 1; }
+  55%  { opacity: 1; background: linear-gradient(160deg, rgba(255, 236, 200, .98), rgba(255, 216, 153, .95)); }
+  100% { transform: rotate(var(--a)) translateY(calc(var(--d) * -1)) rotate(var(--r)) scale(calc(var(--s) * .3)); opacity: 0; }
+}
+
+/* ③ 消えていく。円陣にひと筋 */
+.lgb.is-fade .lgb-hit::after {
+  content: ""; position: absolute; left: -50vw; top: -1px; width: 100vw; height: 2px;
+  background: linear-gradient(90deg, rgba(255,216,153,0), rgba(255,216,153,.95), rgba(255,216,153,0));
+  animation: lgbLine .8s ease-out forwards;
+}
+@keyframes lgbLine { 0% { transform: scaleX(0); opacity: 1; } 100% { transform: scaleX(1); opacity: 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lgb-fall > svg, .lgb-flash, .lgb-ring, .lgb-shard, .lgb.is-fade .lgb-hit::after { animation: none; }
+  .lgb-veil { animation: lgbVeil .9s ease-in-out forwards; }
+}

@@ -7841,3 +7841,28 @@ body:has(.realverse-bg) { background: transparent; }
   .lgb-fall > svg, .lgb-flash, .lgb-ring, .lgb-shard, .lgb.is-fade .lgb-hit::after { animation: none; }
   .lgb-veil { animation: lgbVeil .9s ease-in-out forwards; }
 }
+
+/* クリスタルルーム：自分で書く行／いつやる・期限のボタン */
+.czl-pick.is-mine { position: relative; }
+.czl-pick.is-mine .rm {
+  margin-left: auto; width: 24px; height: 24px; border-radius: 50%; font-size: .8rem;
+  color: rgba(244,231,200,.7); background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.14);
+}
+.czl-mine { display: flex; gap: 6px; margin: 4px 0 12px; }
+.czl-mine input {
+  flex: 1; font-size: .8rem; color: #f4e7c8; padding: 9px 11px; border-radius: 10px;
+  background: rgba(255,255,255,.06); border: 1px dashed rgba(224,189,114,.45);
+}
+.czl-mine input::placeholder { color: rgba(244,231,200,.45); }
+.czl-mine button {
+  flex-shrink: 0; font-size: .76rem; font-weight: 800; color: #2a1f10; padding: 0 14px; border-radius: 10px;
+  background: linear-gradient(160deg, #ffe3a8, #e0bd72);
+}
+.czl-mine button:disabled { opacity: .4; }
+.czl-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 8px; }
+.czl-chips button {
+  font-size: .74rem; font-weight: 700; color: #f4e7c8; padding: 10px 13px; border-radius: 999px; min-height: 40px;
+  background: rgba(255,255,255,.07); border: 1px solid rgba(224,189,114,.32);
+}
+.czl-chips button.is-on { color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72); border-color: #ffe3a8; }
+.czl-when input[type="date"] { color-scheme: dark; }

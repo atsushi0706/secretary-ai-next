@@ -22,7 +22,8 @@ export async function POST(req: Request) {
     if (!title) return NextResponse.json({ error: "中身がありません" }, { status: 400 });
     const q = await createQuest(userId, {
       title: title.slice(0, 60),
-      body: String(b?.body ?? "").slice(0, 300),
+      // 期限（あれば）は本文の頭に置く。quests に期限の列は無いので、ここで見えるようにする
+      body: [b?.due ? `期限 ${String(b.due).slice(0, 10)}` : "", String(b?.body ?? "")].filter(Boolean).join("　").slice(0, 300),
       category: "life",
     });
     return NextResponse.json({ ok: true, quest: { id: q.id, title: q.title } });

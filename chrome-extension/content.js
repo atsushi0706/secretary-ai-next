@@ -4,6 +4,22 @@
 (() => {
   if (window.top !== window.self) return;
 
+  /*
+   * 二重注入ガード。
+   *
+   * 【やらかしたこと】
+   * content.js はページを開いたとき(manifest)に1回入るが、クエスト開始時にも
+   * background が injectAllTabs で全タブに配り直す。開きっぱなしのタブには
+   * **同じスクリプトが2つ**動くことになり、2つのインスタンスが毎秒
+   * お互いのカードを消して作り直す（createBadge が古いカードを片付ける仕様のため）。
+   * カードが0.5〜1秒ごとに別のDOM要素にすり替わるので、ボタンを押しても
+   * 次の瞬間に無かったことになり、「クリックが効かない・動かせない」ように見える
+   * （淳くん報告：ChatGPTの画面でボタンも押せないしカードも動かせない）。
+   * 2回目以降の注入はここで何もせず帰る。
+   */
+  if (window.__kiyoseTimerActive) return;
+  window.__kiyoseTimerActive = true;
+
   // 診断: F12 Console で "kiyose-timer" 検索すれば動いているか確認できる
   const DEBUG_TAG = "[kiyose-timer]";
   console.log(`${DEBUG_TAG} loaded on ${location.href}`);
@@ -327,6 +343,16 @@
         });
       });
     } catch (e) {
+      // 拡張を更新すると、前から開いていたタブのこのスクリプトは裏方と話せなくなる。
+      // 凍ったカード（時間が進まない・押しても何も起きない）を残さないよう、店じまいする。
+      // 新しいスクリプトが配り直されれば、そちらが新しいカードを出す。
+      if (String(e?.message ?? e).includes("Extension context invalidated")) {
+        console.warn(`${DEBUG_TAG} 拡張が更新されたので、このタブの古いカードを片付けます`);
+        clearInterval(tickTimer);
+        removeBadge();
+        window.__kiyoseTimerActive = false;
+        return;
+      }
       console.warn(`${DEBUG_TAG} tick error:`, e);
     }
     if (!s) return;
@@ -541,6 +567,6 @@
     }
   });
 
-  setInterval(tick, 1000);
+  const tickTimer = setInterval(tick, 1000);
   tick();
 })();

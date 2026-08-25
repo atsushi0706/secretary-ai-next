@@ -57,6 +57,8 @@ export async function POST(req: Request) {
     evidence: Array.isArray(rawContext.evidence) ? rawContext.evidence.slice(0, 8).map((v: unknown) => clean(v, 220)).filter(Boolean) : [],
     theme: clean(rawContext.theme, 300),
     exception: clean(rawContext.exception, 300),
+    exceptionScore: clean(rawContext.exceptionScore, 20),
+    clue: clean(rawContext.clue, 300),
     resource: clean(rawContext.resource, 300),
     lastInteraction: clean(rawContext.lastInteraction, 300),
   };
@@ -77,7 +79,10 @@ export async function POST(req: Request) {
     context.nodeKind && `操作の種類：${context.nodeKind}`,
     context.evidence.length && `取得済みの証拠：${context.evidence.join("／")}`,
     context.theme && `生徒が最初に入力した「変えたいこと」：${context.theme}`,
-    context.exception && `生徒が見つけた例外：${context.exception}`,
+    context.theme && "その困難を最も強く感じる基準：100",
+    context.exception && `生徒が見つけた100ではなかった瞬間：${context.exception}`,
+    context.exceptionScore && `その瞬間の本人の点数：${context.exceptionScore}／100`,
+    context.clue && `100との差を作った手がかり：${context.clue}`,
     context.resource && `生徒が選んだ使える材料：${context.resource}`,
     context.lastInteraction && `直前の反応：${context.lastInteraction}`,
   ].filter(Boolean).join("\n") || "現在地の追加情報なし";
@@ -91,7 +96,7 @@ export async function POST(req: Request) {
 
 # この学習ゲームの原則
 - 催眠を「相手を支配する技術」と説明しない。注意の向け方と、すでに起きている反応を利用する学びとして扱う。
-- Utilizationは、欠点を消す前に、その場にある反応・例外・経験を材料として使う考え方。
+- Utilizationは、問題をゼロにしようとする前に、その困難を強く感じる状態を100と置き、100ではなかった具体的な瞬間と、その差を作った条件を材料として使う考え方。
 - 答えを一方的に講義せず、現在地の証拠と生徒自身の入力を結びつける。
 - 医療上の診断や治療効果を断定しない。危険・医療・深刻な症状の相談には専門家への相談も促す。
 - まだ取得していない証拠、選択問題の正解、この後の展開は明かさない。

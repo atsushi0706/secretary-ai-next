@@ -150,7 +150,7 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   const teacherLines = dialogues.filter((n) => n.line.who === "teacher");
   const interactions = scenario.nodes.filter((n) => n.kind === "investigate" || n.kind === "deduction" || n.kind === "apply");
   const allText = JSON.stringify(scenario);
-  const dynamicUses = (allText.match(/\{\{(?:theme|exception|resource)\}\}/g) ?? []).length;
+  const dynamicUses = (allText.match(/\{\{(?:theme|exception|exceptionScore|clue|resource)\}\}/g) ?? []).length;
 
   const push = (severity: QualityIssue["severity"], lens: QualityIssue["lens"], message: string) => issues.push({ severity, lens, message });
 
@@ -162,8 +162,8 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   if (!scenario.nodes.some((n) => n.kind === "reveal")) push("error", "story", "発見を回収するリビールがありません。");
   if (linkLines.length < 4) push("error", "story", "清瀬リンクの発言が少なく、掛け合いになっていません。");
   if (teacherLines.length < 4) push("error", "story", "エリクソンの返答が少なく、対話として成立しません。");
-  if (dynamicUses < 3 || !allText.includes("{{theme}}") || !allText.includes("{{exception}}")) {
-    push("error", "beginner", "ユーザーが入力したテーマと例外が、その後の会話・問題に十分反映されていません。");
+  if (dynamicUses < 7 || !allText.includes("{{theme}}") || !allText.includes("{{exception}}") || !allText.includes("{{exceptionScore}}") || !allText.includes("{{clue}}")) {
+    push("error", "beginner", "本人の困難、100ではなかった瞬間、その点数、差を作った条件が後半へ十分反映されていません。");
   }
 
   dialogues.forEach((node) => {
@@ -221,8 +221,10 @@ export function defineAdventureScenario(input: unknown): AdventureScenario {
 export function interpolateAdventureText(text: string, values: Record<string, string>): string {
   const fallback: Record<string, string> = {
     theme: "今変えたいこと",
-    exception: "一パーセントだけ軽かった瞬間",
-    resource: "小さな違いを観察する",
+    exception: "100ではなかった瞬間",
+    exceptionScore: "100未満",
+    clue: "その瞬間にあった違い",
+    resource: "100との差を作った条件を一つ再現する",
   };
   return text.replace(/\{\{(\w+)\}\}/g, (_, key: string) => values[key]?.trim() || fallback[key] || key);
 }

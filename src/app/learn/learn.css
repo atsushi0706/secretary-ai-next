@@ -160,9 +160,19 @@
 .lrn-exp-prompt textarea { width: 100%; resize: none; border: 1.5px solid rgba(105,221,255,.55); border-radius: 8px; background: #f8fafc; color: #111827; padding: 11px; font: 700 .9rem/1.55 inherit; outline: none; }
 .lrn-exp-prompt textarea:focus { border-color: var(--exp-gold); box-shadow: 0 0 0 3px rgba(244,182,63,.15); }
 .lrn-exp-prompt small { display: block; color: #9ba7ba; line-height: 1.45; margin-top: 7px; }
+.lrn-exp-hint-toggle { width: 100%; margin-top: 11px; padding: 9px 10px; border: 1px dashed rgba(244,182,63,.55); border-radius: 7px; background: rgba(244,182,63,.07); color: #ffd878; font-size: .72rem; font-weight: 900; }
 .lrn-exp-items { display: grid; gap: 7px; }
+.lrn-exp-items.is-optional { margin-top: 8px; animation: lrn-in .22s ease both; }
 .lrn-exp-item { display: flex; align-items: center; gap: 9px; padding: 9px 10px; background: rgba(255,255,255,.07); font-size: .8rem; font-weight: 800; border-left: 2px solid var(--exp-gold); }
 .lrn-exp-item b { color: var(--exp-gold); font-size: .62rem; }
+.lrn-exp-scale-baseline, .lrn-exp-score-input { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 10px 12px; border-radius: 8px; }
+.lrn-exp-scale-baseline { background: rgba(255,255,255,.07); color: #cbd5e1; font-size: .76rem; }
+.lrn-exp-scale-baseline b { color: #fff; font-size: 1.35rem; }
+.lrn-exp-score-input { margin-top: 8px; border: 1.5px solid rgba(105,221,255,.55); background: rgba(105,221,255,.08); color: #f7fbff; font-size: .78rem; font-weight: 900; }
+.lrn-exp-score-input .field { display: flex; align-items: baseline; gap: 5px; }
+.lrn-exp-score-input input { width: 78px; padding: 6px 8px; border: 0; border-radius: 6px; background: #f8fafc; color: #111827; text-align: right; font: 900 1.35rem/1 inherit; outline: none; }
+.lrn-exp-score-input input:focus { box-shadow: 0 0 0 3px rgba(244,182,63,.22); }
+.lrn-exp-score-input .field b { color: var(--exp-gold); font-size: .76rem; }
 .lrn-exp-options { display: grid; gap: 7px; }
 .lrn-exp-options button { display: grid; grid-template-columns: 28px 1fr auto; align-items: center; gap: 8px; text-align: left; padding: 10px; border: 1px solid rgba(105,221,255,.28); background: rgba(255,255,255,.07); color: #fff; font-weight: 800; }
 .lrn-exp-options button b { color: var(--exp-gold); font-size: .62rem; }

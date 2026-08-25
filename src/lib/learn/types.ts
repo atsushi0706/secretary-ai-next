@@ -90,9 +90,9 @@ export type MangaFrame = {
 
 export type ExpStep =
   | { kind: "say"; line: Line; wait?: number }
-  | { kind: "show"; items: string[]; each?: number }
-  | { kind: "input"; id: string; title: string; prompt: string; placeholder?: string; helper?: string; line?: Line }
-  | { kind: "choice"; q: string; help?: string; options: { label: string; then: ExpStep[] }[] }
+  | { kind: "input"; id: string; title: string; prompt: string; placeholder?: string; helper?: string; hints?: string[]; line?: Line }
+  | { kind: "scale"; id: string; title: string; prompt: string; helper?: string; min?: number; max?: number; line?: Line }
+  | { kind: "choice"; q: string; help?: string; storeAs?: string; options: { label: string; value?: string; then: ExpStep[] }[] }
   | { kind: "fade"; text?: string };
 
 export type Scene = {
@@ -146,8 +146,8 @@ export function allLines(ep: Episode): Line[] {
   const out: Line[] = [];
   const fromSteps = (steps: ExpStep[]) => {
     for (const s of steps) {
-      if (s.kind === "say") out.push(s.line);
-      if (s.kind === "input" && s.line) out.push(s.line);
+      if (s.kind === "say" && !s.line.dynamic) out.push(s.line);
+      if ((s.kind === "input" || s.kind === "scale") && s.line && !s.line.dynamic) out.push(s.line);
       if (s.kind === "choice") s.options.forEach((o) => fromSteps(o.then));
     }
   };

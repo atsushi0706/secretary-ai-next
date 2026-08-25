@@ -248,6 +248,8 @@ type LearnAskContext = {
   evidence?: string[];
   theme?: string;
   exception?: string;
+  exceptionScore?: string;
+  clue?: string;
   resource?: string;
   lastInteraction?: string;
 };
@@ -404,11 +406,32 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
   const [started, setStarted] = useState(false);
   const [timeline, setTimeline] = useState<ExpStep[]>(part.steps);
   const [idx, setIdx] = useState(0);
-  const [values, setValues] = useState<Record<string, string>>({});
+  const [values, setValues] = useState<Record<string, string>>(() => {
+    if (typeof window === "undefined") return {};
+    const saved: Record<string, string> = {};
+    for (const key of ["theme", "exception", "exceptionScore", "clue"]) {
+      try {
+        const value = window.localStorage.getItem(`learn:${ep}:${key}`)?.trim();
+        if (value) saved[key] = value;
+      } catch { /* ignore */ }
+    }
+    return saved;
+  });
   const [asking, setAsking] = useState(false);
+  const [hintStepId, setHintStepId] = useState<string | null>(null);
   const step = timeline[idx];
-  const line = step?.kind === "say" ? step.line : step?.kind === "input" ? (step.line ?? null) : null;
-  const inputReady = step?.kind !== "input" || Boolean(values[step.id]?.trim());
+  const resolve = useCallback((text: string) => interpolateAdventureText(text, values), [values]);
+  const line = useMemo<Line | null>(() => {
+    const source = step?.kind === "say" ? step.line : step?.kind === "input" || step?.kind === "scale" ? (step.line ?? null) : null;
+    if (!source) return null;
+    const text = resolve(source.text);
+    return { ...source, text, dynamic: source.dynamic || text !== source.text };
+  }, [resolve, step]);
+  const inputReady = step?.kind === "input"
+    ? Boolean(values[step.id]?.trim())
+    : step?.kind === "scale"
+      ? Number.isFinite(Number(values[step.id])) && Number(values[step.id]) >= (step.min ?? 0) && Number(values[step.id]) <= (step.max ?? 99)
+      : true;
 
   useEffect(() => {
     if (!started || !line) return;
@@ -431,7 +454,7 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
   function next() {
     if (!inputReady) return;
     voice.stop();
-    if (step?.kind === "input") {
+    if (step?.kind === "input" || step?.kind === "scale") {
       try { localStorage.setItem(`learn:${ep}:${step.id}`, values[step.id].trim()); } catch { /* ignore */ }
     }
     if (idx + 1 < timeline.length) setIdx(idx + 1);
@@ -446,6 +469,11 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
 
   function choose(option: Extract<ExpStep, { kind: "choice" }>["options"][number]) {
     voice.stop();
+    if (step?.kind === "choice" && step.storeAs && option.value) {
+      const value = resolve(option.value);
+      setValues((old) => ({ ...old, [step.storeAs!]: value }));
+      try { localStorage.setItem(`learn:${ep}:${step.storeAs}`, value); } catch { /* ignore */ }
+    }
     setTimeline((old) => [...old.slice(0, idx + 1), ...option.then]);
     setIdx(idx + 1);
   }
@@ -457,11 +485,11 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
           <div className="lrn-exp-gate-portrait"><img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" /></div>
           <div className="lrn-kicker">EXPERIMENT 01</div>
           <h2>{part.title}</h2>
-          <p className="lead">悩みを解決する体験ではありません。<br />無意識がすでに作っている「例外」を一つ探します。</p>
+          <p className="lead">問題を消す前に、困難の強さが変わる瞬間を一つ見つけます。</p>
           <div className="lrn-exp-brief">
-            <div><b>01</b><span>変えたいことを書く</span></div>
-            <div><b>02</b><span>1％だけ軽い瞬間を探す</span></div>
-            <div><b>03</b><span>何が違うかを選ぶ</span></div>
+            <div><b>01</b><span>困難が強い状態を100と置く</span></div>
+            <div><b>02</b><span>100ではない瞬間を探す</span></div>
+            <div><b>03</b><span>100との差を材料にする</span></div>
           </div>
           <button className="lrn-cta" onClick={start}>体験をはじめる →</button>
           <span className="lrn-exp-time">約{part.minutes ?? 3}分 ・ 戻る/音声スキップ対応</span>
@@ -476,29 +504,43 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
 
           <div className="lrn-exp-dialogue">
             {line && <div className="lrn-exp-speaker">エリクソン</div>}
-            {step?.kind === "say" && <p key={step.line.id} className="lrn-exp-line">{step.line.text}</p>}
-            {step?.kind === "show" && (
-              <div className="lrn-exp-prompt">
-                <h3>「1％だけ違う瞬間」のヒント</h3>
-                <div className="lrn-exp-items">{step.items.map((t, i) => <div key={t} className="lrn-exp-item"><b>0{i + 1}</b>{t}</div>)}</div>
-              </div>
-            )}
+            {step?.kind === "say" && <p key={step.line.id} className="lrn-exp-line">{resolve(step.line.text)}</p>}
             {step?.kind === "input" && (
               <div className="lrn-exp-prompt">
                 <div className="lrn-exp-step">INPUT ・ {idx + 1}</div>
-                <h3>{step.title}</h3>
-                <p>{step.prompt}</p>
-                <textarea rows={3} value={values[step.id] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [step.id]: e.target.value }))} placeholder={step.placeholder} autoFocus />
-                {step.helper && <small>{step.helper}</small>}
+                <h3>{resolve(step.title)}</h3>
+                <p>{resolve(step.prompt)}</p>
+                <textarea rows={3} value={values[step.id] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [step.id]: e.target.value }))} placeholder={step.placeholder ? resolve(step.placeholder) : undefined} autoFocus />
+                {step.helper && <small>{resolve(step.helper)}</small>}
+                {step.hints && <>
+                  <button className="lrn-exp-hint-toggle" onClick={() => setHintStepId((id) => id === step.id ? null : step.id)}>
+                    {hintStepId === step.id ? "ヒントを閉じる" : "思いつかない時だけヒントを見る"}
+                  </button>
+                  {hintStepId === step.id && <div className="lrn-exp-items is-optional">{step.hints.map((t, i) => <div key={t} className="lrn-exp-item"><b>0{i + 1}</b>{resolve(t)}</div>)}</div>}
+                </>}
+              </div>
+            )}
+            {step?.kind === "scale" && (
+              <div className="lrn-exp-prompt lrn-exp-scale">
+                <div className="lrn-exp-step">SCALE ・ {idx + 1}</div>
+                <h3>{resolve(step.title)}</h3>
+                <p>{resolve(step.prompt)}</p>
+                <div className="lrn-exp-scale-baseline"><span>困難が最も強い状態</span><b>100</b></div>
+                <label className="lrn-exp-score-input">
+                  <span>あなたが思い出した瞬間</span>
+                  <span className="field"><input type="number" inputMode="numeric" min={step.min ?? 0} max={step.max ?? 99}
+                    value={values[step.id] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [step.id]: e.target.value }))} placeholder="80" autoFocus /><b>点</b></span>
+                </label>
+                {step.helper && <small>{resolve(step.helper)}</small>}
               </div>
             )}
             {step?.kind === "choice" && (
               <div className="lrn-exp-choice">
                 <div className="lrn-exp-step">SELECT ・ {idx + 1}</div>
-                <h3>{step.q}</h3>
-                {step.help && <p>{step.help}</p>}
+                <h3>{resolve(step.q)}</h3>
+                {step.help && <p>{resolve(step.help)}</p>}
                 <div className="lrn-exp-options">
-                  {step.options.map((o, i) => <button key={o.label} onClick={() => choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{o.label}</span><i>→</i></button>)}
+                  {step.options.map((o, i) => <button key={o.label} onClick={() => choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>→</i></button>)}
                 </div>
               </div>
             )}
@@ -511,15 +553,17 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
             <button onClick={() => { voice.pause(); setAsking(true); }} disabled={tickets <= 0}>✦ 先生に聞く ×{tickets}</button>
           </div>
           {step && step.kind !== "choice" && step.kind !== "fade" && (
-            <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : "次へ"} →</button>
+            <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
           )}
           {asking && <AskSheet ep={ep} sceneNo={0} tickets={tickets} onUse={onUseTicket}
             context={{
-              location: step?.kind === "input" ? step.title : "最初の催眠体験",
-              objective: "自分の中にすでにある小さな例外を見つける",
+              location: step?.kind === "input" || step?.kind === "scale" ? resolve(step.title) : "最初の催眠体験",
+              objective: "困難を100と置き、100ではなかった瞬間と差を作った条件を見つける",
               nodeKind: step?.kind,
               theme: values.theme,
               exception: values.exception,
+              exceptionScore: values.exceptionScore,
+              clue: values.clue,
             }}
             onClose={() => { setAsking(false); voice.resume(); }} title="体験について聞く" />}
         </>
@@ -548,8 +592,10 @@ function AdventurePart({ ep, scenario, voice, tickets, onUseTicket, onDone }: {
     };
     return {
       theme: read("theme", "今変えたいこと"),
-      exception: read("exception", "まだ見つかっていない一パーセントの例外"),
-      resource: read("resource", "小さな違いを観察する"),
+      exception: read("exception", "まだ見つかっていない100ではなかった瞬間"),
+      exceptionScore: read("exceptionScore", "100未満"),
+      clue: read("clue", "その瞬間にあった違い"),
+      resource: read("resource", "100との差を作った条件を一つ再現する"),
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -612,7 +658,7 @@ function AdventurePart({ ep, scenario, voice, tickets, onUseTicket, onDone }: {
     if (!option.correct) return;
     setSolved((old) => ({ ...old, [challenge.id]: true }));
     if (challenge.kind === "apply" && "value" in option) {
-      const value = option.value;
+      const value = resolve(option.value);
       setValues((old) => ({ ...old, [challenge.storeAs]: value }));
       try { localStorage.setItem(`learn:${ep}:${challenge.storeAs}`, value); } catch { /* ignore */ }
     }
@@ -753,6 +799,8 @@ function AdventurePart({ ep, scenario, voice, tickets, onUseTicket, onDone }: {
               evidence: scenario.evidence.filter((item) => evidenceIds.includes(item.id)).map((item) => `${item.title}：${item.summary}`),
               theme: values.theme,
               exception: values.exception,
+              exceptionScore: values.exceptionScore,
+              clue: values.clue,
               resource: values.resource,
               lastInteraction: feedback || undefined,
             }}

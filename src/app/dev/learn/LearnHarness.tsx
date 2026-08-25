@@ -16,7 +16,7 @@ export function LearnHarness({ part }: { part: number }) {
         await new Promise((r) => setTimeout(r, 400));
         const body = JSON.parse(String(init?.body ?? "{}")) as {
           question?: unknown;
-          context?: { evidence?: unknown; location?: unknown; theme?: unknown; exception?: unknown };
+          context?: { evidence?: unknown; location?: unknown; theme?: unknown; exception?: unknown; exceptionScore?: unknown; clue?: unknown };
         };
         const question = String(body?.question ?? "");
         const context = body?.context ?? {};
@@ -24,7 +24,7 @@ export function LearnHarness({ part }: { part: number }) {
         const answer = /操|支配/.test(question)
           ? `いいえ。催眠は人の意思を奪って操ることではありません。いまの「${context.location || "事件"}」で、命令と本人の反応を証拠で比べて確かめてみましょう。`
           : /自分の場合|入力した悩み/.test(question)
-            ? `あなたが書いた「${context.theme || "変えたいこと"}」なら、「${context.exception || "少しだけ違う瞬間"}」に何があったかを一つ観察するところから始められます。`
+            ? `あなたが書いた「${context.theme || "変えたいこと"}」を100とすると、「${context.exception || "100ではなかった瞬間"}」では${context.exceptionScore || "100未満"}でした。その差を作った「${context.clue || "条件"}」を一つ観察するところから始められます。`
             : /簡単|言い換え/.test(question)
               ? "無理に動かそうとする前に、もう動いている小さな反応を見つけて使う、ということです。"
               : /別の解釈|当てはまらない/.test(question)

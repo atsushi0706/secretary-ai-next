@@ -18,12 +18,9 @@ export default function LearnHome() {
         {eps.map((ep) => (
           <Link key={ep.key} href={`/learn/${ep.key}`} className="lrn-epcard">
             <div className="cover">
-              <MangaArt art="bed-observe" />
+              <img className="episode-cover" src="/learn/ep1/episode-cover.webp" alt="指先の小さな動きに気づく17歳のミルトン・エリクソン" />
               <span className="badge">第{ep.no}話</span>
-              <div className="chars">
-                <img src="/learn/chars/erickson-neutral.webp" alt="" />
-                <img src="/learn/chars/link-smile.webp" alt="" />
-              </div>
+              <div className="cover-hook"><span>CASE 01</span><b>無意識が、身体を動かした。</b></div>
             </div>
             <div className="body">
               <div className="no">エリクソン原理 01</div>

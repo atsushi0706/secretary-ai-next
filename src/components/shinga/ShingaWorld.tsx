@@ -2516,6 +2516,13 @@ function Home({
           <span className="emoji">🎨</span>
           <span className="ja">じぶんワークを{customWorks.length ? "つくる" : "つくってみる"}</span>
         </button>
+        {/* AIラーニング（学びのピッコマ）。いまは淳くんだけ。鍵はかけず、管理者以外には出さない */}
+        {isAdmin && (
+          <a className="iw-door is-sub" href="/learn">
+            <span className="emoji">📚</span>
+            <span className="ja">AIラーニング</span>
+          </a>
+        )}
       </div>
 
       {/* 地図の下の棚。PCでは横に散らばって背景の文字と重なっていたので、

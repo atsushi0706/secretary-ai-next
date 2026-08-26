@@ -134,8 +134,8 @@ export type Episode = {
   sceneSummaries: string[];
 };
 
-/** 声（VOICEVOX の話者番号）。先生＝青山龍星、リンク＝白上虎太郎 */
-export const VOICE_OF: Record<Speaker, string> = { teacher: "13", link: "12" };
+/** 第1話は全台詞を同じ低い男性音声（VOICEVOX 青山龍星）で統一する。 */
+export const VOICE_OF: Record<Speaker, string> = { teacher: "13", link: "13" };
 
 export function audioUrl(ep: string, lineId: string): string {
   return `/learn/${ep}/audio/${lineId}.mp3`;

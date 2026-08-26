@@ -3,24 +3,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Episode, ExpStep, Face, Line, Part, Scene, Slide } from "@/lib/learn/types";
-import { VOICE_OF, audioUrl } from "@/lib/learn/types";
+import { VOICE_OF } from "@/lib/learn/types";
 import type { AdventureEvidence, AdventureNode, AdventureScenario } from "@/lib/learn/adventure";
 import { interpolateAdventureText } from "@/lib/learn/adventure";
 import { MangaArt } from "./MangaArt";
 
 /* ═══════════════════════ 声 ═══════════════════════
- * 1行ずつ鳴らす。焼き込み済みの mp3 → 無ければ /api/tts（VOICEVOX）→ それも駄目なら
- * ブラウザの読み上げ → 全部駄目なら文字数ぶん待つ。
+ * 1行ずつ同じ低い男性音声で鳴らす。声質が途中で変わらないよう、焼き込み音声と
+ * ブラウザ内蔵音声は混ぜず、/api/tts の VOICEVOX 青山龍星だけを使う。
  * 質問チケットのために、途中で止めて・続きから再開できる。
  */
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 function useVoice(ep: string) {
+  void ep;
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const runRef = useRef(0);
   const pausedRef = useRef(false);
   const [speaking, setSpeaking] = useState(false);
-  const [engine, setEngine] = useState<"baked" | "tts" | "browser" | "silent">("baked");
+  const [engine, setEngine] = useState<"baked" | "tts" | "browser" | "silent">("tts");
 
   const waitWhilePaused = useCallback(async () => {
     while (pausedRef.current) await sleep(120);
@@ -51,19 +52,12 @@ function useVoice(ep: string) {
     await waitWhilePaused();
     if (runRef.current !== run) return;
 
-    // ① 焼き込み済み。ユーザー入力を含む動的台詞は、その場で合成する。
+    // 全台詞を同じ VOICEVOX 話者で合成する。
     let ok = false;
-    if (!line.dynamic) {
-      ok = await playUrl(audioUrl(ep, line.id), run);
-      if (runRef.current !== run) return;
-      if (ok) { setEngine("baked"); setSpeaking(false); return; }
-    }
-
-    // ② その場で VOICEVOX
     try {
       const r = await fetch("/api/tts", {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: line.text, speaker: VOICE_OF[line.who] }),
+        body: JSON.stringify({ text: line.text, speaker: VOICE_OF[line.who], strictVoice: true }),
       });
       if (runRef.current !== run) return;
       if (r.ok) {
@@ -73,33 +67,14 @@ function useVoice(ep: string) {
         if (runRef.current !== run) return;
         if (ok) { setEngine("tts"); setSpeaking(false); return; }
       }
-    } catch { /* 次へ */ }
+    } catch { /* 音声が作れない時は、異なる声へ切り替えず無音にする */ }
 
-    // ③ ブラウザの読み上げ（声が無い環境では onend が来ないことがあるので、文字数ぶんで打ち切る）
-    const done = await new Promise<boolean>((resolve) => {
-      setTimeout(() => resolve(false), 1200 + line.text.length * 220);
-      try {
-        if (!window.speechSynthesis) { resolve(false); return; }
-        const u = new SpeechSynthesisUtterance(line.text);
-        u.lang = "ja-JP";
-        u.rate = 0.95;
-        u.pitch = line.who === "link" ? 1.25 : 0.85;
-        u.onend = () => resolve(true);
-        u.onerror = () => resolve(false);
-        setSpeaking(true);
-        window.speechSynthesis.speak(u);
-      } catch { resolve(false); }
-    });
-    if (runRef.current !== run) return;
-    setSpeaking(false);
-    if (done) { setEngine("browser"); return; }
-
-    // ④ 何も鳴らない：読める時間だけ待つ
+    // 異なる代替声は使わない。短く待って、文字だけで進められる状態にする。
     setEngine("silent");
     setSpeaking(true);
-    await sleep(600 + line.text.length * 140);
+    await sleep(450);
     setSpeaking(false);
-  }, [ep, playUrl, stop, waitWhilePaused]);
+  }, [playUrl, stop, waitWhilePaused]);
 
   const pause = useCallback(() => {
     pausedRef.current = true;
@@ -291,7 +266,7 @@ function AskSheet({
       try {
         const t = await fetch("/api/tts", {
           method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: String(d.answer).slice(0, 480), speaker: VOICE_OF.teacher }),
+          body: JSON.stringify({ text: String(d.answer).slice(0, 480), speaker: VOICE_OF.teacher, strictVoice: true }),
         });
         if (t.ok) {
           const url = URL.createObjectURL(await t.blob());
@@ -876,7 +851,7 @@ function DialoguePart({
         <div className="lrn-exp-gate">
           <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
           <h2>事件の答えを、講義で整理します</h2>
-          <p>ここから初めて、催眠・間接暗示・Utilizationの理屈を説明します。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
+          <p>体験と捜査で使った、催眠・間接暗示・Utilizationの理屈を整理します。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (

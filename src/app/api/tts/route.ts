@@ -34,7 +34,7 @@ const elKey = () => process.env.ELEVENLABS_API_KEY?.trim() || "";
 const VV_URL = process.env.VOICEVOX_URL?.trim() || "";
 const VV_KEY = process.env.VOICEVOX_API_KEY?.trim() || "";
 // 12 = 白上虎太郎（ふつう）。アニメ寄りの、幼い男の子の声
-const VV_SPEAKER = process.env.VOICEVOX_SPEAKER?.trim() || "12";
+const VV_SPEAKER = process.env.VOICEVOX_SPEAKER?.trim() || "13";
 
 /**
  * エンジンの優先順。
@@ -44,7 +44,7 @@ const VV_SPEAKER = process.env.VOICEVOX_SPEAKER?.trim() || "12";
 const PREFER = (process.env.TTS_ENGINE?.trim() || "voicevox").toLowerCase();
 
 /** 声のクレジット表記（VOICEVOX の規約で必要）。画面はこれを出す */
-const VOICE_CREDIT = "VOICEVOX:白上虎太郎";
+const VOICE_CREDIT = "VOICEVOX:青山龍星";
 
 /** 聴きくらべ用。清瀬リンク（少年）に合いそうな声だけを並べる */
 const VV_SPEAKER_LIST = [
@@ -276,8 +276,19 @@ export async function POST(req: Request) {
   // 画面から「この声で試す」ができるように、1回きりの指定を受け付ける
   const voiceId = typeof body.voiceId === "string" ? body.voiceId : undefined;
   const speaker = typeof body.speaker === "string" ? body.speaker : undefined;
+  const strictVoice = body.strictVoice === true;
 
   const notes: string[] = [];
+
+  // 学習画面は声質の一貫性を優先する。指定された VOICEVOX 話者以外へは切り替えない。
+  if (strictVoice) {
+    const vv = await voicevox(text, speaker);
+    if (vv.res) return vv.res;
+    if (vv.error) notes.push(vv.error);
+    return new Response(JSON.stringify({ error: "requested_voice_unavailable", detail: notes.join(" / ") }), {
+      status: 503, headers: { "Content-Type": "application/json" },
+    });
+  }
 
   // VOICEVOX を先に使う設定なら、まずそちら（無料・日本語ネイティブ）
   if (PREFER === "voicevox" && vvReady()) {

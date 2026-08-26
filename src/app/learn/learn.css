@@ -39,22 +39,22 @@
 }
 .lrn-cta:active { transform: translateY(1px); }
 
-/* 第1ページより前に、学習目標・物語の問い・到達成果を明示する。 */
-.lrn-lesson-briefing { --exp-cyan: #69ddff; --exp-gold: #f4b63f; min-height: 100%; color: #fff; background: radial-gradient(circle at 50% 4%, #253451 0, #111725 42%, #080b12 100%); overflow-y: auto; }
-.lrn-lesson-briefing-inner { min-height: 100%; width: min(460px, 100%); margin: 0 auto; padding: 10px 20px max(12px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; justify-content: flex-start; align-items: center; gap: 7px; text-align: center; }
-.lrn-lesson-briefing h1 { margin: 2px 0; max-width: 420px; font-size: clamp(1.3rem, 5.8vw, 1.75rem); line-height: 1.42; font-weight: 1000; }
-.lrn-lesson-briefing .definition { margin: 0; max-width: 420px; color: #d8e4f0; font-size: .9rem; line-height: 1.72; font-weight: 750; }
-.lrn-brief-mentor { width: min(420px, 100%); height: 100px; display: flex; align-items: flex-end; justify-content: center; position: relative; border-bottom: 1px solid rgba(105,221,255,.35); overflow: hidden; }
-.lrn-brief-mentor img { height: 120px; width: auto; object-fit: contain; object-position: bottom; filter: drop-shadow(0 12px 20px rgba(0,0,0,.65)); }
-.lrn-brief-mentor div { position: absolute; left: 8px; bottom: 8px; display: flex; flex-direction: column; gap: 2px; padding: 6px 9px; text-align: left; background: rgba(3,8,16,.9); border-left: 3px solid #69ddff; }
-.lrn-brief-mentor b { font-size: .7rem; letter-spacing: .1em; }
-.lrn-brief-mentor span { color: #a6e6f7; font-size: .7rem; }
-.lrn-lesson-briefing blockquote { margin: 0; max-width: 420px; padding: 10px 12px; text-align: left; color: #f7fbff; background: rgba(7,15,28,.88); border-left: 5px solid #69ddff; font-size: .875rem; line-height: 1.58; font-weight: 750; }
-.lrn-brief-question { width: min(420px, 100%); display: grid; gap: 5px; padding: 12px 14px; text-align: left; background: rgba(31,22,7,.9); border: 1px solid rgba(244,182,63,.52); border-left: 5px solid #f4b63f; }
-.lrn-brief-question b { color: #ffd878; font-size: .75rem; letter-spacing: .06em; }
-.lrn-brief-question span { font-size: .9rem; line-height: 1.62; font-weight: 900; }
-.lrn-lesson-briefing .benefit { margin: 0; max-width: 420px; color: #f7fbff; font-size: .875rem; line-height: 1.55; font-weight: 850; }
-.lrn-lesson-briefing .lrn-cta { min-height: 48px; background: #f4b63f; color: #251900; }
+/* 冒頭は説明資料ではなく、エピソードのキービジュアル。 */
+.lrn-lesson-briefing { --exp-cyan: #69ddff; --exp-gold: #f4b63f; position: relative; height: 100%; min-height: 100%; color: #fff; background: #050914; overflow: hidden; }
+.lrn-brief-bg, .lrn-brief-shade, .lrn-brief-person { position: absolute; inset: 0; }
+.lrn-brief-bg { width: 100%; height: 100%; object-fit: cover; object-position: 52% center; opacity: .72; }
+.lrn-brief-shade { background: linear-gradient(180deg, rgba(2,7,16,.5) 0%, rgba(3,8,17,.2) 31%, rgba(3,8,17,.88) 69%, #050914 100%), linear-gradient(90deg, rgba(3,8,17,.7), transparent 68%); }
+.lrn-brief-person { inset: auto -8% 0 auto; height: 70%; width: auto; object-fit: contain; object-position: right bottom; filter: drop-shadow(0 20px 30px #000); opacity: .96; }
+.lrn-lesson-briefing-inner { position: relative; z-index: 2; height: 100%; min-height: 100%; width: min(460px, 100%); margin: 0 auto; padding: 20px 20px max(18px, env(safe-area-inset-bottom)); display: flex; flex-direction: column; align-items: flex-start; text-align: left; }
+.lrn-brief-eyebrow { padding: 6px 9px; color: #9be7ff; background: rgba(3,10,22,.82); border-left: 3px solid #69ddff; font-size: .66rem; line-height: 1.2; font-weight: 950; letter-spacing: .09em; }
+.lrn-brief-title { margin-top: 18px; display: grid; gap: 2px; text-shadow: 0 4px 18px #000; }
+.lrn-brief-title span { font-family: "Hiragino Mincho ProN", "Yu Mincho", serif; font-size: clamp(1.75rem, 8.5vw, 2.5rem); line-height: 1.1; font-weight: 950; letter-spacing: .04em; }
+.lrn-brief-title b { color: #f6c75f; font-size: .76rem; letter-spacing: .27em; }
+.lrn-brief-case { margin-top: auto; color: #8ee7ff; font-size: .68rem; font-weight: 1000; letter-spacing: .25em; }
+.lrn-lesson-briefing h1 { margin: 7px 0 0; max-width: 400px; font-size: clamp(1.38rem, 6.4vw, 1.85rem); line-height: 1.48; font-weight: 1000; text-wrap: balance; text-shadow: 0 4px 16px #000; }
+.lrn-brief-teaser { margin: 9px 0 16px; max-width: 370px; color: #d8e3ef; font-size: .82rem; line-height: 1.55; font-weight: 750; }
+.lrn-lesson-briefing .lrn-cta { align-self: center; min-width: 210px; min-height: 50px; background: #f4b63f; color: #251900; }
+.lrn-lesson-briefing .lrn-exp-time { align-self: center; margin-top: 8px; color: #9eacbd; font-size: .65rem; letter-spacing: .08em; }
 
 /* ── 漫画 ── */
 .lrn-manga { padding: 10px 10px 30px; background: #ddd; }
@@ -160,6 +160,7 @@
 .lrn-exp-time { font-size: .75rem; line-height: 1.45; color: #aebbd0; }
 
 .lrn-exp-mentor { position: relative; flex: 0 0 39%; min-height: 205px; display: flex; justify-content: center; align-items: flex-end; overflow: hidden; border-bottom: 1px solid rgba(105,221,255,.22); }
+.lrn-exp.is-input .lrn-exp-mentor, .lrn-exp.is-scale .lrn-exp-mentor, .lrn-exp.is-choice .lrn-exp-mentor { flex-basis: 31%; min-height: 175px; }
 .lrn-exp-aura { position: absolute; width: 250px; height: 250px; border-radius: 50%; bottom: -90px; background: radial-gradient(circle, rgba(105,221,255,.35), rgba(105,221,255,0) 68%); transition: transform .25s; }
 .lrn-exp-mentor.is-on .lrn-exp-aura { transform: scale(1.12); animation: lrn-pulse 1.2s ease-in-out infinite; }
 @keyframes lrn-pulse { 50% { opacity: .55; } }
@@ -477,21 +478,16 @@
 .lrn-teaser .lrn-cta { background: #fff; color: var(--lrn-ink); }
 
 @media (max-height: 680px) {
-  .lrn-lesson-briefing-inner { padding: 5px 14px max(6px, env(safe-area-inset-bottom)); gap: 3px; }
-  .lrn-brief-mentor { height: 66px; }
-  .lrn-brief-mentor img { height: 88px; }
-  .lrn-brief-mentor div { left: 5px; bottom: 4px; padding: 4px 7px; }
-  .lrn-brief-mentor b, .lrn-brief-mentor span { font-size: .58rem; }
-  .lrn-lesson-briefing .lrn-kicker { font-size: .64rem; }
-  .lrn-lesson-briefing h1 { margin: 0; font-size: 1.02rem; line-height: 1.28; }
-  .lrn-lesson-briefing blockquote { padding: 6px 9px; font-size: .7rem; line-height: 1.4; border-left-width: 4px; }
-  .lrn-brief-question { gap: 2px; padding: 7px 9px; border-left-width: 4px; }
-  .lrn-brief-question b { font-size: .62rem; }
-  .lrn-brief-question span { font-size: .7rem; line-height: 1.4; }
-  .lrn-lesson-briefing .definition { font-size: .68rem; line-height: 1.38; }
-  .lrn-lesson-briefing .benefit { font-size: .68rem; line-height: 1.35; }
+  .lrn-lesson-briefing-inner { padding: 12px 15px max(10px, env(safe-area-inset-bottom)); }
+  .lrn-brief-eyebrow { padding: 5px 7px; font-size: .56rem; }
+  .lrn-brief-title { margin-top: 9px; }
+  .lrn-brief-title span { font-size: 1.55rem; }
+  .lrn-brief-title b { font-size: .58rem; }
+  .lrn-brief-person { height: 68%; bottom: 0; }
+  .lrn-lesson-briefing h1 { margin-top: 4px; max-width: 345px; font-size: 1.08rem; line-height: 1.38; }
+  .lrn-brief-teaser { margin: 5px 0 8px; font-size: .68rem; line-height: 1.4; }
   .lrn-lesson-briefing .lrn-cta { min-height: 44px; padding: 9px 18px; font-size: .78rem; }
-  .lrn-lesson-briefing .lrn-exp-time { font-size: .58rem; }
+  .lrn-lesson-briefing .lrn-exp-time { margin-top: 4px; font-size: .54rem; }
   .lrn-av-start { padding: 18px 20px 9px; }
   .lrn-av-start h2 { margin: 6px 0 2px; font-size: 1.08rem; line-height: 1.22; }
   .lrn-av-question { font-size: .72rem; line-height: 1.4; }
@@ -501,6 +497,12 @@
   .lrn-av-start > .lrn-av-primary { min-height: 44px; padding: 8px 16px; }
   .lrn-exp-mentor { flex-basis: 32%; min-height: 150px; }
   .lrn-exp-dialogue { padding-top: 9px; }
+  .lrn-exp.is-input .lrn-exp-mentor { flex-basis: 23%; min-height: 125px; }
+  .lrn-exp.is-input .lrn-exp-dialogue { padding: 4px 10px; }
+  .lrn-exp.is-input .lrn-exp-turn { gap: 6px; }
+  .lrn-exp.is-input .lrn-exp-question-line { padding: 9px 10px; font-size: .76rem; line-height: 1.45; }
+  .lrn-exp.is-input .lrn-exp-prompt { padding: 10px; }
+  .lrn-exp.is-input .lrn-exp-prompt textarea { height: 60px; }
   .lrn-exp-gate-portrait { width: 112px; height: 132px; }
   .lrn-exp-gate { justify-content: flex-start; padding-top: 14px; }
   .lrn-slide { flex-basis: 34%; margin-top: 6px; padding: 25px 10px 9px; border-width: 6px; }

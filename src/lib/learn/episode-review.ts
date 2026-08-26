@@ -30,11 +30,14 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
 
   const manga = episode.parts[0]?.kind === "manga" ? episode.parts[0] : null;
   if (!manga?.briefing) {
-    push("error", "beginner", "漫画より前に、学習目標・物語の問い・到達成果を示すbriefingが必要です。");
+    push("error", "beginner", "漫画より前に、作品名と未解決の問いだけを見せるタイトル画面が必要です。");
   } else {
-    if (!manga.briefing.plainDefinition.includes("Utilization")) push("error", "learning", "冒頭で平易な説明の後に主概念Utilizationの名前を示してください。");
-    if (!manga.briefing.storyQuestion.includes("？")) push("error", "story", "漫画へ入る前に未解決の物語上の問いが必要です。");
-    if (!manga.briefing.mentorMessage || !manga.briefing.personalBenefit) push("error", "beginner", "エリクソンから何を教わり、受講後に何を持ち帰るかを明記してください。");
+    if (!manga.briefing.title.includes("催眠") || !manga.briefing.principle.toUpperCase().includes("UTILIZATION")) {
+      push("error", "learning", "タイトル画面だけで、催眠の何を扱う回か分かる作品名にしてください。");
+    }
+    if (!manga.briefing.hook.includes("？")) push("error", "story", "漫画へ入る前に未解決の問いを一つだけ置いてください。");
+    const coverLength = [manga.briefing.eyebrow, manga.briefing.title, manga.briefing.principle, manga.briefing.hook, manga.briefing.teaser].join("").length;
+    if (coverLength > 125) push("error", "game", "冒頭タイトルの情報量が多すぎます。定義・手順・成果は体験後へ移してください。");
   }
 
   const experience = episode.parts.find((part): part is Extract<Part, { kind: "experience" }> => part.kind === "experience");
@@ -47,7 +50,13 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
       if (!inputIds.has(id)) push("error", "learning", `${id}を本人が入力する工程がありません。`);
     }
     const firstInput = experience.steps.findIndex((step) => step.kind === "input");
-    if (firstInput > 3) push("error", "game", "最初の入力までに説明台詞が4回以上続いています。入口の説明と重複させないでください。");
+    if (firstInput !== 0 || experience.steps[0]?.kind !== "input" || experience.steps[0].id !== "theme") {
+      push("error", "story", "漫画の直後は工程説明を挟まず、『今、困っていることは何ですか？』から始めてください。");
+    }
+    if (experience.gate) push("error", "game", "漫画直後の体験入口は重複説明になるため、工程一覧のgateを置かないでください。");
+    const experienceText = JSON.stringify(experience.steps);
+    if (/漫画の答え|それを消せるとは/.test(experienceText)) push("error", "story", "作者都合のメタ発言や、誰も求めていない否定から会話を始めないでください。");
+    if (!experienceText.includes("催眠")) push("error", "learning", "本人の回答を受けた直後に、今回扱う催眠との関係を会話として示してください。");
     if (!allSteps.some((step) => step.kind === "choice" && step.storeAs === "clueCategory")) {
       push("error", "learning", "差のカテゴリを選び、その後clueを具体語で入力する二段階が必要です。");
     }

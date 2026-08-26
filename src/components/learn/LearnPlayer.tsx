@@ -341,7 +341,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
   const [index, setIndex] = useState(0);
   const [briefed, setBriefed] = useState(() => {
     if (!part.briefing || typeof window === "undefined") return !part.briefing;
-    try { return window.localStorage.getItem(`learn:${ep}:briefing:v4`) === "done"; }
+    try { return window.localStorage.getItem(`learn:${ep}:briefing:v6`) === "done"; }
     catch { return false; }
   });
 
@@ -356,22 +356,20 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
     const briefing = part.briefing;
     return (
       <div className="lrn-lesson-briefing">
+        <img className="lrn-brief-bg" src="/learn/adventure/erickson-study-v1.webp" alt="" />
+        <div className="lrn-brief-shade" />
+        <img className="lrn-brief-person" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
         <div className="lrn-lesson-briefing-inner">
-          <div className="lrn-brief-mentor">
-            <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-            <div><b>MILTON H. ERICKSON</b><span>あなたへ語りかけています</span></div>
+          <div className="lrn-brief-eyebrow">{briefing.eyebrow}</div>
+          <div className="lrn-brief-title">
+            <span>{briefing.title}</span>
+            <b>{briefing.principle}</b>
           </div>
-          <div className="lrn-kicker">{briefing.kicker}</div>
-          <h1>{briefing.learningGoal}</h1>
-          <blockquote>{briefing.mentorMessage}</blockquote>
-          <section className="lrn-brief-question">
-            <b>私の体験で、最初に見てほしいこと</b>
-            <span>{briefing.storyQuestion}</span>
-          </section>
-          <p className="definition">{briefing.plainDefinition}</p>
-          <p className="benefit">{briefing.personalBenefit}</p>
+          <div className="lrn-brief-case">CASE 01</div>
+          <h1>{briefing.hook}</h1>
+          <p className="lrn-brief-teaser">{briefing.teaser}</p>
           <button className="lrn-cta" onClick={() => {
-            try { window.localStorage.setItem(`learn:${ep}:briefing:v4`, "done"); } catch { /* ignore */ }
+            try { window.localStorage.setItem(`learn:${ep}:briefing:v6`, "done"); } catch { /* ignore */ }
             setBriefed(true);
           }}>{briefing.cta}</button>
           {briefing.note && <span className="lrn-exp-time">{briefing.note}</span>}
@@ -413,7 +411,7 @@ function ExperiencePart({ ep, part, voice, onDone }: {
   ep: string; part: Extract<Part, { kind: "experience" }>; voice: ReturnType<typeof useVoice>;
   onDone: () => void;
 }) {
-  const [started, setStarted] = useState(false);
+  const [started, setStarted] = useState(() => !part.gate);
   const [timeline, setTimeline] = useState<ExpStep[]>(part.steps);
   const [idx, setIdx] = useState(0);
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -428,14 +426,7 @@ function ExperiencePart({ ep, part, voice, onDone }: {
     return saved;
   });
   const [hintStepId, setHintStepId] = useState<string | null>(null);
-  const gate = part.gate ?? {
-    kicker: "体験の前に",
-    title: part.title,
-    lead: "これから何を確かめるのか、先生の説明を聞いてから体験へ進みます。",
-    steps: ["今回の問いを確認する", "先生の説明を聞く", "自分の例で確かめる"] as [string, string, string],
-    cta: "先生の話を聞く →",
-    note: `約${part.minutes ?? 3}分 ・ 戻る/音声スキップ対応`,
-  };
+  const gate = part.gate;
   const step = timeline[idx];
   const resolve = useCallback((text: string) => interpolateAdventureText(text, values), [values]);
   const line = useMemo<Line | null>(() => {
@@ -496,8 +487,8 @@ function ExperiencePart({ ep, part, voice, onDone }: {
   }
 
   return (
-    <div className={`lrn-exp ${step?.kind === "fade" ? "is-fade" : ""}`}>
-      {!started ? (
+    <div className={`lrn-exp ${step ? `is-${step.kind}` : ""} ${step?.kind === "fade" ? "is-fade" : ""}`}>
+      {!started && gate ? (
         <div className="lrn-exp-gate">
           <div className="lrn-exp-gate-portrait"><img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" /></div>
           <div className="lrn-kicker">{gate.kicker}</div>
@@ -1112,7 +1103,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
     const clamp = (value: number) => Math.max(0, Math.min(episode.parts.length - 1, value));
     if (startPart !== undefined) return clamp(startPart);
     if (typeof window === "undefined") return 0;
-    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v4:part`) || 0)); }
+    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v6:part`) || 0)); }
     catch { return 0; }
   });
   const [tickets, setTickets] = useState(episode.tickets);
@@ -1122,7 +1113,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-    try { window.localStorage.setItem(`learn:${episode.key}:flow:v4:part`, String(pi)); } catch { /* ignore */ }
+    try { window.localStorage.setItem(`learn:${episode.key}:flow:v6:part`, String(pi)); } catch { /* ignore */ }
   }, [episode.key, pi]);
 
   const next = useCallback(() => {
@@ -1140,7 +1131,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
   function body() {
     switch (part.kind) {
       case "manga":
-        return <MangaPart ep={episode.key} part={part} onDone={next} label="自分の実例へ ▶" />;
+        return <MangaPart ep={episode.key} part={part} onDone={next} label="エリクソンに答える ▶" />;
       case "experience":
         return <ExperiencePart ep={episode.key} part={part} voice={voice} onDone={next} />;
       case "classroom": {

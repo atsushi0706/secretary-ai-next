@@ -88,14 +88,13 @@ export type MangaFrame = {
   alt: string;
 };
 
-/** 第1ページより前に、学習目標・物語の問い・到達成果を約束する。 */
+/** 第1ページより前に出す、作品のサムネイル兼タイトル画面。説明は置かない。 */
 export type EpisodeBriefing = {
-  kicker: string;
-  learningGoal: string;
-  mentorMessage: string;
-  storyQuestion: string;
-  plainDefinition: string;
-  personalBenefit: string;
+  eyebrow: string;
+  title: string;
+  principle: string;
+  hook: string;
+  teaser: string;
   cta: string;
   note?: string;
 };
@@ -107,7 +106,7 @@ export type ExpStep =
   | { kind: "choice"; q: string; help?: string; storeAs?: string; options: { label: string; value?: string; then: ExpStep[] }[] }
   | { kind: "fade"; text?: string };
 
-/** 体験へ入る前に「なぜ今これをするのか」を説明する入口。 */
+/** 必要な回だけ使う体験入口。直前の物語と重複する工程説明には使わない。 */
 export type ExperienceGate = {
   kicker: string;
   title: string;

@@ -49,8 +49,10 @@ function useVoice(ep: string) {
   const speak = useCallback(async (line: Line): Promise<void> => {
     stop();
     const run = runRef.current;
+    // 合成待ちも「再生中」と同じ中断可能状態にする。
+    setSpeaking(true);
     await waitWhilePaused();
-    if (runRef.current !== run) return;
+    if (runRef.current !== run) { setSpeaking(false); return; }
 
     // 全台詞を同じ VOICEVOX 話者で合成する。
     let ok = false;
@@ -68,6 +70,9 @@ function useVoice(ep: string) {
         if (ok) { setEngine("tts"); setSpeaking(false); return; }
       }
     } catch { /* 音声が作れない時は、異なる声へ切り替えず無音にする */ }
+
+    // 合成待ちの間にスキップ／画面移動された場合は、無音待機も開始しない。
+    if (runRef.current !== run) { setSpeaking(false); return; }
 
     // 異なる代替声は使わない。短く待って、文字だけで進められる状態にする。
     setEngine("silent");
@@ -331,15 +336,48 @@ function AskSheet({
 
 /* ═══════════════════════ 各パート ═══════════════════════ */
 
-function MangaPart({ part, onDone, label }: { part: Extract<Part, { kind: "manga" }>; onDone: () => void; label: string }) {
+function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part, { kind: "manga" }>; onDone: () => void; label: string }) {
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [index, setIndex] = useState(0);
+  const [briefed, setBriefed] = useState(() => {
+    if (!part.briefing || typeof window === "undefined") return !part.briefing;
+    try { return window.localStorage.getItem(`learn:${ep}:briefing:v3`) === "done"; }
+    catch { return false; }
+  });
 
   function go(to: number) {
     const next = Math.max(0, Math.min(part.frames.length - 1, to));
     const track = trackRef.current;
     if (track) track.scrollTo({ left: track.clientWidth * next, behavior: "smooth" });
     setIndex(next);
+  }
+
+  if (!briefed && part.briefing) {
+    const briefing = part.briefing;
+    return (
+      <div className="lrn-lesson-briefing">
+        <div className="lrn-lesson-briefing-inner">
+          <div className="lrn-brief-mentor">
+            <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
+            <div><b>MILTON H. ERICKSON</b><span>あなたへ語りかけています</span></div>
+          </div>
+          <div className="lrn-kicker">{briefing.kicker}</div>
+          <h1>{briefing.learningGoal}</h1>
+          <blockquote>{briefing.mentorMessage}</blockquote>
+          <section className="lrn-brief-question">
+            <b>私の体験で、最初に見てほしいこと</b>
+            <span>{briefing.storyQuestion}</span>
+          </section>
+          <p className="definition">{briefing.plainDefinition}</p>
+          <p className="benefit">{briefing.personalBenefit}</p>
+          <button className="lrn-cta" onClick={() => {
+            try { window.localStorage.setItem(`learn:${ep}:briefing:v3`, "done"); } catch { /* ignore */ }
+            setBriefed(true);
+          }}>{briefing.cta}</button>
+          {briefing.note && <span className="lrn-exp-time">{briefing.note}</span>}
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -381,7 +419,7 @@ function ExperiencePart({ ep, part, voice, onDone }: {
   const [values, setValues] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return {};
     const saved: Record<string, string> = {};
-    for (const key of ["theme", "exception", "exceptionScore", "clue"]) {
+    for (const key of ["theme", "exception", "exceptionScore", "clueCategory", "clue"]) {
       try {
         const value = window.localStorage.getItem(`learn:${ep}:${key}`)?.trim();
         if (value) saved[key] = value;
@@ -390,6 +428,14 @@ function ExperiencePart({ ep, part, voice, onDone }: {
     return saved;
   });
   const [hintStepId, setHintStepId] = useState<string | null>(null);
+  const gate = part.gate ?? {
+    kicker: "体験の前に",
+    title: part.title,
+    lead: "これから何を確かめるのか、先生の説明を聞いてから体験へ進みます。",
+    steps: ["今回の問いを確認する", "先生の説明を聞く", "自分の例で確かめる"] as [string, string, string],
+    cta: "先生の話を聞く →",
+    note: `約${part.minutes ?? 3}分 ・ 戻る/音声スキップ対応`,
+  };
   const step = timeline[idx];
   const resolve = useCallback((text: string) => interpolateAdventureText(text, values), [values]);
   const line = useMemo<Line | null>(() => {
@@ -454,23 +500,21 @@ function ExperiencePart({ ep, part, voice, onDone }: {
       {!started ? (
         <div className="lrn-exp-gate">
           <div className="lrn-exp-gate-portrait"><img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" /></div>
-          <div className="lrn-kicker">EXPERIMENT 01</div>
-          <h2>{part.title}</h2>
-          <p className="lead">問題を消す前に、困難の強さが変わる瞬間を一つ見つけます。</p>
+          <div className="lrn-kicker">{gate.kicker}</div>
+          <h2>{gate.title}</h2>
+          <p className="lead">{gate.lead}</p>
           <div className="lrn-exp-brief">
-            <div><b>01</b><span>困難が強い状態を100と置く</span></div>
-            <div><b>02</b><span>100ではない瞬間を探す</span></div>
-            <div><b>03</b><span>100との差を材料にする</span></div>
+            {gate.steps.map((text, index) => <div key={text}><b>{String(index + 1).padStart(2, "0")}</b><span>{text}</span></div>)}
           </div>
-          <button className="lrn-cta" onClick={start}>体験をはじめる →</button>
-          <span className="lrn-exp-time">約{part.minutes ?? 3}分 ・ 戻る/音声スキップ対応</span>
+          <button className="lrn-cta" onClick={start}>{gate.cta}</button>
+          <span className="lrn-exp-time">{gate.note ?? `約${part.minutes ?? 3}分 ・ 戻る/音声スキップ対応`}</span>
         </div>
       ) : (
         <>
           <div className={`lrn-exp-mentor ${voice.speaking ? "is-on" : ""}`}>
             <div className="lrn-exp-aura" />
             <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-            <div className="lrn-exp-name"><b>MILTON H. ERICKSON</b><span>{voice.speaking ? "語りかけています" : "あなたの答えを待っています"}</span></div>
+            <div className="lrn-exp-name"><b>MILTON H. ERICKSON</b><span>{voice.speaking ? "語りかけています" : step?.kind === "input" || step?.kind === "scale" || step?.kind === "choice" ? "あなたの答えを待っています" : "次へ進めます"}</span></div>
           </div>
 
           <div className="lrn-exp-dialogue">
@@ -483,14 +527,14 @@ function ExperiencePart({ ep, part, voice, onDone }: {
                 <div className="lrn-exp-step">INPUT ・ {idx + 1}</div>
                 <h3>{resolve(step.title)}</h3>
                 <p>{resolve(step.prompt)}</p>
-                <textarea rows={3} value={values[step.id] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [step.id]: e.target.value }))} placeholder={step.placeholder ? resolve(step.placeholder) : undefined} autoFocus />
-                {step.helper && <small>{resolve(step.helper)}</small>}
                 {step.hints && <>
                   <button className="lrn-exp-hint-toggle" onClick={() => setHintStepId((id) => id === step.id ? null : step.id)}>
                     {hintStepId === step.id ? "ヒントを閉じる" : "思いつかない時だけヒントを見る"}
                   </button>
                   {hintStepId === step.id && <div className="lrn-exp-items is-optional">{step.hints.map((t, i) => <div key={t} className="lrn-exp-item"><b>0{i + 1}</b>{resolve(t)}</div>)}</div>}
                 </>}
+                <textarea rows={3} value={values[step.id] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [step.id]: e.target.value }))} placeholder={step.placeholder ? resolve(step.placeholder) : undefined} autoFocus />
+                {step.helper && <small>{resolve(step.helper)}</small>}
                 </div>
               </div>
             )}
@@ -527,10 +571,10 @@ function ExperiencePart({ ep, part, voice, onDone }: {
           <div className="lrn-exp-controls">
             <button onClick={back} disabled={idx === 0}>← 戻る</button>
             <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声を飛ばす</button>
+            {step && step.kind !== "choice" && step.kind !== "fade" && (
+              <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
+            )}
           </div>
-          {step && step.kind !== "choice" && step.kind !== "fade" && (
-            <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
-          )}
         </>
       )}
     </div>
@@ -632,6 +676,10 @@ function AdventurePart({ ep, scenario, voice, onDone }: {
     ? node.spots.filter((spot) => evidenceIds.includes(spot.evidenceId)).length
     : 0;
   const investigateDone = node?.kind === "investigate" && gatheredHere === node.spots.length;
+  const availableEvidenceIds = useMemo(() => new Set(
+    scenario.nodes.slice(0, idx + 1).flatMap((item) => item.kind === "investigate" ? item.spots.map((spot) => spot.evidenceId) : []),
+  ), [idx, scenario.nodes]);
+  const availableEvidence = scenario.evidence.filter((item) => availableEvidenceIds.has(item.id));
 
   return (
     <div className={`lrn-av lrn-av-camera-${node?.kind === "dialogue" ? (node.camera ?? "wide") : "evidence"}`}
@@ -655,19 +703,19 @@ function AdventurePart({ ep, scenario, voice, onDone }: {
           <div className="lrn-av-hud">
             <div className="lrn-av-hud-case"><b>{scenario.caseNo}</b><span>{sceneName}</span></div>
             <div className="lrn-av-hud-goal">目的：{scenario.objective}</div>
-            <div className="lrn-av-hud-actions">
+            <div className={`lrn-av-hud-actions ${node?.kind === "dialogue" ? "is-dialogue" : ""}`}>
               <button onClick={back} disabled={idx === 0} aria-label="一つ前へ戻る">↶</button>
               <button onClick={voice.stop} disabled={!voice.speaking} aria-label="音声をスキップ">≫</button>
             </div>
           </div>
 
-          <div className="lrn-av-evidence-tray" aria-label={`証拠 ${evidenceIds.length}個`}>
-            {scenario.evidence.map((evidence) => (
+          {availableEvidence.length > 0 && <div className="lrn-av-evidence-tray" aria-label={`証拠 ${evidenceIds.length}個`}>
+            {availableEvidence.map((evidence) => (
               <span key={evidence.id} className={evidenceIds.includes(evidence.id) ? "is-found" : ""} title={evidence.title}>
                 {evidenceIds.includes(evidence.id) ? evidence.icon : "?"}
               </span>
             ))}
-          </div>
+          </div>}
 
           <div className="lrn-av-cast" aria-hidden="true">
             <img className={`teacher ${speaker === "teacher" ? "is-speaking" : speaker ? "is-dim" : ""}`} src={scenario.teacherSprite} alt="" />
@@ -678,7 +726,11 @@ function AdventurePart({ ep, scenario, voice, onDone }: {
             <div className={`lrn-av-dialogue is-${currentLine.who}`} key={node.id}>
               <div className="lrn-av-speaker">{currentLine.who === "teacher" ? "ミルトン・エリクソン" : "清瀬リンク"}</div>
               <p>{currentLine.text}</p>
-              <button onClick={advance}>{node.nextLabel ?? "会話を続ける"} <span>›</span></button>
+              <div className="lrn-av-dialogue-controls">
+                <button onClick={back} disabled={idx === 0}>← 戻る</button>
+                <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声</button>
+                <button className="next" onClick={advance}>{node.nextLabel ?? "会話を続ける"} <span>›</span></button>
+              </div>
             </div>
           )}
 
@@ -796,8 +848,16 @@ function DialoguePart({
       const v = items[i]?.line.slide;
       if (v !== undefined) s = v;
     }
-    return s;
-  }, [idx, items]);
+    if (!s) return null;
+    const resolveText = (value?: string) => value === undefined ? undefined : interpolateAdventureText(value, lectureValues);
+    return {
+      ...s,
+      h: resolveText(s.h),
+      left: resolveText(s.left),
+      right: resolveText(s.right),
+      items: s.items?.map((item) => interpolateAdventureText(item, lectureValues)),
+    };
+  }, [idx, items, lectureValues]);
 
   useEffect(() => { aliveRef.current = true; return () => { aliveRef.current = false; voice.stop(); }; }, [voice]);
 
@@ -843,7 +903,8 @@ function DialoguePart({
     voice.resume();
   }
 
-  const sceneLabel = cur?.scene ? `SCENE ${cur.scene.no}｜${cur.scene.title}` : undefined;
+  const totalScenes = Math.max(1, new Set(items.flatMap((item) => item.scene ? [item.scene.no] : [])).size);
+  const sceneLabel = cur?.scene ? `SCENE ${cur.scene.no}/${totalScenes}｜${cur.scene.title}` : undefined;
 
   return (
     <div className="lrn-class">
@@ -851,7 +912,7 @@ function DialoguePart({
         <div className="lrn-exp-gate">
           <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
           <h2>事件の答えを、講義で整理します</h2>
-          <p>体験と捜査で使った、催眠・間接暗示・Utilizationの理屈を整理します。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
+          <p>漫画と捜査で見つけた「観察とUtilization」に、ここで名前と限界を与えます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (
@@ -877,7 +938,7 @@ function DialoguePart({
             <AskSheet ep={ep} sceneNo={cur.scene?.no ?? 0} tickets={tickets} onUse={onUseTicket} onClose={closeAsk}
               context={{
                 location: cur.scene?.title ?? "解説講義",
-                objective: "事件で体験したロジックを、催眠・間接暗示・Utilizationの理屈として理解する",
+                objective: "事件で体験した観察手順を、催眠とUtilizationの理屈・限界として理解する",
                 nodeKind: "lecture",
                 theme: lectureValues.theme,
                 exception: lectureValues.exception,
@@ -896,6 +957,23 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
   ep: string; part: Extract<Part, { kind: "qa" }>; tickets: number; onUseTicket: () => void; onDone: () => void; lastScene: number;
 }) {
   const [asking, setAsking] = useState(false);
+  const [context] = useState(() => {
+    const read = (key: string, fallback: string) => {
+      if (typeof window === "undefined") return fallback;
+      try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
+      catch { return fallback; }
+    };
+    return {
+      location: "講義後の振り返り",
+      objective: "学んだUtilizationを、自分の具体例へ安全に当てはめて理解する",
+      nodeKind: "final-qa",
+      theme: read("theme", "今変えたいこと"),
+      exception: read("exception", "100ではなかった瞬間"),
+      exceptionScore: read("exceptionScore", "100未満"),
+      clue: read("clue", "その瞬間にあった具体的な違い"),
+      resource: read("resource", "その違いを一つ小さく試す"),
+    };
+  });
   return (
     <div className="lrn-qa">
       <img src={ERICKSON.smile} alt="" />
@@ -905,7 +983,7 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
         {tickets > 0 && <button className="main" onClick={() => setAsking(true)}>🎫 先生に聞く</button>}
         <button className="ghost" onClick={onDone}>{tickets > 0 ? "もう大丈夫。先へ ▶" : "先へ ▶"}</button>
       </div>
-      {asking && <AskSheet ep={ep} sceneNo={lastScene} tickets={tickets} onUse={onUseTicket} onClose={() => setAsking(false)} title="質問タイム" />}
+      {asking && <AskSheet ep={ep} sceneNo={lastScene} tickets={tickets} onUse={onUseTicket} onClose={() => setAsking(false)} title="質問タイム" context={context} />}
     </div>
   );
 }
@@ -914,7 +992,16 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
   const [phase, setPhase] = useState<"intro" | "card" | "after">("intro");
   const [lineIdx, setLineIdx] = useState(0);
   const lines = phase === "intro" ? part.lines : phase === "after" ? part.after : [];
-  const line = lines[lineIdx] ?? null;
+  const [cardValues] = useState<Record<string, string>>(() => {
+    const read = (key: string, fallback: string) => {
+      if (typeof window === "undefined") return fallback;
+      try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
+      catch { return fallback; }
+    };
+    return { theme: read("theme", "今変えたいこと"), clue: read("clue", "見つけた違い"), resource: read("resource", "見つけた違いを一つ試す") };
+  });
+  const rawLine = lines[lineIdx] ?? null;
+  const line = rawLine ? { ...rawLine, text: interpolateAdventureText(rawLine.text, cardValues), dynamic: rawLine.dynamic || rawLine.text.includes("{{") } : null;
 
   useEffect(() => {
     if (line) void voice.speak(line);
@@ -1005,7 +1092,6 @@ function TeaserPart({ part, epNo }: { part: Extract<Part, { kind: "teaser" }>; e
           <div className="series">{part.next.series}</div>
           <div className="principle">{part.next.principle}</div>
         </div>
-        <p className="lrn-nextcase-note">第2話は、絵コンテと全シーンの絵を固定してから公開します。</p>
         <div className="lrn-manga-end">
           <p>第{epNo}話 おわり</p>
           <Link href="/learn" className="lrn-cta">一覧にもどる</Link>
@@ -1021,19 +1107,32 @@ const PART_LABEL: Record<Part["kind"], string> = {
   manga: "漫画", experience: "体験", classroom: "教室", adventure: "推理", qa: "質問", card: "原理", outro: "次回へ", teaser: "次回",
 };
 
-export function LearnPlayer({ episode, startPart = 0 }: { episode: Episode; startPart?: number }) {
-  const [pi, setPi] = useState(Math.max(0, Math.min(episode.parts.length - 1, startPart)));
+export function LearnPlayer({ episode, startPart }: { episode: Episode; startPart?: number }) {
+  const [pi, setPi] = useState(() => {
+    const clamp = (value: number) => Math.max(0, Math.min(episode.parts.length - 1, value));
+    if (startPart !== undefined) return clamp(startPart);
+    if (typeof window === "undefined") return 0;
+    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v3:part`) || 0)); }
+    catch { return 0; }
+  });
   const [tickets, setTickets] = useState(episode.tickets);
   const voice = useVoice(episode.key);
   const part = episode.parts[pi];
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
-  useEffect(() => { scrollRef.current?.scrollTo({ top: 0 }); }, [pi]);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0 });
+    try { window.localStorage.setItem(`learn:${episode.key}:flow:v3:part`, String(pi)); } catch { /* ignore */ }
+  }, [episode.key, pi]);
 
   const next = useCallback(() => {
     voice.stop();
     setPi((p) => Math.min(episode.parts.length - 1, p + 1));
   }, [episode.parts.length, voice]);
+  const previousPart = useCallback(() => {
+    voice.stop();
+    setPi((p) => Math.max(0, p - 1));
+  }, [voice]);
 
   const classroom = episode.parts.find((p) => p.kind === "classroom") as Extract<Part, { kind: "classroom" }> | undefined;
   const lastScene = classroom ? classroom.scenes[classroom.scenes.length - 1].no : 0;
@@ -1041,7 +1140,7 @@ export function LearnPlayer({ episode, startPart = 0 }: { episode: Episode; star
   function body() {
     switch (part.kind) {
       case "manga":
-        return <MangaPart part={part} onDone={next} label="体験へ ▶" />;
+        return <MangaPart ep={episode.key} part={part} onDone={next} label="自分の実例へ ▶" />;
       case "experience":
         return <ExperiencePart ep={episode.key} part={part} voice={voice} onDone={next} />;
       case "classroom": {
@@ -1067,7 +1166,9 @@ export function LearnPlayer({ episode, startPart = 0 }: { episode: Episode; star
   return (
     <div className="lrn">
       <header className="lrn-head">
-        <Link href="/learn" className="back">‹</Link>
+        {pi > 0
+          ? <button type="button" className="back" onClick={previousPart} aria-label="前のパートへ戻る">‹</button>
+          : <Link href="/learn" className="back" aria-label="一覧へ戻る">‹</Link>}
         <div className="mid">
           <span className="ep">第{episode.no}話</span>
           <span className="part">{PART_LABEL[part.kind]}</span>

@@ -88,12 +88,34 @@ export type MangaFrame = {
   alt: string;
 };
 
+/** 第1ページより前に、学習目標・物語の問い・到達成果を約束する。 */
+export type EpisodeBriefing = {
+  kicker: string;
+  learningGoal: string;
+  mentorMessage: string;
+  storyQuestion: string;
+  plainDefinition: string;
+  personalBenefit: string;
+  cta: string;
+  note?: string;
+};
+
 export type ExpStep =
   | { kind: "say"; line: Line; wait?: number }
   | { kind: "input"; id: string; title: string; prompt: string; placeholder?: string; helper?: string; hints?: string[]; line?: Line }
   | { kind: "scale"; id: string; title: string; prompt: string; helper?: string; min?: number; max?: number; line?: Line }
   | { kind: "choice"; q: string; help?: string; storeAs?: string; options: { label: string; value?: string; then: ExpStep[] }[] }
   | { kind: "fade"; text?: string };
+
+/** 体験へ入る前に「なぜ今これをするのか」を説明する入口。 */
+export type ExperienceGate = {
+  kicker: string;
+  title: string;
+  lead: string;
+  steps: [string, string, string];
+  cta: string;
+  note?: string;
+};
 
 export type Scene = {
   no: number;
@@ -112,8 +134,8 @@ export type PrincipleCard = {
 };
 
 export type Part =
-  | { kind: "manga"; title: string; frames: MangaFrame[]; /** 最後に出す文 */ close?: string[] }
-  | { kind: "experience"; title: string; steps: ExpStep[]; minutes?: number }
+  | { kind: "manga"; title: string; frames: MangaFrame[]; briefing?: EpisodeBriefing; /** 最後に出す文 */ close?: string[] }
+  | { kind: "experience"; title: string; steps: ExpStep[]; minutes?: number; gate?: ExperienceGate }
   | { kind: "classroom"; scenes: Scene[] }
   | { kind: "adventure"; scenario: AdventureScenario }
   | { kind: "qa"; title: string }

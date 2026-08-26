@@ -87,8 +87,11 @@ export async function POST(req: Request) {
     context.lastInteraction && `直前の反応：${context.lastInteraction}`,
   ].filter(Boolean).join("\n") || "現在地の追加情報なし";
   const asksAboutControl = /(?:催眠|トランス).{0,18}(?:操|支配|命令|意思を奪)|(?:操|支配).{0,18}(?:催眠|トランス)/.test(question);
+  const asksAboutPersonalApplication = /(?:自分|私|僕).{0,24}(?:場合|不安|悩み|困|どう|何を|使|試)|(?:何|どう).{0,12}(?:試|使)/.test(question);
   const focusInstruction = asksAboutControl
     ? "この質問には、最初に『いいえ。催眠は人の意思を奪って操ることではありません』と明答し、現在の事件でこれから命令と本人の反応を区別して確かめる、と説明する。"
+    : asksAboutPersonalApplication && context.clue
+      ? `この質問には、生徒の「${context.theme || "変えたいこと"}」と、本人が書いた具体的な違い「${context.clue}」を必ず使う。その違いを一つだけ安全に試し、同じ結果を約束せず、起きた違いを観察する手順として答える。`
     : `質問「${question}」に含まれる中心語を最初の二文以内でもう一度使い、別の話題へすり替えない。`;
 
   const persona = `あなたはミルトン・エリクソン。教室で「${ep.subtitle}」の授業をしている先生です。
@@ -147,6 +150,10 @@ ${notYet.length ? notYet.map((s) => `- ${s}`).join("\n") : "- なし（授業は
     // 最初の誤解解除に直結する質問だけは、モデルが話題を取り違えても曖昧な回答を返さない。
     if (asksAboutControl && !/(?:操|支配|意思を奪)/.test(answer)) {
       answer = `いいえ。催眠は人の意思を奪って操ることではありません。注意が一つの体験へ深く向き、その人の中にすでにあるイメージや身体反応が起こりやすくなる状態です。いまの「${context.location || "事件"}」では、まだ答えを信じなくて構いません。命令したときと、本人の反応が起きたときを証拠で比べて確かめましょう。`;
+    }
+    // 自分への使い方を聞かれた時、本人が入力した材料を無視した一般論は返さない。
+    if (asksAboutPersonalApplication && context.clue && !answer.includes(context.clue.slice(0, Math.min(12, context.clue.length)))) {
+      answer = `あなたの場合は、「${context.theme || "変えたいこと"}」を一気になくそうとせず、${context.exception ? `「${context.exception}」で` : "100ではなかった時に"}違っていた「${context.clue}」を、次の場面で一つだけ安全に再現してみます。同じ結果になるとは決めず、その時に何が少し変わったかを観察してください。`;
     }
     return NextResponse.json({ answer, sceneNo });
   } catch (error: unknown) {

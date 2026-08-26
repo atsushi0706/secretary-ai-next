@@ -23,8 +23,8 @@ export function LearnHarness({ part }: { part: number }) {
         const evidence = Array.isArray(context.evidence) ? context.evidence.join("、") : "";
         const answer = /操|支配/.test(question)
           ? `いいえ。催眠は人の意思を奪って操ることではありません。いまの「${context.location || "事件"}」で、命令と本人の反応を証拠で比べて確かめてみましょう。`
-          : /自分の場合|入力した悩み/.test(question)
-            ? `あなたが書いた「${context.theme || "変えたいこと"}」を100とすると、「${context.exception || "100ではなかった瞬間"}」では${context.exceptionScore || "100未満"}でした。その差を作った「${context.clue || "条件"}」を一つ観察するところから始められます。`
+          : /自分|私|僕|入力した悩み|どう試|どう使/.test(question)
+            ? `あなたが書いた「${context.theme || "変えたいこと"}」は、「${context.exception || "100ではなかった瞬間"}」では${context.exceptionScore || "100未満"}でした。次は、その時に違っていた「${context.clue || "条件"}」を一つだけ再現し、同じ結果を求めず、何が変わるかを観察します。`
             : /簡単|言い換え/.test(question)
               ? "無理に動かそうとする前に、もう動いている小さな反応を見つけて使う、ということです。"
               : /別の解釈|当てはまらない/.test(question)

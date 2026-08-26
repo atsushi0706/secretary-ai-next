@@ -9,34 +9,51 @@ import { useEffect, useState } from "react";
  * - すでにインストール済み（standalone）や、閉じたあと（7日）は出さない
  */
 const DISMISS_KEY = "pwa-install-dismissed-v1";
+type InstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<unknown>;
+};
+type NavigatorWithStandalone = Navigator & { standalone?: boolean };
+
+function isDismissed(): boolean {
+  try {
+    const until = Number(localStorage.getItem(DISMISS_KEY) || "0");
+    return Boolean(until && Date.now() < until);
+  } catch { return false; }
+}
 
 function isStandalone(): boolean {
   if (typeof window === "undefined") return false;
-  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as any).standalone === true;
+  return window.matchMedia?.("(display-mode: standalone)").matches || (navigator as NavigatorWithStandalone).standalone === true;
 }
 function isIOS(): boolean {
   if (typeof navigator === "undefined") return false;
-  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !(navigator as any).standalone;
+  return /iphone|ipad|ipod/i.test(navigator.userAgent) && !(navigator as NavigatorWithStandalone).standalone;
 }
 
 export function PwaInstallBanner() {
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
-  const [deferred, setDeferred] = useState<any>(null);
+  const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (isStandalone()) return;              // もうアプリとして開いてる
-    try {
-      const until = Number(localStorage.getItem(DISMISS_KEY) || "0");
-      if (until && Date.now() < until) return; // 閉じてから7日は出さない
-    } catch { /* ignore */ }
+    if (isDismissed()) return;                // 閉じてから7日は出さない
 
-    const onBIP = (e: Event) => { e.preventDefault(); setDeferred(e); setShow(true); };
+    const onBIP = (e: Event) => {
+      e.preventDefault();
+      // 待機中のイベントが、閉じた後に再度バナーを出さないよう毎回確認する。
+      if (isDismissed()) return;
+      setDeferred(e as InstallPromptEvent); setShow(true);
+    };
     window.addEventListener("beforeinstallprompt", onBIP);
 
-    if (isIOS()) { setIos(true); setShow(true); }
+    const iosTimer = isIOS() ? window.setTimeout(() => { setIos(true); setShow(true); }, 0) : undefined;
 
-    return () => window.removeEventListener("beforeinstallprompt", onBIP);
+    return () => {
+      window.removeEventListener("beforeinstallprompt", onBIP);
+      if (iosTimer !== undefined) window.clearTimeout(iosTimer);
+    };
   }, []);
 
   function dismiss() {

@@ -6,7 +6,6 @@ import type { Episode, ExpStep, Face, Line, Part, Scene, Slide } from "@/lib/lea
 import { VOICE_OF, audioUrl } from "@/lib/learn/types";
 import type { AdventureEvidence, AdventureNode, AdventureScenario } from "@/lib/learn/adventure";
 import { interpolateAdventureText } from "@/lib/learn/adventure";
-import { MangaPageView } from "./MangaPage";
 import { MangaArt } from "./MangaArt";
 
 /* ═══════════════════════ 声 ═══════════════════════
@@ -187,7 +186,7 @@ function SlideView({ slide, sceneLabel }: { slide: Slide | null; sceneLabel?: st
           {slide.items && slide.items.length > 0 && (
             <div className="lrn-items">
               {slide.items.map((t, i) => (
-                <div className="lrn-item" key={i} style={{ animationDelay: `${i * 0.35}s` }}>
+                <div className="lrn-item" key={i}>
                   {(st === "flow" || st === "strike") && <span className="arrow">↓</span>}
                   {st === "steps" && <span className="num">{i + 1}</span>}
                   <span className="txt">{t.split("\n").map((s, j) => <div key={j}>{s}</div>)}</span>
@@ -207,9 +206,7 @@ function Stage({
   line, speaking, slide, sceneLabel, onTap, dim, aside,
 }: { line: Line | null; speaking: boolean; slide: Slide | null; sceneLabel?: string; onTap?: () => void; dim?: boolean; aside?: React.ReactNode }) {
   const who = line?.who ?? null;
-  const tFace: Face = (who === "teacher" ? line?.face : line?.react) ?? "neutral";
   const lFace: Face = (who === "link" ? line?.face : line?.react) ?? "neutral";
-  const tMouth = useMouth(speaking && who === "teacher");
   const lMouth = useMouth(speaking && who === "link");
   return (
     <div className={`lrn-stage ${dim ? "is-dim" : ""}`} onClick={onTap}>
@@ -227,7 +224,7 @@ function Stage({
 
       <div className="lrn-chars">
         <div className={`lrn-char is-teacher ${who === "teacher" ? "is-on" : who ? "is-off" : ""}`}>
-          <img src={who === "teacher" && tMouth ? ERICKSON.talk : ERICKSON[tFace]} alt="エリクソン" />
+          <img src={ERICKSON_CUTOUT} alt="エリクソン" />
         </div>
         <div className={`lrn-char is-link ${who === "link" ? "is-on" : who ? "is-off" : ""}`}>
           <img src={linkSrc(lFace, who === "link" && lMouth)} alt="リンク" />
@@ -399,9 +396,9 @@ function MangaPart({ part, onDone, label }: { part: Extract<Part, { kind: "manga
   );
 }
 
-function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
+function ExperiencePart({ ep, part, voice, onDone }: {
   ep: string; part: Extract<Part, { kind: "experience" }>; voice: ReturnType<typeof useVoice>;
-  tickets: number; onUseTicket: () => void; onDone: () => void;
+  onDone: () => void;
 }) {
   const [started, setStarted] = useState(false);
   const [timeline, setTimeline] = useState<ExpStep[]>(part.steps);
@@ -417,7 +414,6 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
     }
     return saved;
   });
-  const [asking, setAsking] = useState(false);
   const [hintStepId, setHintStepId] = useState<string | null>(null);
   const step = timeline[idx];
   const resolve = useCallback((text: string) => interpolateAdventureText(text, values), [values]);
@@ -506,7 +502,9 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
             {line && <div className="lrn-exp-speaker">エリクソン</div>}
             {step?.kind === "say" && <p key={step.line.id} className="lrn-exp-line">{resolve(step.line.text)}</p>}
             {step?.kind === "input" && (
-              <div className="lrn-exp-prompt">
+              <div className="lrn-exp-turn">
+                {line && <p className="lrn-exp-question-line">{line.text}</p>}
+                <div className="lrn-exp-prompt">
                 <div className="lrn-exp-step">INPUT ・ {idx + 1}</div>
                 <h3>{resolve(step.title)}</h3>
                 <p>{resolve(step.prompt)}</p>
@@ -518,10 +516,13 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
                   </button>
                   {hintStepId === step.id && <div className="lrn-exp-items is-optional">{step.hints.map((t, i) => <div key={t} className="lrn-exp-item"><b>0{i + 1}</b>{resolve(t)}</div>)}</div>}
                 </>}
+                </div>
               </div>
             )}
             {step?.kind === "scale" && (
-              <div className="lrn-exp-prompt lrn-exp-scale">
+              <div className="lrn-exp-turn">
+                {line && <p className="lrn-exp-question-line">{line.text}</p>}
+                <div className="lrn-exp-prompt lrn-exp-scale">
                 <div className="lrn-exp-step">SCALE ・ {idx + 1}</div>
                 <h3>{resolve(step.title)}</h3>
                 <p>{resolve(step.prompt)}</p>
@@ -532,6 +533,7 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
                     value={values[step.id] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [step.id]: e.target.value }))} placeholder="80" autoFocus /><b>点</b></span>
                 </label>
                 {step.helper && <small>{resolve(step.helper)}</small>}
+                </div>
               </div>
             )}
             {step?.kind === "choice" && (
@@ -550,22 +552,10 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
           <div className="lrn-exp-controls">
             <button onClick={back} disabled={idx === 0}>← 戻る</button>
             <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声を飛ばす</button>
-            <button onClick={() => { voice.pause(); setAsking(true); }} disabled={tickets <= 0}>✦ 先生に聞く ×{tickets}</button>
           </div>
           {step && step.kind !== "choice" && step.kind !== "fade" && (
             <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
           )}
-          {asking && <AskSheet ep={ep} sceneNo={0} tickets={tickets} onUse={onUseTicket}
-            context={{
-              location: step?.kind === "input" || step?.kind === "scale" ? resolve(step.title) : "最初の催眠体験",
-              objective: "困難を100と置き、100ではなかった瞬間と差を作った条件を見つける",
-              nodeKind: step?.kind,
-              theme: values.theme,
-              exception: values.exception,
-              exceptionScore: values.exceptionScore,
-              clue: values.clue,
-            }}
-            onClose={() => { setAsking(false); voice.resume(); }} title="体験について聞く" />}
         </>
       )}
     </div>
@@ -574,12 +564,10 @@ function ExperiencePart({ ep, part, voice, tickets, onUseTicket, onDone }: {
 
 /* ═══════════════════════ シナリオ駆動アドベンチャー ═══════════════════════ */
 
-function AdventurePart({ ep, scenario, voice, tickets, onUseTicket, onDone }: {
+function AdventurePart({ ep, scenario, voice, onDone }: {
   ep: string;
   scenario: AdventureScenario;
   voice: ReturnType<typeof useVoice>;
-  tickets: number;
-  onUseTicket: () => void;
   onDone: () => void;
 }) {
   const [started, setStarted] = useState(false);
@@ -603,7 +591,6 @@ function AdventurePart({ ep, scenario, voice, tickets, onUseTicket, onDone }: {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const [solved, setSolved] = useState<Record<string, boolean>>({});
-  const [asking, setAsking] = useState(false);
   const node = scenario.nodes[idx];
 
   const resolve = useCallback((text: string) => interpolateAdventureText(text, values), [values]);
@@ -696,7 +683,6 @@ function AdventurePart({ ep, scenario, voice, tickets, onUseTicket, onDone }: {
             <div className="lrn-av-hud-actions">
               <button onClick={back} disabled={idx === 0} aria-label="一つ前へ戻る">↶</button>
               <button onClick={voice.stop} disabled={!voice.speaking} aria-label="音声をスキップ">≫</button>
-              <button className="ask" onClick={() => { voice.pause(); setAsking(true); }} disabled={tickets <= 0}>質問 ×{tickets}</button>
             </div>
           </div>
 
@@ -789,22 +775,6 @@ function AdventurePart({ ep, scenario, voice, tickets, onUseTicket, onDone }: {
             </div>
           )}
 
-          {asking && <AskSheet ep={ep} sceneNo={idx + 1} tickets={tickets} onUse={onUseTicket}
-            context={{
-              scenarioId: scenario.id,
-              caseTitle: `${scenario.caseNo} ${scenario.title}`,
-              location: sceneName,
-              objective: scenario.objective,
-              nodeKind: node?.kind,
-              evidence: scenario.evidence.filter((item) => evidenceIds.includes(item.id)).map((item) => `${item.title}：${item.summary}`),
-              theme: values.theme,
-              exception: values.exception,
-              exceptionScore: values.exceptionScore,
-              clue: values.clue,
-              resource: values.resource,
-              lastInteraction: feedback || undefined,
-            }}
-            onClose={() => { setAsking(false); voice.resume(); }} title="この場面について聞く" />}
         </>
       )}
     </div>
@@ -823,7 +793,26 @@ function DialoguePart({
   const [asking, setAsking] = useState(false);
   const runIdRef = useRef(0);
   const aliveRef = useRef(true);
-  const cur = idx >= 0 ? items[idx] : null;
+  const [lectureValues] = useState<Record<string, string>>(() => {
+    const read = (key: string, fallback: string) => {
+      if (typeof window === "undefined") return fallback;
+      try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
+      catch { return fallback; }
+    };
+    return {
+      theme: read("theme", "今変えたいこと"),
+      exception: read("exception", "100ではなかった瞬間"),
+      exceptionScore: read("exceptionScore", "100未満"),
+      clue: read("clue", "その瞬間にあった違い"),
+      resource: read("resource", "100との差を作った条件を一つ試す"),
+    };
+  });
+  const rawCur = idx >= 0 ? items[idx] : null;
+  const cur = useMemo<Flat | null>(() => {
+    if (!rawCur) return null;
+    const text = interpolateAdventureText(rawCur.line.text, lectureValues);
+    return { ...rawCur, line: { ...rawCur.line, text, dynamic: rawCur.line.dynamic || text !== rawCur.line.text } };
+  }, [lectureValues, rawCur]);
 
   // いま出しておくスライド：ここまでで最後に指定されたもの
   const slide = useMemo<Slide | null>(() => {
@@ -885,14 +874,14 @@ function DialoguePart({
     <div className="lrn-class">
       {idx < 0 ? (
         <div className="lrn-exp-gate">
-          <img src={ERICKSON.smile} alt="" />
-          <h2>教室へ</h2>
-          <p>先生とリンクの授業がはじまります。<br />分からなくなったら、いつでも 🎫 で先生を止めて聞けます。</p>
+          <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
+          <h2>事件の答えを、講義で整理します</h2>
+          <p>ここから初めて、催眠・間接暗示・Utilizationの理屈を説明します。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (
         <>
-          <Stage line={cur?.line ?? null} speaking={voice.speaking} slide={slide} sceneLabel={sceneLabel} onTap={next} dim={dim}
+          <Stage line={cur?.line ?? null} speaking={voice.speaking} slide={slide} sceneLabel={sceneLabel} dim={dim}
             aside={showTickets ? (
               /* 吹き出しの右隣。キャラクターに被せない */
               <div className="lrn-ticket-wrap" onClick={(e) => e.stopPropagation()}>
@@ -908,9 +897,19 @@ function DialoguePart({
             <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声スキップ</button>
             <button className="next" onClick={next}>次へ →</button>
           </div>
-          <div className="lrn-tapnote">{voice.engine === "silent" ? "音が出ていません" : "画面タップでも進めます"}</div>
+          <div className="lrn-tapnote">{voice.engine === "silent" ? "音が出ていません ・ 次へで進みます" : "台詞は自動で進みません"}</div>
           {asking && cur && (
-            <AskSheet ep={ep} sceneNo={cur.scene?.no ?? 0} tickets={tickets} onUse={onUseTicket} onClose={closeAsk} />
+            <AskSheet ep={ep} sceneNo={cur.scene?.no ?? 0} tickets={tickets} onUse={onUseTicket} onClose={closeAsk}
+              context={{
+                location: cur.scene?.title ?? "解説講義",
+                objective: "事件で体験したロジックを、催眠・間接暗示・Utilizationの理屈として理解する",
+                nodeKind: "lecture",
+                theme: lectureValues.theme,
+                exception: lectureValues.exception,
+                exceptionScore: lectureValues.exceptionScore,
+                clue: lectureValues.clue,
+                resource: lectureValues.resource,
+              }} title="講義中に先生へ質問" />
           )}
         </>
       )}
@@ -938,26 +937,37 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
 
 function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part, { kind: "card" }>; voice: ReturnType<typeof useVoice>; onDone: () => void }) {
   const [phase, setPhase] = useState<"intro" | "card" | "after">("intro");
-  const [line, setLine] = useState<Line | null>(null);
-  const aliveRef = useRef(true);
-  const startedRef = useRef(false);
+  const [lineIdx, setLineIdx] = useState(0);
+  const lines = phase === "intro" ? part.lines : phase === "after" ? part.after : [];
+  const line = lines[lineIdx] ?? null;
 
   useEffect(() => {
-    aliveRef.current = true;
-    if (startedRef.current) return;
-    startedRef.current = true;
-    (async () => {
-      for (const l of part.lines) {
-        if (!aliveRef.current) return;
-        setLine(l); await voice.speak(l); await sleep((l.pause ?? 0.7) * 1000);
-      }
-      if (aliveRef.current) setPhase("card");
-    })();
-    return () => { aliveRef.current = false; voice.stop(); };
+    if (line) void voice.speak(line);
+    return () => voice.stop();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [phase, lineIdx]);
 
-  async function take() {
+  function advanceLine() {
+    voice.stop();
+    if (lineIdx + 1 < lines.length) {
+      setLineIdx((current) => current + 1);
+      return;
+    }
+    if (phase === "intro") {
+      setPhase("card");
+      setLineIdx(0);
+      return;
+    }
+    onDone();
+  }
+
+  function backLine() {
+    if (lineIdx <= 0) return;
+    voice.stop();
+    setLineIdx((current) => Math.max(0, current - 1));
+  }
+
+  function take() {
     try {
       const key = "learn:cards";
       const parsed: unknown = JSON.parse(localStorage.getItem(key) || "[]");
@@ -970,16 +980,22 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
       }
     } catch { /* ignore */ }
     setPhase("after");
-    for (const l of part.after) {
-      if (!aliveRef.current) return;
-      setLine(l); await voice.speak(l); await sleep((l.pause ?? 0.7) * 1000);
-    }
-    if (aliveRef.current) onDone();
+    setLineIdx(0);
   }
 
   return (
     <div className="lrn-cardpart">
-      {phase !== "card" && <Stage line={line} speaking={voice.speaking} slide={null} dim />}
+      {phase !== "card" && (
+        <>
+          <Stage line={line} speaking={voice.speaking} slide={null} dim />
+          <div className="lrn-adv-controls">
+            <button onClick={backLine} disabled={lineIdx <= 0}>← 戻る</button>
+            <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声スキップ</button>
+            <button className="next" onClick={advanceLine}>次へ →</button>
+          </div>
+          <div className="lrn-tapnote">台詞は自動で進みません</div>
+        </>
+      )}
       {phase === "card" && (
         <div className="lrn-cardget">
           <div className="lrn-pcard">
@@ -996,22 +1012,29 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
 
 function TeaserPart({ part, epNo }: { part: Extract<Part, { kind: "teaser" }>; epNo: number }) {
   return (
-    <div className="lrn-manga lrn-teaser">
-      {part.manga.map((pg, i) => <MangaPageView key={i} page={pg} index={i} />)}
-      <div className="lrn-hook">{part.hook.map((t, i) => <div key={i}>{t}</div>)}</div>
-      <div className="lrn-next">
-        <div className="no">{part.next.no}</div>
-        <div className="title">{part.next.title}</div>
-        <div className="series">{part.next.series}</div>
-        <div className="principle">{part.next.principle}</div>
+    <div className="lrn-teaser">
+      <div className="lrn-nextcase-stage">
+        <img className="lrn-nextcase-bg" src="/learn/adventure/erickson-study-v1.webp" alt="夜の書斎" />
+        <div className="lrn-nextcase-shade" />
+        <div className="lrn-nextcase-kicker">NEXT CASE 02</div>
+        <h2>「催眠なんか絶対に<br />かかりません」</h2>
+        <div className="lrn-nextcase-dialogue is-man"><b>男性</b><span>私は絶対に、催眠なんかにかかりません。</span></div>
+        <img className="lrn-nextcase-erickson" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
+        <div className="lrn-nextcase-dialogue is-teacher"><b>エリクソン</b><span>では、かからないようにしてください。</span></div>
       </div>
-      <div className="lrn-unlock">
-        {part.unlock.map((u, i) => <button key={i} className={i === 0 ? "ghost" : "main"} disabled>{u}</button>)}
-        <p className="note">（第2話は準備中）</p>
-      </div>
-      <div className="lrn-manga-end">
-        <p>第{epNo}話 おわり</p>
-        <Link href="/learn" className="lrn-cta">一覧にもどる</Link>
+      <div className="lrn-nextcase-info">
+        <div className="lrn-hook">{part.hook.map((t, i) => <div key={i}>{t}</div>)}</div>
+        <div className="lrn-next">
+          <div className="no">{part.next.no}</div>
+          <div className="title">{part.next.title}</div>
+          <div className="series">{part.next.series}</div>
+          <div className="principle">{part.next.principle}</div>
+        </div>
+        <p className="lrn-nextcase-note">第2話は、絵コンテと全シーンの絵を固定してから公開します。</p>
+        <div className="lrn-manga-end">
+          <p>第{epNo}話 おわり</p>
+          <Link href="/learn" className="lrn-cta">一覧にもどる</Link>
+        </div>
       </div>
     </div>
   );
@@ -1045,16 +1068,14 @@ export function LearnPlayer({ episode, startPart = 0 }: { episode: Episode; star
       case "manga":
         return <MangaPart part={part} onDone={next} label="体験へ ▶" />;
       case "experience":
-        return <ExperiencePart ep={episode.key} part={part} voice={voice} tickets={tickets}
-          onUseTicket={() => setTickets((t) => Math.max(0, t - 1))} onDone={next} />;
+        return <ExperiencePart ep={episode.key} part={part} voice={voice} onDone={next} />;
       case "classroom": {
         const items: Flat[] = part.scenes.flatMap((s, si) => s.lines.map((l) => ({ line: l, scene: s, sceneIdx: si })));
         return <DialoguePart ep={episode.key} items={items} voice={voice} tickets={tickets} onUseTicket={() => setTickets((t) => Math.max(0, t - 1))}
           onDone={next} showTickets startLabel="▶ 授業をはじめる" />;
       }
       case "adventure":
-        return <AdventurePart ep={episode.key} scenario={part.scenario} voice={voice} tickets={tickets}
-          onUseTicket={() => setTickets((t) => Math.max(0, t - 1))} onDone={next} />;
+        return <AdventurePart ep={episode.key} scenario={part.scenario} voice={voice} onDone={next} />;
       case "qa":
         return <QaPart ep={episode.key} part={part} tickets={tickets} onUseTicket={() => setTickets((t) => Math.max(0, t - 1))} onDone={next} lastScene={lastScene} />;
       case "card":

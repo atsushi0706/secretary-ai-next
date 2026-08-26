@@ -171,13 +171,25 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   });
 
   let consecutiveDialogue = 0;
-  scenario.nodes.forEach((node) => {
+  scenario.nodes.forEach((node, nodeIndex) => {
     consecutiveDialogue = node.kind === "dialogue" ? consecutiveDialogue + 1 : 0;
     if (consecutiveDialogue > 4) push("error", "game", `${node.id}: 5台詞以上操作がなく、読むだけの時間が続きます。`);
     if (node.kind === "deduction" || node.kind === "apply") {
       const correct = node.options.filter((o) => o.correct);
       if (correct.length !== 1) push("error", "system", `${node.id}: 正解は必ず一つにしてください。`);
       if (node.options.some((o) => !o.feedback.trim())) push("error", "game", `${node.id}: 全選択肢に即時フィードバックが必要です。`);
+
+      const challengeText = JSON.stringify(node);
+      if (challengeText.includes("催眠")) {
+        const wasIntroduced = scenario.nodes.slice(0, nodeIndex).some((previous) =>
+          previous.kind === "dialogue"
+          && previous.line.text.includes("催眠")
+          && /(ここで|とは|意味|呼び|説明)/.test(previous.line.text),
+        );
+        if (!wasIntroduced) {
+          push("error", "story", `${node.id}: 「催眠」を説明する会話より先に問題へ出しています。用語の登場順を直してください。`);
+        }
+      }
     }
   });
 

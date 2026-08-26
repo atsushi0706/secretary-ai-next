@@ -153,7 +153,7 @@ export function allLines(ep: Episode): Line[] {
   };
   for (const p of ep.parts) {
     if (p.kind === "experience") fromSteps(p.steps);
-    if (p.kind === "classroom") p.scenes.forEach((s) => out.push(...s.lines));
+    if (p.kind === "classroom") p.scenes.forEach((s) => out.push(...s.lines.filter((line) => !line.dynamic)));
     if (p.kind === "adventure") {
       p.scenario.nodes.forEach((node) => {
         if (node.kind === "dialogue" && !node.line.dynamic) out.push(node.line as Line);

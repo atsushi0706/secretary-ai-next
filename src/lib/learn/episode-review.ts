@@ -54,6 +54,12 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
       push("error", "story", "漫画の直後は工程説明を挟まず、『今、困っていることは何ですか？』から始めてください。");
     }
     if (experience.gate) push("error", "game", "漫画直後の体験入口は重複説明になるため、工程一覧のgateを置かないでください。");
+    if (!experience.bridge) {
+      push("error", "story", "漫画から本人への質問へ直結させず、世界観の中でエリクソンが話を渡す一場面を挟んでください。");
+    } else {
+      if (!experience.bridge.line.includes("あなた")) push("error", "story", "橋渡しの台詞は、エリクソンがプレイヤー本人へ話を向ける内容にしてください。");
+      if (experience.bridge.narration.length + experience.bridge.line.length > 95) push("error", "game", "橋渡し場面は説明ページにせず、ナレーションと一台詞だけにしてください。");
+    }
     const experienceText = JSON.stringify(experience.steps);
     if (/漫画の答え|それを消せるとは/.test(experienceText)) push("error", "story", "作者都合のメタ発言や、誰も求めていない否定から会話を始めないでください。");
     if (!experienceText.includes("催眠")) push("error", "learning", "本人の回答を受けた直後に、今回扱う催眠との関係を会話として示してください。");

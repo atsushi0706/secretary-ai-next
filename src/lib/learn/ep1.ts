@@ -246,7 +246,7 @@ export const EP1: Episode = {
       kind: "manga",
       title: "冒頭漫画",
       briefing: {
-        eyebrow: "異端の催眠学者｜MILTON H. ERICKSON",
+        eyebrow: "変態催眠学者｜MILTON H. ERICKSON",
         title: "催眠の極意",
         principle: "UTILIZATION",
         hook: "なぜ、動かそうとしても動かなかった私の足は、『走る自分』を思い浮かべた時に動いたのか？",
@@ -268,6 +268,12 @@ export const EP1: Episode = {
       kind: "experience",
       title: "困難の見え方が変わる瞬間を探す",
       minutes: 4,
+      bridge: {
+        narration: "エリクソンは、自分の足の話を終えると、こちらを見た。",
+        line: "ここまでが、私の話です。今度は、あなたの話を聞かせてください。",
+        cta: "エリクソンと話す →",
+        background: "/learn/adventure/erickson-study-v1.webp",
+      },
       steps: [
         {
           kind: "input", id: "theme", title: "いま困っていること",

@@ -116,6 +116,14 @@ export type ExperienceGate = {
   note?: string;
 };
 
+/** 漫画などの前パートから、対話体験へ世界観を切らずに渡す一場面。 */
+export type ExperienceBridge = {
+  narration: string;
+  line: string;
+  cta: string;
+  background?: string;
+};
+
 export type Scene = {
   no: number;
   title: string;
@@ -134,7 +142,7 @@ export type PrincipleCard = {
 
 export type Part =
   | { kind: "manga"; title: string; frames: MangaFrame[]; briefing?: EpisodeBriefing; /** 最後に出す文 */ close?: string[] }
-  | { kind: "experience"; title: string; steps: ExpStep[]; minutes?: number; gate?: ExperienceGate }
+  | { kind: "experience"; title: string; steps: ExpStep[]; minutes?: number; gate?: ExperienceGate; bridge?: ExperienceBridge }
   | { kind: "classroom"; scenes: Scene[] }
   | { kind: "adventure"; scenario: AdventureScenario }
   | { kind: "qa"; title: string }

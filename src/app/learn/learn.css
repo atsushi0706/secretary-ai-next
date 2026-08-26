@@ -146,6 +146,17 @@
   text-align: center; padding: 22px 22px; gap: 9px;
 }
 .lrn-exp-gate { overflow-y: auto; background: linear-gradient(160deg, rgba(22,30,48,.4), rgba(4,7,12,.92)); }
+.lrn-exp-bridge { position: relative; width: 100%; height: 100%; min-height: 100%; overflow: hidden; background: #050914; }
+.lrn-exp-bridge-bg, .lrn-exp-bridge-shade, .lrn-exp-bridge-person { position: absolute; }
+.lrn-exp-bridge-bg { inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.lrn-exp-bridge-shade { inset: 0; background: linear-gradient(180deg, rgba(2,7,15,.24), rgba(2,7,15,.25) 43%, rgba(2,7,15,.92) 79%, #050914 100%); }
+.lrn-exp-bridge-person { right: -5%; bottom: 0; height: 82%; width: auto; object-fit: contain; object-position: right bottom; filter: drop-shadow(0 20px 30px #000); }
+.lrn-exp-bridge-narration { position: absolute; z-index: 2; top: 26px; left: 20px; right: 20px; margin: 0; color: #d9e7f1; text-align: center; font: 800 .82rem/1.75 "Hiragino Mincho ProN", "Yu Mincho", serif; letter-spacing: .03em; text-shadow: 0 3px 12px #000; }
+.lrn-exp-bridge-dialogue { position: absolute; z-index: 3; left: 14px; right: 14px; bottom: 88px; padding: 13px 15px 14px; background: rgba(19,13,5,.94); border: 1px solid rgba(244,182,63,.62); border-left: 5px solid #f4b63f; box-shadow: 0 15px 32px rgba(0,0,0,.58); }
+.lrn-exp-bridge-dialogue b { display: inline-block; margin-bottom: 5px; color: #ffd36c; font-size: .68rem; letter-spacing: .08em; }
+.lrn-exp-bridge-dialogue p { margin: 0; color: #fff; font-size: 1rem; line-height: 1.68; font-weight: 900; }
+.lrn-exp-bridge > .lrn-cta { position: absolute; z-index: 4; left: 50%; bottom: max(18px, env(safe-area-inset-bottom)); transform: translateX(-50%); min-width: 210px; background: #f4b63f; color: #251900; }
+.lrn-exp-bridge > .lrn-cta:active { transform: translate(-50%, 1px); }
 .lrn-exp-gate-portrait { width: 150px; height: 178px; border-radius: 76px 76px 18px 18px; overflow: hidden; background: rgba(7,16,29,.58); border: 2px solid var(--exp-cyan); box-shadow: 0 0 35px rgba(105,221,255,.28); }
 .lrn-exp-gate-portrait img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 10%; }
 .lrn-qa img { width: 120px; height: 120px; object-fit: cover; object-position: top; border-radius: 50%; background: #fff; }
@@ -505,6 +516,12 @@
   .lrn-exp.is-input .lrn-exp-prompt textarea { height: 60px; }
   .lrn-exp-gate-portrait { width: 112px; height: 132px; }
   .lrn-exp-gate { justify-content: flex-start; padding-top: 14px; }
+  .lrn-exp-bridge-person { height: 78%; }
+  .lrn-exp-bridge-narration { top: 18px; left: 14px; right: 14px; font-size: .7rem; line-height: 1.6; }
+  .lrn-exp-bridge-dialogue { left: 10px; right: 10px; bottom: 74px; padding: 9px 11px 10px; }
+  .lrn-exp-bridge-dialogue b { margin-bottom: 3px; font-size: .58rem; }
+  .lrn-exp-bridge-dialogue p { font-size: .82rem; line-height: 1.52; }
+  .lrn-exp-bridge > .lrn-cta { bottom: max(12px, env(safe-area-inset-bottom)); min-width: 190px; min-height: 44px; padding: 9px 16px; font-size: .78rem; }
   .lrn-slide { flex-basis: 34%; margin-top: 6px; padding: 25px 10px 9px; border-width: 6px; }
   .lrn-scene-chip { top: 5px; }
   .lrn-h, .lrn-slide.is-big .lrn-h { font-size: 1.02rem; }

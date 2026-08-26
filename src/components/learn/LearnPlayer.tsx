@@ -341,7 +341,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
   const [index, setIndex] = useState(0);
   const [briefed, setBriefed] = useState(() => {
     if (!part.briefing || typeof window === "undefined") return !part.briefing;
-    try { return window.localStorage.getItem(`learn:${ep}:briefing:v6`) === "done"; }
+    try { return window.localStorage.getItem(`learn:${ep}:briefing:v7`) === "done"; }
     catch { return false; }
   });
 
@@ -369,7 +369,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
           <h1>{briefing.hook}</h1>
           <p className="lrn-brief-teaser">{briefing.teaser}</p>
           <button className="lrn-cta" onClick={() => {
-            try { window.localStorage.setItem(`learn:${ep}:briefing:v6`, "done"); } catch { /* ignore */ }
+            try { window.localStorage.setItem(`learn:${ep}:briefing:v7`, "done"); } catch { /* ignore */ }
             setBriefed(true);
           }}>{briefing.cta}</button>
           {briefing.note && <span className="lrn-exp-time">{briefing.note}</span>}
@@ -411,7 +411,7 @@ function ExperiencePart({ ep, part, voice, onDone }: {
   ep: string; part: Extract<Part, { kind: "experience" }>; voice: ReturnType<typeof useVoice>;
   onDone: () => void;
 }) {
-  const [started, setStarted] = useState(() => !part.gate);
+  const [started, setStarted] = useState(() => !part.bridge && !part.gate);
   const [timeline, setTimeline] = useState<ExpStep[]>(part.steps);
   const [idx, setIdx] = useState(0);
   const [values, setValues] = useState<Record<string, string>>(() => {
@@ -426,6 +426,7 @@ function ExperiencePart({ ep, part, voice, onDone }: {
     return saved;
   });
   const [hintStepId, setHintStepId] = useState<string | null>(null);
+  const bridge = part.bridge;
   const gate = part.gate;
   const step = timeline[idx];
   const resolve = useCallback((text: string) => interpolateAdventureText(text, values), [values]);
@@ -470,7 +471,13 @@ function ExperiencePart({ ep, part, voice, onDone }: {
   }
 
   function back() {
-    if (idx <= 0) return;
+    if (idx <= 0) {
+      if (bridge) {
+        voice.stop();
+        setStarted(false);
+      }
+      return;
+    }
     voice.stop();
     setIdx((i) => Math.max(0, i - 1));
   }
@@ -487,8 +494,20 @@ function ExperiencePart({ ep, part, voice, onDone }: {
   }
 
   return (
-    <div className={`lrn-exp ${step ? `is-${step.kind}` : ""} ${step?.kind === "fade" ? "is-fade" : ""}`}>
-      {!started && gate ? (
+    <div className={`lrn-exp ${!started && bridge ? "is-bridge" : step ? `is-${step.kind}` : ""} ${step?.kind === "fade" ? "is-fade" : ""}`}>
+      {!started && bridge ? (
+        <div className="lrn-exp-bridge">
+          <img className="lrn-exp-bridge-bg" src={bridge.background ?? "/learn/adventure/erickson-study-v1.webp"} alt="" />
+          <div className="lrn-exp-bridge-shade" />
+          <img className="lrn-exp-bridge-person" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
+          <p className="lrn-exp-bridge-narration">{bridge.narration}</p>
+          <div className="lrn-exp-bridge-dialogue">
+            <b>エリクソン</b>
+            <p>{bridge.line}</p>
+          </div>
+          <button className="lrn-cta" onClick={start}>{bridge.cta}</button>
+        </div>
+      ) : !started && gate ? (
         <div className="lrn-exp-gate">
           <div className="lrn-exp-gate-portrait"><img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" /></div>
           <div className="lrn-kicker">{gate.kicker}</div>
@@ -560,7 +579,7 @@ function ExperiencePart({ ep, part, voice, onDone }: {
           </div>
 
           <div className="lrn-exp-controls">
-            <button onClick={back} disabled={idx === 0}>← 戻る</button>
+            <button onClick={back} disabled={idx === 0 && !bridge}>← 戻る</button>
             <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声を飛ばす</button>
             {step && step.kind !== "choice" && step.kind !== "fade" && (
               <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
@@ -1103,7 +1122,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
     const clamp = (value: number) => Math.max(0, Math.min(episode.parts.length - 1, value));
     if (startPart !== undefined) return clamp(startPart);
     if (typeof window === "undefined") return 0;
-    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v6:part`) || 0)); }
+    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v7:part`) || 0)); }
     catch { return 0; }
   });
   const [tickets, setTickets] = useState(episode.tickets);
@@ -1113,7 +1132,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-    try { window.localStorage.setItem(`learn:${episode.key}:flow:v6:part`, String(pi)); } catch { /* ignore */ }
+    try { window.localStorage.setItem(`learn:${episode.key}:flow:v7:part`, String(pi)); } catch { /* ignore */ }
   }, [episode.key, pi]);
 
   const next = useCallback(() => {

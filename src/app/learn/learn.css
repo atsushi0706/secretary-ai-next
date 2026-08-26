@@ -191,6 +191,7 @@
 .lrn-exp-prompt textarea { width: 100%; resize: none; border: 1.5px solid rgba(105,221,255,.55); border-radius: 8px; background: #f8fafc; color: #111827; padding: 11px; font: 700 .9rem/1.55 inherit; outline: none; }
 .lrn-exp-prompt textarea:focus { border-color: var(--exp-gold); box-shadow: 0 0 0 3px rgba(244,182,63,.15); }
 .lrn-exp-prompt small { display: block; color: #aebbd0; font-size: .75rem; line-height: 1.45; margin-top: 7px; }
+.lrn-exp-skip { width: 100%; min-height: 44px; margin-top: 9px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.28); border-radius: 7px; background: rgba(255,255,255,.06); color: #d8e4f2; font-size: .78rem; font-weight: 900; }
 .lrn-exp-hint-toggle { width: 100%; min-height: 44px; margin: 0 0 9px; padding: 9px 10px; border: 1px dashed rgba(244,182,63,.55); border-radius: 7px; background: rgba(244,182,63,.07); color: #ffd878; font-size: .75rem; font-weight: 900; }
 .lrn-exp-items { display: grid; gap: 7px; }
 .lrn-exp-items.is-optional { margin-top: 8px; animation: lrn-in .22s ease both; }
@@ -417,8 +418,9 @@
 /* ── 質問シート ── */
 .lrn-sheet { position: absolute; inset: 0; background: rgba(4,8,16,.78); display: flex; align-items: flex-end; z-index: 50; animation: lrn-fadein .2s ease both; backdrop-filter: blur(5px); }
 .lrn-sheet-card { position: relative; z-index: 1; width: 100%; height: min(88%, 720px); min-height: 320px; display: flex; flex-direction: column; background: #fff; color: #141c29; text-align: left; border-radius: 18px 18px 0 0; padding: 14px 16px 16px; overflow: hidden; }
-.lrn-sheet-head { flex: 0 0 auto; display: flex; justify-content: space-between; gap: 10px; font-weight: 900; font-size: .95rem; margin-bottom: 6px; }
+.lrn-sheet-head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px 10px; font-weight: 900; font-size: .95rem; margin-bottom: 6px; }
 .lrn-sheet-head .rest { font-size: .78rem; color: var(--lrn-sub); }
+.lrn-voice-stop { min-height: 40px; padding: 7px 11px; border: 1px solid #b8c8d8; border-radius: 999px; background: #fff; color: #24364a; font-size: .75rem; font-weight: 900; }
 .lrn-sheet-lead { flex: 0 0 auto; font-size: .78rem; line-height: 1.5; color: var(--lrn-sub); margin: 0 0 8px; }
 .lrn-sheet-card textarea { flex: 0 0 auto; width: 100%; border: 1.5px solid var(--lrn-line); border-radius: 12px; padding: 10px; font-size: .9rem; font-family: inherit; }
 .lrn-ask-thread { flex: 1 1 auto; min-height: 90px; display: grid; align-content: start; gap: 9px; margin: 5px 0 8px; padding: 2px 4px 6px 2px; overflow-y: auto; scrollbar-gutter: stable; }
@@ -475,8 +477,11 @@
 .lrn-nextcase-dialogue b { color: #8fe8ff; font-size: .6rem; letter-spacing: .08em; }
 .lrn-nextcase-dialogue span { font-size: .78rem; line-height: 1.5; font-weight: 850; }
 .lrn-nextcase-dialogue.is-man { top: 154px; right: 54px; }
-.lrn-nextcase-dialogue.is-teacher { bottom: 18px; left: 54px; border-color: rgba(242,189,85,.6); border-left-color: #f2bd55; background: rgba(30,20,6,.94); }
+.lrn-nextcase-dialogue.is-teacher { bottom: 48px; left: 54px; border-color: rgba(242,189,85,.6); border-left-color: #f2bd55; background: rgba(30,20,6,.94); }
 .lrn-nextcase-dialogue.is-teacher b { color: #ffd981; }
+.lrn-nextcase-swipe { position: absolute; z-index: 4; left: 50%; bottom: 10px; transform: translateX(-50%); color: #d9e8f6; font-size: .7rem; font-weight: 900; white-space: nowrap; text-shadow: 0 2px 8px #000; animation: lrn-next-swipe 1.25s ease-in-out infinite alternate; }
+.lrn-nextcase-swipe span { color: #8fe8ff; font-size: 1rem; }
+@keyframes lrn-next-swipe { from { transform: translate(-50%, 2px); opacity: .7; } to { transform: translate(-50%, -3px); opacity: 1; } }
 .lrn-nextcase-info { height: 100%; min-height: 100%; padding: 0 12px 22px; display: flex; flex-direction: column; justify-content: center; scroll-snap-align: start; scroll-snap-stop: always; }
 .lrn-hook { text-align: center; font-size: 1.15rem; font-weight: 900; line-height: 1.5; padding: 26px 10px 16px; font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif; }
 .lrn-next { background: #fff; color: var(--lrn-ink); border-radius: 14px; padding: 14px; margin: 0 4px; }
@@ -496,15 +501,15 @@
   .lrn-brief-title b { font-size: .58rem; }
   .lrn-brief-person { height: 68%; bottom: 0; }
   .lrn-lesson-briefing h1 { margin-top: 4px; max-width: 345px; font-size: 1.08rem; line-height: 1.38; }
-  .lrn-brief-teaser { margin: 5px 0 8px; font-size: .68rem; line-height: 1.4; }
-  .lrn-lesson-briefing .lrn-cta { min-height: 44px; padding: 9px 18px; font-size: .78rem; }
-  .lrn-lesson-briefing .lrn-exp-time { margin-top: 4px; font-size: .54rem; }
+  .lrn-brief-teaser { margin: 5px 0 8px; font-size: .78rem; line-height: 1.4; }
+  .lrn-lesson-briefing .lrn-cta { min-height: 46px; padding: 9px 18px; font-size: .84rem; }
+  .lrn-lesson-briefing .lrn-exp-time { margin-top: 4px; font-size: .62rem; }
   .lrn-av-start { padding: 18px 20px 9px; }
   .lrn-av-start h2 { margin: 6px 0 2px; font-size: 1.08rem; line-height: 1.22; }
-  .lrn-av-question { font-size: .72rem; line-height: 1.4; }
+  .lrn-av-question { font-size: .8rem; line-height: 1.4; }
   .lrn-av-start-cast { min-height: 170px; margin-top: 0; }
   .lrn-av-objective { padding: 7px 9px; margin: 2px 0 5px; }
-  .lrn-av-objective span { font-size: .66rem; }
+  .lrn-av-objective span { font-size: .75rem; }
   .lrn-av-start > .lrn-av-primary { min-height: 44px; padding: 8px 16px; }
   .lrn-exp-mentor { flex-basis: 32%; min-height: 150px; }
   .lrn-exp-dialogue { padding-top: 9px; }
@@ -514,6 +519,13 @@
   .lrn-exp.is-input .lrn-exp-question-line { padding: 9px 10px; font-size: .76rem; line-height: 1.45; }
   .lrn-exp.is-input .lrn-exp-prompt { padding: 10px; }
   .lrn-exp.is-input .lrn-exp-prompt textarea { height: 60px; }
+  .lrn-exp.is-choice .lrn-exp-mentor { flex-basis: 18%; min-height: 96px; }
+  .lrn-exp.is-choice .lrn-exp-dialogue { padding: 4px 10px 12px; }
+  .lrn-exp.is-choice .lrn-exp-choice { padding: 10px; }
+  .lrn-exp.is-choice .lrn-exp-choice h3 { margin: 4px 0 5px; font-size: .96rem; }
+  .lrn-exp.is-choice .lrn-exp-choice > p { margin-bottom: 6px; font-size: .78rem; }
+  .lrn-exp.is-choice .lrn-exp-options { gap: 5px; }
+  .lrn-exp.is-choice .lrn-exp-options button { min-height: 44px; padding: 7px 9px; font-size: .82rem; }
   .lrn-exp-gate-portrait { width: 112px; height: 132px; }
   .lrn-exp-gate { justify-content: flex-start; padding-top: 14px; }
   .lrn-exp-bridge-person { height: 78%; }
@@ -525,24 +537,24 @@
   .lrn-slide { flex-basis: 34%; margin-top: 6px; padding: 25px 10px 9px; border-width: 6px; }
   .lrn-scene-chip { top: 5px; }
   .lrn-h, .lrn-slide.is-big .lrn-h { font-size: 1.02rem; }
-  .lrn-item, .lrn-slide.is-big .lrn-item { font-size: .72rem; }
+  .lrn-item, .lrn-slide.is-big .lrn-item { font-size: .78rem; }
   .lrn-items { margin-top: 4px; gap: 2px; }
   .lrn-chars { padding-bottom: 108px; }
   .lrn-bubble-wrap { bottom: 66px; min-height: 91px; }
   .lrn-bubble { min-height: 91px; padding: 31px 11px 9px 13px; }
-  .lrn-bubble p { font-size: .79rem; line-height: 1.48; }
+  .lrn-bubble p { font-size: .84rem; line-height: 1.48; }
   .lrn-ticket-wrap { top: -41px; width: 132px; }
   .lrn-ticket-hint { display: none; }
   .lrn-ticket { min-height: 44px; padding: 6px 7px; }
   .lrn-av-task-card { top: 78px; width: calc(100% - 20px); padding: 7px 10px; }
-  .lrn-av-task-card p { display: none; }
+  .lrn-av-task-card p { display: block; font-size: .68rem; line-height: 1.32; }
   .lrn-av-hotspot { margin-top: 26px; }
   .lrn-sheet { align-items: stretch; padding-top: 4px; }
   .lrn-sheet-card { height: 100%; min-height: 0; max-height: none; border-radius: 14px 14px 0 0; padding: 10px 12px 12px; }
   .lrn-sheet-lead { font-size: .7rem; margin-bottom: 5px; }
   .lrn-sheet-card textarea { padding: 8px; font-size: .8rem; }
   .lrn-ask-thread { min-height: 64px; }
-  .lrn-ask-msg p { font-size: .74rem; line-height: 1.48; }
+  .lrn-ask-msg p { font-size: .8rem; line-height: 1.48; }
   .lrn-ask-followups > span { display: none; }
 }
 

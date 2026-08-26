@@ -9,9 +9,11 @@ export type EpisodeReviewIssue = {
 export type EpisodeReview = { ok: boolean; issues: EpisodeReviewIssue[] };
 
 function collectExperienceSteps(steps: ExpStep[]): ExpStep[] {
-  return steps.flatMap((step) => step.kind === "choice"
-    ? [step, ...step.options.flatMap((option) => collectExperienceSteps(option.then))]
-    : [step]);
+  return steps.flatMap((step) => {
+    if (step.kind === "choice") return [step, ...step.options.flatMap((option) => collectExperienceSteps(option.then))];
+    if (step.kind === "input" && step.skip) return [step, ...collectExperienceSteps(step.skip.then)];
+    return [step];
+  });
 }
 
 /**
@@ -30,14 +32,15 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
 
   const manga = episode.parts[0]?.kind === "manga" ? episode.parts[0] : null;
   if (!manga?.briefing) {
-    push("error", "beginner", "漫画より前に、作品名と未解決の問いだけを見せるタイトル画面が必要です。");
+    push("error", "beginner", "漫画より前に、作品名・未解決の問い・この回で得るものを一画面で見せてください。");
   } else {
     if (!manga.briefing.title.includes("催眠") || !manga.briefing.principle.toUpperCase().includes("UTILIZATION")) {
       push("error", "learning", "タイトル画面だけで、催眠の何を扱う回か分かる作品名にしてください。");
     }
     if (!manga.briefing.hook.includes("？")) push("error", "story", "漫画へ入る前に未解決の問いを一つだけ置いてください。");
+    if (!manga.briefing.teaser.includes("この回で学ぶこと")) push("error", "learning", "冒頭だけで、何を学べる回か一文で分かるようにしてください。");
     const coverLength = [manga.briefing.eyebrow, manga.briefing.title, manga.briefing.principle, manga.briefing.hook, manga.briefing.teaser].join("").length;
-    if (coverLength > 125) push("error", "game", "冒頭タイトルの情報量が多すぎます。定義・手順・成果は体験後へ移してください。");
+    if (coverLength > 155) push("error", "game", "冒頭タイトルの情報量が多すぎます。定義や工程一覧は体験後へ移してください。");
   }
 
   const experience = episode.parts.find((part): part is Extract<Part, { kind: "experience" }> => part.kind === "experience");
@@ -46,9 +49,11 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
   } else {
     const allSteps = collectExperienceSteps(experience.steps);
     const inputIds = new Set(allSteps.flatMap((step) => step.kind === "input" || step.kind === "scale" ? [step.id] : []));
-    for (const id of ["theme", "exception", "exceptionScore", "clue"]) {
+    for (const id of ["theme", "exception", "exceptionScore"]) {
       if (!inputIds.has(id)) push("error", "learning", `${id}を本人が入力する工程がありません。`);
     }
+    const storesClue = allSteps.some((step) => step.kind === "choice" && step.storeAs === "clue");
+    if (!inputIds.has("clue") && !storesClue) push("error", "learning", "clueを本人が入力または選択する工程がありません。");
     const firstInput = experience.steps.findIndex((step) => step.kind === "input");
     if (firstInput !== 0 || experience.steps[0]?.kind !== "input" || experience.steps[0].id !== "theme") {
       push("error", "story", "漫画の直後は工程説明を挟まず、『今、困っていることは何ですか？』から始めてください。");
@@ -58,13 +63,19 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
       push("error", "story", "漫画から本人への質問へ直結させず、世界観の中でエリクソンが話を渡す一場面を挟んでください。");
     } else {
       if (!experience.bridge.line.includes("あなた")) push("error", "story", "橋渡しの台詞は、エリクソンがプレイヤー本人へ話を向ける内容にしてください。");
-      if (experience.bridge.narration.length + experience.bridge.line.length > 95) push("error", "game", "橋渡し場面は説明ページにせず、ナレーションと一台詞だけにしてください。");
+      if (!experience.bridge.line.includes("比べ")) push("error", "learning", "個人的なテーマを聞く前に、なぜ聞くのかを一台詞で示してください。");
+      if (experience.bridge.narration.length + experience.bridge.line.length > 110) push("error", "game", "橋渡し場面は説明ページにせず、ナレーションと一台詞だけにしてください。");
     }
     const experienceText = JSON.stringify(experience.steps);
     if (/漫画の答え|それを消せるとは/.test(experienceText)) push("error", "story", "作者都合のメタ発言や、誰も求めていない否定から会話を始めないでください。");
-    if (!experienceText.includes("催眠")) push("error", "learning", "本人の回答を受けた直後に、今回扱う催眠との関係を会話として示してください。");
-    if (!allSteps.some((step) => step.kind === "choice" && step.storeAs === "clueCategory")) {
-      push("error", "learning", "差のカテゴリを選び、その後clueを具体語で入力する二段階が必要です。");
+    if (/困っている[^。]{0,40}催眠|困りごと[^。]{0,40}催眠|あなた[^。]{0,40}催眠/.test(experienceText)) {
+      push("error", "ethics", "本人の困りごとを『催眠』と診断・決めつける台詞を置かないでください。催眠の定義は講義で一度だけ扱います。");
+    }
+    const clueCategory = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "clueCategory");
+    if (!clueCategory) {
+      push("error", "learning", "差のカテゴリを選び、その後clueを入力または観察項目として選ぶ二段階が必要です。");
+    } else if (!clueCategory.options.some((option) => /分からない|思い出せない/.test(option.label))) {
+      push("error", "beginner", "違いをまだ言葉にできない人が、架空の回答を作らず進める分岐が必要です。");
     }
   }
 

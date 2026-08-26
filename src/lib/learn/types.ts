@@ -101,7 +101,7 @@ export type EpisodeBriefing = {
 
 export type ExpStep =
   | { kind: "say"; line: Line; wait?: number }
-  | { kind: "input"; id: string; title: string; prompt: string; placeholder?: string; helper?: string; hints?: string[]; line?: Line }
+  | { kind: "input"; id: string; title: string; prompt: string; placeholder?: string; helper?: string; hints?: string[]; line?: Line; skip?: { label: string; values: Record<string, string>; then: ExpStep[] } }
   | { kind: "scale"; id: string; title: string; prompt: string; helper?: string; min?: number; max?: number; line?: Line }
   | { kind: "choice"; q: string; help?: string; storeAs?: string; options: { label: string; value?: string; then: ExpStep[] }[] }
   | { kind: "fade"; text?: string };

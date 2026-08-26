@@ -179,6 +179,17 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
       if (correct.length !== 1) push("error", "system", `${node.id}: 正解は必ず一つにしてください。`);
       if (node.options.some((o) => !o.feedback.trim())) push("error", "game", `${node.id}: 全選択肢に即時フィードバックが必要です。`);
 
+      if (node.kind === "deduction" && correct.length === 1) {
+        const normalize = (text: string) => text.replace(/[\s『』「」、。？?！!・→]/g, "");
+        const answer = normalize(correct[0].label);
+        const previousDialogue = scenario.nodes.slice(Math.max(0, nodeIndex - 2), nodeIndex)
+          .filter((previous): previous is Extract<AdventureNode, { kind: "dialogue" }> => previous.kind === "dialogue")
+          .map((previous) => normalize(previous.line.text));
+        const leaked = answer.length >= 14 && Array.from({ length: answer.length - 13 }, (_, index) => answer.slice(index, index + 14))
+          .some((fragment) => previousDialogue.some((line) => line.includes(fragment)));
+        if (leaked) push("error", "game", `${node.id}: 推理の直前に正解を台詞で説明しています。仮説や問いで止め、判断はプレイヤーへ渡してください。`);
+      }
+
       const challengeText = JSON.stringify(node);
       if (challengeText.includes("催眠")) {
         const wasIntroduced = scenario.nodes.slice(0, nodeIndex).some((previous) =>

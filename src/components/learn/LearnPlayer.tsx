@@ -296,6 +296,10 @@ function AskSheet({
         <div className="lrn-sheet-head">
           <span>🎫 {title}</span>
           <span className="rest">{ticketUsed ? "この対話は追加消費なし" : `残り 🎫 × ${tickets}`}</span>
+          {voicing && <button className="lrn-voice-stop" onClick={() => {
+            try { audioRef.current?.pause(); } catch { /* ignore */ }
+            setVoicing(false);
+          }}>音声を止める</button>}
         </div>
         <p className="lrn-sheet-lead">
           {context?.location ? `「${context.location}」で時間を止めています。` : "授業はここで止まっています。"}
@@ -341,7 +345,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
   const [index, setIndex] = useState(0);
   const [briefed, setBriefed] = useState(() => {
     if (!part.briefing || typeof window === "undefined") return !part.briefing;
-    try { return window.localStorage.getItem(`learn:${ep}:briefing:v7`) === "done"; }
+    try { return window.localStorage.getItem(`learn:${ep}:briefing:v8`) === "done"; }
     catch { return false; }
   });
 
@@ -369,7 +373,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
           <h1>{briefing.hook}</h1>
           <p className="lrn-brief-teaser">{briefing.teaser}</p>
           <button className="lrn-cta" onClick={() => {
-            try { window.localStorage.setItem(`learn:${ep}:briefing:v7`, "done"); } catch { /* ignore */ }
+            try { window.localStorage.setItem(`learn:${ep}:briefing:v8`, "done"); } catch { /* ignore */ }
             setBriefed(true);
           }}>{briefing.cta}</button>
           {briefing.note && <span className="lrn-exp-time">{briefing.note}</span>}
@@ -493,6 +497,17 @@ function ExperiencePart({ ep, part, voice, onDone }: {
     setIdx(idx + 1);
   }
 
+  function skipInput(input: Extract<ExpStep, { kind: "input" }>) {
+    if (!input.skip) return;
+    voice.stop();
+    setValues((old) => ({ ...old, ...input.skip!.values }));
+    for (const [key, value] of Object.entries(input.skip.values)) {
+      try { localStorage.setItem(`learn:${ep}:${key}`, value); } catch { /* ignore */ }
+    }
+    setTimeline((old) => [...old.slice(0, idx + 1), ...input.skip!.then]);
+    setIdx(idx + 1);
+  }
+
   return (
     <div className={`lrn-exp ${!started && bridge ? "is-bridge" : step ? `is-${step.kind}` : ""} ${step?.kind === "fade" ? "is-fade" : ""}`}>
       {!started && bridge ? (
@@ -543,6 +558,7 @@ function ExperiencePart({ ep, part, voice, onDone }: {
                   </button>
                   {hintStepId === step.id && <div className="lrn-exp-items is-optional">{step.hints.map((t, i) => <div key={t} className="lrn-exp-item"><b>0{i + 1}</b>{resolve(t)}</div>)}</div>}
                 </>}
+                {step.skip && <button type="button" className="lrn-exp-skip" onClick={() => skipInput(step)}>{step.skip.label}</button>}
                 <textarea rows={3} value={values[step.id] ?? ""} onChange={(e) => setValues((v) => ({ ...v, [step.id]: e.target.value }))} placeholder={step.placeholder ? resolve(step.placeholder) : undefined} autoFocus />
                 {step.helper && <small>{resolve(step.helper)}</small>}
                 </div>
@@ -922,7 +938,7 @@ function DialoguePart({
         <div className="lrn-exp-gate">
           <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
           <h2>事件の答えを、講義で整理します</h2>
-          <p>漫画と捜査で見つけた「観察とUtilization」に、ここで名前と限界を与えます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
+          <p>漫画と捜査で体験した「観察の使い方」に、ここで名前と限界を与えます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (
@@ -1093,6 +1109,7 @@ function TeaserPart({ part, epNo }: { part: Extract<Part, { kind: "teaser" }>; e
         <div className="lrn-nextcase-dialogue is-man"><b>男性</b><span>私は絶対に、催眠なんかにかかりません。</span></div>
         <img className="lrn-nextcase-erickson" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
         <div className="lrn-nextcase-dialogue is-teacher"><b>エリクソン</b><span>では、かからないようにしてください。</span></div>
+        <div className="lrn-nextcase-swipe">上へスワイプして続きへ <span>↑</span></div>
       </div>
       <div className="lrn-nextcase-info">
         <div className="lrn-hook">{part.hook.map((t, i) => <div key={i}>{t}</div>)}</div>
@@ -1122,7 +1139,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
     const clamp = (value: number) => Math.max(0, Math.min(episode.parts.length - 1, value));
     if (startPart !== undefined) return clamp(startPart);
     if (typeof window === "undefined") return 0;
-    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v7:part`) || 0)); }
+    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v8:part`) || 0)); }
     catch { return 0; }
   });
   const [tickets, setTickets] = useState(episode.tickets);
@@ -1132,7 +1149,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-    try { window.localStorage.setItem(`learn:${episode.key}:flow:v7:part`, String(pi)); } catch { /* ignore */ }
+    try { window.localStorage.setItem(`learn:${episode.key}:flow:v8:part`, String(pi)); } catch { /* ignore */ }
   }, [episode.key, pi]);
 
   const next = useCallback(() => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 
 /**
  * 「ホーム画面に追加」の案内バナー。
@@ -32,6 +33,7 @@ function isIOS(): boolean {
 }
 
 export function PwaInstallBanner() {
+  const pathname = usePathname();
   const [show, setShow] = useState(false);
   const [ios, setIos] = useState(false);
   const [deferred, setDeferred] = useState<InstallPromptEvent | null>(null);
@@ -67,7 +69,8 @@ export function PwaInstallBanner() {
     setDeferred(null); setShow(false);
   }
 
-  if (!show) return null;
+  // 学習中の主要操作を覆わない。追加案内は一覧・ホーム側だけで出す。
+  if (!show || pathname.startsWith("/learn") || pathname.startsWith("/dev/learn")) return null;
 
   return (
     <div className="pwa-banner" role="dialog" aria-label="アプリを追加">

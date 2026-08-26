@@ -341,7 +341,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
   const [index, setIndex] = useState(0);
   const [briefed, setBriefed] = useState(() => {
     if (!part.briefing || typeof window === "undefined") return !part.briefing;
-    try { return window.localStorage.getItem(`learn:${ep}:briefing:v3`) === "done"; }
+    try { return window.localStorage.getItem(`learn:${ep}:briefing:v4`) === "done"; }
     catch { return false; }
   });
 
@@ -371,7 +371,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
           <p className="definition">{briefing.plainDefinition}</p>
           <p className="benefit">{briefing.personalBenefit}</p>
           <button className="lrn-cta" onClick={() => {
-            try { window.localStorage.setItem(`learn:${ep}:briefing:v3`, "done"); } catch { /* ignore */ }
+            try { window.localStorage.setItem(`learn:${ep}:briefing:v4`, "done"); } catch { /* ignore */ }
             setBriefed(true);
           }}>{briefing.cta}</button>
           {briefing.note && <span className="lrn-exp-time">{briefing.note}</span>}
@@ -1112,7 +1112,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
     const clamp = (value: number) => Math.max(0, Math.min(episode.parts.length - 1, value));
     if (startPart !== undefined) return clamp(startPart);
     if (typeof window === "undefined") return 0;
-    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v3:part`) || 0)); }
+    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v4:part`) || 0)); }
     catch { return 0; }
   });
   const [tickets, setTickets] = useState(episode.tickets);
@@ -1122,7 +1122,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-    try { window.localStorage.setItem(`learn:${episode.key}:flow:v3:part`, String(pi)); } catch { /* ignore */ }
+    try { window.localStorage.setItem(`learn:${episode.key}:flow:v4:part`, String(pi)); } catch { /* ignore */ }
   }, [episode.key, pi]);
 
   const next = useCallback(() => {

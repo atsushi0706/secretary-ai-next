@@ -34,6 +34,9 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
   if (!manga?.briefing) {
     push("error", "beginner", "漫画より前に、作品名・未解決の問い・この回で得るものを一画面で見せてください。");
   } else {
+    if (!manga.schoolIntro || !JSON.stringify(manga.schoolIntro).includes("催眠学校") || !JSON.stringify(manga.schoolIntro).includes("{{userName}}")) {
+      push("error", "story", "漫画の前に、ここが催眠学校であり、登録名で呼ばれて授業へ参加する一場面を置いてください。");
+    }
     if (![manga.briefing.eyebrow, manga.briefing.title, manga.briefing.hook].join("").includes("催眠")) {
       push("error", "learning", "タイトル画面だけで、催眠を学ぶ回だと分かるようにしてください。");
     }
@@ -57,12 +60,12 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
     if (/困難.{0,12}100|100ではない瞬間|差の条件/.test(experienceText)) {
       push("error", "learning", "催眠と関係の薄い『困難を100と置く』共通ワークを、第1話へ戻さないでください。");
     }
-    if (!experienceText.includes("催眠の入口") || !experienceText.includes("海辺にいるところをイメージ") || !experienceText.includes("そこで催眠が止まりました")) {
+    if (!experienceText.includes("催眠を始めるきっかけ") || !experienceText.includes("海辺にいるところをイメージ") || !experienceText.includes("そこで催眠が止まりました")) {
       push("error", "learning", "誰が何を頼まれ、何ができずに催眠が止まったのかを、具体的な出来事として明示してください。");
     }
     const channelChoice = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "channel");
     if (!channelChoice || channelChoice.options.length < 4) {
-      push("error", "game", "言葉・身体感覚・実際に見えるもの・同じイメージの反復、の選択で相手の返事と次の催眠が変わる必要があります。");
+      push("error", "game", "言葉・身体感覚・今見えている人物・同じイメージの反復、の選択で相手の返事と次の催眠が変わる必要があります。");
     }
     const firstJudgmentChoice = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "firstJudgment");
     if (!firstJudgmentChoice || firstJudgmentChoice.options.length < 3) {
@@ -80,6 +83,10 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
   }
 
   const classroom = episode.parts.find((part): part is Extract<Part, { kind: "classroom" }> => part.kind === "classroom");
+  const adventure = episode.parts.find((part): part is Extract<Part, { kind: "adventure" }> => part.kind === "adventure");
+  if (!JSON.stringify(adventure).includes("日常") || !JSON.stringify(adventure).includes("同意")) {
+    push("error", "learning", "講義前に、同意のある日常の催眠場面で、学んだ方法を使う選択を入れてください。");
+  }
   const renderedText = JSON.stringify({ experience, classroom, card: episode.parts.find((part) => part.kind === "card") });
   for (const banned of ["自己催眠", "間接暗示", "イメージなら身体が治る"]) {
     if (renderedText.includes(banned)) push("error", "learning", `第1話の中心概念をぼかす「${banned}」が残っています。`);
@@ -89,7 +96,7 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
   });
 
   if (!episode.goal.takeaway.includes("催眠") || !episode.goal.takeaway.includes("本人") || !episode.goal.takeaway.includes("暗示")) {
-    push("error", "ethics", "中心命題には、催眠で本人が使えるやり方から次の暗示を作る、と明記してください。");
+    push("error", "ethics", "中心命題には、催眠で本人に実際に起きた反応を次の暗示へつなげる、と明記してください。");
   }
 
   const teaser = episode.parts.find((part): part is Extract<Part, { kind: "teaser" }> => part.kind === "teaser");

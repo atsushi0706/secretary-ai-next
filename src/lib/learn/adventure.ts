@@ -20,6 +20,8 @@ const evidenceSchema = z.object({
   summary: z.string().min(1),
   detail: z.string().min(1),
   icon: z.string().min(1),
+  image: z.string().min(1).optional(),
+  imageAlt: z.string().min(1).optional(),
 });
 
 const dialogueNodeSchema = z.object({
@@ -97,7 +99,7 @@ export const adventureScenarioSchema = z.object({
   id: z.string().min(1),
   caseNo: z.string().min(1),
   title: z.string().min(1),
-  question: z.string().min(1),
+  question: z.string().min(1).optional(),
   objective: z.string().min(1),
   background: z.string().min(1),
   teacherSprite: z.string().min(1),
@@ -154,14 +156,15 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
 
   const push = (severity: QualityIssue["severity"], lens: QualityIssue["lens"], message: string) => issues.push({ severity, lens, message });
 
-  if (scenario.question.length > 42) push("warning", "beginner", "冒頭の事件質問が長すぎます。初見で一息に読める長さにしてください。");
+  if (scenario.question && scenario.question.length > 42) push("warning", "beginner", "冒頭の事件質問が長すぎます。初見で一息に読める長さにしてください。");
   if (interactions.length < 3) push("error", "game", "探索や推理など、プレイヤーが判断する操作を3回以上入れてください。");
   if (!scenario.nodes.some((n) => n.kind === "investigate")) push("error", "game", "調べる対象がなく、プレイヤーが受け身です。");
   if (!scenario.nodes.some((n) => n.kind === "deduction")) push("error", "game", "証拠から結論を選ぶ推理がありません。");
+  if (!scenario.nodes.some((n) => n.kind === "apply")) push("error", "game", "学んだ催眠を日常の具体的な場面で使う選択がありません。");
   if (!scenario.nodes.some((n) => n.kind === "reveal")) push("error", "story", "発見を回収するリビールがありません。");
   if (linkLines.length < 4) push("error", "story", "清瀬リンクの発言が少なく、掛け合いになっていません。");
   if (teacherLines.length < 4) push("error", "story", "エリクソンの返答が少なく、対話として成立しません。");
-  if (!/(誰|本人|エリクソン|身体|相手)/.test(scenario.question + scenario.objective)) {
+  if (!/(誰|本人|エリクソン|身体|足|相手)/.test((scenario.question ?? "") + scenario.title + scenario.objective)) {
     push("error", "beginner", "事件の問いに、誰が何をする話なのかを具体的に書いてください。");
   }
 
@@ -194,6 +197,9 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
 
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   if (evidenceIds.size !== scenario.evidence.length) push("error", "system", "証拠IDが重複しています。");
+  if (scenario.evidence.some((e) => !e.image || !e.imageAlt)) {
+    push("error", "game", "各証拠には、元の漫画場面と状況が分かる代替文を付けてください。文字だけの証拠は禁止です。");
+  }
   scenario.nodes.forEach((node) => {
     if (node.kind === "investigate") node.spots.forEach((spot) => {
       if (!evidenceIds.has(spot.evidenceId)) push("error", "system", `${spot.id}: 存在しない証拠を参照しています。`);
@@ -231,11 +237,12 @@ export function defineAdventureScenario(input: unknown): AdventureScenario {
 
 export function interpolateAdventureText(text: string, values: Record<string, string>): string {
   const fallback: Record<string, string> = {
+    userName: "あなた",
     theme: "この回の催眠",
-    exception: "本人に合わせて催眠の入口を変えた場面",
+    exception: "イメージできない相手へ、別の感覚から催眠を始めた場面",
     exceptionScore: "採点しない",
-    clue: "本人が使いやすかった入口",
-    resource: "本人が使えるやり方から次の暗示を作る",
+    clue: "本人に実際に起きた反応",
+    resource: "実際に起きた反応を次の暗示へつなげる",
   };
   return text.replace(/\{\{(\w+)\}\}/g, (_, key: string) => values[key]?.trim() || fallback[key] || key);
 }

@@ -45,5 +45,5 @@ export function LearnHarness({ part }: { part: number }) {
     };
   }, []);
   if (!ready) return null;
-  return <LearnPlayer episode={EP1} startPart={part} />;
+  return <LearnPlayer episode={EP1} userName="淳くん" startPart={part} />;
 }

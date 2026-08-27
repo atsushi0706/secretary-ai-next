@@ -99,6 +99,16 @@ export type EpisodeBriefing = {
   note?: string;
 };
 
+/** 漫画事件へ入る前に、学校・先生・プレイヤーの役割を一場面で伝える。 */
+export type EpisodeSchoolIntro = {
+  kicker: string;
+  title: string;
+  lead: string;
+  teacherLine: string;
+  linkLine: string;
+  cta: string;
+};
+
 export type ExpStep =
   | { kind: "say"; line: Line; wait?: number }
   | { kind: "input"; id: string; title: string; prompt: string; placeholder?: string; helper?: string; hints?: string[]; line?: Line; skip?: { label: string; values: Record<string, string>; then: ExpStep[] } }
@@ -141,7 +151,7 @@ export type PrincipleCard = {
 };
 
 export type Part =
-  | { kind: "manga"; title: string; frames: MangaFrame[]; briefing?: EpisodeBriefing; /** 最後に出す文 */ close?: string[] }
+  | { kind: "manga"; title: string; frames: MangaFrame[]; schoolIntro?: EpisodeSchoolIntro; briefing?: EpisodeBriefing; /** 最後に出す文 */ close?: string[] }
   | { kind: "experience"; title: string; steps: ExpStep[]; minutes?: number; gate?: ExperienceGate; bridge?: ExperienceBridge }
   | { kind: "classroom"; scenes: Scene[] }
   | { kind: "adventure"; scenario: AdventureScenario }

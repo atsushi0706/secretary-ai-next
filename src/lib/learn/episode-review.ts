@@ -57,13 +57,26 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
     if (/困難.{0,12}100|100ではない瞬間|差の条件/.test(experienceText)) {
       push("error", "learning", "催眠と関係の薄い『困難を100と置く』共通ワークを、第1話へ戻さないでください。");
     }
-    if (!experienceText.includes("催眠の入口") || !experienceText.includes("頭の中に絵")) {
-      push("error", "learning", "何のための体験か、頭に絵が出ない人へどう催眠をかける話かを明示してください。");
+    if (!experienceText.includes("催眠の入口") || !experienceText.includes("海辺にいるところをイメージ") || !experienceText.includes("そこで催眠が止まりました")) {
+      push("error", "learning", "誰が何を頼まれ、何ができずに催眠が止まったのかを、具体的な出来事として明示してください。");
     }
     const channelChoice = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "channel");
     if (!channelChoice || channelChoice.options.length < 4) {
-      push("error", "game", "絵・言葉・身体感覚・想像方法が分からない、の回答でエリクソンの次の言葉が変わる必要があります。");
+      push("error", "game", "言葉・身体感覚・実際に見えるもの・同じイメージの反復、の選択で相手の返事と次の催眠が変わる必要があります。");
     }
+    const firstJudgmentChoice = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "firstJudgment");
+    if (!firstJudgmentChoice || firstJudgmentChoice.options.length < 3) {
+      push("error", "story", "先生の正解を見る前に、主人公が最初の判断をして物語を動かす選択が必要です。");
+    }
+  }
+
+  const outro = episode.parts.find((part): part is Extract<Part, { kind: "outro" }> => part.kind === "outro");
+  const outroText = JSON.stringify(outro);
+  if (!outroText.includes("{{firstJudgment}}") || !outroText.includes("{{channel}}")) {
+    push("error", "story", "主人公の二つの判断を、登場人物が終盤で具体的に覚えている会話が必要です。");
+  }
+  if (!outroText.includes("あなたが最初の一言") || !JSON.stringify(episode.parts).includes("見習い")) {
+    push("error", "game", "一話の終わりで主人公の立場を変え、次の事件で担う役目を明示してください。");
   }
 
   const classroom = episode.parts.find((part): part is Extract<Part, { kind: "classroom" }> => part.kind === "classroom");

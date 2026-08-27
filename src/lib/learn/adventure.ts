@@ -130,8 +130,8 @@ export type QualityReport = {
 };
 
 /**
- * シナリオ投入時の三者審査。
- * 初見ユーザー・ゲーム制作者・作家のどれか一つでも致命的に弱ければ失敗させる。
+ * シナリオ投入時の最低品質審査。
+ * 催眠の具体的な事件・プレイヤー操作・掛け合いが欠ければ失敗させる。
  */
 export function reviewAdventureScenario(input: unknown): QualityReport {
   const parsed = adventureScenarioSchema.safeParse(input);
@@ -155,15 +155,14 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   const push = (severity: QualityIssue["severity"], lens: QualityIssue["lens"], message: string) => issues.push({ severity, lens, message });
 
   if (scenario.question.length > 42) push("warning", "beginner", "冒頭の事件質問が長すぎます。初見で一息に読める長さにしてください。");
-  if (interactions.length < 3) push("error", "game", "探索・推理・自己適用の三種類の操作が必要です。");
+  if (interactions.length < 3) push("error", "game", "探索や推理など、プレイヤーが判断する操作を3回以上入れてください。");
   if (!scenario.nodes.some((n) => n.kind === "investigate")) push("error", "game", "調べる対象がなく、プレイヤーが受け身です。");
   if (!scenario.nodes.some((n) => n.kind === "deduction")) push("error", "game", "証拠から結論を選ぶ推理がありません。");
-  if (!scenario.nodes.some((n) => n.kind === "apply")) push("error", "beginner", "学びを自分のテーマへ適用する操作がありません。");
   if (!scenario.nodes.some((n) => n.kind === "reveal")) push("error", "story", "発見を回収するリビールがありません。");
   if (linkLines.length < 4) push("error", "story", "清瀬リンクの発言が少なく、掛け合いになっていません。");
   if (teacherLines.length < 4) push("error", "story", "エリクソンの返答が少なく、対話として成立しません。");
-  if (dynamicUses < 7 || !allText.includes("{{theme}}") || !allText.includes("{{exception}}") || !allText.includes("{{exceptionScore}}") || !allText.includes("{{clue}}")) {
-    push("error", "beginner", "本人の困難、100ではなかった瞬間、その点数、差を作った条件が後半へ十分反映されていません。");
+  if (!/(誰|本人|エリクソン|身体|相手)/.test(scenario.question + scenario.objective)) {
+    push("error", "beginner", "事件の問いに、誰が何をする話なのかを具体的に書いてください。");
   }
 
   dialogues.forEach((node) => {
@@ -190,17 +189,6 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
         if (leaked) push("error", "game", `${node.id}: 推理の直前に正解を台詞で説明しています。仮説や問いで止め、判断はプレイヤーへ渡してください。`);
       }
 
-      const challengeText = JSON.stringify(node);
-      if (challengeText.includes("催眠")) {
-        const wasIntroduced = scenario.nodes.slice(0, nodeIndex).some((previous) =>
-          previous.kind === "dialogue"
-          && previous.line.text.includes("催眠")
-          && /(ここで|とは|意味|呼び|説明)/.test(previous.line.text),
-        );
-        if (!wasIntroduced) {
-          push("error", "story", `${node.id}: 「催眠」を説明する会話より先に問題へ出しています。用語の登場順を直してください。`);
-        }
-      }
     }
   });
 
@@ -243,11 +231,11 @@ export function defineAdventureScenario(input: unknown): AdventureScenario {
 
 export function interpolateAdventureText(text: string, values: Record<string, string>): string {
   const fallback: Record<string, string> = {
-    theme: "今変えたいこと",
-    exception: "100ではなかった瞬間",
-    exceptionScore: "100未満",
-    clue: "その瞬間にあった違い",
-    resource: "100との差を作った条件を一つ再現する",
+    theme: "この回の催眠",
+    exception: "本人に合わせて催眠の入口を変えた場面",
+    exceptionScore: "採点しない",
+    clue: "本人が使いやすかった入口",
+    resource: "本人が使えるやり方から次の暗示を作る",
   };
   return text.replace(/\{\{(\w+)\}\}/g, (_, key: string) => values[key]?.trim() || fallback[key] || key);
 }

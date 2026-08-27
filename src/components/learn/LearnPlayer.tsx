@@ -345,7 +345,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
   const [index, setIndex] = useState(0);
   const [briefed, setBriefed] = useState(() => {
     if (!part.briefing || typeof window === "undefined") return !part.briefing;
-    try { return window.localStorage.getItem(`learn:${ep}:briefing:v8`) === "done"; }
+    try { return window.localStorage.getItem(`learn:${ep}:briefing:v9`) === "done"; }
     catch { return false; }
   });
 
@@ -373,7 +373,7 @@ function MangaPart({ ep, part, onDone, label }: { ep: string; part: Extract<Part
           <h1>{briefing.hook}</h1>
           <p className="lrn-brief-teaser">{briefing.teaser}</p>
           <button className="lrn-cta" onClick={() => {
-            try { window.localStorage.setItem(`learn:${ep}:briefing:v8`, "done"); } catch { /* ignore */ }
+            try { window.localStorage.setItem(`learn:${ep}:briefing:v9`, "done"); } catch { /* ignore */ }
             setBriefed(true);
           }}>{briefing.cta}</button>
           {briefing.note && <span className="lrn-exp-time">{briefing.note}</span>}
@@ -433,6 +433,12 @@ function ExperiencePart({ ep, part, voice, onDone }: {
   const bridge = part.bridge;
   const gate = part.gate;
   const step = timeline[idx];
+  const activeSpeaker = step?.kind === "say" ? step.line.who : "teacher";
+  const activeFace: Face = step?.kind === "say" ? (step.line.face ?? "neutral") : "neutral";
+  const mentorImage = activeSpeaker === "link" ? linkSrc(activeFace, false) : ERICKSON_CUTOUT;
+  const mentorAlt = activeSpeaker === "link" ? "清瀬リンク" : "ミルトン・エリクソン";
+  const mentorName = activeSpeaker === "link" ? "清瀬リンク" : "MILTON H. ERICKSON";
+  const mentorSpeaker = activeSpeaker === "link" ? "リンク" : "エリクソン";
   const resolve = useCallback((text: string) => interpolateAdventureText(text, values), [values]);
   const line = useMemo<Line | null>(() => {
     const source = step?.kind === "say" ? step.line : step?.kind === "input" || step?.kind === "scale" ? (step.line ?? null) : null;
@@ -536,14 +542,14 @@ function ExperiencePart({ ep, part, voice, onDone }: {
         </div>
       ) : (
         <>
-          <div className={`lrn-exp-mentor ${voice.speaking ? "is-on" : ""}`}>
+          <div className={`lrn-exp-mentor is-${activeSpeaker} ${voice.speaking ? "is-on" : ""}`}>
             <div className="lrn-exp-aura" />
-            <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-            <div className="lrn-exp-name"><b>MILTON H. ERICKSON</b><span>{voice.speaking ? "語りかけています" : step?.kind === "input" || step?.kind === "scale" || step?.kind === "choice" ? "あなたの答えを待っています" : "次へ進めます"}</span></div>
+            <img src={mentorImage} alt={mentorAlt} />
+            <div className="lrn-exp-name"><b>{mentorName}</b><span>{voice.speaking ? "語りかけています" : step?.kind === "input" || step?.kind === "scale" || step?.kind === "choice" ? "あなたの答えを待っています" : "次へ進めます"}</span></div>
           </div>
 
           <div className="lrn-exp-dialogue">
-            {line && <div className="lrn-exp-speaker">エリクソン</div>}
+            {line && <div className="lrn-exp-speaker">{mentorSpeaker}</div>}
             {step?.kind === "say" && <p key={step.line.id} className="lrn-exp-line">{resolve(step.line.text)}</p>}
             {step?.kind === "input" && (
               <div className="lrn-exp-turn">
@@ -624,11 +630,11 @@ function AdventurePart({ ep, scenario, voice, onDone }: {
       catch { return fallback; }
     };
     return {
-      theme: read("theme", "今変えたいこと"),
-      exception: read("exception", "まだ見つかっていない100ではなかった瞬間"),
-      exceptionScore: read("exceptionScore", "100未満"),
-      clue: read("clue", "その瞬間にあった違い"),
-      resource: read("resource", "100との差を作った条件を一つ再現する"),
+      theme: "第1話の催眠",
+      exception: "本人に合わせて催眠の入口を変えた場面",
+      exceptionScore: "採点しない",
+      clue: read("channel", "本人が使いやすかった入口"),
+      resource: "本人が使えるやり方から次の暗示を作る",
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -853,11 +859,11 @@ function DialoguePart({
       catch { return fallback; }
     };
     return {
-      theme: read("theme", "今変えたいこと"),
-      exception: read("exception", "100ではなかった瞬間"),
-      exceptionScore: read("exceptionScore", "100未満"),
-      clue: read("clue", "その瞬間にあった違い"),
-      resource: read("resource", "100との差を作った条件を一つ試す"),
+      theme: "第1話の催眠",
+      exception: "本人に合わせて催眠の入口を変えた場面",
+      exceptionScore: "採点しない",
+      clue: read("channel", "本人が使いやすかった入口"),
+      resource: "本人が使えるやり方から次の暗示を作る",
     };
   });
   const rawCur = idx >= 0 ? items[idx] : null;
@@ -937,8 +943,8 @@ function DialoguePart({
       {idx < 0 ? (
         <div className="lrn-exp-gate">
           <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-          <h2>事件の答えを、講義で整理します</h2>
-          <p>漫画と捜査で体験した「観察の使い方」に、ここで名前と限界を与えます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
+          <h2>事件の答えを、催眠の講義で整理します</h2>
+          <p>先ほど体験した「本人に合わせて催眠の入口を変える方法」に、催眠・暗示・Utilizationという名前と限界を与えます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (
@@ -964,7 +970,7 @@ function DialoguePart({
             <AskSheet ep={ep} sceneNo={cur.scene?.no ?? 0} tickets={tickets} onUse={onUseTicket} onClose={closeAsk}
               context={{
                 location: cur.scene?.title ?? "解説講義",
-                objective: "事件で体験した観察手順を、催眠とUtilizationの理屈・限界として理解する",
+                objective: "事件と短い催眠体験を、催眠・暗示・Utilizationの仕組みとして理解する",
                 nodeKind: "lecture",
                 theme: lectureValues.theme,
                 exception: lectureValues.exception,
@@ -991,13 +997,13 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
     };
     return {
       location: "講義後の振り返り",
-      objective: "学んだUtilizationを、自分の具体例へ安全に当てはめて理解する",
+      objective: "本人に合わせて催眠の入口と暗示を変える理由を理解する",
       nodeKind: "final-qa",
-      theme: read("theme", "今変えたいこと"),
-      exception: read("exception", "100ではなかった瞬間"),
-      exceptionScore: read("exceptionScore", "100未満"),
-      clue: read("clue", "その瞬間にあった具体的な違い"),
-      resource: read("resource", "その違いを一つ小さく試す"),
+      theme: "第1話の催眠",
+      exception: "本人に合わせて催眠の入口を変えた場面",
+      exceptionScore: "採点しない",
+      clue: read("channel", "本人が使いやすかった入口"),
+      resource: "本人が使えるやり方から次の暗示を作る",
     };
   });
   return (
@@ -1024,7 +1030,7 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
       try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
       catch { return fallback; }
     };
-    return { theme: read("theme", "今変えたいこと"), clue: read("clue", "見つけた違い"), resource: read("resource", "見つけた違いを一つ試す") };
+    return { theme: "第1話の催眠", clue: read("channel", "本人が使いやすかった入口"), resource: "本人が使えるやり方から次の暗示を作る" };
   });
   const rawLine = lines[lineIdx] ?? null;
   const line = rawLine ? { ...rawLine, text: interpolateAdventureText(rawLine.text, cardValues), dynamic: rawLine.dynamic || rawLine.text.includes("{{") } : null;
@@ -1139,7 +1145,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
     const clamp = (value: number) => Math.max(0, Math.min(episode.parts.length - 1, value));
     if (startPart !== undefined) return clamp(startPart);
     if (typeof window === "undefined") return 0;
-    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v8:part`) || 0)); }
+    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:v9:part`) || 0)); }
     catch { return 0; }
   });
   const [tickets, setTickets] = useState(episode.tickets);
@@ -1149,7 +1155,7 @@ export function LearnPlayer({ episode, startPart }: { episode: Episode; startPar
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0 });
-    try { window.localStorage.setItem(`learn:${episode.key}:flow:v8:part`, String(pi)); } catch { /* ignore */ }
+    try { window.localStorage.setItem(`learn:${episode.key}:flow:v9:part`, String(pi)); } catch { /* ignore */ }
   }, [episode.key, pi]);
 
   const next = useCallback(() => {

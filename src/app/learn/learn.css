@@ -176,6 +176,7 @@
 .lrn-exp-mentor.is-on .lrn-exp-aura { transform: scale(1.12); animation: lrn-pulse 1.2s ease-in-out infinite; }
 @keyframes lrn-pulse { 50% { opacity: .55; } }
 .lrn-exp-mentor img { position: relative; z-index: 1; height: 96%; max-width: 82%; width: auto; object-fit: contain; object-position: bottom; background: transparent; filter: drop-shadow(0 14px 24px rgba(0,0,0,.72)); }
+.lrn-exp-mentor.is-link img { height: 82%; max-width: 66%; }
 .lrn-exp-name { position: absolute; z-index: 2; left: 12px; bottom: 8px; display: flex; flex-direction: column; gap: 1px; padding: 6px 10px; background: rgba(4,8,15,.86); border-left: 3px solid var(--exp-cyan); }
 .lrn-exp-name b { font-size: .58rem; letter-spacing: .12em; }
 .lrn-exp-name span { font-size: .56rem; color: #9fdff1; }

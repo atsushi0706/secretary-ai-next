@@ -34,48 +34,35 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
   if (!manga?.briefing) {
     push("error", "beginner", "漫画より前に、作品名・未解決の問い・この回で得るものを一画面で見せてください。");
   } else {
-    if (!manga.briefing.title.includes("催眠") || !manga.briefing.principle.toUpperCase().includes("UTILIZATION")) {
-      push("error", "learning", "タイトル画面だけで、催眠の何を扱う回か分かる作品名にしてください。");
+    if (![manga.briefing.eyebrow, manga.briefing.title, manga.briefing.hook].join("").includes("催眠")) {
+      push("error", "learning", "タイトル画面だけで、催眠を学ぶ回だと分かるようにしてください。");
     }
     if (!manga.briefing.hook.includes("？")) push("error", "story", "漫画へ入る前に未解決の問いを一つだけ置いてください。");
-    if (!manga.briefing.teaser.includes("この回で学ぶこと")) push("error", "learning", "冒頭だけで、何を学べる回か一文で分かるようにしてください。");
     const coverLength = [manga.briefing.eyebrow, manga.briefing.title, manga.briefing.principle, manga.briefing.hook, manga.briefing.teaser].join("").length;
     if (coverLength > 155) push("error", "game", "冒頭タイトルの情報量が多すぎます。定義や工程一覧は体験後へ移してください。");
   }
 
   const experience = episode.parts.find((part): part is Extract<Part, { kind: "experience" }> => part.kind === "experience");
   if (!experience) {
-    push("error", "system", "自分の実例を作る体験パートが必要です。");
+    push("error", "system", "説明を聞くだけでなく、本人が選ぶ催眠体験パートが必要です。");
   } else {
     const allSteps = collectExperienceSteps(experience.steps);
-    const inputIds = new Set(allSteps.flatMap((step) => step.kind === "input" || step.kind === "scale" ? [step.id] : []));
-    for (const id of ["theme", "exception", "exceptionScore"]) {
-      if (!inputIds.has(id)) push("error", "learning", `${id}を本人が入力する工程がありません。`);
-    }
-    const storesClue = allSteps.some((step) => step.kind === "choice" && step.storeAs === "clue");
-    if (!inputIds.has("clue") && !storesClue) push("error", "learning", "clueを本人が入力または選択する工程がありません。");
-    const firstInput = experience.steps.findIndex((step) => step.kind === "input");
-    if (firstInput !== 0 || experience.steps[0]?.kind !== "input" || experience.steps[0].id !== "theme") {
-      push("error", "story", "漫画の直後は工程説明を挟まず、『今、困っていることは何ですか？』から始めてください。");
-    }
     if (experience.gate) push("error", "game", "漫画直後の体験入口は重複説明になるため、工程一覧のgateを置かないでください。");
     if (!experience.bridge) {
-      push("error", "story", "漫画から本人への質問へ直結させず、世界観の中でエリクソンが話を渡す一場面を挟んでください。");
+      push("error", "story", "漫画から催眠体験へ直結させず、書斎の掛け合いへ戻る一場面を挟んでください。");
     } else {
-      if (!experience.bridge.line.includes("あなた")) push("error", "story", "橋渡しの台詞は、エリクソンがプレイヤー本人へ話を向ける内容にしてください。");
-      if (!experience.bridge.line.includes("比べ")) push("error", "learning", "個人的なテーマを聞く前に、なぜ聞くのかを一台詞で示してください。");
       if (experience.bridge.narration.length + experience.bridge.line.length > 110) push("error", "game", "橋渡し場面は説明ページにせず、ナレーションと一台詞だけにしてください。");
     }
     const experienceText = JSON.stringify(experience.steps);
-    if (/漫画の答え|それを消せるとは/.test(experienceText)) push("error", "story", "作者都合のメタ発言や、誰も求めていない否定から会話を始めないでください。");
-    if (/困っている[^。]{0,40}催眠|困りごと[^。]{0,40}催眠|あなた[^。]{0,40}催眠/.test(experienceText)) {
-      push("error", "ethics", "本人の困りごとを『催眠』と診断・決めつける台詞を置かないでください。催眠の定義は講義で一度だけ扱います。");
+    if (/困難.{0,12}100|100ではない瞬間|差の条件/.test(experienceText)) {
+      push("error", "learning", "催眠と関係の薄い『困難を100と置く』共通ワークを、第1話へ戻さないでください。");
     }
-    const clueCategory = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "clueCategory");
-    if (!clueCategory) {
-      push("error", "learning", "差のカテゴリを選び、その後clueを入力または観察項目として選ぶ二段階が必要です。");
-    } else if (!clueCategory.options.some((option) => /分からない|思い出せない/.test(option.label))) {
-      push("error", "beginner", "違いをまだ言葉にできない人が、架空の回答を作らず進める分岐が必要です。");
+    if (!experienceText.includes("催眠の入口") || !experienceText.includes("頭の中に絵")) {
+      push("error", "learning", "何のための体験か、頭に絵が出ない人へどう催眠をかける話かを明示してください。");
+    }
+    const channelChoice = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "channel");
+    if (!channelChoice || channelChoice.options.length < 4) {
+      push("error", "game", "絵・言葉・身体感覚・想像方法が分からない、の回答でエリクソンの次の言葉が変わる必要があります。");
     }
   }
 
@@ -88,13 +75,13 @@ export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
     if (scene.lines.length > 5) push("warning", "game", `講義SCENE ${scene.no}が5台詞を超えています。理解操作のない受動タップを減らしてください。`);
   });
 
-  if (!episode.goal.takeaway.includes("本人") || !episode.goal.takeaway.includes("役立てる")) {
-    push("error", "ethics", "中心命題には、本人にすでにあるものを本人の望む変化へ役立てる、と明記してください。");
+  if (!episode.goal.takeaway.includes("催眠") || !episode.goal.takeaway.includes("本人") || !episode.goal.takeaway.includes("暗示")) {
+    push("error", "ethics", "中心命題には、催眠で本人が使えるやり方から次の暗示を作る、と明記してください。");
   }
 
   const teaser = episode.parts.find((part): part is Extract<Part, { kind: "teaser" }> => part.kind === "teaser");
   const teaserText = JSON.stringify(teaser);
-  if (/かかってしまった|都合がよかった/.test(teaserText) || !/尊重|壊さず/.test(teaserText)) {
+  if (/かかってしまった|都合がよかった/.test(teaserText) || !/尊重|壊さず|やめさせず|断る/.test(teaserText)) {
     push("error", "ethics", "次回予告が拒否を無視して催眠へかける印象です。拒否の尊重を明記してください。");
   }
 

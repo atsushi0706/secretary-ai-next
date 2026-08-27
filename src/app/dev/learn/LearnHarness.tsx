@@ -16,20 +16,20 @@ export function LearnHarness({ part }: { part: number }) {
         await new Promise((r) => setTimeout(r, 400));
         const body = JSON.parse(String(init?.body ?? "{}")) as {
           question?: unknown;
-          context?: { evidence?: unknown; location?: unknown; theme?: unknown; exception?: unknown; exceptionScore?: unknown; clue?: unknown };
+          context?: { evidence?: unknown; location?: unknown; theme?: unknown; exception?: unknown; exceptionScore?: unknown; clue?: unknown; resource?: unknown };
         };
         const question = String(body?.question ?? "");
         const context = body?.context ?? {};
         const evidence = Array.isArray(context.evidence) ? context.evidence.join("、") : "";
         const answer = /操|支配/.test(question)
-          ? `いいえ。催眠は人の意思を奪って操ることではありません。いまの「${context.location || "事件"}」で、命令と本人の反応を証拠で比べて確かめてみましょう。`
+          ? `いいえ。催眠は人の意思を奪って操ることではありません。いまの「${context.location || "講義"}」では、本人が使えるやり方に合わせて暗示を変えています。`
           : /自分|私|僕|入力した悩み|どう試|どう使/.test(question)
-            ? `あなたが書いた「${context.theme || "変えたいこと"}」は、「${context.exception || "100ではなかった瞬間"}」では${context.exceptionScore || "100未満"}でした。次は、その時に違っていた「${context.clue || "条件"}」を一つだけ再現し、同じ結果を求めず、何が変わるかを観察します。`
+            ? `あなたが選んだ催眠の入口は「${context.clue || "本人が使いやすかった入口"}」です。そこから、${context.resource || "本人が実際に使えるやり方に合わせて次の暗示を作る"}、という順で考えます。`
             : /簡単|言い換え/.test(question)
-              ? "無理に動かそうとする前に、もう動いている小さな反応を見つけて使う、ということです。"
+              ? "催眠を受ける人を台本へ合わせず、催眠の言葉をその人へ合わせ直す、ということです。"
               : /別の解釈|当てはまらない/.test(question)
-                ? "一度の反応だけなら偶然という解釈も残ります。だから、このゲームでは観察と反復の証拠まで集めて確かめます。"
-                : `「${question}」ですね。${evidence ? `いま持っている「${evidence}」から考えると、` : "まだ証拠がないので、"}答えを先に決めず、起きた順番を比べるのが最初です。`;
+                ? "どの方法も分かりにくい時は、催眠に入ったことにせず、別の方法を探すか、そこでやめます。"
+                : `「${question}」ですね。${evidence ? `いま持っている「${evidence}」から考えると、` : "第1話の内容から考えると、"}本人が実際に使える入口を確かめ、その入口に合わせて暗示を変えるのが最初です。`;
         return new Response(JSON.stringify({ answer }), {
           status: 200, headers: { "Content-Type": "application/json" },
         });

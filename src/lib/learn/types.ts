@@ -138,8 +138,9 @@ export type ExperienceGate = {
 
 /** 漫画などの前パートから、対話体験へ世界観を切らずに渡す一場面。 */
 export type ExperienceBridge = {
-  narration: string;
-  line: string;
+  narration?: string;
+  line?: string;
+  beats?: { who: "teacher" | "link"; text: string }[];
   cta: string;
   background?: string;
 };

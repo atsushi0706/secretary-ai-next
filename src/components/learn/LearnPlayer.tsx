@@ -409,7 +409,15 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
   const [hintStepId, setHintStepId] = useState<string | null>(null);
   const [pendingChoice, setPendingChoice] = useState<Extract<ExpStep, { kind: "choice" }>["options"][number] | null>(null);
   const [summarizing, setSummarizing] = useState(false);
+  const [bridgeBeatIndex, setBridgeBeatIndex] = useState(0);
   const bridge = part.bridge;
+  const bridgeBeats = bridge?.beats?.length
+    ? bridge.beats
+    : bridge?.line
+      ? [{ who: "teacher" as const, text: bridge.line }]
+      : [];
+  const bridgeBeat = bridgeBeats[Math.min(bridgeBeatIndex, Math.max(0, bridgeBeats.length - 1))];
+  const bridgeIsLast = bridgeBeatIndex >= bridgeBeats.length - 1;
   const gate = part.gate;
   const step = timeline[idx];
   const activeSpeaker = step?.kind === "say" ? step.line.who : "teacher";
@@ -449,6 +457,14 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     setStarted(true);
   }
 
+  function advanceBridge() {
+    if (!bridgeIsLast) {
+      setBridgeBeatIndex((value) => Math.min(bridgeBeats.length - 1, value + 1));
+      return;
+    }
+    start();
+  }
+
   function next() {
     if (!inputReady) return;
     voice.stop();
@@ -463,6 +479,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     if (idx <= 0) {
       if (bridge) {
         voice.stop();
+        setBridgeBeatIndex(Math.max(0, bridgeBeats.length - 1));
         setStarted(false);
       }
       return;
@@ -530,13 +547,17 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
         <div className="lrn-exp-bridge">
           <img className="lrn-exp-bridge-bg" src={bridge.background ?? "/learn/adventure/erickson-study-v1.webp"} alt="" />
           <div className="lrn-exp-bridge-shade" />
-          <img className="lrn-exp-bridge-person" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-          {bridge.narration.trim() && <p className="lrn-exp-bridge-narration">{resolve(bridge.narration)}</p>}
-          <div className="lrn-exp-bridge-dialogue">
-            <b>エリクソン</b>
-            <p>{resolve(bridge.line)}</p>
+          <img className={`lrn-exp-bridge-person ${bridgeBeat?.who === "teacher" ? "is-speaking" : "is-listening"}`} src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
+          <img className={`lrn-exp-bridge-link ${bridgeBeat?.who === "link" ? "is-speaking" : "is-listening"}`} src={linkSrc(bridgeBeat?.who === "link" ? "think" : "neutral", false)} alt="清瀬リンク" />
+          {bridge.narration?.trim() && <p className="lrn-exp-bridge-narration">{resolve(bridge.narration)}</p>}
+          <div className="lrn-exp-bridge-progress" aria-label={`${bridgeBeats.length}場面中${bridgeBeatIndex + 1}場面`}>
+            {bridgeBeats.map((_, index) => <i key={index} className={index <= bridgeBeatIndex ? "is-on" : ""} />)}
           </div>
-          <button className="lrn-cta" onClick={start}>{resolve(bridge.cta)}</button>
+          <div className={`lrn-exp-bridge-dialogue is-${bridgeBeat?.who ?? "teacher"}`}>
+            <b>{bridgeBeat?.who === "link" ? "清瀬リンク" : "エリクソン"}</b>
+            <p>{bridgeBeat ? resolve(bridgeBeat.text) : "漫画の続きを、あなた自身の場面へつなげます。"}</p>
+          </div>
+          <button className="lrn-cta" onClick={advanceBridge}>{bridgeIsLast ? resolve(bridge.cta) : "会話を続ける →"}</button>
         </div>
       ) : !started && gate ? (
         <div className="lrn-exp-gate">

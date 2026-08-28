@@ -131,7 +131,7 @@ export const EP1: Episode = {
             storeAs: "stuckMoment",
             label: "あなたの場合は、何をしようとした時に動けなくなりますか？",
             placeholder: "例：YouTubeを始めたいのに、失敗が怖くて投稿できない",
-            helper: "うまく文章にしなくて大丈夫です。書くか、マイクでそのまま話してください。",
+            helper: "長くなっても大丈夫です。書くか、そのまま話してください。こちらで後の会話に使える一文へまとめます。",
           },
           options: [
             {

@@ -12,6 +12,14 @@ export function LearnHarness({ part }: { part: number }) {
     window.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
       if (url.startsWith("/api/tts")) return new Response("{}", { status: 404 });
+      if (url.startsWith("/api/learn/summarize")) {
+        const body = JSON.parse(String(init?.body ?? "{}")) as { text?: unknown };
+        const source = String(body.text ?? "").replace(/[\r\n\t]+/g, " ").trim();
+        const summary = /YouTube|動画/.test(source) ? "動画を始めたいが、失敗が怖くて投稿できない" : source.slice(0, 55);
+        return new Response(JSON.stringify({ summary }), {
+          status: 200, headers: { "Content-Type": "application/json" },
+        });
+      }
       if (url.startsWith("/api/learn/ask")) {
         await new Promise((r) => setTimeout(r, 400));
         const body = JSON.parse(String(init?.body ?? "{}")) as {

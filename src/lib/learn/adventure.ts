@@ -49,6 +49,34 @@ const investigateNodeSchema = z.object({
   })).min(3),
 });
 
+const recallNodeSchema = z.object({
+  kind: z.literal("recall"),
+  id: z.string().min(1),
+  scene: z.string().min(1),
+  title: z.string().min(1),
+  prompt: z.string().min(1),
+  placeholder: z.string().optional(),
+  helper: z.string().optional(),
+  storeAs: z.string().min(1),
+  skipLabel: z.string().optional(),
+  skipValue: z.string().optional(),
+});
+
+const guidedInvestigationNodeSchema = z.object({
+  kind: z.literal("guided-investigation"),
+  id: z.string().min(1),
+  scene: z.string().min(1),
+  title: z.string().min(1),
+  steps: z.array(z.object({
+    id: z.string().min(1),
+    linkPrompt: z.string().min(1),
+    actionLabel: z.string().min(1),
+    evidenceId: z.string().min(1),
+    linkComment: z.string().min(1),
+  })).min(1),
+  nextLabel: z.string().optional(),
+});
+
 const optionSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
@@ -90,6 +118,8 @@ const revealNodeSchema = z.object({
 const nodeSchema = z.discriminatedUnion("kind", [
   dialogueNodeSchema,
   investigateNodeSchema,
+  recallNodeSchema,
+  guidedInvestigationNodeSchema,
   deductionNodeSchema,
   applyNodeSchema,
   revealNodeSchema,
@@ -104,6 +134,7 @@ export const adventureScenarioSchema = z.object({
   background: z.string().min(1),
   teacherSprite: z.string().min(1),
   linkSprite: z.string().min(1),
+  startLabel: z.string().optional(),
   evidence: z.array(evidenceSchema).min(3),
   nodes: z.array(nodeSchema).min(8),
 });
@@ -150,7 +181,7 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   const dialogues = scenario.nodes.filter((n): n is Extract<AdventureNode, { kind: "dialogue" }> => n.kind === "dialogue");
   const linkLines = dialogues.filter((n) => n.line.who === "link");
   const teacherLines = dialogues.filter((n) => n.line.who === "teacher");
-  const interactions = scenario.nodes.filter((n) => n.kind === "investigate" || n.kind === "deduction" || n.kind === "apply");
+  const interactions = scenario.nodes.filter((n) => n.kind === "investigate" || n.kind === "guided-investigation" || n.kind === "recall" || n.kind === "deduction" || n.kind === "apply");
   const allText = JSON.stringify(scenario);
   const dynamicUses = (allText.match(/\{\{\w+\}\}/g) ?? []).length;
 
@@ -158,7 +189,7 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
 
   if (scenario.question && scenario.question.length > 42) push("warning", "beginner", "冒頭の事件質問が長すぎます。初見で一息に読める長さにしてください。");
   if (interactions.length === 0) push("error", "game", "プレイヤーが物語へ働きかける判断を一つ以上入れてください。");
-  if (!scenario.nodes.some((n) => n.kind === "investigate")) push("warning", "game", "調べる操作がありません。この話で本当に不要か、物語上の理由を確認してください。");
+  if (!scenario.nodes.some((n) => n.kind === "investigate" || n.kind === "guided-investigation")) push("warning", "game", "調べる操作がありません。この話で本当に不要か、物語上の理由を確認してください。");
   if (!scenario.nodes.some((n) => n.kind === "deduction")) push("warning", "game", "証拠から自分で結論を選ぶ場面がありません。この話で本当に不要か確認してください。");
   if (!scenario.nodes.some((n) => n.kind === "apply")) push("warning", "game", "学びを自分や目の前の相手へ使う判断がありません。この話で本当に不要か確認してください。");
   if (!scenario.nodes.some((n) => n.kind === "reveal")) push("error", "story", "発見を回収するリビールがありません。");
@@ -200,6 +231,9 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   scenario.nodes.forEach((node) => {
     if (node.kind === "investigate") node.spots.forEach((spot) => {
       if (!evidenceIds.has(spot.evidenceId)) push("error", "system", `${spot.id}: 存在しない証拠を参照しています。`);
+    });
+    if (node.kind === "guided-investigation") node.steps.forEach((step) => {
+      if (!evidenceIds.has(step.evidenceId)) push("error", "system", `${step.id}: 存在しない証拠を参照しています。`);
     });
     if (node.kind === "reveal") node.evidenceIds?.forEach((id) => {
       if (!evidenceIds.has(id)) push("error", "system", `${node.id}: 存在しない証拠をリビールに使用しています。`);

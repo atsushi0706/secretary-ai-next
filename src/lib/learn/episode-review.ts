@@ -90,8 +90,11 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
 
   const adventure = episode.parts.find((part): part is Extract<Part, { kind: "adventure" }> => part.kind === "adventure");
   const nodes: AdventureNode[] = adventure?.scenario.nodes ?? [];
-  if (!nodes.some((node) => node.kind === "investigate") || !nodes.some((node) => node.kind === "deduction") || !nodes.some((node) => node.kind === "apply")) {
+  if (!nodes.some((node) => node.kind === "investigate" || node.kind === "guided-investigation") || !nodes.some((node) => node.kind === "deduction") || !nodes.some((node) => node.kind === "apply")) {
     push("error", "game", "見る、考える、自分で使うの三つをプレイヤー操作として入れてください。");
+  }
+  if (!nodes.some((node) => node.kind === "recall")) {
+    push("warning", "learning", "教材を見直す前に、学習者が自分の記憶を言葉にする場面がありません。");
   }
   const linkLines = nodes.filter((node) => node.kind === "dialogue" && node.line.who === "link");
   if (linkLines.length === 0) push("warning", "beginner", "初学者がつまずく地点を、リンクか別の演出で実際に表せているか確認してください。");

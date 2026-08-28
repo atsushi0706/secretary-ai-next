@@ -408,6 +408,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
   });
   const [hintStepId, setHintStepId] = useState<string | null>(null);
   const [pendingChoice, setPendingChoice] = useState<Extract<ExpStep, { kind: "choice" }>["options"][number] | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
   const bridge = part.bridge;
   const gate = part.gate;
   const step = timeline[idx];
@@ -470,7 +471,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     setIdx((i) => Math.max(0, i - 1));
   }
 
-  function choose(option: Extract<ExpStep, { kind: "choice" }>["options"][number]) {
+  async function choose(option: Extract<ExpStep, { kind: "choice" }>["options"][number]) {
     voice.stop();
     const updates: Record<string, string> = {};
     if (step?.kind === "choice" && step.storeAs && option.value) {
@@ -480,7 +481,25 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     if (step?.kind === "choice" && step.detail) {
       const detailValue = values[step.detail.id]?.trim();
       const fallback = option.value ? resolve(option.value) : resolve(option.label);
-      updates[step.detail.storeAs ?? step.detail.id] = detailValue || fallback;
+      const storeAs = step.detail.storeAs ?? step.detail.id;
+      if (detailValue) {
+        setSummarizing(true);
+        const localSummary = detailValue.replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim().slice(0, 90);
+        let summary = localSummary;
+        try {
+          const response = await fetch("/api/learn/summarize", {
+            method: "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({ text: detailValue }),
+          });
+          const data = await response.json().catch(() => ({}));
+          if (response.ok && typeof data.summary === "string" && data.summary.trim()) summary = data.summary.trim();
+        } catch { /* 通信に失敗しても、入力を一文に整えて先へ進める */ }
+        updates[storeAs] = summary;
+        try { localStorage.setItem(`learn:${ep}:${storeAs}Raw`, detailValue); } catch { /* ignore */ }
+      } else {
+        updates[storeAs] = fallback;
+      }
     }
     if (Object.keys(updates).length > 0) {
       setValues((old) => ({ ...old, ...updates }));
@@ -491,6 +510,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     setTimeline((old) => [...old.slice(0, idx + 1), ...option.then]);
     setPendingChoice(null);
     setIdx(idx + 1);
+    setSummarizing(false);
   }
 
   function skipInput(input: Extract<ExpStep, { kind: "input" }>) {
@@ -583,7 +603,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
                 <h3>{resolve(step.q)}</h3>
                 {step.help && <p>{resolve(step.help)}</p>}
                 <div className="lrn-exp-options">
-                  {step.options.map((o, i) => <button key={o.label} className={pendingChoice?.label === o.label ? "is-selected" : ""} onClick={() => step.detail ? setPendingChoice(o) : choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>{pendingChoice?.label === o.label ? "✓" : "→"}</i></button>)}
+                  {step.options.map((o, i) => <button key={o.label} className={pendingChoice?.label === o.label ? "is-selected" : ""} onClick={() => step.detail ? setPendingChoice(o) : void choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>{pendingChoice?.label === o.label ? "✓" : "→"}</i></button>)}
                 </div>
                 {step.detail && <div className="lrn-exp-choice-detail">
                   <label htmlFor={`learn-detail-${step.detail.id}`}>{resolve(step.detail.label)} <small>任意</small></label>
@@ -596,7 +616,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
                       [step.detail!.id]: old[step.detail!.id]?.trim() ? `${old[step.detail!.id].trim()}\n${text}` : text,
                     }))} />
                   </div>
-                  {step.detail.helper && <p>{resolve(step.detail.helper)}</p>}
+                  {step.detail.helper && <p>{summarizing ? "話してくれた内容を、一文にまとめています…" : resolve(step.detail.helper)}</p>}
                 </div>}
               </div>
             )}
@@ -609,7 +629,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
               <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
             )}
             {step?.kind === "choice" && step.detail && (
-              <button className="lrn-exp-next" onClick={() => pendingChoice && choose(pendingChoice)} disabled={!pendingChoice}>この内容で進む →</button>
+              <button className="lrn-exp-next" onClick={() => pendingChoice && void choose(pendingChoice)} disabled={!pendingChoice || summarizing}>{summarizing ? "一文にまとめています…" : "この内容で進む →"}</button>
             )}
           </div>
         </>
@@ -696,6 +716,21 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     setActiveEvidence({ evidence, comment: spot.linkComment });
   }
 
+  function inspectGuided(step: Extract<AdventureNode, { kind: "guided-investigation" }>['steps'][number]) {
+    const evidence = scenario.evidence.find((item) => item.id === step.evidenceId);
+    if (!evidence) return;
+    setEvidenceIds((ids) => ids.includes(evidence.id) ? ids : [...ids, evidence.id]);
+    setActiveEvidence({ evidence, comment: step.linkComment });
+  }
+
+  function submitRecall(recall: Extract<AdventureNode, { kind: "recall" }>, forcedValue?: string) {
+    const value = (forcedValue ?? values[recall.storeAs] ?? "").trim();
+    if (!value) return;
+    setValues((old) => ({ ...old, [recall.storeAs]: value }));
+    try { localStorage.setItem(`learn:${ep}:${recall.storeAs}`, value); } catch { /* ignore */ }
+    advance();
+  }
+
   function choose(
     challenge: Extract<AdventureNode, { kind: "deduction" | "apply" }>,
     option: Extract<AdventureNode, { kind: "deduction" | "apply" }>['options'][number],
@@ -711,18 +746,23 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     }
   }
 
-  const speaker = currentLine?.who ?? null;
+  const speaker = currentLine?.who ?? (node?.kind === "recall" || node?.kind === "guided-investigation" ? "link" : null);
   const sceneName = node?.scene ?? scenario.title;
   const gatheredHere = node?.kind === "investigate"
     ? node.spots.filter((spot) => evidenceIds.includes(spot.evidenceId)).length
     : 0;
   const investigateDone = node?.kind === "investigate" && gatheredHere === node.spots.length;
   const currentInvestigateSpot = node?.kind === "investigate" ? node.spots[gatheredHere] ?? null : null;
+  const gatheredGuided = node?.kind === "guided-investigation"
+    ? node.steps.filter((step) => evidenceIds.includes(step.evidenceId)).length
+    : 0;
+  const currentGuidedStep = node?.kind === "guided-investigation" ? node.steps[gatheredGuided] ?? null : null;
+  const guidedDone = node?.kind === "guided-investigation" && gatheredGuided === node.steps.length;
   const availableEvidenceIds = useMemo(() => new Set(evidenceIds), [evidenceIds]);
   const availableEvidence = scenario.evidence.filter((item) => availableEvidenceIds.has(item.id));
 
   return (
-    <div className={`lrn-av lrn-av-camera-${node?.kind === "dialogue" ? (node.camera ?? "wide") : "evidence"}`}
+    <div className={`lrn-av lrn-av-camera-${node?.kind === "dialogue" ? (node.camera ?? "wide") : node?.kind === "recall" || node?.kind === "guided-investigation" ? "link" : "evidence"}`}
       style={{ backgroundImage: `linear-gradient(180deg,rgba(5,9,18,.05),rgba(5,9,18,.78)),url(${scenario.background})` }}>
       <div className="lrn-av-vignette" />
 
@@ -736,7 +776,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
             <img className="link" src={scenario.linkSprite} alt="" />
           </div>
           <div className="lrn-av-objective"><b>MISSION</b><span>{resolve(scenario.objective)}</span></div>
-          <button className="lrn-av-primary" onClick={() => setStarted(true)}>捜査を始める</button>
+          <button className="lrn-av-primary" onClick={() => setStarted(true)}>{scenario.startLabel ?? "捜査を始める"}</button>
         </div>
       ) : (
         <>
@@ -786,6 +826,48 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
             </div>
           )}
 
+          {node?.kind === "recall" && (
+            <div className="lrn-av-recall">
+              <div className="lrn-av-recall-card">
+                <div className="lrn-av-recall-speaker"><img src={scenario.linkSprite} alt="" /><b>清瀬リンク</b></div>
+                <h3>{resolve(node.title)}</h3>
+                <p>{resolve(node.prompt)}</p>
+                <div className="lrn-av-recall-field">
+                  <textarea rows={3} value={values[node.storeAs] ?? ""}
+                    onChange={(event) => setValues((old) => ({ ...old, [node.storeAs]: event.target.value }))}
+                    placeholder={node.placeholder ? resolve(node.placeholder) : undefined} autoFocus />
+                  <VoiceInput mode="learning" compact onText={(text) => setValues((old) => ({
+                    ...old,
+                    [node.storeAs]: old[node.storeAs]?.trim() ? `${old[node.storeAs].trim()}\n${text}` : text,
+                  }))} />
+                </div>
+                {node.helper && <small>{resolve(node.helper)}</small>}
+                <div className="lrn-av-recall-actions">
+                  {node.skipLabel && node.skipValue && <button onClick={() => submitRecall(node, node.skipValue)}>{node.skipLabel}</button>}
+                  <button className="lrn-av-primary" disabled={!values[node.storeAs]?.trim()} onClick={() => submitRecall(node)}>リンクに答える</button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {node?.kind === "guided-investigation" && (
+            <div className="lrn-av-guided">
+              <div className="lrn-av-guided-card">
+                <div className="lrn-av-guided-count">本を読み返す　{Math.min(gatheredGuided + 1, node.steps.length)} / {node.steps.length}</div>
+                <div className="lrn-av-guided-link"><img src={scenario.linkSprite} alt="" /><b>清瀬リンク</b></div>
+                <h3>{resolve(node.title)}</h3>
+                {currentGuidedStep && !activeEvidence && <>
+                  <p>{resolve(currentGuidedStep.linkPrompt)}</p>
+                  <button className="lrn-av-primary" onClick={() => inspectGuided(currentGuidedStep)}>{currentGuidedStep.actionLabel}</button>
+                </>}
+                {guidedDone && !activeEvidence && <>
+                  <p>三つの場面がつながった。先生に、分かったことを話してみよう。</p>
+                  <button className="lrn-av-primary" onClick={advance}>{node.nextLabel ?? "会話を続ける"}</button>
+                </>}
+              </div>
+            </div>
+          )}
+
           {(node?.kind === "deduction" || node?.kind === "apply") && (
             <div className={`lrn-av-challenge ${node.kind === "apply" ? "is-apply" : ""}`}>
               <div className="lrn-av-challenge-kicker">{node.kind === "apply" ? "YOUR CASE" : "DEDUCTION"}</div>
@@ -824,16 +906,16 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
           )}
 
           {activeEvidence && (
-            <div className="lrn-av-evidence-modal" role="dialog" aria-label="証拠を発見">
+            <div className="lrn-av-evidence-modal" role="dialog" aria-label={node?.kind === "guided-investigation" ? "漫画の場面を確認" : "証拠を発見"}>
               <div className="lrn-av-evidence-card">
-                <div className="lrn-av-evidence-found">EVIDENCE FOUND</div>
+                <div className="lrn-av-evidence-found">{node?.kind === "guided-investigation" ? "MANGA SCENE" : "EVIDENCE FOUND"}</div>
                 <div className="icon">{activeEvidence.evidence.icon}</div>
                 <h3>{activeEvidence.evidence.title}</h3>
                 {activeEvidence.evidence.image && <img className="lrn-av-evidence-scene" src={activeEvidence.evidence.image} alt={activeEvidence.evidence.imageAlt ?? activeEvidence.evidence.title} />}
                 <b>{activeEvidence.evidence.summary}</b>
                 <p>{activeEvidence.evidence.detail}</p>
                 <div className="link-comment"><img src={scenario.linkSprite} alt="清瀬リンク" /><span>{activeEvidence.comment}</span></div>
-                <button className="lrn-av-primary" onClick={() => setActiveEvidence(null)}>証拠ファイルへ保存</button>
+                <button className="lrn-av-primary" onClick={() => setActiveEvidence(null)}>{node?.kind === "guided-investigation" ? "本を閉じてリンクと話す" : "証拠ファイルへ保存"}</button>
               </div>
             </div>
           )}

@@ -3,8 +3,7 @@ import { defineAdventureScenario, reviewAdventureScenario } from "./adventure";
 export const EP1_ADVENTURE = defineAdventureScenario({
   id: "ep1-case-self-hypnosis",
   caseNo: "CASE 01",
-  title: "走るイメージで、どう自己暗示をかけた？",
-  question: "エリクソンは、どう自分の足へ自己暗示をかけた？",
+  title: "足が動いた後、エリクソンはどう自己暗示を続けた？",
   objective: "自己暗示を解き、同じ考え方でリンクの催眠を進める",
   background: "/learn/adventure/erickson-study-v1.webp",
   teacherSprite: "/learn/adventure/erickson-cutout-v1.webp",

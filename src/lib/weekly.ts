@@ -49,15 +49,45 @@ export type WeeklyReport = {
   created_at: string;
 };
 
-/** その週の月曜（JST） */
+/** その週の月曜（JST）。データベースの「週の鍵」として使う */
 export function weekStartStr(at: Date = jstNow()): string {
   const dow = at.getDay();                 // 0=日
   const back = dow === 0 ? 6 : dow - 1;    // 月曜まで戻す
   return jstDateStr(new Date(at.getTime() - back * 86400000));
 }
 
-/** 1人ぶんの週刊レポートを作る（保存はしない）。手紙と、宝箱に並べる中身を一緒に返す */
-export async function buildWeekly(userId: string): Promise<{ body: string; facets: WeeklyFacets }> {
+/**
+ * その週のレポートが**実際に扱う期間**。
+ *
+ * レポートは毎週金曜の夜に作って送る。だから中身は
+ * 「前の金曜に送ったあと＝土曜」から「この金曜」まで。
+ * 鍵（week_start）は月曜のままだが、拾う記録はこの土→金で切る。
+ *
+ * 【やらかしたこと】前は「今日から7日さかのぼる」で拾っていたので、
+ * 前の金曜（前回すでに送った日）がもう一度入り、1日ぶん二重に数えていた
+ * （淳くん：金曜から金曜までの流れがちゃんと記録されてるのかな、前回の記録を
+ * そのまま反映させちゃってないか不安）。
+ */
+export function weekPeriod(weekStart: string): { from: string; to: string } {
+  const mon = new Date(`${weekStart}T00:00:00+09:00`);
+  return {
+    from: jstDateStr(new Date(mon.getTime() - 2 * 86400000)),   // 土曜
+    to: jstDateStr(new Date(mon.getTime() + 4 * 86400000)),     // 金曜
+  };
+}
+
+/** 画面に出す期間の言い方：「8/22（土）〜8/28（金）」 */
+export function periodLabel(weekStart: string): string {
+  const { from, to } = weekPeriod(weekStart);
+  const md = (d: string) => `${Number(d.slice(5, 7))}/${Number(d.slice(8, 10))}`;
+  return `${md(from)}（土）〜${md(to)}（金）`;
+}
+
+/**
+ * 1人ぶんの週刊レポートを作る（保存はしない）。手紙と、宝箱に並べる中身を一緒に返す。
+ * weekStart を渡せば、その週（土→金）の記録だけで作る。省くと今週。
+ */
+export async function buildWeekly(userId: string, weekStart: string = weekStartStr()): Promise<{ body: string; facets: WeeklyFacets }> {
   const s: any = await getUserSettings(userId).catch(() => null);
   const who = s?.user_call_name || "きみ";
 
@@ -70,29 +100,35 @@ export async function buildWeekly(userId: string): Promise<{ body: string; facet
    * その週に残った記録は、全部渡す。
    */
   const supa = supabaseAdmin();
-  const from = jstDateStr(new Date(Date.now() - 7 * 86400000));
+  const { from, to } = weekPeriod(weekStart);
+  const inWeek = (d: unknown) => { const x = String(d ?? ""); return x >= from && x <= to; };
   const q = (table: string, cols: string) =>
-    supa.from(table).select(cols).eq("user_id", userId).gte("date", from)
+    supa.from(table).select(cols).eq("user_id", userId).gte("date", from).lte("date", to)
       .order("date", { ascending: true }).limit(200)
       .then((r: any) => (r.data ?? []) as any[], () => [] as any[]);
 
-  const [marks, tomorrows, walks, emotions, acts, hq, cards, skills, guards, said] = await Promise.all([
-    listDayMarks(userId, 7).catch(() => []),
-    listTomorrow(userId, 7).catch(() => []),
-    listWalkLogs(userId, 7).catch(() => []),
-    listEmotions(userId, 30).catch(() => []),
+  // 「直近N件」で取るものは、多めに取ってから期間で切る（過去の週を作り直すときにも効く）
+  const [marks0, tomorrows0, walks0, emotions0, acts, hq, cards, skills, guards, said] = await Promise.all([
+    listDayMarks(userId, 60).catch(() => []),
+    listTomorrow(userId, 60).catch(() => []),
+    listWalkLogs(userId, 60).catch(() => []),
+    listEmotions(userId, 120).catch(() => []),
     q("real_actions", "date, title, kind, aligned"),      // リアルバースでやったこと
     q("higher_quest", "date, items"),                     // 今日の一手
     q("quest_cards", "date, title, done"),                // 未来からのクエスト
     q("skill_cards", "date, title, body"),                // 手に入れた力
     q("guardians", "date, color"),                        // 解き放った守り手
     supa.from("shinga_conversations").select("date, place, content")
-      .eq("user_id", userId).eq("role", "user").gte("date", from)
+      .eq("user_id", userId).eq("role", "user").gte("date", from).lte("date", to)
       .order("created_at", { ascending: true }).limit(60)
       .then((r: any) => (r.data ?? []) as any[], () => [] as any[]),
   ]);
+  const marks = (marks0 as any[]).filter((m) => inWeek(m.date));
+  const tomorrows = (tomorrows0 as any[]).filter((t) => inWeek(t.date));
+  const walks = (walks0 as any[]).filter((w) => inWeek(w.date));
+  const emotions = (emotions0 as any[]).filter((e) => inWeek(e.date));
 
-  const emo7 = emotions.filter((e: any) => e.date >= from);
+  const emo7 = emotions;
   const wd = (d: string) => {
     try { return jstWeekdayJa(new Date(`${d}T00:00:00+09:00`)); } catch { return ""; }
   };
@@ -209,13 +245,12 @@ export async function buildWeekly(userId: string): Promise<{ body: string; facet
 # ${who} の1週間
 ${material}`;
 
-  try {
-    const raw = await complete({ userId, prompt, maxTokens: 3200, temperature: 0.8 });
+  const arr = (v: any, n: number) =>
+    (Array.isArray(v) ? v : []).map((x: any) => String(x ?? "").trim()).filter(Boolean).slice(0, n);
+  const parse = (raw: unknown) => {
     const m = String(raw ?? "").match(/\{[\s\S]*\}/);
-    if (!m) return { body: String(raw ?? "").trim(), facets: emptyFacets };
+    if (!m) return null;
     const j = JSON.parse(m[0]);
-    const arr = (v: any, n: number) =>
-      (Array.isArray(v) ? v : []).map((x: any) => String(x ?? "").trim()).filter(Boolean).slice(0, n);
     /*
      * 「やらなかったこと」に触れていないか、こちらでも見る。
      * 指示に書いても、少ない週ほど足りなさの説明を始めてしまう。
@@ -223,14 +258,34 @@ ${material}`;
      */
     const letter = dropAbsenceTalk(String(j.letter ?? "").trim());
     return {
-      body: letter || `${who}へ。今週もおつかれさま。`,
+      body: letter,
       facets: {
         progressed: arr(j.progressed, 4),
         struggled: String(j.struggled ?? "").trim().slice(0, 80),
         reframed: String(j.reframed ?? "").trim().slice(0, 100),
         gained: arr(j.gained, 3),
-      },
+      } as WeeklyFacets,
     };
+  };
+
+  try {
+    let best = parse(await complete({ userId, prompt, maxTokens: 3200, temperature: 0.8 }));
+    /*
+     * 2〜3行で終わってしまうことがある（淳くん：ちるちゃんが2〜3行しか書かれてない）。
+     * 記録があるのに短いときは、一度だけ書き直させて、長いほうを採る。
+     */
+    if (!best || best.body.length < 300) {
+      let again: ReturnType<typeof parse> = null;
+      try {
+        again = parse(await complete({
+          userId, temperature: 0.9, maxTokens: 3200,
+          prompt: prompt + "\n\n# やり直し\n前の下書きは短すぎた。記録にある出来事を一つずつ具体的に挙げて、手紙は必ず600字以上で書くこと。",
+        }));
+      } catch { again = null; }
+      if (again && (!best || again.body.length > best.body.length)) best = again;
+    }
+    if (!best) return { body: `${who}へ。今週もおつかれさま。`, facets: emptyFacets };
+    return { body: best.body || `${who}へ。今週もおつかれさま。`, facets: best.facets };
   } catch {
     return {
       body: `${who}へ。\n今週もおつかれさま。うまく言葉にできなかったけど、続いていること自体がちゃんと効いてるよ。`,
@@ -277,12 +332,12 @@ export function dropAbsenceTalk(text: string): string {
 }
 
 /** 週刊レポートを下書きとして保存（同じ週は上書き） */
-export async function saveWeeklyDraft(userId: string, body: string, facets?: WeeklyFacets): Promise<void> {
+export async function saveWeeklyDraft(userId: string, body: string, facets?: WeeklyFacets, weekStart: string = weekStartStr()): Promise<void> {
   const supa = supabaseAdmin();
   await supa.from("weekly_reports").upsert(
     {
       user_id: userId,
-      week_start: weekStartStr(),
+      week_start: weekStart,
       body,
       facets: facets ?? null,
       status: "draft",
@@ -290,6 +345,34 @@ export async function saveWeeklyDraft(userId: string, body: string, facets?: Wee
     },
     { onConflict: "user_id,week_start" },
   );
+}
+
+/**
+ * 1通だけ作り直す（マスターが「作り直す」を押したとき）。
+ * その週の土→金の記録で書き直し、下書きとして置き換える。送ってしまったものは触らない。
+ */
+export async function rebuildWeekly(reportId: string): Promise<{ body: string; facets: WeeklyFacets } | null> {
+  const supa = supabaseAdmin();
+  const { data } = await supa.from("weekly_reports")
+    .select("id, user_id, week_start, status").eq("id", reportId).maybeSingle();
+  if (!data) return null;
+  if (data.status !== "draft" && data.status !== "skipped") return null;
+  const built = await buildWeekly(data.user_id, data.week_start);
+  await saveWeeklyDraft(data.user_id, built.body, built.facets, data.week_start);
+  return built;
+}
+
+/**
+ * 送らずに片づける（status = skipped）。
+ * 送り忘れた週の下書きが、承認の欄に居座り続けないようにする。本人には何も届かない。
+ */
+export async function skipWeekly(ids: string[]): Promise<number> {
+  if (ids.length === 0) return 0;
+  const supa = supabaseAdmin();
+  const { data } = await supa.from("weekly_reports")
+    .update({ status: "skipped", updated_at: new Date().toISOString() })
+    .in("id", ids).eq("status", "draft").select("id");
+  return (data ?? []).length;
 }
 
 /** 承認待ちの一覧（マスターが読む） */

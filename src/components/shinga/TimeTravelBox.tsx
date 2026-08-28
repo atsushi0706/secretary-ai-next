@@ -25,12 +25,19 @@ type Count = { key: string; label: string; n: number };
 
 const RARITY: Record<string, string> = { gold: "金", silver: "銀", bronze: "銅" };
 
-const md = (s: string) => s.slice(5).replace("-", "/");
-const weekEnd = (start: string) => {
+/*
+ * 週の見せ方は「土曜〜金曜」。
+ * レポートは金曜の夜に作って送るので、中身は前の土曜からその金曜まで。
+ * 鍵（week_start）は月曜だが、人に見せる期間は土→金で揃える。
+ */
+const shiftJst = (start: string, days: number) => {
   const d = new Date(`${start}T00:00:00+09:00`);
-  d.setDate(d.getDate() + 6);
-  return `${String(d.getMonth() + 1).padStart(2, "0")}/${String(d.getDate()).padStart(2, "0")}`;
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
 };
+const md = (s: string) => `${Number(s.slice(5, 7))}/${Number(s.slice(8, 10))}`;
+const periodOf = (start: string) => ({ from: shiftJst(start, -2), to: shiftJst(start, 4) });
+const weekLabel = (start: string) => { const p = periodOf(start); return `${md(p.from)}（土）〜${md(p.to)}（金）`; };
 
 export function TimeTravelBox({ guideName, avatarUrl, onBack, onOpened }: {
   guideName: string; avatarUrl: string; onBack: () => void;
@@ -68,10 +75,8 @@ export function TimeTravelBox({ guideName, avatarUrl, onBack, onOpened }: {
   const cardsOfWeek = useMemo(() => {
     const m = new Map<string, Card[]>();
     for (const w of weeks) {
-      const end = new Date(`${w.week_start}T00:00:00+09:00`);
-      end.setDate(end.getDate() + 7);
-      const endStr = end.toISOString().slice(0, 10);
-      m.set(w.id, cards.filter((c) => c.date >= w.week_start && c.date < endStr));
+      const p = periodOf(w.week_start);
+      m.set(w.id, cards.filter((c) => c.date >= p.from && c.date <= p.to));
     }
     return m;
   }, [weeks, cards]);
@@ -157,7 +162,7 @@ export function TimeTravelBox({ guideName, avatarUrl, onBack, onOpened }: {
                 return (
                   <div key={w.id} className={`tt-week ${isOpen ? "is-open" : ""} ${i === 0 ? "is-new" : ""}`}>
                     <button className="tt-week-head" onClick={() => setOpen(isOpen ? null : w.id)}>
-                      <span className="tt-when">{md(w.week_start)} 〜 {weekEnd(w.week_start)}</span>
+                      <span className="tt-when">{weekLabel(w.week_start)}</span>
                       {i === 0 && <span className="tt-new">いちばん新しい</span>}
                       <span className="tt-chev">{isOpen ? "▲" : "▼"}</span>
                     </button>

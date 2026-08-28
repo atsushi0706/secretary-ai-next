@@ -3,10 +3,11 @@
  * ここでは誰にも届かない。マスターが /admin で読んでOKを出して、初めて届く。
  *
  * 金曜20時(JST) = 金曜11時(UTC) に動かす。
+ * 中身は「前の土曜〜この金曜」の記録だけ（前回送ったぶんは入れない）。
  */
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase";
-import { buildWeekly, saveWeeklyDraft, weekStartStr } from "@/lib/weekly";
+import { buildWeekly, saveWeeklyDraft, weekStartStr, weekPeriod } from "@/lib/weekly";
 import { sendPushToUser } from "@/lib/push";
 import { isAdmin } from "@/lib/admin";
 
@@ -21,6 +22,7 @@ export async function GET(req: Request) {
     if (auth !== `Bearer ${secret}`) return NextResponse.json({ error: "forbidden" }, { status: 403 });
   }
 
+  const weekStart = weekStartStr();
   const supa = supabaseAdmin();
   const { data: users } = await supa.from("user_settings").select("user_id");
   const list = (users ?? []) as { user_id: string }[];
@@ -29,8 +31,8 @@ export async function GET(req: Request) {
   const failed: string[] = [];
   for (const u of list) {
     try {
-      const { body, facets } = await buildWeekly(u.user_id);
-      await saveWeeklyDraft(u.user_id, body, facets);
+      const { body, facets } = await buildWeekly(u.user_id, weekStart);
+      await saveWeeklyDraft(u.user_id, body, facets, weekStart);
       made++;
     } catch (e: any) {
       failed.push(`${u.user_id.slice(0, 8)}: ${String(e?.message ?? e).slice(0, 60)}`);
@@ -50,5 +52,5 @@ export async function GET(req: Request) {
     } catch { /* 通知が飛ばなくても、管理画面には出ている */ }
   }
 
-  return NextResponse.json({ ok: true, weekStart: weekStartStr(), made, failed });
+  return NextResponse.json({ ok: true, weekStart, period: weekPeriod(weekStart), made, failed });
 }

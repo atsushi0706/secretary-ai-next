@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 
 type AdminUser = {
@@ -80,10 +80,24 @@ export default function AdminPage() {
   const [grantMsg, setGrantMsg] = useState("");
 
   // 週刊レポートの承認待ち（OKを出すまで、本人には絶対に見えない）
-  const [drafts, setDrafts] = useState<{ id: string; name: string; week_start: string; body: string }[]>([]);
+  const [drafts, setDrafts] = useState<{ id: string; name: string; week_start: string; period?: string; body: string }[]>([]);
   const [picked, setPicked] = useState<Record<string, boolean>>({});
   const [wkMsg, setWkMsg] = useState("");
   const [wkBusy, setWkBusy] = useState(false);
+  /** 作り直し中の1通（ボタンを連打させない） */
+  const [rebuilding, setRebuilding] = useState<string | null>(null);
+  /**
+   * 承認待ちを**週ごと**に分ける。
+   * 前は全部が一つの列に並び、送り忘れた先週ぶんと今週ぶんが混ざっていて、
+   * 「先週は送らない」をやるのに1つずつチェックを外すしかなかった。
+   * いちばん新しい週だけを最初からチェックし、古い週は外しておく。
+   */
+  const draftWeeks = useMemo(() => {
+    const m = new Map<string, typeof drafts>();
+    for (const d of drafts) m.set(d.week_start, [...(m.get(d.week_start) ?? []), d]);
+    return [...m.entries()].sort((a, b) => b[0].localeCompare(a[0]))
+      .map(([week_start, list]) => ({ week_start, period: list[0]?.period ?? week_start, list }));
+  }, [drafts]);
   /**
    * 全員ぶんの週次レポートを、週ごとにまとめて読む場所。
    * 承認の欄は「まだ送っていないもの」しか出ないので、
@@ -91,6 +105,8 @@ export default function AdminPage() {
    */
   const [allWeeks, setAllWeeks] = useState<{
     week_start: string;
+    /** 人に見せる期間「8/22（土）〜8/28（金）」 */
+    period?: string;
     reports: { id: string; name: string; body: string; status: string; facets?: any }[];
   }[]>([]);
   const [openWeek, setOpenWeek] = useState<string | null>(null);
@@ -104,7 +120,9 @@ export default function AdminPage() {
       const d = await r.json();
       if (Array.isArray(d.drafts)) {
         setDrafts(d.drafts);
-        setPicked(Object.fromEntries(d.drafts.map((x: any) => [x.id, true])));  // 既定は全部チェック
+        // 既定は「いちばん新しい週」だけチェック。古い週（送り忘れ）は外しておく
+        const newest = d.drafts.map((x: any) => String(x.week_start)).sort().pop();
+        setPicked(Object.fromEntries(d.drafts.map((x: any) => [x.id, x.week_start === newest])));
       }
       if (Array.isArray(d.all)) {
         setAllWeeks(d.all);
@@ -113,8 +131,9 @@ export default function AdminPage() {
     } catch { /* 出せなくても他は動く */ }
   }
 
-  async function approve() {
-    const ids = Object.entries(picked).filter(([, v]) => v).map(([k]) => k);
+  /** その週の、チェックした人にだけ送る */
+  async function approve(weekStart: string) {
+    const ids = drafts.filter((d) => d.week_start === weekStart && picked[d.id]).map((d) => d.id);
     if (ids.length === 0) { setWkMsg("送るものが選ばれていません"); return; }
     if (!confirm(`${ids.length}人にレポートを送ります。よろしいですか？`)) return;
     setWkBusy(true); setWkMsg("");
@@ -129,6 +148,50 @@ export default function AdminPage() {
       await loadDrafts();
     } catch (e: any) { setWkMsg(String(e?.message ?? e)); }
     finally { setWkBusy(false); }
+  }
+
+  /** その週をまるごと、送らずに片づける（本人には何も届かない） */
+  async function skipWeek(weekStart: string, label: string) {
+    const ids = drafts.filter((d) => d.week_start === weekStart).map((d) => d.id);
+    if (ids.length === 0) return;
+    if (!confirm(`${label} の週（${ids.length}人ぶん）を、送らずに片づけます。本人には何も届きません。よろしいですか？`)) return;
+    setWkBusy(true); setWkMsg("");
+    try {
+      const r = await fetch("/api/admin/weekly", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "skip", ids }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setWkMsg(d.error || `HTTP ${r.status}`); return; }
+      setWkMsg(`${d.skipped}人ぶんを片づけました（送っていません）`);
+      await loadDrafts();
+    } catch (e: any) { setWkMsg(String(e?.message ?? e)); }
+    finally { setWkBusy(false); }
+  }
+
+  /** 1通だけ、その週の記録で書き直す（短すぎたとき用） */
+  async function rebuild(id: string) {
+    if (rebuilding) return;
+    setRebuilding(id); setWkMsg("");
+    try {
+      const r = await fetch("/api/admin/weekly", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "rebuild", id }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setWkMsg(d.error || `HTTP ${r.status}`); return; }
+      setDrafts((list) => list.map((x) => (x.id === id ? { ...x, body: d.body } : x)));
+      setWkMsg("書き直しました。読んでから送ってください");
+    } catch (e: any) { setWkMsg(String(e?.message ?? e)); }
+    finally { setRebuilding(null); }
+  }
+
+  function pickWeek(weekStart: string, on: boolean) {
+    setPicked((p) => {
+      const next = { ...p };
+      for (const d of drafts) if (d.week_start === weekStart) next[d.id] = on;
+      return next;
+    });
   }
 
   async function toggleLock(key: string) {
@@ -376,25 +439,54 @@ export default function AdminPage() {
           </div>
           <p className="text-xs text-gray-600 mb-3">
             読んでOKを出すと、その人に届きます。<b>OKを出すまでは誰にも見えません。</b>
-            送りたくないものはチェックを外してください。
+            週ごとに分けてあります。送り忘れた週は「送らずに片づける」でしまえます。
           </p>
-          <div className="space-y-2 max-h-[420px] overflow-y-auto">
-            {drafts.map((d) => (
-              <label key={d.id} className="block bg-white border rounded-lg p-3 cursor-pointer">
-                <div className="flex items-center gap-2 mb-1.5">
-                  <input type="checkbox" checked={!!picked[d.id]}
-                    onChange={(e) => setPicked((p) => ({ ...p, [d.id]: e.target.checked }))} />
-                  <b className="text-sm">{d.name}</b>
-                  <span className="text-xs text-gray-400">{d.week_start} の週</span>
+          <div className="space-y-4">
+            {draftWeeks.map((w, wi) => {
+              const n = w.list.filter((d) => picked[d.id]).length;
+              return (
+                <div key={w.week_start} className={`rounded-lg border ${wi === 0 ? "border-purple-300 bg-white" : "border-gray-200 bg-gray-50"} p-3`}>
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <b className="text-sm">{w.period} の週</b>
+                    <span className="text-xs text-gray-500">{w.list.length}人ぶん</span>
+                    {wi === 0 && <span className="text-[10px] bg-purple-600 text-white rounded-full px-2 py-0.5">いちばん新しい</span>}
+                    <span className="flex-1" />
+                    <button type="button" className="text-xs underline text-gray-600" onClick={() => pickWeek(w.week_start, true)}>全部チェック</button>
+                    <button type="button" className="text-xs underline text-gray-600" onClick={() => pickWeek(w.week_start, false)}>全部外す</button>
+                  </div>
+                  <div className="space-y-2 max-h-[360px] overflow-y-auto">
+                    {w.list.map((d) => (
+                      <div key={d.id} className="bg-white border rounded-lg p-3">
+                        <label className="flex items-center gap-2 mb-1.5 cursor-pointer">
+                          <input type="checkbox" checked={!!picked[d.id]}
+                            onChange={(e) => setPicked((p) => ({ ...p, [d.id]: e.target.checked }))} />
+                          <b className="text-sm">{d.name}</b>
+                          <span className="text-xs text-gray-400">{d.body.length}字</span>
+                          <span className="flex-1" />
+                          <button type="button" disabled={!!rebuilding || wkBusy}
+                            onClick={(e) => { e.preventDefault(); void rebuild(d.id); }}
+                            className="text-xs border border-purple-300 text-purple-700 rounded px-2 py-1 disabled:opacity-40">
+                            {rebuilding === d.id ? "書き直し中…" : "↻ 作り直す"}
+                          </button>
+                        </label>
+                        <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{d.body}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="mt-3 flex gap-2">
+                    <button onClick={() => void approve(w.week_start)} disabled={wkBusy || n === 0}
+                      className="flex-1 bg-purple-600 text-white font-bold text-sm py-2.5 rounded-lg disabled:opacity-50">
+                      {wkBusy ? "送っています…" : `✓ この週の チェックした人に送る（${n}人）`}
+                    </button>
+                    <button onClick={() => void skipWeek(w.week_start, w.period)} disabled={wkBusy}
+                      className="bg-white border border-gray-300 text-gray-700 text-xs font-bold px-3 rounded-lg disabled:opacity-50">
+                      送らずに片づける
+                    </button>
+                  </div>
                 </div>
-                <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{d.body}</div>
-              </label>
-            ))}
+              );
+            })}
           </div>
-          <button onClick={() => void approve()} disabled={wkBusy}
-            className="mt-3 w-full bg-purple-600 text-white font-bold text-sm py-2.5 rounded-lg disabled:opacity-50">
-            {wkBusy ? "送っています…" : `✓ チェックした人に送る（${Object.values(picked).filter(Boolean).length}人）`}
-          </button>
         </div>
       )}
 
@@ -459,7 +551,7 @@ export default function AdminPage() {
                   onClick={() => setOpenWeek(open ? null : w.week_start)}
                   className="w-full flex items-center justify-between px-3 py-2.5 bg-gray-50 text-sm font-bold"
                 >
-                  <span>{w.week_start} の週　<span className="font-normal text-gray-500">{w.reports.length}人ぶん</span></span>
+                  <span>{w.period ?? w.week_start} の週　<span className="font-normal text-gray-500">{w.reports.length}人ぶん</span></span>
                   <span className="flex items-center gap-2">
                     {yet > 0 && <span className="badge bg-amber-100 text-amber-700">未送信 {yet}</span>}
                     <span className="text-gray-400">{open ? "▲" : "▼"}</span>
@@ -473,8 +565,9 @@ export default function AdminPage() {
                           <b className="text-sm">{r.name}</b>
                           <span className={`badge ${r.status === "draft"
                             ? "bg-amber-100 text-amber-700"
+                            : r.status === "skipped" ? "bg-gray-200 text-gray-600"
                             : r.status === "approved" ? "bg-blue-100 text-blue-700" : "bg-green-100 text-green-700"}`}>
-                            {r.status === "draft" ? "未送信" : r.status === "approved" ? "送信ずみ・未読" : "読んだ"}
+                            {r.status === "draft" ? "未送信" : r.status === "skipped" ? "送らなかった" : r.status === "approved" ? "送信ずみ・未読" : "読んだ"}
                           </span>
                         </div>
                         {r.facets?.progressed?.length > 0 && (

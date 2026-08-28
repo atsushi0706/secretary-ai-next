@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { EPISODES } from "@/lib/learn";
+import type { Part } from "@/lib/learn/types";
 import { MangaArt } from "@/components/learn/MangaArt";
 import { CardShelf } from "@/components/learn/CardShelf";
 
 export default function LearnHome() {
   const eps = Object.values(EPISODES);
   const ep1 = eps[0];
-  const teaser = ep1.parts.find((p) => p.kind === "teaser") as any;
+  const teaser = ep1.parts.find((p): p is Extract<Part, { kind: "teaser" }> => p.kind === "teaser");
   return (
     <main className="min-h-screen" style={{ background: "#f3f4f8" }}>
       <div className="lrn-list">
@@ -18,9 +19,9 @@ export default function LearnHome() {
         {eps.map((ep) => (
           <Link key={ep.key} href={`/learn/${ep.key}`} className="lrn-epcard">
             <div className="cover">
-              <img className="episode-cover" src="/learn/ep1/episode-cover.webp" alt="指先の小さな動きに気づく17歳のミルトン・エリクソン" />
+              <img className="episode-cover" src="/learn/ep1/episode-cover.webp" alt="動けという命令をやめ、走るイメージへ注意を移す17歳のミルトン・エリクソン" />
               <span className="badge">第{ep.no}話</span>
-              <div className="cover-hook"><span>CASE 01</span><b>無意識が、身体を動かした。</b></div>
+              <div className="cover-hook"><span>CASE 01</span><b>「やらなきゃ」と思うほど、動けない。</b></div>
             </div>
             <div className="body">
               <div className="no">エリクソン原理 01</div>

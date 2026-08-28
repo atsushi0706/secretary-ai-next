@@ -78,12 +78,10 @@ export async function POST(req: Request) {
     context.objective && `いまの目的：${context.objective}`,
     context.nodeKind && `操作の種類：${context.nodeKind}`,
     context.evidence.length && `取得済みの証拠：${context.evidence.join("／")}`,
-    context.theme && `生徒が最初に入力した「変えたいこと」：${context.theme}`,
-    context.theme && "その困難を最も強く感じる基準：100",
-    context.exception && `生徒が見つけた100ではなかった瞬間：${context.exception}`,
-    context.exceptionScore && `その瞬間の本人の点数：${context.exceptionScore}／100`,
-    context.clue && `100との差を作った手がかり：${context.clue}`,
-    context.resource && `生徒が選んだ使える材料：${context.resource}`,
+    context.theme && `生徒が選んだ「やりたいのに動けない場面」：${context.theme}`,
+    context.exception && `できない方向から注意を外した場面：${context.exception}`,
+    context.clue && `その時に注意を向けた具体的な感覚：${context.clue}`,
+    context.resource && `生徒が選んだ最初の一動作：${context.resource}`,
     context.lastInteraction && `直前の反応：${context.lastInteraction}`,
   ].filter(Boolean).join("\n") || "現在地の追加情報なし";
   const asksAboutControl = /(?:催眠|トランス).{0,18}(?:操|支配|命令|意思を奪)|(?:操|支配).{0,18}(?:催眠|トランス)/.test(question);
@@ -91,15 +89,16 @@ export async function POST(req: Request) {
   const focusInstruction = asksAboutControl
     ? "この質問には、最初に『いいえ。催眠は人の意思を奪って操ることではありません』と明答し、現在の事件でこれから命令と本人の反応を区別して確かめる、と説明する。"
     : asksAboutPersonalApplication && context.clue
-      ? `この質問には、生徒の「${context.theme || "変えたいこと"}」と、本人が書いた具体的な違い「${context.clue}」を必ず使う。その違いを一つだけ安全に試し、同じ結果を約束せず、起きた違いを観察する手順として答える。`
+      ? `この質問には、生徒の「${context.theme || "やりたいのに動けない場面"}」と、本人が選んだ具体的な感覚または一動作「${context.resource || context.clue}」を必ず使う。できない完成から注意を外し、今できる最初の一動作へ移す順番で答える。同じ結果は約束しない。`
     : `質問「${question}」に含まれる中心語を最初の二文以内でもう一度使い、別の話題へすり替えない。`;
 
   const persona = `あなたはミルトン・エリクソン。教室で「${ep.subtitle}」の授業をしている先生です。
 生徒の一人が、学習アドベンチャーを一時停止して質問しました。目の前の一人に、声で答えるように話してください。
 
 # この学習ゲームの原則
-- 催眠を「相手を支配する技術」と説明しない。注意の向け方と、すでに起きている反応を利用する学びとして扱う。
-- Utilizationは、問題をゼロにしようとする前に、その困難を強く感じる状態を100と置き、100ではなかった具体的な瞬間と、その差を作った条件を材料として使う考え方。
+- 催眠を「相手を支配する技術」と説明しない。一つの体験へ注意が深く集まり、言葉やイメージを受け取りやすくなる体験として扱う。
+- この回のUtilizationは、できない結果へ注意を向け続けるのをやめ、今すでに分かる感覚や、できている動作へ注意を移し、そこから次の小さな暗示を作る考え方。
+- 「今できるものを使う」だけで説明を止めない。何から注意を外し、何へ移し、次に何をするのかまで答える。
 - 答えを一方的に講義せず、現在地の証拠と生徒自身の入力を結びつける。
 - 医療上の診断や治療効果を断定しない。危険・医療・深刻な症状の相談には専門家への相談も促す。
 - まだ取得していない証拠、選択問題の正解、この後の展開は明かさない。
@@ -149,11 +148,11 @@ ${notYet.length ? notYet.map((s) => `- ${s}`).join("\n") : "- なし（授業は
     let answer = text(r2) || draft;
     // 最初の誤解解除に直結する質問だけは、モデルが話題を取り違えても曖昧な回答を返さない。
     if (asksAboutControl && !/(?:操|支配|意思を奪)/.test(answer)) {
-      answer = `いいえ。催眠は人の意思を奪って操ることではありません。注意が一つの体験へ深く向き、その人の中にすでにあるイメージや身体反応が起こりやすくなる状態です。いまの「${context.location || "事件"}」では、まだ答えを信じなくて構いません。命令したときと、本人の反応が起きたときを証拠で比べて確かめましょう。`;
+      answer = `いいえ。催眠は人の意思を奪って操ることではありません。一つの体験へ注意が深く集まり、言葉やイメージを受け取りやすくなる体験です。いまの「${context.location || "事件"}」では、できない結果へ命令し続けた時と、今分かる感覚へ注意を移した時を比べています。`;
     }
     // 自分への使い方を聞かれた時、本人が入力した材料を無視した一般論は返さない。
     if (asksAboutPersonalApplication && context.clue && !answer.includes(context.clue.slice(0, Math.min(12, context.clue.length)))) {
-      answer = `あなたの場合は、「${context.theme || "変えたいこと"}」を一気になくそうとせず、${context.exception ? `「${context.exception}」で` : "100ではなかった時に"}違っていた「${context.clue}」を、次の場面で一つだけ安全に再現してみます。同じ結果になるとは決めず、その時に何が少し変わったかを観察してください。`;
+      answer = `あなたの場合は、「${context.theme || "やりたいのに動けない場面"}」を全部終わらせようと命令するのをいったんやめます。まず「${context.resource || context.clue}」へ注意を移し、その一動作だけをしている自分をイメージしてから、実際に一回だけ行います。同じ結果は約束せず、始めやすさがどう変わったかを確かめてください。`;
     }
     return NextResponse.json({ answer, sceneNo });
   } catch (error: unknown) {

@@ -1,7 +1,8 @@
 /**
  * AIラーニングの実験台。**本番では開かない**（notFound）。
  * ログイン無しで LearnPlayer を動かし、Playwright で画面を測るために使う。
- *   ?part=N … N番目のパートから始める（0=漫画 1=体験 2=教室 3=質問 4=原理 5=次回へ 6=次回）
+ *   ?part=N … N番目のパートから始める
+ *   （0=漫画 1=体験 2=推理 3=教室 4=質問 5=原理 6=次回へ 7=次回）
  */
 import { notFound } from "next/navigation";
 import "../../learn/learn.css";

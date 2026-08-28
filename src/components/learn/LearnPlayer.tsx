@@ -175,6 +175,7 @@ type LearnAskContext = {
 };
 
 type AskMessage = { role: "user" | "teacher"; text: string };
+type LearnNote = { question: string; answer: string; savedAt: string };
 
 function AskSheet({
   ep, sceneNo, tickets, onUse, onClose, title = "先生に聞く", context,
@@ -187,7 +188,25 @@ function AskSheet({
   const [ticketUsed, setTicketUsed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
+  const [notes, setNotes] = useState<LearnNote[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const value = JSON.parse(window.localStorage.getItem(`learn:${ep}:notes`) ?? "[]");
+      return Array.isArray(value) ? value.filter((note): note is LearnNote => Boolean(note?.question && note?.answer)) : [];
+    } catch { return []; }
+  });
   const threadRef = useRef<HTMLDivElement | null>(null);
+
+  function saveNote(answerIndex: number) {
+    const answer = messages[answerIndex]?.text?.trim();
+    const question = messages[answerIndex - 1]?.role === "user" ? messages[answerIndex - 1].text.trim() : "先生に聞いたこと";
+    if (!answer) return;
+    const next = notes.some((note) => note.question === question && note.answer === answer)
+      ? notes
+      : [...notes, { question, answer, savedAt: new Date().toISOString() }];
+    setNotes(next);
+    try { window.localStorage.setItem(`learn:${ep}:notes`, JSON.stringify(next)); } catch { /* ignore */ }
+  }
 
   async function ask(suggested?: string) {
     const question = (suggested ?? q).trim();
@@ -233,9 +252,19 @@ function AskSheet({
             <div className="lrn-ask-msg is-teacher" key={i}>
               <div className="lrn-answer-who"><img src={ERICKSON.smile} alt="" /><span>エリクソン</span></div>
               <p>{message.text}</p>
+              <button className="lrn-save-note" onClick={() => saveNote(i)} disabled={notes.some((note) => note.answer === message.text)}>
+                {notes.some((note) => note.answer === message.text) ? "✓ メモに保存済み" : "＋ この回答をメモに保存"}
+              </button>
             </div>
           ))}
         </div>}
+
+        {notes.length > 0 && <details className="lrn-saved-notes">
+          <summary>保存した学習メモ（{notes.length}）</summary>
+          <div>
+            {notes.map((note, i) => <article key={`${note.savedAt}-${i}`}><b>Q. {note.question}</b><p>{note.answer}</p></article>)}
+          </div>
+        </details>}
 
         {messages.length > 0 && <div className="lrn-ask-followups">
           <span>もう一歩たしかめる</span>
@@ -357,7 +386,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
   const [values, setValues] = useState<Record<string, string>>(() => {
     if (typeof window === "undefined") return { userName };
     const saved: Record<string, string> = { userName };
-    for (const key of ["theme", "exception", "exceptionScore", "clueCategory", "clue"]) {
+    for (const key of ["stuckMoment", "firstJudgment", "channel", "theme", "exception", "clue"]) {
       try {
         const value = window.localStorage.getItem(`learn:${ep}:${key}`)?.trim();
         if (value) saved[key] = value;
@@ -567,13 +596,13 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     };
     return {
       userName,
-      theme: "第1話の催眠",
-      exception: "イメージできないリンクへ、別の感覚から催眠を始めた場面",
-      exceptionScore: "採点しない",
+      stuckMoment: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+      theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+      exception: "できない方向から目を外し、今分かる感覚へ注意を移した場面",
       clue: read("channel", "今、聞こえている声"),
-      resource: "本人が実際に感じられるものから暗示を始める",
-      firstJudgment: read("firstJudgment", "同じ走る感覚をもう一度使い、足が動くか確かめた"),
-      channel: read("channel", "聞こえている声から催眠を始めた"),
+      resource: "『できないのに、やらなきゃ』から目を外し、今できる方向から次の暗示を作る",
+      firstJudgment: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
+      channel: read("channel", "作れない海辺から目を外し、今聞こえている声へ注意を移した"),
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -659,20 +688,20 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
       {!started ? (
         <div className="lrn-av-start">
           <div className="lrn-av-case-no">{scenario.caseNo}</div>
-          <h2>{scenario.title}</h2>
-          {scenario.question && <p className="lrn-av-question">{scenario.question}</p>}
+          <h2>{resolve(scenario.title)}</h2>
+          {scenario.question && <p className="lrn-av-question">{resolve(scenario.question)}</p>}
           <div className="lrn-av-start-cast" aria-hidden="true">
             <img className="teacher" src={scenario.teacherSprite} alt="" />
             <img className="link" src={scenario.linkSprite} alt="" />
           </div>
-          <div className="lrn-av-objective"><b>MISSION</b><span>{scenario.objective}</span></div>
+          <div className="lrn-av-objective"><b>MISSION</b><span>{resolve(scenario.objective)}</span></div>
           <button className="lrn-av-primary" onClick={() => setStarted(true)}>捜査を始める</button>
         </div>
       ) : (
         <>
           <div className="lrn-av-hud">
             <div className="lrn-av-hud-case"><b>{scenario.caseNo}</b><span>{sceneName}</span></div>
-            <div className="lrn-av-hud-goal">目的：{scenario.objective}</div>
+            <div className="lrn-av-hud-goal">目的：{resolve(scenario.objective)}</div>
             <div className={`lrn-av-hud-actions ${node?.kind === "dialogue" ? "is-dialogue" : ""}`}>
               <button onClick={back} disabled={idx === 0} aria-label="一つ前へ戻る">↶</button>
             </div>
@@ -794,13 +823,13 @@ function DialoguePart({
     };
     return {
       userName,
-      theme: "第1話の催眠",
-      exception: "イメージできないリンクへ、別の感覚から催眠を始めた場面",
-      exceptionScore: "採点しない",
+      stuckMoment: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+      theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+      exception: "できない方向から目を外し、今分かる感覚へ注意を移した場面",
       clue: read("channel", "今、聞こえている声"),
-      resource: "本人が実際に感じられるものから暗示を始める",
-      firstJudgment: read("firstJudgment", "同じ走る感覚をもう一度使い、足が動くか確かめた"),
-      channel: read("channel", "聞こえている声から催眠を始めた"),
+      resource: "『できないのに、やらなきゃ』から目を外し、今できる方向から次の暗示を作る",
+      firstJudgment: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
+      channel: read("channel", "作れない海辺から目を外し、今聞こえている声へ注意を移した"),
     };
   });
   const rawCur = idx >= 0 ? items[idx] : null;
@@ -879,8 +908,8 @@ function DialoguePart({
       {idx < 0 ? (
         <div className="lrn-exp-gate">
           <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-          <h2>事件の答えを、催眠の講義で整理します</h2>
-          <p>なぜ「動け」という命令では動かなかった足が、走る感覚のイメージでは動いたのか。漫画とリンクへの催眠を、ここで一つにつなげます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
+          <h2>「できない」から目を外すと、何が変わる？</h2>
+          <p>命令、自己暗示、リンクへの催眠、あなたの最初の一動作。注意がどこからどこへ移ったかを、ここで一つにつなげます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (
@@ -934,11 +963,10 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
       location: "講義後の振り返り",
       objective: "命令と暗示の違い、自己暗示とUtilizationのつながりを理解する",
       nodeKind: "final-qa",
-      theme: "第1話の催眠",
-      exception: "イメージできないリンクへ、別の感覚から催眠を始めた場面",
-      exceptionScore: "採点しない",
+      theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+      exception: "できない方向から目を外し、今分かる感覚へ注意を移した場面",
       clue: read("channel", "今、聞こえている声"),
-      resource: "本人が実際に感じられるものから暗示を始める",
+      resource: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
     };
   });
   return (
@@ -965,7 +993,11 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
       try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
       catch { return fallback; }
     };
-    return { theme: "第1話の催眠", clue: read("channel", "今、聞こえている声"), resource: "本人が実際に感じられるものから暗示を始める" };
+    return {
+      theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+      clue: read("channel", "今、聞こえている声"),
+      resource: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
+    };
   });
   const rawLine = lines[lineIdx] ?? null;
   const line = rawLine ? { ...rawLine, text: interpolateAdventureText(rawLine.text, cardValues), dynamic: rawLine.dynamic || rawLine.text.includes("{{") } : null;

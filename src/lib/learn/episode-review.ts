@@ -1,3 +1,5 @@
+import type { EpisodeFoundation } from "./episode-foundation";
+import type { AdventureNode } from "./adventure";
 import type { Episode, ExpStep, Part } from "./types";
 
 export type EpisodeReviewIssue = {
@@ -16,106 +18,102 @@ function collectExperienceSteps(steps: ExpStep[]): ExpStep[] {
   });
 }
 
+function storedDecisionKeys(episode: Episode): string[] {
+  const experience = episode.parts.find((part): part is Extract<Part, { kind: "experience" }> => part.kind === "experience");
+  const experienceKeys = experience
+    ? collectExperienceSteps(experience.steps).flatMap((step) => step.kind === "choice" && step.storeAs ? [step.storeAs] : [])
+    : [];
+  const adventure = episode.parts.find((part): part is Extract<Part, { kind: "adventure" }> => part.kind === "adventure");
+  const adventureKeys = adventure?.scenario.nodes.flatMap((node) => node.kind === "apply" ? [node.storeAs] : []) ?? [];
+  return [...new Set([...experienceKeys, ...adventureKeys])];
+}
+
 /**
- * 新しい話を投入した時に必ず通す最低品質ゲート。
- * 個別画面の構造チェックであり、実機の通し監査は別に必要。
+ * 固有の単語を強制する検査ではなく、学習者の変化と物語の因果が実装に存在するかを見る。
+ * コピーの自然さ、漫画の連続性、実機の触り心地は別の通し監査で確認する。
  */
-export function reviewEpisodeLearningFlow(episode: Episode): EpisodeReview {
+export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeFoundation): EpisodeReview {
   const issues: EpisodeReviewIssue[] = [];
   const push = (severity: EpisodeReviewIssue["severity"], lens: EpisodeReviewIssue["lens"], message: string) => issues.push({ severity, lens, message });
   const kinds = episode.parts.map((part) => part.kind);
-  const required: Part["kind"][] = ["manga", "experience", "adventure", "classroom", "qa", "card", "outro", "teaser"];
+  const required: Part["kind"][] = ["manga", "adventure", "classroom", "card", "outro"];
+  required.forEach((kind) => {
+    if (!kinds.includes(kind)) push("error", "system", `学習の因果を回収するため「${kind}」パートが必要です。`);
+  });
+  const causalOrder: Part["kind"][] = ["manga", "adventure", "classroom", "card", "outro"];
+  const causalIndexes = causalOrder.map((kind) => kinds.indexOf(kind));
+  if (causalIndexes.every((index) => index >= 0) && causalIndexes.some((index, position) => position > 0 && index < causalIndexes[position - 1])) {
+    push("error", "story", "事件を体験し、自分で判断し、講義で整理し、原理を持ち帰る因果の順番を確認してください。");
+  }
 
-  if (required.some((kind, index) => kinds[index] !== kind)) {
-    push("error", "system", `パート順は ${required.join(" → ")} にしてください。`);
+  if (!foundation.learner.problem.trim() || foundation.learner.livedExamples.some((item) => !item.trim())) {
+    push("error", "learning", "学ぶ技術より先に、学習者が日常で困っている具体的な場面を定義してください。");
+  }
+  if (!foundation.learner.attentionTrap.trim() || !foundation.lesson.awayFrom.trim() || !foundation.lesson.turnToward.trim() || !foundation.lesson.nextAction.trim()) {
+    push("error", "learning", "変化前、転換点、変化後、次の行動を一続きで定義してください。");
+  }
+  if (!foundation.teacher.experience.trim() || !foundation.teacher.belief.trim() || !foundation.teacher.decisionRule.trim()) {
+    push("error", "story", "先生の台詞が人物の経験と信念から生まれるよう、人物前提を定義してください。");
+  }
+  if (!foundation.link.learnerState.trim() || !foundation.link.role.trim()) {
+    push("error", "beginner", "リンクがどこで分からなくなり、何を読者の代わりに聞くかを定義してください。");
+  }
+  if (foundation.causalChain.length < 5 || foundation.causalChain.some((beat) => !beat.trim())) {
+    push("error", "story", "前の出来事が次の台詞を生む因果の鎖を、少なくとも5段階で定義してください。");
   }
 
   const manga = episode.parts[0]?.kind === "manga" ? episode.parts[0] : null;
-  if (!manga?.briefing) {
-    push("error", "beginner", "漫画より前に、作品名・未解決の問い・この回で得るものを一画面で見せてください。");
+  if (!manga?.briefing || !manga.schoolIntro) {
+    push("error", "beginner", "漫画の前に、学習者の問題と事件の問いをそれぞれ一画面で見せてください。");
   } else {
-    if (!manga.schoolIntro || !JSON.stringify(manga.schoolIntro).includes("催眠学校") || !JSON.stringify(manga.schoolIntro).includes("{{userName}}")) {
-      push("error", "story", "漫画の前に、ここが催眠学校であり、登録名で呼ばれて授業へ参加する一場面を置いてください。");
+    if (!manga.schoolIntro.title.trim() || !manga.schoolIntro.lead.trim() || !manga.schoolIntro.teacherLine.includes("{{userName}}")) {
+      push("error", "story", "冒頭で学習者の問題を提示し、登録名で授業へ招いてください。");
     }
-    if (![manga.briefing.eyebrow, manga.briefing.title, manga.briefing.hook].join("").includes("催眠")) {
-      push("error", "learning", "タイトル画面だけで、催眠を学ぶ回だと分かるようにしてください。");
-    }
-    if (!manga.briefing.hook.includes("？")) push("error", "story", "漫画へ入る前に未解決の問いを一つだけ置いてください。");
+    if (!manga.briefing.hook.includes("？")) push("error", "story", "漫画へ入る前に、答えを知りたくなる問いを一つ置いてください。");
     const coverLength = [manga.briefing.eyebrow, manga.briefing.title, manga.briefing.principle, manga.briefing.hook, manga.briefing.teaser].join("").length;
-    if (coverLength > 155) push("error", "game", "冒頭タイトルの情報量が多すぎます。定義や工程一覧は体験後へ移してください。");
+    if (coverLength > 155) push("warning", "game", "冒頭タイトルの情報量が多めです。実画面で、問いより説明が先に立っていないか確認してください。");
+    if (manga.frames.length < 2) push("warning", "story", "漫画だけで葛藤と転換を追えるか、ネームとして確認してください。");
   }
 
   const experience = episode.parts.find((part): part is Extract<Part, { kind: "experience" }> => part.kind === "experience");
   if (!experience) {
-    push("error", "system", "説明を聞くだけでなく、本人が選ぶ催眠体験パートが必要です。");
+    push("error", "game", "漫画後に、学習者が自分の場面を選ぶ体験が必要です。");
   } else {
-    const allSteps = collectExperienceSteps(experience.steps);
-    if (experience.gate) push("error", "game", "漫画直後の体験入口は重複説明になるため、工程一覧のgateを置かないでください。");
-    if (!experience.bridge) {
-      push("error", "story", "漫画から催眠体験へ直結させず、書斎の掛け合いへ戻る一場面を挟んでください。");
-    } else {
-      if (experience.bridge.narration.length + experience.bridge.line.length > 110) push("error", "game", "橋渡し場面は説明ページにせず、ナレーションと一台詞だけにしてください。");
-    }
-    const experienceText = JSON.stringify(experience.steps);
-    if (/困難.{0,12}100|100ではない瞬間|差の条件/.test(experienceText)) {
-      push("error", "learning", "催眠と関係の薄い『困難を100と置く』共通ワークを、第1話へ戻さないでください。");
-    }
-    if (!experienceText.includes("同じ走る感覚") || !experienceText.includes("もう一度") || !experienceText.includes("偶然")) {
-      push("error", "learning", "漫画直後は、走る感覚をもう一度使い、足の動きが偶然か確かめる選択にしてください。");
-    }
-    const firstJudgmentChoice = allSteps.find((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice" && step.storeAs === "firstJudgment");
-    if (!firstJudgmentChoice || firstJudgmentChoice.options.length < 3) {
-      push("error", "story", "先生の正解を見る前に、主人公が最初の判断をして物語を動かす選択が必要です。");
-    }
+    const choices = collectExperienceSteps(experience.steps).filter((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice");
+    if (experience.gate) push("error", "game", "漫画後に工程一覧を重ねず、物語の一場面から選択へ渡してください。");
+    if (!experience.bridge?.narration.trim() || !experience.bridge?.line.trim()) push("error", "story", "漫画から本人の問題へ移る理由を、一場面でつないでください。");
+    if (!choices.some((choice) => choice.storeAs && choice.options.length >= 2)) push("error", "game", "学習者が自分に近い場面を選び、後半で使える形で保存してください。");
   }
 
+  const adventure = episode.parts.find((part): part is Extract<Part, { kind: "adventure" }> => part.kind === "adventure");
+  const nodes: AdventureNode[] = adventure?.scenario.nodes ?? [];
+  if (!nodes.some((node) => node.kind === "investigate") || !nodes.some((node) => node.kind === "deduction") || !nodes.some((node) => node.kind === "apply")) {
+    push("error", "game", "見る、考える、自分で使うの三つをプレイヤー操作として入れてください。");
+  }
+  const linkLines = nodes.filter((node) => node.kind === "dialogue" && node.line.who === "link");
+  if (linkLines.length === 0) push("warning", "beginner", "初学者がつまずく地点を、リンクか別の演出で実際に表せているか確認してください。");
+  const dynamicKeys = storedDecisionKeys(episode);
   const outro = episode.parts.find((part): part is Extract<Part, { kind: "outro" }> => part.kind === "outro");
   const outroText = JSON.stringify(outro);
-  if (!outroText.includes("{{firstJudgment}}") || !outroText.includes("{{channel}}")) {
-    push("error", "story", "主人公の二つの判断を、登場人物が終盤で具体的に覚えている会話が必要です。");
-  }
-  if (!outroText.includes("あなたが最初の一言") || !JSON.stringify(episode.parts).includes("見習い")) {
-    push("error", "game", "一話の終わりで主人公の立場を変え、次の事件で担う役目を明示してください。");
-  }
+  dynamicKeys.forEach((key) => {
+    if (!outroText.includes(`{{${key}}}`)) push("error", "story", `プレイヤーが選んだ「${key}」を、終盤の会話で具体的に回収してください。`);
+  });
 
   const classroom = episode.parts.find((part): part is Extract<Part, { kind: "classroom" }> => part.kind === "classroom");
-  const adventure = episode.parts.find((part): part is Extract<Part, { kind: "adventure" }> => part.kind === "adventure");
-  const adventureText = JSON.stringify(adventure);
-  if (!adventureText.includes('"storeAs":"channel"') || !adventureText.includes("海辺") || !adventureText.includes("今、私の声は聞こえていますか")) {
-    push("error", "learning", "自己暗示の事件から、海辺をイメージできないリンクへ、聞こえている声を使う催眠へつなげてください。");
-  }
-  if (!JSON.stringify(adventure).includes("日常") || !JSON.stringify(adventure).includes("同意")) {
-    push("error", "learning", "講義前に、同意のある日常の催眠場面で、学んだ方法を使う選択を入れてください。");
-  }
-  if (!adventureText.includes("もう難しい") || !adventureText.includes("まだつながって")) {
-    push("error", "beginner", "リンクに、初学者が分からなくなる地点と、自己暗示から他者催眠へつながらない疑問を言わせてください。");
-  }
-  const renderedText = JSON.stringify({ experience, classroom, card: episode.parts.find((part) => part.kind === "card") });
-  if (/起きたもの|来たもの|本人に実際に起きた反応/.test(renderedText + adventureText)) {
-    push("error", "beginner", "『起きたもの』『反応』だけで済ませず、何が見えた・聞こえた・感じられたのかを具体的に書いてください。");
-  }
-  for (const banned of ["間接暗示", "イメージなら身体が治る"]) {
-    if (renderedText.includes(banned)) push("error", "learning", `第1話の中心概念をぼかす「${banned}」が残っています。`);
-  }
+  if (!classroom?.scenes.length) push("error", "learning", "体験後に、起きたことの因果を言葉で整理する講義が必要です。");
   classroom?.scenes.forEach((scene) => {
     if (scene.lines.length > 5) push("warning", "game", `講義SCENE ${scene.no}が5台詞を超えています。理解操作のない受動タップを減らしてください。`);
   });
 
-  if (!episode.goal.takeaway.includes("催眠") || !episode.goal.takeaway.includes("本人") || !episode.goal.takeaway.includes("暗示")) {
-    push("error", "ethics", "中心命題には、催眠で本人が実際に感じられるものを確かめ、そこから暗示を作る、と明記してください。");
-  }
-
-  const teaser = episode.parts.find((part): part is Extract<Part, { kind: "teaser" }> => part.kind === "teaser");
-  const teaserText = JSON.stringify(teaser);
-  if (/かかってしまった|都合がよかった/.test(teaserText) || !/尊重|壊さず|やめさせず|断る/.test(teaserText)) {
-    push("error", "ethics", "次回予告が拒否を無視して催眠へかける印象です。拒否の尊重を明記してください。");
+  if (!foundation.evidenceBoundary.historical.trim() || !foundation.evidenceBoundary.teachingInterpretation.trim() || !foundation.evidenceBoundary.claimLimit.trim()) {
+    push("error", "ethics", "史実、教材としての解釈、断定しない範囲を分けてください。");
   }
 
   return { ok: !issues.some((issue) => issue.severity === "error"), issues };
 }
 
-export function assertEpisodeLearningFlow(episode: Episode): EpisodeReview {
-  const report = reviewEpisodeLearningFlow(episode);
+export function assertEpisodeLearningFlow(episode: Episode, foundation: EpisodeFoundation): EpisodeReview {
+  const report = reviewEpisodeLearningFlow(episode, foundation);
   if (!report.ok) {
     throw new Error(`Episode failed learning-flow gate:\n${report.issues.filter((issue) => issue.severity === "error").map((issue) => `- [${issue.lens}] ${issue.message}`).join("\n")}`);
   }

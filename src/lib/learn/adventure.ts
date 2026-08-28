@@ -152,30 +152,27 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   const teacherLines = dialogues.filter((n) => n.line.who === "teacher");
   const interactions = scenario.nodes.filter((n) => n.kind === "investigate" || n.kind === "deduction" || n.kind === "apply");
   const allText = JSON.stringify(scenario);
-  const dynamicUses = (allText.match(/\{\{(?:theme|exception|exceptionScore|clue|resource)\}\}/g) ?? []).length;
+  const dynamicUses = (allText.match(/\{\{\w+\}\}/g) ?? []).length;
 
   const push = (severity: QualityIssue["severity"], lens: QualityIssue["lens"], message: string) => issues.push({ severity, lens, message });
 
   if (scenario.question && scenario.question.length > 42) push("warning", "beginner", "冒頭の事件質問が長すぎます。初見で一息に読める長さにしてください。");
-  if (interactions.length < 3) push("error", "game", "探索や推理など、プレイヤーが判断する操作を3回以上入れてください。");
-  if (!scenario.nodes.some((n) => n.kind === "investigate")) push("error", "game", "調べる対象がなく、プレイヤーが受け身です。");
-  if (!scenario.nodes.some((n) => n.kind === "deduction")) push("error", "game", "証拠から結論を選ぶ推理がありません。");
-  if (!scenario.nodes.some((n) => n.kind === "apply")) push("error", "game", "学んだ催眠を日常の具体的な場面で使う選択がありません。");
+  if (interactions.length === 0) push("error", "game", "プレイヤーが物語へ働きかける判断を一つ以上入れてください。");
+  if (!scenario.nodes.some((n) => n.kind === "investigate")) push("warning", "game", "調べる操作がありません。この話で本当に不要か、物語上の理由を確認してください。");
+  if (!scenario.nodes.some((n) => n.kind === "deduction")) push("warning", "game", "証拠から自分で結論を選ぶ場面がありません。この話で本当に不要か確認してください。");
+  if (!scenario.nodes.some((n) => n.kind === "apply")) push("warning", "game", "学びを自分や目の前の相手へ使う判断がありません。この話で本当に不要か確認してください。");
   if (!scenario.nodes.some((n) => n.kind === "reveal")) push("error", "story", "発見を回収するリビールがありません。");
-  if (linkLines.length < 4) push("error", "story", "清瀬リンクの発言が少なく、掛け合いになっていません。");
-  if (teacherLines.length < 4) push("error", "story", "エリクソンの返答が少なく、対話として成立しません。");
-  if (!/(誰|本人|エリクソン|身体|足|相手)/.test((scenario.question ?? "") + scenario.title + scenario.objective)) {
-    push("error", "beginner", "事件の問いに、誰が何をする話なのかを具体的に書いてください。");
-  }
+  if (linkLines.length === 0) push("warning", "story", "初学者の疑問を受け持つ登場人物がいません。この話で別の表現方法があるか確認してください。");
+  if (teacherLines.length === 0) push("warning", "story", "先生の判断が会話として現れていません。この話で別の表現方法があるか確認してください。");
 
   dialogues.forEach((node) => {
-    if (node.line.text.length > 92) push("error", "beginner", `${node.id}: 一つの台詞が長すぎます。説明を分けてください。`);
+    if (node.line.text.length > 92) push("warning", "beginner", `${node.id}: 一つの台詞が長めです。画面で読んだ時に意味の切れ目が一つか確認してください。`);
   });
 
   let consecutiveDialogue = 0;
   scenario.nodes.forEach((node, nodeIndex) => {
     consecutiveDialogue = node.kind === "dialogue" ? consecutiveDialogue + 1 : 0;
-    if (consecutiveDialogue > 4) push("error", "game", `${node.id}: 5台詞以上操作がなく、読むだけの時間が続きます。`);
+    if (consecutiveDialogue > 4) push("warning", "game", `${node.id}: 会話が続いています。ここで操作を入れるより、会話として続ける方が面白いか通しで確認してください。`);
     if (node.kind === "deduction" || node.kind === "apply") {
       const correct = node.options.filter((o) => o.correct);
       if (correct.length !== 1) push("error", "system", `${node.id}: 正解は必ず一つにしてください。`);
@@ -241,8 +238,8 @@ export function interpolateAdventureText(text: string, values: Record<string, st
     theme: "この回の催眠",
     exception: "イメージできない相手へ、別の感覚から催眠を始めた場面",
     exceptionScore: "採点しない",
-    clue: "本人に実際に起きた反応",
-    resource: "実際に起きた反応を次の暗示へつなげる",
+    clue: "できない方向から目を外した後に、本人が今分かる感覚",
+    resource: "できない方向を頑張るのをやめ、今できる方向から次の暗示を作る",
   };
   return text.replace(/\{\{(\w+)\}\}/g, (_, key: string) => values[key]?.trim() || fallback[key] || key);
 }

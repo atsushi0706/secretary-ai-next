@@ -72,7 +72,7 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       id: "adv-03",
       scene: "自己暗示を解く",
       camera: "link",
-      line: { id: "adv-03", who: "link", face: "think", text: "三つは見ました。でも、最初に変わったのは足そのものなのか、足へ向けていた注意なのか。僕はまだ言葉にできません。" },
+      line: { id: "adv-03", who: "link", face: "think", text: "先生。三つとも足の話なのに、最初だけ何度やっても動かない。違いは、命令の強さじゃない気がします。でも、まだうまく言えません。" },
       nextLabel: "推理する",
     },
     {
@@ -110,7 +110,7 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       id: "adv-05",
       scene: "リンクへの催眠",
       camera: "link",
-      line: { id: "adv-05", who: "link", face: "think", text: "自分への暗示は分かりました。でも、人へ催眠をかける時も、同じように注意を変えるんですか？" },
+      line: { id: "adv-05", who: "link", face: "think", text: "自分にかけていた催眠を変えたのは分かりました。でも、相手が『できません』と止まった時にも使えるんですか？" },
       nextLabel: "実際に試す",
     },
     {
@@ -118,7 +118,7 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       id: "adv-06",
       scene: "リンクへの催眠",
       camera: "teacher",
-      line: { id: "adv-06", who: "teacher", text: "試しましょう。リンクは以前、眠りやすくする催眠で『海辺をイメージして』と言われ、海辺が浮かばず止まりました。" },
+      line: { id: "adv-06", who: "teacher", text: "試しましょう。リンク、以前『眠れる海辺をイメージして』と言われて、そこで止まったそうですね。" },
       nextLabel: "リンクに聞く",
     },
     {
@@ -126,7 +126,7 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       id: "adv-07",
       scene: "リンクへの催眠",
       camera: "link",
-      line: { id: "adv-07", who: "link", face: "think", text: "海辺を出そう、出さなきゃ、と頑張るほど、何も浮かばなくなりました。" },
+      line: { id: "adv-07", who: "link", face: "think", text: "はい。海辺が見えないのに、『見なきゃ、出さなきゃ』って。目を閉じるほど、頭の中は真っ暗になりました。" },
       nextLabel: "注意を変える",
     },
     {
@@ -162,7 +162,7 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       id: "adv-10",
       scene: "リンクへの催眠",
       camera: "link",
-      line: { id: "adv-10", who: "link", face: "aha", text: "声も、椅子が背中に触れている感じも分かります。『できない海辺』から目が離れたら、肩の力が少し抜けました。" },
+      line: { id: "adv-10", who: "link", face: "aha", text: "……先生の声は聞こえる。椅子も背中に触れている。『海辺を出さなきゃ』が消えたら、急に息がしやすくなりました。" },
       nextLabel: "自分の場面へ使う",
     },
     {
@@ -170,7 +170,7 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       id: "adv-11",
       scene: "あなたへの自己暗示",
       camera: "teacher",
-      line: { id: "adv-11", who: "teacher", text: "次は『{{stuckMoment}}』へ使います。完成を命じる代わりに、最初の一動作へ注意を移してください。", dynamic: true },
+      line: { id: "adv-11", who: "teacher", text: "今、リンクに起きたことを『{{stuckMoment}}』へ使います。完成を命じる代わりに、最初の一動作へ注意を移してください。", dynamic: true },
       nextLabel: "最初の一手を選ぶ",
     },
     {
@@ -183,7 +183,7 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       options: [
         { id: "finish-all", label: "『今すぐ全部やれ。終わるまで止まるな』と言う", correct: false, value: "全部やれと命令した", feedback: "それでは、できない結果へまた注意が戻ります。最初の一動作まで小さくしてください。" },
         { id: "analyze", label: "動けない理由を、全部理解できるまで考える", correct: false, value: "理由を考え続けた", feedback: "考えることが、始めないための次の課題になっています。今できる一動作へ注意を移しましょう。" },
-        { id: "one-action", label: "『息を一度吐いて、最初の一動作だけをする自分をイメージしよう』と言う", correct: true, value: "できない完成から目を外し、最初の一動作をする自分へ注意を移した", feedback: "そうです。全部を終える自分ではなく、今できる最初の動作へ注意をつなげました。" },
+        { id: "one-action", label: "『全部は置いておこう。息を一度吐いて、最初の一動作をする自分だけイメージしよう』と言う", correct: true, value: "できない完成から目を外し、最初の一動作をする自分へ注意を移した", feedback: "そうです。先に『全部やらなきゃ』から目を外し、今できる最初の動作へ注意をつなげました。" },
       ],
     },
     {
@@ -213,14 +213,14 @@ export const EP1_ADVENTURE = defineAdventureScenario({
       id: "adv-12",
       scene: "事件解決",
       camera: "link",
-      line: { id: "adv-12", who: "link", face: "aha", text: "『今できることを探す』だけじゃなかった。まず、できない方向を見続けるのをやめる。それから、できる方向へ移すんですね。" },
+      line: { id: "adv-12", who: "link", face: "aha", text: "あ……。『今できることを探す』だけじゃない。先に、僕を『海辺を出さなきゃ』へ縛っていた自己暗示から、目を外したんですね。" },
     },
     {
       kind: "dialogue",
       id: "adv-13",
       scene: "事件解決",
       camera: "teacher",
-      line: { id: "adv-13", who: "teacher", face: "smile", text: "その通りです。教室で、なぜその順番が必要なのかを整理しましょう。" },
+      line: { id: "adv-13", who: "teacher", face: "smile", text: "その通りです。順番を逆にすると、また『できない』を頑張ることになります。教室で、この違いを整理しましょう。" },
       nextLabel: "講義へ進む",
     },
   ],

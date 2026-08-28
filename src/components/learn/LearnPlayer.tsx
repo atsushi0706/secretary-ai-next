@@ -1109,13 +1109,12 @@ const PART_LABEL: Record<Part["kind"], string> = {
 const LEARN_PROGRESS_VERSION = "v11";
 
 export function LearnPlayer({ episode, userName, startPart }: { episode: Episode; userName: string; startPart?: number }) {
+  const clampPart = useCallback((value: number) => Math.max(0, Math.min(episode.parts.length - 1, value)), [episode.parts.length]);
   const [pi, setPi] = useState(() => {
-    const clamp = (value: number) => Math.max(0, Math.min(episode.parts.length - 1, value));
-    if (startPart !== undefined) return clamp(startPart);
-    if (typeof window === "undefined") return 0;
-    try { return clamp(Number(window.localStorage.getItem(`learn:${episode.key}:flow:${LEARN_PROGRESS_VERSION}:part`) || 0)); }
-    catch { return 0; }
+    if (startPart !== undefined) return Math.max(0, Math.min(episode.parts.length - 1, startPart));
+    return 0;
   });
+  const [progressReady, setProgressReady] = useState(startPart !== undefined);
   const [tickets, setTickets] = useState(episode.tickets);
   const [restartKey, setRestartKey] = useState(0);
   const voice = useVoice(episode.key);
@@ -1123,9 +1122,23 @@ export function LearnPlayer({ episode, userName, startPart }: { episode: Episode
   const scrollRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    if (startPart !== undefined) return;
+    const restoreProgress = window.setTimeout(() => {
+      let savedPart = 0;
+      try {
+        savedPart = clampPart(Number(window.localStorage.getItem(`learn:${episode.key}:flow:${LEARN_PROGRESS_VERSION}:part`) || 0));
+      } catch { /* ignore */ }
+      setPi(savedPart);
+      setProgressReady(true);
+    }, 0);
+    return () => window.clearTimeout(restoreProgress);
+  }, [clampPart, episode.key, startPart]);
+
+  useEffect(() => {
+    if (!progressReady) return;
     scrollRef.current?.scrollTo({ top: 0 });
     try { window.localStorage.setItem(`learn:${episode.key}:flow:${LEARN_PROGRESS_VERSION}:part`, String(pi)); } catch { /* ignore */ }
-  }, [episode.key, pi]);
+  }, [episode.key, pi, progressReady]);
 
   const next = useCallback(() => {
     voice.stop();
@@ -1150,6 +1163,14 @@ export function LearnPlayer({ episode, userName, startPart }: { episode: Episode
 
   const classroom = episode.parts.find((p) => p.kind === "classroom") as Extract<Part, { kind: "classroom" }> | undefined;
   const lastScene = classroom ? classroom.scenes[classroom.scenes.length - 1].no : 0;
+
+  if (!progressReady) {
+    return (
+      <div className="lrn lrn-resume-loading" role="status" aria-live="polite">
+        <span>授業を開いています…</span>
+      </div>
+    );
+  }
 
   function body() {
     switch (part.kind) {

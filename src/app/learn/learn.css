@@ -609,6 +609,7 @@
 
 /* ── 一覧 ── */
 .lrn-list { max-width: 520px; margin: 0 auto; padding: 14px 14px 40px; font-family: "Hiragino Sans", "Noto Sans JP", system-ui, sans-serif; color: #1d1d22; }
+.lrn-resume-loading { display: grid; place-items: center; min-height: 100dvh; background: #080d18; color: #d9e8f4; font-size: .82rem; font-weight: 800; letter-spacing: .08em; }
 .lrn-list-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
 .lrn-list-head h1 { font-size: 1.05rem; font-weight: 900; margin: 0; }
 .lrn-epcard { display: block; background: #fff; border-radius: 16px; overflow: hidden; box-shadow: 0 6px 20px rgba(0,0,0,.08); text-decoration: none; color: inherit; margin-bottom: 12px; border: 1px solid #e6e6ec; }

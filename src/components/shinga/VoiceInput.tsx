@@ -24,6 +24,7 @@ const CONTEXT: Record<string, string> = {
   speech: "インナーワールド（自己理解の対話）での発言",
   quest: "これからやること・小さな一手の宣言",
   reflect: "その日の振り返り。今日どんな一日だったかを話している",
+  learning: "催眠の学習中。やりたいのに動けなくなる、自分の具体的な場面を話している",
 };
 
 export function VoiceInput({
@@ -31,7 +32,7 @@ export function VoiceInput({
   onText,
   compact,
 }: {
-  mode?: "speech" | "quest" | "reflect";
+  mode?: "speech" | "quest" | "reflect" | "learning";
   onText: (text: string) => void;
   compact?: boolean;
 }) {

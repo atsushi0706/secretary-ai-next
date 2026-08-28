@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { Episode, ExpStep, Face, Line, Part, Scene, Slide } from "@/lib/learn/types";
 import type { AdventureEvidence, AdventureNode, AdventureScenario } from "@/lib/learn/adventure";
 import { interpolateAdventureText } from "@/lib/learn/adventure";
+import { VoiceInput } from "@/components/shinga/VoiceInput";
 import { MangaArt } from "./MangaArt";
 
 /* ═══════════════════════ 声 ═══════════════════════
@@ -406,6 +407,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     return saved;
   });
   const [hintStepId, setHintStepId] = useState<string | null>(null);
+  const [pendingChoice, setPendingChoice] = useState<Extract<ExpStep, { kind: "choice" }>["options"][number] | null>(null);
   const bridge = part.bridge;
   const gate = part.gate;
   const step = timeline[idx];
@@ -470,12 +472,24 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
 
   function choose(option: Extract<ExpStep, { kind: "choice" }>["options"][number]) {
     voice.stop();
+    const updates: Record<string, string> = {};
     if (step?.kind === "choice" && step.storeAs && option.value) {
       const value = resolve(option.value);
-      setValues((old) => ({ ...old, [step.storeAs!]: value }));
-      try { localStorage.setItem(`learn:${ep}:${step.storeAs}`, value); } catch { /* ignore */ }
+      updates[step.storeAs] = value;
+    }
+    if (step?.kind === "choice" && step.detail) {
+      const detailValue = values[step.detail.id]?.trim();
+      const fallback = option.value ? resolve(option.value) : resolve(option.label);
+      updates[step.detail.storeAs ?? step.detail.id] = detailValue || fallback;
+    }
+    if (Object.keys(updates).length > 0) {
+      setValues((old) => ({ ...old, ...updates }));
+      for (const [key, value] of Object.entries(updates)) {
+        try { localStorage.setItem(`learn:${ep}:${key}`, value); } catch { /* ignore */ }
+      }
     }
     setTimeline((old) => [...old.slice(0, idx + 1), ...option.then]);
+    setPendingChoice(null);
     setIdx(idx + 1);
   }
 
@@ -497,7 +511,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
           <img className="lrn-exp-bridge-bg" src={bridge.background ?? "/learn/adventure/erickson-study-v1.webp"} alt="" />
           <div className="lrn-exp-bridge-shade" />
           <img className="lrn-exp-bridge-person" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-          <p className="lrn-exp-bridge-narration">{resolve(bridge.narration)}</p>
+          {bridge.narration.trim() && <p className="lrn-exp-bridge-narration">{resolve(bridge.narration)}</p>}
           <div className="lrn-exp-bridge-dialogue">
             <b>エリクソン</b>
             <p>{resolve(bridge.line)}</p>
@@ -569,8 +583,21 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
                 <h3>{resolve(step.q)}</h3>
                 {step.help && <p>{resolve(step.help)}</p>}
                 <div className="lrn-exp-options">
-                  {step.options.map((o, i) => <button key={o.label} onClick={() => choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>→</i></button>)}
+                  {step.options.map((o, i) => <button key={o.label} className={pendingChoice?.label === o.label ? "is-selected" : ""} onClick={() => step.detail ? setPendingChoice(o) : choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>{pendingChoice?.label === o.label ? "✓" : "→"}</i></button>)}
                 </div>
+                {step.detail && <div className="lrn-exp-choice-detail">
+                  <label htmlFor={`learn-detail-${step.detail.id}`}>{resolve(step.detail.label)} <small>任意</small></label>
+                  <div className="lrn-exp-choice-detail-field">
+                    <textarea id={`learn-detail-${step.detail.id}`} rows={3} value={values[step.detail.id] ?? ""}
+                      onChange={(e) => setValues((old) => ({ ...old, [step.detail!.id]: e.target.value }))}
+                      placeholder={step.detail.placeholder ? resolve(step.detail.placeholder) : undefined} />
+                    <VoiceInput mode="learning" compact onText={(text) => setValues((old) => ({
+                      ...old,
+                      [step.detail!.id]: old[step.detail!.id]?.trim() ? `${old[step.detail!.id].trim()}\n${text}` : text,
+                    }))} />
+                  </div>
+                  {step.detail.helper && <p>{resolve(step.detail.helper)}</p>}
+                </div>}
               </div>
             )}
             {step?.kind === "fade" && <div className="lrn-fade">{step.text}</div>}
@@ -580,6 +607,9 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
             <button onClick={back} disabled={idx === 0 && !bridge}>← 戻る</button>
             {step && step.kind !== "choice" && step.kind !== "fade" && (
               <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
+            )}
+            {step?.kind === "choice" && step.detail && (
+              <button className="lrn-exp-next" onClick={() => pendingChoice && choose(pendingChoice)} disabled={!pendingChoice}>この内容で進む →</button>
             )}
           </div>
         </>

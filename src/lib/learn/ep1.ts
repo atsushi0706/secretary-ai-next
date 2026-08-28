@@ -114,7 +114,7 @@ export const EP1: Episode = {
       title: "第1の事件に答える",
       minutes: 2,
       bridge: {
-        narration: "漫画が終わり、催眠学校の教室へ戻る。リンクは、まだ自分の問題とのつながりが分からない。",
+        narration: "",
         line: "{{userName}}。ここからは、あなたが『やらなきゃ』と思うほど動けなくなる場面へ、この発見をつなげます。",
         cta: "自分の場面を選ぶ →",
       },
@@ -124,8 +124,15 @@ export const EP1: Episode = {
         {
           kind: "choice",
           q: "いまのあなたに一番近い『動けない』は、どれですか？",
-          help: "正解はありません。後で、この場面に使う最初の暗示を作ります。",
+          help: "一つ選び、よければあなたの具体的な場面も教えてください。後の会話が、その内容に変わります。",
           storeAs: "stuckMoment",
+          detail: {
+            id: "stuckDetail",
+            storeAs: "stuckMoment",
+            label: "あなたの場合は、何をしようとした時に動けなくなりますか？",
+            placeholder: "例：YouTubeを始めたいのに、失敗が怖くて投稿できない",
+            helper: "うまく文章にしなくて大丈夫です。書くか、マイクでそのまま話してください。",
+          },
           options: [
             {
               label: "目標を決めたのに、始められない",

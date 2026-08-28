@@ -83,8 +83,9 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
   } else {
     const choices = collectExperienceSteps(experience.steps).filter((step): step is Extract<ExpStep, { kind: "choice" }> => step.kind === "choice");
     if (experience.gate) push("error", "game", "漫画後に工程一覧を重ねず、物語の一場面から選択へ渡してください。");
-    if (!experience.bridge?.narration.trim() || !experience.bridge?.line.trim()) push("error", "story", "漫画から本人の問題へ移る理由を、一場面でつないでください。");
+    if (!experience.bridge?.line.trim()) push("error", "story", "漫画から本人の問題へ移る理由を、人物の台詞でつないでください。");
     if (!choices.some((choice) => choice.storeAs && choice.options.length >= 2)) push("error", "game", "学習者が自分に近い場面を選び、後半で使える形で保存してください。");
+    if (!choices.some((choice) => choice.detail?.storeAs && choice.detail.storeAs === choice.storeAs)) push("error", "learning", "選択だけで終わらせず、学習者が自分の具体的な場面を文字か音声で補足できるようにしてください。");
   }
 
   const adventure = episode.parts.find((part): part is Extract<Part, { kind: "adventure" }> => part.kind === "adventure");

@@ -86,6 +86,8 @@ export default function AdminPage() {
   const [wkBusy, setWkBusy] = useState(false);
   /** 作り直し中の1通（ボタンを連打させない） */
   const [rebuilding, setRebuilding] = useState<string | null>(null);
+  /** 「材料を見る」で開いた、その週の記録（手紙と見比べる用） */
+  const [materials, setMaterials] = useState<Record<string, string>>({});
   /**
    * 承認待ちを**週ごと**に分ける。
    * 前は全部が一つの列に並び、送り忘れた先週ぶんと今週ぶんが混ざっていて、
@@ -181,9 +183,24 @@ export default function AdminPage() {
       const d = await r.json();
       if (!r.ok) { setWkMsg(d.error || `HTTP ${r.status}`); return; }
       setDrafts((list) => list.map((x) => (x.id === id ? { ...x, body: d.body } : x)));
-      setWkMsg("書き直しました。読んでから送ってください");
+      setAllWeeks((weeks) => weeks.map((w) => ({ ...w, reports: w.reports.map((x) => (x.id === id ? { ...x, body: d.body, facets: d.facets } : x)) })));
+      setWkMsg(d.status === "draft" ? "書き直しました。読んでから送ってください" : "書き直しました（送信ずみのものは、中身だけ差し替わりました）");
     } catch (e: any) { setWkMsg(String(e?.message ?? e)); }
     finally { setRebuilding(null); }
+  }
+
+  /** その1通の材料（その週の記録）を出す／しまう。手紙が記録に無いことを書いていないかを確かめる */
+  async function showMaterial(id: string) {
+    if (materials[id] !== undefined) { setMaterials((m) => { const n = { ...m }; delete n[id]; return n; }); return; }
+    try {
+      const r = await fetch("/api/admin/weekly", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "material", id }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setWkMsg(d.error || `HTTP ${r.status}`); return; }
+      setMaterials((m) => ({ ...m, [id]: `【${d.period.from} 〜 ${d.period.to} の記録】\n${d.material}` }));
+    } catch (e: any) { setWkMsg(String(e?.message ?? e)); }
   }
 
   function pickWeek(weekStart: string, on: boolean) {
@@ -463,12 +480,19 @@ export default function AdminPage() {
                           <b className="text-sm">{d.name}</b>
                           <span className="text-xs text-gray-400">{d.body.length}字</span>
                           <span className="flex-1" />
+                          <button type="button" onClick={(e) => { e.preventDefault(); void showMaterial(d.id); }}
+                            className="text-xs border border-gray-300 text-gray-600 rounded px-2 py-1">
+                            {materials[d.id] !== undefined ? "材料をしまう" : "材料を見る"}
+                          </button>
                           <button type="button" disabled={!!rebuilding || wkBusy}
                             onClick={(e) => { e.preventDefault(); void rebuild(d.id); }}
                             className="text-xs border border-purple-300 text-purple-700 rounded px-2 py-1 disabled:opacity-40">
                             {rebuilding === d.id ? "書き直し中…" : "↻ 作り直す"}
                           </button>
                         </label>
+                        {materials[d.id] !== undefined && (
+                          <pre className="text-[11px] bg-gray-50 border rounded p-2 mb-2 whitespace-pre-wrap overflow-x-auto">{materials[d.id]}</pre>
+                        )}
                         <div className="text-xs text-gray-700 leading-relaxed whitespace-pre-wrap">{d.body}</div>
                       </div>
                     ))}
@@ -563,6 +587,16 @@ export default function AdminPage() {
                       <div key={r.id} className="p-3">
                         <div className="flex items-center gap-2 mb-1.5">
                           <b className="text-sm">{r.name}</b>
+                          <span className="text-xs text-gray-400">{r.body.length}字</span>
+                          <button type="button" onClick={() => void showMaterial(r.id)}
+                            className="text-xs border border-gray-300 text-gray-600 rounded px-2 py-1">
+                            {materials[r.id] !== undefined ? "材料をしまう" : "材料を見る"}
+                          </button>
+                          <button type="button" disabled={!!rebuilding || wkBusy}
+                            onClick={() => void rebuild(r.id)}
+                            className="text-xs border border-purple-300 text-purple-700 rounded px-2 py-1 disabled:opacity-40">
+                            {rebuilding === r.id ? "書き直し中…" : "↻ 作り直す"}
+                          </button>
                           <span className={`badge ${r.status === "draft"
                             ? "bg-amber-100 text-amber-700"
                             : r.status === "skipped" ? "bg-gray-200 text-gray-600"
@@ -570,6 +604,9 @@ export default function AdminPage() {
                             {r.status === "draft" ? "未送信" : r.status === "skipped" ? "送らなかった" : r.status === "approved" ? "送信ずみ・未読" : "読んだ"}
                           </span>
                         </div>
+                        {materials[r.id] !== undefined && (
+                          <pre className="text-[11px] bg-gray-50 border rounded p-2 mb-2 whitespace-pre-wrap overflow-x-auto">{materials[r.id]}</pre>
+                        )}
                         {r.facets?.progressed?.length > 0 && (
                           <div className="text-[11px] text-gray-600 mb-1.5">
                             進んだこと：{r.facets.progressed.join(" / ")}

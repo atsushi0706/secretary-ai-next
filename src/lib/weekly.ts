@@ -87,7 +87,8 @@ export function periodLabel(weekStart: string): string {
  * 1人ぶんの週刊レポートを作る（保存はしない）。手紙と、宝箱に並べる中身を一緒に返す。
  * weekStart を渡せば、その週（土→金）の記録だけで作る。省くと今週。
  */
-export async function buildWeekly(userId: string, weekStart: string = weekStartStr()): Promise<{ body: string; facets: WeeklyFacets }> {
+export type WeeklyBuilt = { body: string; facets: WeeklyFacets; /** AIに渡した材料（記録の一覧）。手紙と見比べるため */ material: string };
+export async function buildWeekly(userId: string, weekStart: string = weekStartStr(), opts: { materialOnly?: boolean } = {}): Promise<WeeklyBuilt> {
   const s: any = await getUserSettings(userId).catch(() => null);
   const who = s?.user_call_name || "きみ";
 
@@ -182,10 +183,13 @@ export async function buildWeekly(userId: string, weekStart: string = weekStartS
   ].filter(Boolean).join(NL + NL);
 
   const emptyFacets: WeeklyFacets = { progressed: [], struggled: "", reframed: "", gained: [] };
+  // 材料だけ見たいとき（「材料を見る」）。AIは呼ばない
+  if (opts.materialOnly) return { body: "", facets: emptyFacets, material };
   if (!material.trim()) {
     return {
       body: `${who}へ。\n今週は記録がまだ少なかったから、まとめはお休み。\n書けなかった週があっても、それはそれでいい。来週またここで会おう。`,
       facets: emptyFacets,
+      material,
     };
   }
 
@@ -284,12 +288,13 @@ ${material}`;
       } catch { again = null; }
       if (again && (!best || again.body.length > best.body.length)) best = again;
     }
-    if (!best) return { body: `${who}へ。今週もおつかれさま。`, facets: emptyFacets };
-    return { body: best.body || `${who}へ。今週もおつかれさま。`, facets: best.facets };
+    if (!best) return { body: `${who}へ。今週もおつかれさま。`, facets: emptyFacets, material };
+    return { body: best.body || `${who}へ。今週もおつかれさま。`, facets: best.facets, material };
   } catch {
     return {
       body: `${who}へ。\n今週もおつかれさま。うまく言葉にできなかったけど、続いていること自体がちゃんと効いてるよ。`,
       facets: emptyFacets,
+      material,
     };
   }
 }
@@ -351,15 +356,29 @@ export async function saveWeeklyDraft(userId: string, body: string, facets?: Wee
  * 1通だけ作り直す（マスターが「作り直す」を押したとき）。
  * その週の土→金の記録で書き直し、下書きとして置き換える。送ってしまったものは触らない。
  */
-export async function rebuildWeekly(reportId: string): Promise<{ body: string; facets: WeeklyFacets } | null> {
+export async function rebuildWeekly(reportId: string): Promise<(WeeklyBuilt & { status: WeeklyStatus | "skipped" }) | null> {
   const supa = supabaseAdmin();
   const { data } = await supa.from("weekly_reports")
     .select("id, user_id, week_start, status").eq("id", reportId).maybeSingle();
   if (!data) return null;
-  if (data.status !== "draft" && data.status !== "skipped") return null;
   const built = await buildWeekly(data.user_id, data.week_start);
-  await saveWeeklyDraft(data.user_id, built.body, built.facets, data.week_start);
-  return built;
+  /*
+   * 送ったあとのものも書き直せる（淳くん：ちるちゃんの手紙が2〜3行しかない → 直したい）。
+   * その場合は状態（送信ずみ／読んだ）はそのままにして、中身だけ差し替える。通知は飛ばさない。
+   */
+  await supa.from("weekly_reports")
+    .update({ body: built.body, facets: built.facets, updated_at: new Date().toISOString() })
+    .eq("id", reportId);
+  return { ...built, status: data.status };
+}
+
+/** その1通の材料（その週の土〜金の記録）を出す。手紙と見比べて「記録に無いことを書いていないか」を確かめる用 */
+export async function weeklyMaterial(reportId: string): Promise<{ material: string; period: { from: string; to: string } } | null> {
+  const supa = supabaseAdmin();
+  const { data } = await supa.from("weekly_reports").select("id, user_id, week_start").eq("id", reportId).maybeSingle();
+  if (!data) return null;
+  const built = await buildWeekly(data.user_id, data.week_start, { materialOnly: true });
+  return { material: built.material || "（この週の記録はありません）", period: weekPeriod(data.week_start) };
 }
 
 /**

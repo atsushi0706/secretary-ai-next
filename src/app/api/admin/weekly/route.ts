@@ -3,12 +3,13 @@
  * GET  : 承認待ちの一覧（全ユーザーぶん・週ごと）
  * POST : { ids }                       → 承認 → その場で本人へ通知（ここで初めて届く）
  *        { action: "skip", ids }       → 送らずに片づける（本人には何も届かない）
- *        { action: "rebuild", id }     → その1通を、その週の記録で作り直す（下書きのまま）
+ *        { action: "rebuild", id }     → その1通を、その週の記録で作り直す（送信ずみなら中身だけ差し替え）
+ *        { action: "material", id }    → その1通の材料（その週の記録）を見る。AIは呼ばない
  */
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
-import { listDrafts, approveWeekly, listAllWeekly, skipWeekly, rebuildWeekly, periodLabel } from "@/lib/weekly";
+import { listDrafts, approveWeekly, listAllWeekly, skipWeekly, rebuildWeekly, weeklyMaterial, periodLabel } from "@/lib/weekly";
 import { sendPushToUser } from "@/lib/push";
 import { supabaseAdmin } from "@/lib/supabase";
 
@@ -38,12 +39,19 @@ export async function POST(req: Request) {
     const action = String(b.action ?? "approve");
     const ids: string[] = Array.isArray(b.ids) ? b.ids.map(String) : [];
 
+    if (action === "material") {
+      const id = String(b.id ?? "");
+      const m = id ? await weeklyMaterial(id) : null;
+      if (!m) return NextResponse.json({ error: "見つかりません" }, { status: 404 });
+      return NextResponse.json({ ok: true, ...m });
+    }
+
     if (action === "rebuild") {
       const id = String(b.id ?? "");
       if (!id) return NextResponse.json({ error: "どれを作り直すかが選ばれていません" }, { status: 400 });
       const built = await rebuildWeekly(id);
-      if (!built) return NextResponse.json({ error: "下書きでないものは作り直せません" }, { status: 400 });
-      return NextResponse.json({ ok: true, body: built.body, facets: built.facets });
+      if (!built) return NextResponse.json({ error: "見つかりません" }, { status: 404 });
+      return NextResponse.json({ ok: true, body: built.body, facets: built.facets, status: built.status, material: built.material });
     }
 
     if (action === "skip") {

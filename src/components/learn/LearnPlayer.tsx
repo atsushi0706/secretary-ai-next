@@ -293,6 +293,7 @@ function MangaPart({ part, userName, onDone, label }: { part: Extract<Part, { ki
   const trackRef = useRef<HTMLDivElement | null>(null);
   const [index, setIndex] = useState(0);
   const [introStep, setIntroStep] = useState(() => part.schoolIntro ? 0 : part.briefing ? 1 : 2);
+  const [schoolBeatIndex, setSchoolBeatIndex] = useState(0);
   const resolveIntro = useCallback((text: string) => text.replaceAll("{{userName}}", userName), [userName]);
 
   function go(to: number) {
@@ -304,22 +305,32 @@ function MangaPart({ part, userName, onDone, label }: { part: Extract<Part, { ki
 
   if (introStep === 0 && part.schoolIntro) {
     const intro = part.schoolIntro;
+    const beat = intro.beats[Math.min(schoolBeatIndex, intro.beats.length - 1)];
+    const isLastBeat = schoolBeatIndex >= intro.beats.length - 1;
+    const speakerName = beat.who === "teacher" ? "エリクソン" : "清瀬リンク";
+    const beatContent = <>
+      <b>{speakerName}</b>
+      <span key={schoolBeatIndex}>{resolveIntro(beat.text)}</span>
+      {!isLastBeat && <small>タップして次へ <i>›</i></small>}
+    </>;
     return (
-      <div className="lrn-school-intro">
+      <div className={`lrn-school-intro is-${beat.who} ${isLastBeat ? "is-final" : ""}`}>
         <img className="lrn-school-bg" src="/learn/adventure/erickson-study-v1.webp" alt="夜の催眠学校の教室" />
         <div className="lrn-school-shade" />
         <div className="lrn-school-sign"><b>{intro.kicker}</b><span>HYPNOSIS SCHOOL</span></div>
-        <img className="lrn-school-erickson" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-        <img className="lrn-school-link" src={linkSrc("neutral", false)} alt="清瀬リンク" />
-        <div className="lrn-school-copy">
-          <h1>{resolveIntro(intro.title)}</h1>
-          <p>{resolveIntro(intro.lead)}</p>
+        <img className={`lrn-school-erickson ${beat.who === "teacher" ? "is-speaking" : "is-listening"}`} src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
+        <img className={`lrn-school-link ${beat.who === "link" ? "is-speaking" : "is-listening"}`} src={linkSrc(beat.who === "link" ? "think" : "neutral", false)} alt="清瀬リンク" />
+        <div className="lrn-school-beat-progress" aria-label={`${intro.beats.length}場面中${schoolBeatIndex + 1}場面`}>
+          {intro.beats.map((_, i) => <i key={i} className={i <= schoolBeatIndex ? "is-on" : ""} />)}
         </div>
-        <div className="lrn-school-dialogues">
-          <div className="is-teacher"><b>エリクソン</b><span>{resolveIntro(intro.teacherLine)}</span></div>
-          <div className="is-link"><b>清瀬リンク</b><span>{resolveIntro(intro.linkLine)}</span></div>
-        </div>
-        <button className="lrn-cta" onClick={() => setIntroStep(part.briefing ? 1 : 2)}>{resolveIntro(intro.cta)}</button>
+        {isLastBeat ? (
+          <div className={`lrn-school-beat is-${beat.who} tone-${beat.tone || "question"}`}>{beatContent}</div>
+        ) : (
+          <button className={`lrn-school-beat is-${beat.who} tone-${beat.tone || "question"}`} onClick={() => setSchoolBeatIndex((value) => Math.min(intro.beats.length - 1, value + 1))}>
+            {beatContent}
+          </button>
+        )}
+        {isLastBeat && <button className="lrn-cta" onClick={() => setIntroStep(part.briefing ? 1 : 2)}>{resolveIntro(intro.cta)}</button>}
       </div>
     );
   }

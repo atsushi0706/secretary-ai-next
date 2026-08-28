@@ -66,9 +66,11 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
   if (!manga?.briefing || !manga.schoolIntro) {
     push("error", "beginner", "漫画の前に、学習者の問題と事件の問いをそれぞれ一画面で見せてください。");
   } else {
-    if (!manga.schoolIntro.title.trim() || !manga.schoolIntro.lead.trim() || !manga.schoolIntro.teacherLine.includes("{{userName}}")) {
-      push("error", "story", "冒頭で学習者の問題を提示し、登録名で授業へ招いてください。");
-    }
+    const introBeats = manga.schoolIntro.beats;
+    if (introBeats.length < 4) push("error", "game", "冒頭は一括説明にせず、問い・具体例・発見・授業への招待を一台詞ずつ進めてください。");
+    if (!introBeats[0]?.text.includes("？")) push("error", "story", "冒頭の最初の一拍は、学習者が自分事として答えられる問いにしてください。");
+    if (!introBeats.some((beat) => beat.who === "link")) push("error", "beginner", "冒頭でリンクが初学者の驚きか疑問を口にしてください。");
+    if (!introBeats.some((beat) => beat.text.includes("{{userName}}"))) push("error", "story", "冒頭の最後は、登録名でプレイヤーを授業へ招いてください。");
     if (!manga.briefing.hook.includes("？")) push("error", "story", "漫画へ入る前に、答えを知りたくなる問いを一つ置いてください。");
     const coverLength = [manga.briefing.eyebrow, manga.briefing.title, manga.briefing.principle, manga.briefing.hook, manga.briefing.teaser].join("").length;
     if (coverLength > 155) push("warning", "game", "冒頭タイトルの情報量が多めです。実画面で、問いより説明が先に立っていないか確認してください。");

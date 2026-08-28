@@ -99,13 +99,16 @@ export type EpisodeBriefing = {
   note?: string;
 };
 
-/** 漫画事件へ入る前に、学校・先生・プレイヤーの役割を一場面で伝える。 */
+export type EpisodeSchoolIntroBeat = {
+  who: "teacher" | "link";
+  text: string;
+  tone?: "question" | "example" | "reveal" | "reaction" | "address";
+};
+
+/** 漫画事件へ入る前に、問いから事件への招待までを一台詞ずつ体験させる。 */
 export type EpisodeSchoolIntro = {
   kicker: string;
-  title: string;
-  lead: string;
-  teacherLine: string;
-  linkLine: string;
+  beats: EpisodeSchoolIntroBeat[];
   cta: string;
 };
 

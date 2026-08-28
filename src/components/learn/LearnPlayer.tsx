@@ -3,96 +3,39 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import type { Episode, ExpStep, Face, Line, Part, Scene, Slide } from "@/lib/learn/types";
-import { VOICE_OF } from "@/lib/learn/types";
 import type { AdventureEvidence, AdventureNode, AdventureScenario } from "@/lib/learn/adventure";
 import { interpolateAdventureText } from "@/lib/learn/adventure";
 import { MangaArt } from "./MangaArt";
 
 /* ═══════════════════════ 声 ═══════════════════════
- * 1行ずつ同じ低い男性音声で鳴らす。声質が途中で変わらないよう、焼き込み音声と
- * ブラウザ内蔵音声は混ぜず、/api/tts の VOICEVOX 青山龍星だけを使う。
- * 質問チケットのために、途中で止めて・続きから再開できる。
+ * 第1話の音声は品質が揃うまで停止する。画面遷移側の呼び出し規約は残し、
+ * 将来ひとつの声で再開しても各パートを書き換えずに済むようにしている。
  */
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 function useVoice(ep: string) {
   void ep;
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const runRef = useRef(0);
   const pausedRef = useRef(false);
-  const [speaking, setSpeaking] = useState(false);
-  const [engine, setEngine] = useState<"baked" | "tts" | "browser" | "silent">("tts");
+  const speaking = false;
+  const engine = "silent" as const;
 
   const waitWhilePaused = useCallback(async () => {
     while (pausedRef.current) await sleep(120);
   }, []);
 
-  const stop = useCallback(() => {
-    runRef.current++;
-    const a = audioRef.current;
-    if (a) { try { a.pause(); a.src = ""; } catch { /* ignore */ } }
-    audioRef.current = null;
-    try { window.speechSynthesis?.cancel(); } catch { /* ignore */ }
-    setSpeaking(false);
-  }, []);
-
-  const playUrl = useCallback((url: string, run: number) => new Promise<boolean>((resolve) => {
-    const a = new Audio();
-    audioRef.current = a;
-    a.preload = "auto";
-    a.onended = () => resolve(true);
-    a.onerror = () => resolve(false);
-    a.src = url;
-    a.play().then(() => { if (runRef.current === run) setSpeaking(true); }).catch(() => resolve(false));
-  }), []);
+  const stop = useCallback(() => {}, []);
 
   const speak = useCallback(async (line: Line): Promise<void> => {
-    stop();
-    const run = runRef.current;
-    // 合成待ちも「再生中」と同じ中断可能状態にする。
-    setSpeaking(true);
+    void line;
     await waitWhilePaused();
-    if (runRef.current !== run) { setSpeaking(false); return; }
-
-    // 全台詞を同じ VOICEVOX 話者で合成する。
-    let ok = false;
-    try {
-      const r = await fetch("/api/tts", {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: line.text, speaker: VOICE_OF[line.who], strictVoice: true }),
-      });
-      if (runRef.current !== run) return;
-      if (r.ok) {
-        const url = URL.createObjectURL(await r.blob());
-        ok = await playUrl(url, run);
-        URL.revokeObjectURL(url);
-        if (runRef.current !== run) return;
-        if (ok) { setEngine("tts"); setSpeaking(false); return; }
-      }
-    } catch { /* 音声が作れない時は、異なる声へ切り替えず無音にする */ }
-
-    // 合成待ちの間にスキップ／画面移動された場合は、無音待機も開始しない。
-    if (runRef.current !== run) { setSpeaking(false); return; }
-
-    // 異なる代替声は使わない。短く待って、文字だけで進められる状態にする。
-    setEngine("silent");
-    setSpeaking(true);
-    await sleep(450);
-    setSpeaking(false);
-  }, [playUrl, stop, waitWhilePaused]);
+  }, [waitWhilePaused]);
 
   const pause = useCallback(() => {
     pausedRef.current = true;
-    try { audioRef.current?.pause(); } catch { /* ignore */ }
-    try { window.speechSynthesis?.pause(); } catch { /* ignore */ }
   }, []);
   const resume = useCallback(() => {
     pausedRef.current = false;
-    try { void audioRef.current?.play(); } catch { /* ignore */ }
-    try { window.speechSynthesis?.resume(); } catch { /* ignore */ }
   }, []);
-
-  useEffect(() => () => stop(), [stop]);
   return { speak, stop, pause, resume, speaking, engine, waitWhilePaused, pausedRef };
 }
 
@@ -244,16 +187,12 @@ function AskSheet({
   const [ticketUsed, setTicketUsed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const audioRef = useRef<HTMLAudioElement | null>(null);
   const threadRef = useRef<HTMLDivElement | null>(null);
-  const [voicing, setVoicing] = useState(false);
 
   async function ask(suggested?: string) {
     const question = (suggested ?? q).trim();
     if (!question || busy || (!ticketUsed && tickets <= 0)) return;
     setBusy(true); setErr("");
-    try { audioRef.current?.pause(); } catch { /* ignore */ }
-    setVoicing(false);
     try {
       const r = await fetch("/api/learn/ask", {
         method: "POST", headers: { "Content-Type": "application/json" },
@@ -267,24 +206,9 @@ function AskSheet({
         setTicketUsed(true);
         onUse();
       }
-      // 声（その場で VOICEVOX。失敗しても文字は出ている）
-      try {
-        const t = await fetch("/api/tts", {
-          method: "POST", headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: String(d.answer).slice(0, 480), speaker: VOICE_OF.teacher, strictVoice: true }),
-        });
-        if (t.ok) {
-          const url = URL.createObjectURL(await t.blob());
-          const au = new Audio(url); audioRef.current = au;
-          au.onended = () => setVoicing(false);
-          setVoicing(true);
-          await au.play().catch(() => setVoicing(false));
-        }
-      } catch { /* 文字だけ */ }
     } catch (error: unknown) { setErr(error instanceof Error ? error.message : String(error)); }
     finally { setBusy(false); }
   }
-  useEffect(() => () => { try { audioRef.current?.pause(); } catch { /* ignore */ } }, []);
   useEffect(() => {
     const thread = threadRef.current;
     if (thread) thread.scrollTo({ top: thread.scrollHeight, behavior: "smooth" });
@@ -296,10 +220,6 @@ function AskSheet({
         <div className="lrn-sheet-head">
           <span>🎫 {title}</span>
           <span className="rest">{ticketUsed ? "この対話は追加消費なし" : `残り 🎫 × ${tickets}`}</span>
-          {voicing && <button className="lrn-voice-stop" onClick={() => {
-            try { audioRef.current?.pause(); } catch { /* ignore */ }
-            setVoicing(false);
-          }}>音声を止める</button>}
         </div>
         <p className="lrn-sheet-lead">
           {context?.location ? `「${context.location}」で時間を止めています。` : "授業はここで止まっています。"}
@@ -311,7 +231,7 @@ function AskSheet({
             <div className="lrn-ask-msg is-user" key={i}><b>あなた</b><p>{message.text}</p></div>
           ) : (
             <div className="lrn-ask-msg is-teacher" key={i}>
-              <div className="lrn-answer-who"><img src={ERICKSON[voicing && i === messages.length - 1 ? "talk" : "smile"]} alt="" /><span>エリクソン</span></div>
+              <div className="lrn-answer-who"><img src={ERICKSON.smile} alt="" /><span>エリクソン</span></div>
               <p>{message.text}</p>
             </div>
           ))}
@@ -554,7 +474,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
             {gate.steps.map((text, index) => <div key={text}><b>{String(index + 1).padStart(2, "0")}</b><span>{text}</span></div>)}
           </div>
           <button className="lrn-cta" onClick={start}>{gate.cta}</button>
-          <span className="lrn-exp-time">{gate.note ?? `約${part.minutes ?? 3}分 ・ 戻る/音声スキップ対応`}</span>
+          <span className="lrn-exp-time">{gate.note ?? `約${part.minutes ?? 3}分 ・ タップで進行`}</span>
         </div>
       ) : (
         <>
@@ -618,7 +538,6 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
 
           <div className="lrn-exp-controls">
             <button onClick={back} disabled={idx === 0 && !bridge}>← 戻る</button>
-            <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声を飛ばす</button>
             {step && step.kind !== "choice" && step.kind !== "fade" && (
               <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
             )}
@@ -651,10 +570,10 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
       theme: "第1話の催眠",
       exception: "イメージできないリンクへ、別の感覚から催眠を始めた場面",
       exceptionScore: "採点しない",
-      clue: read("channel", "本人に実際に起きた反応"),
-      resource: "実際に起きた反応を次の暗示へつなげる",
-      firstJudgment: read("firstJudgment", "小さな動きが起きた時に何をしていたかを見る"),
-      channel: read("channel", "本人に実際に起きた反応から、催眠を始めるきっかけを作った"),
+      clue: read("channel", "今、聞こえている声"),
+      resource: "本人が実際に感じられるものから暗示を始める",
+      firstJudgment: read("firstJudgment", "同じ走る感覚をもう一度使い、足が動くか確かめた"),
+      channel: read("channel", "聞こえている声から催眠を始めた"),
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -728,9 +647,8 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     ? node.spots.filter((spot) => evidenceIds.includes(spot.evidenceId)).length
     : 0;
   const investigateDone = node?.kind === "investigate" && gatheredHere === node.spots.length;
-  const availableEvidenceIds = useMemo(() => new Set(
-    scenario.nodes.slice(0, idx + 1).flatMap((item) => item.kind === "investigate" ? item.spots.map((spot) => spot.evidenceId) : []),
-  ), [idx, scenario.nodes]);
+  const currentInvestigateSpot = node?.kind === "investigate" ? node.spots[gatheredHere] ?? null : null;
+  const availableEvidenceIds = useMemo(() => new Set(evidenceIds), [evidenceIds]);
   const availableEvidence = scenario.evidence.filter((item) => availableEvidenceIds.has(item.id));
 
   return (
@@ -757,7 +675,6 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
             <div className="lrn-av-hud-goal">目的：{scenario.objective}</div>
             <div className={`lrn-av-hud-actions ${node?.kind === "dialogue" ? "is-dialogue" : ""}`}>
               <button onClick={back} disabled={idx === 0} aria-label="一つ前へ戻る">↶</button>
-              <button onClick={voice.stop} disabled={!voice.speaking} aria-label="音声をスキップ">≫</button>
             </div>
           </div>
 
@@ -780,7 +697,6 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
               <p>{currentLine.text}</p>
               <div className="lrn-av-dialogue-controls">
                 <button onClick={back} disabled={idx === 0}>← 戻る</button>
-                <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声</button>
                 <button className="next" onClick={advance}>{node.nextLabel ?? "会話を続ける"} <span>›</span></button>
               </div>
             </div>
@@ -792,14 +708,11 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
                 <b>INVESTIGATION</b><h3>{node.title}</h3><p>{node.prompt}</p>
                 <span>{gatheredHere} / {node.spots.length} 発見</span>
               </div>
-              {node.spots.map((spot) => {
-                const found = evidenceIds.includes(spot.evidenceId);
-                return <button key={spot.id} className={`lrn-av-hotspot ${found ? "is-found" : ""}`}
-                  style={{ left: `${spot.x}%`, top: `${spot.y}%` }} onClick={() => inspect(spot)}>
-                  <i>{found ? "✓" : "!"}</i><span>{spot.label}</span>
-                </button>;
-              })}
-              {investigateDone && !activeEvidence && <button className="lrn-av-primary lrn-av-investigate-next" onClick={advance}>3つの証拠で推理する</button>}
+              {currentInvestigateSpot && !activeEvidence && <button key={currentInvestigateSpot.id} className="lrn-av-hotspot"
+                style={{ left: `${currentInvestigateSpot.x}%`, top: `${currentInvestigateSpot.y}%` }} onClick={() => inspect(currentInvestigateSpot)}>
+                <i>!</i><span>{currentInvestigateSpot.label}</span>
+              </button>}
+              {investigateDone && !activeEvidence && <button className="lrn-av-primary lrn-av-investigate-next" onClick={advance}>3つの場面で推理する</button>}
             </div>
           )}
 
@@ -884,10 +797,10 @@ function DialoguePart({
       theme: "第1話の催眠",
       exception: "イメージできないリンクへ、別の感覚から催眠を始めた場面",
       exceptionScore: "採点しない",
-      clue: read("channel", "本人に実際に起きた反応"),
-      resource: "実際に起きた反応を次の暗示へつなげる",
-      firstJudgment: read("firstJudgment", "小さな動きが起きた時に何をしていたかを見る"),
-      channel: read("channel", "本人に実際に起きた反応から、催眠を始めるきっかけを作った"),
+      clue: read("channel", "今、聞こえている声"),
+      resource: "本人が実際に感じられるものから暗示を始める",
+      firstJudgment: read("firstJudgment", "同じ走る感覚をもう一度使い、足が動くか確かめた"),
+      channel: read("channel", "聞こえている声から催眠を始めた"),
     };
   });
   const rawCur = idx >= 0 ? items[idx] : null;
@@ -930,7 +843,6 @@ function DialoguePart({
         await voice.waitWhilePaused();
         if (!aliveRef.current || runIdRef.current !== run) return;
       }
-      // アドベンチャーゲームと同じく、音声が終わっても勝手に進まない。
       // プレイヤーが文字を読み終えてから、タップまたは「次へ」を押す。
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -968,7 +880,7 @@ function DialoguePart({
         <div className="lrn-exp-gate">
           <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
           <h2>事件の答えを、催眠の講義で整理します</h2>
-          <p>先ほど体験した「本人に実際に起きた反応から、次の暗示を作る方法」に、催眠・暗示・Utilizationという名前と限界を与えます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
+          <p>なぜ「動け」という命令では動かなかった足が、走る感覚のイメージでは動いたのか。漫画とリンクへの催眠を、ここで一つにつなげます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (
@@ -986,10 +898,9 @@ function DialoguePart({
             ) : undefined} />
           <div className="lrn-adv-controls" onClick={(e) => e.stopPropagation()}>
             <button onClick={prev} disabled={idx <= 0}>← 戻る</button>
-            <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声スキップ</button>
             <button className="next" onClick={next}>次へ →</button>
           </div>
-          <div className="lrn-tapnote">{voice.engine === "silent" ? "音が出ていません ・ 次へで進みます" : "台詞は自動で進みません"}</div>
+          <div className="lrn-tapnote">タップまたは「次へ」で進みます</div>
           {asking && cur && (
             <AskSheet ep={ep} sceneNo={cur.scene?.no ?? 0} tickets={tickets} onUse={onUseTicket} onClose={closeAsk}
               context={{
@@ -1021,13 +932,13 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
     };
     return {
       location: "講義後の振り返り",
-      objective: "本人に実際に起きた反応を、次の暗示へつなげる理由を理解する",
+      objective: "命令と暗示の違い、自己暗示とUtilizationのつながりを理解する",
       nodeKind: "final-qa",
       theme: "第1話の催眠",
       exception: "イメージできないリンクへ、別の感覚から催眠を始めた場面",
       exceptionScore: "採点しない",
-      clue: read("channel", "本人に実際に起きた反応"),
-      resource: "実際に起きた反応を次の暗示へつなげる",
+      clue: read("channel", "今、聞こえている声"),
+      resource: "本人が実際に感じられるものから暗示を始める",
     };
   });
   return (
@@ -1054,7 +965,7 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
       try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
       catch { return fallback; }
     };
-    return { theme: "第1話の催眠", clue: read("channel", "本人に実際に起きた反応"), resource: "実際に起きた反応を次の暗示へつなげる" };
+    return { theme: "第1話の催眠", clue: read("channel", "今、聞こえている声"), resource: "本人が実際に感じられるものから暗示を始める" };
   });
   const rawLine = lines[lineIdx] ?? null;
   const line = rawLine ? { ...rawLine, text: interpolateAdventureText(rawLine.text, cardValues), dynamic: rawLine.dynamic || rawLine.text.includes("{{") } : null;
@@ -1108,7 +1019,6 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
           <Stage line={line} speaking={voice.speaking} slide={null} dim />
           <div className="lrn-adv-controls">
             <button onClick={backLine} disabled={lineIdx <= 0}>← 戻る</button>
-            <button onClick={voice.stop} disabled={!voice.speaking}>⏩ 音声スキップ</button>
             <button className="next" onClick={advanceLine}>次へ →</button>
           </div>
           <div className="lrn-tapnote">台詞は自動で進みません</div>

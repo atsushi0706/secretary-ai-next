@@ -16,7 +16,7 @@
  */
 import type { AdventureScenario } from "./adventure";
 
-export type Speaker = "teacher" | "link";
+export type Speaker = "teacher" | "link" | "mio";
 
 export type Face = "neutral" | "smile" | "think" | "aha" | "laugh" | "shy";
 
@@ -101,7 +101,7 @@ export type EpisodeBriefing = {
 };
 
 export type EpisodeSchoolIntroBeat = {
-  who: "teacher" | "link";
+  who: Speaker;
   text: string;
   tone?: "question" | "example" | "reveal" | "reaction" | "address";
 };
@@ -151,7 +151,7 @@ export type ExperienceGate = {
 export type ExperienceBridge = {
   narration?: string;
   line?: string;
-  beats?: { who: "teacher" | "link"; text: string }[];
+  beats?: { who: Speaker; text: string }[];
   cta: string;
   background?: string;
 };
@@ -225,7 +225,7 @@ export type Episode = {
 };
 
 /** 第1話は全台詞を同じ低い男性音声（VOICEVOX 青山龍星）で統一する。 */
-export const VOICE_OF: Record<Speaker, string> = { teacher: "13", link: "13" };
+export const VOICE_OF: Record<Speaker, string> = { teacher: "13", link: "13", mio: "13" };
 
 export function audioUrl(ep: string, lineId: string): string {
   return `/learn/${ep}/audio/${lineId}.mp3`;

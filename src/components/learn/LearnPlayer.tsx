@@ -60,6 +60,46 @@ function linkSrc(face: Face, open: boolean) {
   return `/learn/chars/${LINK_BASE[face]}${open ? "-open" : ""}.webp`;
 }
 
+type ReadLearningValue = (key: string, fallback: string) => string;
+
+function episodeQuestionContext(ep: string, read: ReadLearningValue) {
+  if (ep === "ep2") return {
+    objective: "拒否を消そうとせず、本人が断れるまま、今確かめられる感覚から催眠を始める順番を理解する",
+    theme: read("resistanceScene", "私は絶対に催眠にかかりません"),
+    exception: "拒否したまま、まぶたや呼吸を本人に確かめてもらった場面",
+    clue: read("openingMove", "目を閉じない自由を残し、まぶたの感覚を確かめてもらった"),
+    resource: read("personalMove", "拒否を認め、今の感覚を本人に確かめてもらった"),
+  };
+  if (ep === "ep3") return {
+    objective: "止まらない考えを消さず、浮かんだ一つを今できる感覚へ戻る合図として使う",
+    theme: read("innerDialogueScene", "考えを止めようとして、余計に続いてしまう"),
+    exception: "考えは残ったまま、浮かんだ後に一呼吸を確かめられた場面",
+    clue: read("ep3Move", "浮かんだ考えを一呼吸の合図へ変えた"),
+    resource: "考えを失敗として消そうとせず、呼吸など今確かめられる感覚へ戻る合図として使う",
+  };
+  if (ep === "ep4") return {
+    objective: "本人が今確かめられる事実へ言葉を合わせ、その続きに選べる小さな提案を置く",
+    theme: read("tensionScene", "緊張して、最初の一言が出なくなる"),
+    exception: "足と呼吸という二つの事実を確かめた後、次の一言を本人が選べた場面",
+    clue: read("ep4Move", "二つの事実から、次の一動作を提案した"),
+    resource: "確かめられる事実を二つ言い、その続きに選べる一動作を一つ提案する",
+  };
+  if (ep === "ep5") return {
+    objective: "混乱を急いだ結論で埋めず、事実・未確定・次の確認行動を分けて選択を取り戻す",
+    theme: read("shockScene", "予想外の出来事で、最初の答えを決めつけそうになる"),
+    exception: "カードが消えた直後、ミオの目的を断定せず、今分かる事実から確認行動を選んだ場面",
+    clue: read("ep5Move", "事実を分けて、次に確認する一手を選ばせた"),
+    resource: "今確認できる事実、まだ分からない意味、次に選べる確認行動を分ける",
+  };
+  return {
+    objective: "命令と暗示の違い、自己暗示とUtilizationのつながりを理解する",
+    theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+    exception: "できない方向から目を外し、今分かる感覚へ注意を移した場面",
+    clue: read("channel", "今、聞こえている声"),
+    resource: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
+  };
+}
+
 /** 口パク：話している間だけ 開↔閉 を切り替える */
 function useMouth(active: boolean) {
   const [tick, setTick] = useState(0);
@@ -776,6 +816,12 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
       resistanceScene: read("resistanceScene", "私は絶対に催眠にかかりません"),
       openingMove: read("openingMove", "目を閉じない自由を残し、まぶたの感覚を確かめてもらった"),
       personalMove: read("personalMove", "拒否を認め、今の感覚を本人に確かめてもらった"),
+      innerDialogueScene: read("innerDialogueScene", "考えを止めようとして、余計に続いてしまう"),
+      ep3Move: read("ep3Move", "浮かんだ考えを一呼吸の合図へ変えた"),
+      tensionScene: read("tensionScene", "緊張して、最初の一言が出なくなる"),
+      ep4Move: read("ep4Move", "二つの事実から、次の一動作を提案した"),
+      shockScene: read("shockScene", "予想外の出来事で、最初の答えを決めつけそうになる"),
+      ep5Move: read("ep5Move", "事実を分けて、次に確認する一手を選ばせた"),
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -955,16 +1001,33 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     const acceptsRefusal = /(しなくていい|閉じなくていい|そのまま|やめても|断って|無理に.+ない)/.test(raw);
     const invitesObservation = /(確かめ|感じ|まぶた|呼吸|声|重さ|軽さ|変化)/.test(raw);
     const forcesCompliance = /(目を閉じ(?:て|ろ)|絶対|必ず|信じて|従って|気づかれないよう)/.test(raw);
-    let correct = isResistanceLesson
-      ? acceptsRefusal && invitesObservation && !forcesCompliance
-      : !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(raw);
-    let responseText = isResistanceLesson
-      ? correct
-        ? "正解です。拒否する自由を残し、本人が今の感覚を確かめられる一言になっています。"
-        : "拒否を本当に認める言葉と、本人が今確かめられる感覚を一つ入れてください。"
-      : correct
-        ? "正解です。完成ではなく、今できる一動作へ注意を移せています。"
-        : "まだ『できない完成』へ注意が残っています。今すぐ本当にできる一動作まで小さくしてください。";
+    const sensoryWords = raw.match(/(足|床|息|呼吸|声|椅子|手|触れ|聞こえ|見え|重さ|温度)/g) ?? [];
+    const localEvaluation = (() => {
+      if (isResistanceLesson) return {
+        correct: acceptsRefusal && invitesObservation && !forcesCompliance,
+        ok: "正解です。拒否する自由を残し、本人が今の感覚を確かめられる一言になっています。",
+        ng: "拒否を本当に認める言葉と、本人が今確かめられる感覚を一つ入れてください。",
+      };
+      if (ep === "ep3") return {
+        correct: /(浮か|考え|言葉|声)/.test(raw) && /(息|呼吸|吐|感覚|触れ)/.test(raw) && !/(考えるな|何も考えない|頭を空)/.test(raw),
+        ok: "正解です。浮かんだ考えを消さず、今できる感覚の合図へ変えています。",
+        ng: "考えを止める命令ではなく、浮かんだことから一呼吸など今できる感覚へつないでください。",
+      };
+      if (ep === "ep4") return {
+        correct: new Set(sensoryWords).size >= 2 && /(言って|試して|してみ|一つ|だけ|できますか|できる)/.test(raw) && !/(絶対|必ず|落ち着け|全部)/.test(raw),
+        ok: "正解です。二つの確認できる事実の後に、選べる一動作を一つ置けています。",
+        ng: "相手が今確かめられる事実を二つ、その後に選べる小さな提案を一つ入れてください。",
+      };
+      if (ep === "ep5") return {
+        correct: /(カード|印|鍵|映像|声|今|事実)/.test(raw) && /(確認|調べ|次|選|分かる)/.test(raw) && !/(犯人|絶対|全部嘘|忘れろ|従え)/.test(raw),
+        ok: "正解です。結論を増やさず、現在の事実から選べる確認行動へ戻しています。",
+        ng: "犯人や目的を断定せず、今分かる事実と、本人が選べる次の確認行動を入れてください。",
+      };
+      const correct = !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(raw);
+      return { correct, ok: "正解です。完成ではなく、今できる一動作へ注意を移せています。", ng: "まだ『できない完成』へ注意が残っています。今すぐ本当にできる一動作まで小さくしてください。" };
+    })();
+    let correct = localEvaluation.correct;
+    let responseText = correct ? localEvaluation.ok : localEvaluation.ng;
     try {
       const response = await fetch("/api/learn/evaluate", {
         method: "POST",
@@ -996,6 +1059,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
   }
 
   const speaker = currentLine?.who ?? (node?.kind === "recall" || node?.kind === "guided-investigation" ? "link" : null);
+  const hasGuest = Boolean(scenario.guestSprite);
   const sceneName = node?.scene ?? scenario.title;
   const gatheredHere = node?.kind === "investigate"
     ? node.spots.filter((spot) => evidenceIds.includes(spot.evidenceId)).length
@@ -1013,7 +1077,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
   const availableEvidence = scenario.evidence.filter((item) => availableEvidenceIds.has(item.id));
 
   return (
-    <div className={`lrn-av lrn-av-camera-${node?.kind === "dialogue" ? (node.camera ?? "wide") : node?.kind === "recall" || node?.kind === "guided-investigation" ? "link" : "evidence"}`}
+    <div className={`lrn-av ${hasGuest ? "has-guest" : ""} lrn-av-camera-${node?.kind === "dialogue" ? (node.camera ?? "wide") : node?.kind === "recall" || node?.kind === "guided-investigation" ? "link" : "evidence"}`}
       style={{ backgroundImage: `linear-gradient(180deg,rgba(5,9,18,.05),rgba(5,9,18,.78)),url(${scenario.background})` }}>
       <div className="lrn-av-vignette" />
 
@@ -1025,6 +1089,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
           <div className="lrn-av-start-cast" aria-hidden="true">
             <img className="teacher" src={scenario.teacherSprite} alt="" />
             <img className="link" src={scenario.linkSprite} alt="" />
+            {scenario.guestSprite && <img className="mio" src={scenario.guestSprite} alt="" />}
           </div>
           <div className="lrn-av-objective"><b>MISSION</b><span>{resolve(scenario.objective)}</span></div>
           <button className="lrn-av-primary" onClick={() => setStarted(true)}>{scenario.startLabel ?? "捜査を始める"}</button>
@@ -1050,11 +1115,12 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
           <div className="lrn-av-cast" aria-hidden="true">
             <img className={`teacher ${speaker === "teacher" ? "is-speaking" : speaker ? "is-dim" : ""}`} src={scenario.teacherSprite} alt="" />
             <img className={`link ${speaker === "link" ? "is-speaking" : speaker ? "is-dim" : ""}`} src={scenario.linkSprite} alt="" />
+            {scenario.guestSprite && <img className={`mio ${speaker === "mio" ? "is-speaking" : speaker ? "is-dim" : ""}`} src={scenario.guestSprite} alt="" />}
           </div>
 
           {node?.kind === "dialogue" && currentLine && (
             <div className={`lrn-av-dialogue is-${currentLine.who}`} key={node.id}>
-              <div className="lrn-av-speaker">{currentLine.who === "teacher" ? "ミルトン・エリクソン" : "清瀬リンク"}</div>
+              <div className="lrn-av-speaker">{currentLine.who === "teacher" ? "ミルトン・エリクソン" : currentLine.who === "mio" ? (scenario.guestName ?? "雨宮ミオ") : "清瀬リンク"}</div>
               <p><TypewriterText text={currentLine.text} /></p>
               <div className="lrn-av-dialogue-controls">
                 <button onClick={back} disabled={idx === 0}>← 戻る</button>
@@ -1240,13 +1306,10 @@ function DialoguePart({
       try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
       catch { return fallback; }
     };
+    const questionContext = episodeQuestionContext(ep, read);
     return {
       userName,
       stuckMoment: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
-      theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
-      exception: "できない方向から目を外し、今分かる感覚へ注意を移した場面",
-      clue: read("channel", "今、聞こえている声"),
-      resource: "『できないのに、やらなきゃ』から目を外し、今できる方向から次の暗示を作る",
       firstJudgment: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
       channel: read("channel", "").startsWith("『海辺")
         ? read("channel", "")
@@ -1254,6 +1317,13 @@ function DialoguePart({
       resistanceScene: read("resistanceScene", "私は絶対に催眠にかかりません"),
       openingMove: read("openingMove", "目を閉じない自由を残し、まぶたの感覚を確かめてもらった"),
       personalMove: read("personalMove", "拒否を認め、今の感覚を本人に確かめてもらった"),
+      innerDialogueScene: read("innerDialogueScene", "考えを止めようとして、余計に続いてしまう"),
+      ep3Move: read("ep3Move", "浮かんだ考えを一呼吸の合図へ変えた"),
+      tensionScene: read("tensionScene", "緊張して、最初の一言が出なくなる"),
+      ep4Move: read("ep4Move", "二つの事実から、次の一動作を提案した"),
+      shockScene: read("shockScene", "予想外の出来事で、最初の答えを決めつけそうになる"),
+      ep5Move: read("ep5Move", "事実を分けて、次に確認する一手を選ばせた"),
+      ...questionContext,
     };
   });
   const rawCur = idx >= 0 ? items[idx] : null;
@@ -1358,7 +1428,7 @@ function DialoguePart({
             <AskSheet ep={ep} sceneNo={cur.scene?.no ?? 0} tickets={tickets} onUse={onUseTicket} onClose={closeAsk}
               context={{
                 location: cur.scene?.title ?? "解説講義",
-                objective: "事件と短い催眠体験を、催眠・暗示・Utilizationの仕組みとして理解する",
+                objective: lectureValues.objective,
                 nodeKind: "lecture",
                 theme: lectureValues.theme,
                 exception: lectureValues.exception,
@@ -1383,25 +1453,11 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
       try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
       catch { return fallback; }
     };
-    const ep2 = ep === "ep2";
+    const episodeContext = episodeQuestionContext(ep, read);
     return {
       location: "講義後の振り返り",
-      objective: ep2
-        ? "拒否を消そうとせず、相手が今確認できる反応から催眠を始める順番を理解する"
-        : "命令と暗示の違い、自己暗示とUtilizationのつながりを理解する",
       nodeKind: "final-qa",
-      theme: ep2
-        ? read("resistanceScene", "私は絶対に催眠にかかりません")
-        : read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
-      exception: ep2
-        ? "拒否したまま、まぶたや呼吸を本人に確かめてもらった場面"
-        : "できない方向から目を外し、今分かる感覚へ注意を移した場面",
-      clue: ep2
-        ? read("openingMove", "目を閉じない自由を残し、まぶたの感覚を確かめてもらった")
-        : read("channel", "今、聞こえている声"),
-      resource: ep2
-        ? read("personalMove", "拒否を認め、今の感覚を本人に確かめてもらった")
-        : read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
+      ...episodeContext,
     };
   });
   return (
@@ -1572,6 +1628,12 @@ export function LearnPlayer({ episode, userName, startPart }: { episode: Episode
     scrollRef.current?.scrollTo({ top: 0 });
     try { window.localStorage.setItem(`learn:${episode.key}:flow:${LEARN_PROGRESS_VERSION}:part`, String(pi)); } catch { /* ignore */ }
   }, [episode.key, pi, progressReady]);
+
+  useEffect(() => {
+    if (!progressReady || episode.key !== "ep5") return;
+    // 第5話の喪失は物語上の封印。獲得データ自体は削除しない。
+    try { window.localStorage.setItem("learn:story:archiveBreach", "ep5"); } catch { /* ignore */ }
+  }, [episode.key, progressReady]);
 
   const next = useCallback(() => {
     voice.stop();

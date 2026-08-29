@@ -23,6 +23,7 @@ export function CardShelf({ catalog, previewUnlocked = false }: {
   previewUnlocked?: boolean;
 }) {
   const [unlockedEpisodes, setUnlockedEpisodes] = useState<string[]>([]);
+  const [archiveBreach, setArchiveBreach] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
@@ -32,6 +33,7 @@ export function CardShelf({ catalog, previewUnlocked = false }: {
       try {
         const saved = JSON.parse(localStorage.getItem("learn:cards") || "[]") as SavedUnlock[];
         setUnlockedEpisodes(saved.flatMap((item) => typeof item?.ep === "string" ? [item.ep] : []));
+        setArchiveBreach(localStorage.getItem("learn:story:archiveBreach") === "ep5");
       } catch {
         setUnlockedEpisodes([]);
       } finally {
@@ -48,6 +50,18 @@ export function CardShelf({ catalog, previewUnlocked = false }: {
 
   if (!loaded && !previewUnlocked) {
     return <div className="lrn-vault-loading">宝箱を開いています…</div>;
+  }
+
+  if (archiveBreach && !previewUnlocked) {
+    return (
+      <section className="lrn-vault-empty is-breached">
+        <div className="lrn-vault-breach-mark" aria-hidden="true">!</div>
+        <span className="lrn-vault-breach-kicker">ARCHIVE INCIDENT</span>
+        <h2>原理カードが、保管庫から消えています</h2>
+        <p>獲得記録は失われていません。ただし第5話の事件により、カードの閲覧は物語上封印されています。</p>
+        <Link href="/learn/ep5">第5話の事件を追う</Link>
+      </section>
+    );
   }
 
   if (cards.length === 0) {

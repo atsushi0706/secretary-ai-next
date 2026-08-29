@@ -3,10 +3,17 @@
 import { useEffect, useState } from "react";
 import { EP1 } from "@/lib/learn/ep1";
 import { EP2 } from "@/lib/learn/ep2";
+import { EP3 } from "@/lib/learn/ep3";
+import { EP4 } from "@/lib/learn/ep4";
+import { EP5 } from "@/lib/learn/ep5";
 import { LearnPlayer } from "@/components/learn/LearnPlayer";
 
+type EpisodeKey = "ep1" | "ep2" | "ep3" | "ep4" | "ep5";
+
+const EPISODES = { ep1: EP1, ep2: EP2, ep3: EP3, ep4: EP4, ep5: EP5 } as const;
+
 /** 通信を偽物にして、本物の LearnPlayer を動かす */
-export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episodeKey?: "ep1" | "ep2" }) {
+export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episodeKey?: EpisodeKey }) {
   const [ready, setReady] = useState(false);
   useEffect(() => {
     const real = window.fetch.bind(window);
@@ -29,14 +36,24 @@ export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episo
         const forcesCompliance = /(目を閉じ(?:て|ろ)|絶対|必ず|信じて|従って|気づかれないよう)/.test(answer);
         const correct = episodeKey === "ep2"
           ? acceptsRefusal && invitesObservation && !forcesCompliance
-          : !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(answer);
-        const feedback = episodeKey === "ep2"
-          ? correct
-            ? "正解です。断る自由と、本人が確かめられる感覚の両方が入っています。"
-            : "拒否を認める言葉と、今確かめられる感覚を一つ入れてください。"
-          : correct
-            ? "正解です。今できる一動作へ注意を移せています。"
-            : "完成ではなく、今すぐできる一動作まで小さくしてください。";
+          : episodeKey === "ep3"
+            ? /(考え|言葉|浮か)/.test(answer) && /(息|呼吸|感覚)/.test(answer) && !/(考えるな|止めろ|頭を空)/.test(answer)
+            : episodeKey === "ep4"
+              ? /(足|床|息|呼吸|声|椅子|震え)/.test(answer) && /(名前|一言|試|してみ)/.test(answer) && !/(全部|必ず|落ち着け)/.test(answer)
+              : episodeKey === "ep5"
+                ? /(カード|印|映像|事実|見える)/.test(answer) && /(確認|次|選)/.test(answer) && !/(犯人|全部嘘|忘れろ)/.test(answer)
+                : !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(answer);
+        const feedback = correct
+          ? "正解です。この回で学んだ順番が一言の中に入っています。"
+          : episodeKey === "ep2"
+            ? "拒否を認める言葉と、今確かめられる感覚を一つ入れてください。"
+            : episodeKey === "ep3"
+              ? "考えを止めず、浮かんだことを呼吸などの感覚へつないでください。"
+              : episodeKey === "ep4"
+                ? "今分かる事実を二つ、その続きに選べる一動作を一つ入れてください。"
+                : episodeKey === "ep5"
+                  ? "犯人や意味を決めず、今分かる事実から次の確認行動へつないでください。"
+                  : "完成ではなく、今すぐできる一動作まで小さくしてください。";
         return new Response(JSON.stringify({ correct, feedback }), {
           status: 200, headers: { "Content-Type": "application/json" },
         });
@@ -70,7 +87,7 @@ export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episo
                 ? "声も、体の感覚も分からないと言われたら、無理に続けません。別の方法を一緒に探すか、本人が望めばそこで終わります。"
                 : isEp2
                   ? `「${question}」ですね。${evidence ? `いま持っている「${evidence}」から考えると、` : "第2話の事件から考えると、"}拒否を説得で消さず、断れる状態を残します。そのうえで、本人が今確かめられる感覚から催眠を始めます。`
-                  : `「${question}」ですね。${evidence ? `いま持っている「${evidence}」から考えると、` : "第1話の内容から考えると、"}先に、できない方向を頑張り続ける自己暗示から目を外します。その後で、今分かる感覚やできる動作へ注意を移し、次の暗示を作ります。`;
+                  : `「${question}」ですね。${evidence ? `いま持っている「${evidence}」から考えると、` : `第${episodeKey.slice(2)}話の内容から考えると、`}${context.resource || "今分かる感覚やできる動作から、次の暗示を作ります。"}`;
         return new Response(JSON.stringify({ answer }), {
           status: 200, headers: { "Content-Type": "application/json" },
         });
@@ -86,5 +103,5 @@ export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episo
     };
   }, [episodeKey]);
   if (!ready) return null;
-  return <LearnPlayer episode={episodeKey === "ep2" ? EP2 : EP1} userName="淳くん" startPart={part} />;
+  return <LearnPlayer episode={EPISODES[episodeKey]} userName="淳くん" startPart={part} />;
 }

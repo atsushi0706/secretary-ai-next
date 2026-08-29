@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 const faceSchema = z.enum(["neutral", "smile", "think", "aha", "laugh", "shy"]);
-const cameraSchema = z.enum(["wide", "teacher", "link", "evidence"]);
+const cameraSchema = z.enum(["wide", "teacher", "link", "mio", "evidence"]);
 
 const lineSchema = z.object({
   id: z.string().min(1),
-  who: z.enum(["teacher", "link"]),
+  who: z.enum(["teacher", "link", "mio"]),
   text: z.string().min(1),
   pause: z.number().optional(),
   face: faceSchema.optional(),
@@ -169,6 +169,8 @@ export const adventureScenarioSchema = z.object({
   background: z.string().min(1),
   teacherSprite: z.string().min(1),
   linkSprite: z.string().min(1),
+  guestSprite: z.string().min(1).optional(),
+  guestName: z.string().min(1).optional(),
   startLabel: z.string().optional(),
   evidence: z.array(evidenceSchema).min(3),
   nodes: z.array(nodeSchema).min(8),

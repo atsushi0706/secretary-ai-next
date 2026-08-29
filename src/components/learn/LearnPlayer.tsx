@@ -538,14 +538,17 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     setIdx((i) => Math.max(0, i - 1));
   }
 
-  async function choose(option: Extract<ExpStep, { kind: "choice" }>["options"][number]) {
+  async function choose(
+    option: Extract<ExpStep, { kind: "choice" }>["options"][number],
+    useDetail = true,
+  ) {
     voice.stop();
     const updates: Record<string, string> = {};
     if (step?.kind === "choice" && step.storeAs && option.value) {
       const value = resolve(option.value);
       updates[step.storeAs] = value;
     }
-    if (step?.kind === "choice" && step.detail) {
+    if (step?.kind === "choice" && step.detail && useDetail) {
       const detailValue = values[step.detail.id]?.trim();
       const fallback = option.value ? resolve(option.value) : resolve(option.label);
       const storeAs = step.detail.storeAs ?? step.detail.id;
@@ -593,6 +596,19 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
       value: detailValue,
       then: step.detail.then ?? [],
     });
+  }
+
+  function selectChoice(option: Extract<ExpStep, { kind: "choice" }>["options"][number]) {
+    if (step?.kind !== "choice") return;
+    if (step.completion === "option-or-detail") {
+      void choose(option, false);
+      return;
+    }
+    if (step.detail) {
+      setPendingChoice(option);
+      return;
+    }
+    void choose(option);
   }
 
   function skipInput(input: Extract<ExpStep, { kind: "input" }>) {
@@ -689,7 +705,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
                 <h3>{resolve(step.q)}</h3>
                 {step.help && <p>{resolve(step.help)}</p>}
                 <div className="lrn-exp-options">
-                  {step.options.map((o, i) => <button key={o.label} className={pendingChoice?.label === o.label ? "is-selected" : ""} onClick={() => step.detail ? setPendingChoice(o) : void choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>{pendingChoice?.label === o.label ? "✓" : "→"}</i></button>)}
+                  {step.options.map((o, i) => <button key={o.label} className={pendingChoice?.label === o.label ? "is-selected" : ""} onClick={() => selectChoice(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>{pendingChoice?.label === o.label ? "✓" : "→"}</i></button>)}
                 </div>
                 {step.detail && <div className="lrn-exp-choice-detail">
                   <label htmlFor={`learn-detail-${step.detail.id}`}>{resolve(step.detail.label)} <small>{step.completion === "option-or-detail" ? "三択なしでも送れます" : "任意"}</small></label>
@@ -719,8 +735,8 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
             {step && step.kind !== "choice" && step.kind !== "fade" && (
               <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
             )}
-            {step?.kind === "choice" && step.detail && (
-              <button className="lrn-exp-next" onClick={confirmChoice} disabled={(!pendingChoice && !(step.completion === "option-or-detail" && detailReady)) || summarizing}>{summarizing ? "一文にまとめています…" : "この内容で進む →"}</button>
+            {step?.kind === "choice" && step.detail && step.completion !== "option-or-detail" && (
+              <button className="lrn-exp-next" onClick={confirmChoice} disabled={!pendingChoice || summarizing}>{summarizing ? "一文にまとめています…" : "この内容で進む →"}</button>
             )}
           </div>
         </>

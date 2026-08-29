@@ -144,8 +144,33 @@ function splitJapaneseSentences(text: string) {
 }
 
 function SentenceText({ text }: { text: string }) {
-  const sentences = splitJapaneseSentences(text);
+  const manualParagraphs = text.split("\n").map((paragraph) => paragraph.trim()).filter(Boolean);
+  const sentences = manualParagraphs.length > 1 ? manualParagraphs : splitJapaneseSentences(text);
   return <>{sentences.map((sentence, index) => <span className="lrn-sentence-block" key={`${index}-${sentence}`}>{sentence}</span>)}</>;
+}
+
+function TypewriterText({ text, speed = 18 }: { text: string; speed?: number }) {
+  const characters = useMemo(() => Array.from(text), [text]);
+  const [visibleCount, setVisibleCount] = useState(0);
+
+  useEffect(() => {
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const frame = window.requestAnimationFrame(() => setVisibleCount(characters.length));
+      return () => window.cancelAnimationFrame(frame);
+    }
+    const timer = window.setInterval(() => {
+      setVisibleCount((count) => {
+        if (count >= characters.length) {
+          window.clearInterval(timer);
+          return count;
+        }
+        return count + 1;
+      });
+    }, speed);
+    return () => window.clearInterval(timer);
+  }, [characters, speed]);
+
+  return <span className="lrn-typewriter" aria-label={text}><span aria-hidden="true">{characters.slice(0, visibleCount).join("")}</span></span>;
 }
 
 function Stage({
@@ -162,7 +187,7 @@ function Stage({
         {line ? (
           <div className={`lrn-bubble is-${line.who}`} key={line.id}>
             <span className="lrn-name">{line.who === "teacher" ? "エリクソン" : "リンク"}</span>
-            <p><SentenceText text={line.text} /></p>
+            <p><TypewriterText text={line.text} /></p>
           </div>
         ) : <div className="lrn-bubble is-blank" />}
         {aside}
@@ -595,7 +620,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
           </div>
           <div className={`lrn-exp-bridge-dialogue is-${bridgeBeat?.who ?? "teacher"}`}>
             <b>{bridgeBeat?.who === "link" ? "清瀬リンク" : "エリクソン"}</b>
-            <p>{bridgeBeat ? resolve(bridgeBeat.text) : "漫画の続きを、あなた自身の場面へつなげます。"}</p>
+            <p><TypewriterText key={`bridge-${bridgeBeatIndex}`} text={bridgeBeat ? resolve(bridgeBeat.text) : "漫画の続きを、あなた自身の場面へつなげます。"} /></p>
           </div>
           <button className="lrn-cta" onClick={advanceBridge}>{bridgeIsLast ? resolve(bridge.cta) : "会話を続ける →"}</button>
         </div>
@@ -621,10 +646,10 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
 
           <div className="lrn-exp-dialogue">
             {line && <div className="lrn-exp-speaker">{mentorSpeaker}</div>}
-            {step?.kind === "say" && <p key={step.line.id} className="lrn-exp-line">{resolve(step.line.text)}</p>}
+            {step?.kind === "say" && <p key={step.line.id} className="lrn-exp-line"><TypewriterText text={resolve(step.line.text)} /></p>}
             {step?.kind === "input" && (
               <div className="lrn-exp-turn">
-                {line && <p className="lrn-exp-question-line">{line.text}</p>}
+                {line && <p className="lrn-exp-question-line"><TypewriterText key={line.id} text={line.text} /></p>}
                 <div className="lrn-exp-prompt">
                 <div className="lrn-exp-step">INPUT ・ {idx + 1}</div>
                 <h3>{resolve(step.title)}</h3>
@@ -643,7 +668,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
             )}
             {step?.kind === "scale" && (
               <div className="lrn-exp-turn">
-                {line && <p className="lrn-exp-question-line">{line.text}</p>}
+                {line && <p className="lrn-exp-question-line"><TypewriterText key={line.id} text={line.text} /></p>}
                 <div className="lrn-exp-prompt lrn-exp-scale">
                 <div className="lrn-exp-step">SCALE ・ {idx + 1}</div>
                 <h3>{resolve(step.title)}</h3>
@@ -736,6 +761,9 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
   const [activeEvidence, setActiveEvidence] = useState<{ evidence: AdventureEvidence; comment: string } | null>(null);
+  const [guidedCompletedIds, setGuidedCompletedIds] = useState<string[]>([]);
+  const [guidedSubmittedId, setGuidedSubmittedId] = useState<string | null>(null);
+  const [summarizingKey, setSummarizingKey] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [feedback, setFeedback] = useState("");
   const [solved, setSolved] = useState<Record<string, boolean>>({});
@@ -791,12 +819,57 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     setActiveEvidence({ evidence, comment: step.linkComment });
   }
 
-  function submitRecall(recall: Extract<AdventureNode, { kind: "recall" }>, forcedValue?: string) {
-    const value = (forcedValue ?? values[recall.storeAs] ?? "").trim();
-    if (!value) return;
+  async function summarizePlayerAnswer(raw: string, question: string) {
+    const cleaned = raw.replace(/[\r\n\t]+/g, " ").replace(/\s{2,}/g, " ").trim();
+    if (cleaned.length <= 55) return cleaned.replace(/[。！？]+$/, "");
+    try {
+      const response = await fetch("/api/learn/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: cleaned, question, mode: "insight" }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      const summary = typeof payload?.summary === "string" ? payload.summary.trim() : "";
+      if (response.ok && summary) return summary;
+    } catch { /* 元の意味を変えない短縮へフォールバック */ }
+    const firstSentence = cleaned.split(/[。！？]/)[0]?.trim() || cleaned;
+    return firstSentence.length <= 70 ? firstSentence : `${firstSentence.slice(0, 69)}…`;
+  }
+
+  async function submitRecall(recall: Extract<AdventureNode, { kind: "recall" }>, forcedValue?: string) {
+    const raw = (forcedValue ?? values[recall.storeAs] ?? "").trim();
+    if (!raw || summarizingKey) return;
+    setSummarizingKey(recall.storeAs);
+    const value = forcedValue ? raw : await summarizePlayerAnswer(raw, resolve(recall.title));
     setValues((old) => ({ ...old, [recall.storeAs]: value }));
-    try { localStorage.setItem(`learn:${ep}:${recall.storeAs}`, value); } catch { /* ignore */ }
+    try {
+      localStorage.setItem(`learn:${ep}:${recall.storeAs}`, value);
+      if (!forcedValue) localStorage.setItem(`learn:${ep}:${recall.storeAs}Raw`, raw);
+    } catch { /* ignore */ }
+    setSummarizingKey(null);
     advance();
+  }
+
+  async function submitGuidedReflection(
+    step: Extract<AdventureNode, { kind: "guided-investigation" }>["steps"][number],
+    forcedValue?: string,
+  ) {
+    const raw = (forcedValue ?? values[step.storeAs] ?? "").trim();
+    if (!raw || summarizingKey) return;
+    setSummarizingKey(step.storeAs);
+    const value = forcedValue ? raw : await summarizePlayerAnswer(raw, resolve(step.reflectionPrompt));
+    setValues((old) => ({ ...old, [step.storeAs]: value }));
+    try {
+      localStorage.setItem(`learn:${ep}:${step.storeAs}`, value);
+      if (!forcedValue) localStorage.setItem(`learn:${ep}:${step.storeAs}Raw`, raw);
+    } catch { /* ignore */ }
+    setGuidedSubmittedId(step.id);
+    setSummarizingKey(null);
+  }
+
+  function completeGuidedReflection(stepId: string) {
+    setGuidedCompletedIds((ids) => ids.includes(stepId) ? ids : [...ids, stepId]);
+    setGuidedSubmittedId(null);
   }
 
   function choose(
@@ -814,6 +887,45 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     }
   }
 
+  async function evaluateFreeAnswer(challenge: Extract<AdventureNode, { kind: "apply" }>) {
+    if (!challenge.freeAnswer || summarizingKey) return;
+    const raw = (values[challenge.freeAnswer.storeAs] ?? "").trim();
+    if (!raw) return;
+    setSummarizingKey(challenge.freeAnswer.storeAs);
+    let correct = !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(raw);
+    let responseText = correct
+      ? "正解です。完成ではなく、今できる一動作へ注意を移せています。"
+      : "まだ『できない完成』へ注意が残っています。今すぐ本当にできる一動作まで小さくしてください。";
+    try {
+      const response = await fetch("/api/learn/evaluate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          question: resolve(challenge.title),
+          answer: raw,
+          correctCriteria: challenge.freeAnswer.correctCriteria,
+          incorrectCriteria: challenge.freeAnswer.incorrectCriteria,
+        }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (response.ok && typeof payload?.correct === "boolean" && typeof payload?.feedback === "string") {
+        correct = payload.correct;
+        responseText = payload.feedback.trim();
+      }
+    } catch { /* 通信できない場合も、画面内の基準で判定して止めない */ }
+    setSelectedId("custom-answer");
+    setFeedback(responseText);
+    if (correct) {
+      setSolved((old) => ({ ...old, [challenge.id]: true }));
+      setValues((old) => ({ ...old, [challenge.storeAs]: raw }));
+      try {
+        localStorage.setItem(`learn:${ep}:${challenge.storeAs}`, raw);
+        localStorage.setItem(`learn:${ep}:${challenge.freeAnswer.storeAs}`, raw);
+      } catch { /* ignore */ }
+    }
+    setSummarizingKey(null);
+  }
+
   const speaker = currentLine?.who ?? (node?.kind === "recall" || node?.kind === "guided-investigation" ? "link" : null);
   const sceneName = node?.scene ?? scenario.title;
   const gatheredHere = node?.kind === "investigate"
@@ -822,10 +934,12 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
   const investigateDone = node?.kind === "investigate" && gatheredHere === node.spots.length;
   const currentInvestigateSpot = node?.kind === "investigate" ? node.spots[gatheredHere] ?? null : null;
   const gatheredGuided = node?.kind === "guided-investigation"
-    ? node.steps.filter((step) => evidenceIds.includes(step.evidenceId)).length
+    ? node.steps.filter((step) => guidedCompletedIds.includes(step.id)).length
     : 0;
   const currentGuidedStep = node?.kind === "guided-investigation" ? node.steps[gatheredGuided] ?? null : null;
   const guidedDone = node?.kind === "guided-investigation" && gatheredGuided === node.steps.length;
+  const currentGuidedViewed = currentGuidedStep ? evidenceIds.includes(currentGuidedStep.evidenceId) : false;
+  const currentGuidedSubmitted = currentGuidedStep ? guidedSubmittedId === currentGuidedStep.id : false;
   const availableEvidenceIds = useMemo(() => new Set(evidenceIds), [evidenceIds]);
   const availableEvidence = scenario.evidence.filter((item) => availableEvidenceIds.has(item.id));
 
@@ -872,7 +986,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
           {node?.kind === "dialogue" && currentLine && (
             <div className={`lrn-av-dialogue is-${currentLine.who}`} key={node.id}>
               <div className="lrn-av-speaker">{currentLine.who === "teacher" ? "ミルトン・エリクソン" : "清瀬リンク"}</div>
-              <p><SentenceText text={currentLine.text} /></p>
+              <p><TypewriterText text={currentLine.text} /></p>
               <div className="lrn-av-dialogue-controls">
                 <button onClick={back} disabled={idx === 0}>← 戻る</button>
                 <button className="next" onClick={advance}>{node.nextLabel ?? "会話を続ける"} <span>›</span></button>
@@ -924,9 +1038,35 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
                 <div className="lrn-av-guided-count">本を読み返す　{Math.min(gatheredGuided + 1, node.steps.length)} / {node.steps.length}</div>
                 <div className="lrn-av-guided-link"><img src={scenario.linkSprite} alt="" /><b>清瀬リンク</b></div>
                 <h3>{resolve(node.title)}</h3>
-                {currentGuidedStep && !activeEvidence && <>
+                {currentGuidedStep && !activeEvidence && !currentGuidedViewed && <>
                   <p>{resolve(currentGuidedStep.linkPrompt)}</p>
                   <button className="lrn-av-primary" onClick={() => inspectGuided(currentGuidedStep)}>{currentGuidedStep.actionLabel}</button>
+                </>}
+                {currentGuidedStep && !activeEvidence && currentGuidedViewed && !currentGuidedSubmitted && <>
+                  <p className="lrn-av-guided-question">{resolve(currentGuidedStep.reflectionPrompt)}</p>
+                  <div className="lrn-av-recall-field">
+                    <textarea rows={3} value={values[currentGuidedStep.storeAs] ?? ""}
+                      onChange={(event) => setValues((old) => ({ ...old, [currentGuidedStep.storeAs]: event.target.value }))}
+                      placeholder={currentGuidedStep.placeholder ? resolve(currentGuidedStep.placeholder) : undefined} />
+                    <VoiceInput mode="learning" compact onText={(text) => setValues((old) => ({
+                      ...old,
+                      [currentGuidedStep.storeAs]: old[currentGuidedStep.storeAs]?.trim() ? `${old[currentGuidedStep.storeAs].trim()}\n${text}` : text,
+                    }))} />
+                  </div>
+                  {currentGuidedStep.helper && <small>{resolve(currentGuidedStep.helper)}</small>}
+                  <div className="lrn-av-recall-actions">
+                    {currentGuidedStep.skipLabel && currentGuidedStep.skipValue && <button disabled={Boolean(summarizingKey)} onClick={() => void submitGuidedReflection(currentGuidedStep, currentGuidedStep.skipValue)}>{currentGuidedStep.skipLabel}</button>}
+                    <button className="lrn-av-primary" disabled={!values[currentGuidedStep.storeAs]?.trim() || Boolean(summarizingKey)} onClick={() => void submitGuidedReflection(currentGuidedStep)}>
+                      {summarizingKey === currentGuidedStep.storeAs ? "考えをまとめています…" : "リンクに答える"}
+                    </button>
+                  </div>
+                </>}
+                {currentGuidedStep && !activeEvidence && currentGuidedSubmitted && <>
+                  <div className="lrn-av-guided-response">
+                    <b>リンク</b>
+                    <p><TypewriterText text={resolve(currentGuidedStep.linkResponse)} /></p>
+                  </div>
+                  <button className="lrn-av-primary" onClick={() => completeGuidedReflection(currentGuidedStep.id)}>{currentGuidedStep.nextLabel ?? "次へ進む"}</button>
                 </>}
                 {guidedDone && !activeEvidence && <>
                   <p>見た場面をつなげて、リンクに気づいたことを一言で話してみよう。</p>
@@ -953,7 +1093,26 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
                   </button>;
                 })}
               </div>
-              {feedback && <div className={`lrn-av-feedback ${solved[node.id] ? "is-correct" : ""}`}><b>リンク</b><span>{feedback}</span></div>}
+              {node.kind === "apply" && node.freeAnswer && <div className="lrn-av-free-answer">
+                <label htmlFor={`learn-${node.id}-free`}>{resolve(node.freeAnswer.label)}</label>
+                <div className="lrn-av-recall-field">
+                  <textarea id={`learn-${node.id}-free`} rows={3}
+                    value={values[node.freeAnswer.storeAs] ?? ""}
+                    onChange={(event) => setValues((old) => ({ ...old, [node.freeAnswer!.storeAs]: event.target.value }))}
+                    placeholder={resolve(node.freeAnswer.placeholder)} />
+                  <VoiceInput mode="learning" compact onText={(text) => setValues((old) => ({
+                    ...old,
+                    [node.freeAnswer!.storeAs]: old[node.freeAnswer!.storeAs]?.trim() ? `${old[node.freeAnswer!.storeAs].trim()}\n${text}` : text,
+                  }))} />
+                </div>
+                <small>{resolve(node.freeAnswer.helper)}</small>
+                <button type="button" className="lrn-av-free-submit"
+                  disabled={!values[node.freeAnswer.storeAs]?.trim() || Boolean(summarizingKey) || Boolean(solved[node.id])}
+                  onClick={() => void evaluateFreeAnswer(node)}>
+                  {summarizingKey === node.freeAnswer.storeAs ? "判定しています…" : "この一言を判定する"}
+                </button>
+              </div>}
+              {feedback && <div className={`lrn-av-feedback ${solved[node.id] ? "is-correct" : ""}`}><b>リンク</b><span><TypewriterText key={feedback} text={feedback} /></span></div>}
               {solved[node.id] && <button className="lrn-av-primary" onClick={advance}>{node.kind === "apply" ? "この一手を使う" : "推理を確定する"}</button>}
             </div>
           )}
@@ -982,7 +1141,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
                 {activeEvidence.evidence.image && <img className="lrn-av-evidence-scene" src={activeEvidence.evidence.image} alt={activeEvidence.evidence.imageAlt ?? activeEvidence.evidence.title} />}
                 <b>{activeEvidence.evidence.summary}</b>
                 <p>{activeEvidence.evidence.detail}</p>
-                <div className="link-comment"><img src={scenario.linkSprite} alt="清瀬リンク" /><span>{activeEvidence.comment}</span></div>
+                <div className="link-comment"><img src={scenario.linkSprite} alt="清瀬リンク" /><span><TypewriterText text={activeEvidence.comment} /></span></div>
                 <button className="lrn-av-primary" onClick={() => setActiveEvidence(null)}>{node?.kind === "guided-investigation" ? "本を閉じてリンクと話す" : "証拠ファイルへ保存"}</button>
               </div>
             </div>

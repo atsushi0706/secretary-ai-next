@@ -74,6 +74,14 @@ const guidedInvestigationNodeSchema = z.object({
     actionLabel: z.string().min(1),
     evidenceId: z.string().min(1),
     linkComment: z.string().min(1),
+    reflectionPrompt: z.string().min(1),
+    placeholder: z.string().optional(),
+    helper: z.string().optional(),
+    storeAs: z.string().min(1),
+    skipLabel: z.string().optional(),
+    skipValue: z.string().optional(),
+    linkResponse: z.string().min(1),
+    nextLabel: z.string().optional(),
   })).min(1),
   nextLabel: z.string().optional(),
 });
@@ -91,6 +99,11 @@ const deductionNodeSchema = z.object({
   scene: z.string().min(1),
   title: z.string().min(1),
   prompt: z.string().min(1),
+  questionBasis: z.object({
+    subject: z.string().min(1),
+    before: z.string().min(1),
+    asks: z.string().min(1),
+  }),
   hint: z.string().optional(),
   options: z.array(optionSchema).min(3),
 });
@@ -101,8 +114,21 @@ const applyNodeSchema = z.object({
   scene: z.string().min(1),
   title: z.string().min(1),
   prompt: z.string().min(1),
+  questionBasis: z.object({
+    subject: z.string().min(1),
+    before: z.string().min(1),
+    asks: z.string().min(1),
+  }),
   storeAs: z.string().min(1),
   options: z.array(optionSchema.extend({ value: z.string().min(1) })).min(3),
+  freeAnswer: z.object({
+    label: z.string().min(1),
+    placeholder: z.string().min(1),
+    helper: z.string().min(1),
+    storeAs: z.string().min(1),
+    correctCriteria: z.string().min(1),
+    incorrectCriteria: z.string().min(1),
+  }).optional(),
 });
 
 const revealNodeSchema = z.object({
@@ -231,6 +257,12 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
       const correct = node.options.filter((o) => o.correct);
       if (correct.length !== 1) push("error", "system", `${node.id}: 正解は必ず一つにしてください。`);
       if (node.options.some((o) => !o.feedback.trim())) push("error", "game", `${node.id}: 全選択肢に即時フィードバックが必要です。`);
+      if (node.title.includes("最初") && !node.questionBasis.before.includes("後") && !node.questionBasis.before.includes("時")) {
+        push("error", "beginner", `${node.id}: 「最初」と問うなら、何が起きた後・どの状態の時なのかを questionBasis.before で定義してください。`);
+      }
+      if (/[こそ]れ|その後|何が違/.test(node.title) && !node.title.includes(node.questionBasis.subject)) {
+        push("warning", "beginner", `${node.id}: 問いの主語・比較する場面を画面の文だけで取り戻せるか確認してください。`);
+      }
 
       if (node.kind === "deduction" && correct.length === 1) {
         const normalize = (text: string) => text.replace(/[\s『』「」、。？?！!・→]/g, "");
@@ -246,6 +278,15 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
     }
     if (node.kind === "reveal" && node.evidenceIds?.length) {
       push("warning", "beginner", `${node.id}: 結論画面に証拠一覧を重ねています。見出し・短い説明・次への操作だけで意味が通るなら削除してください。`);
+    }
+    if (node.kind === "guided-investigation") {
+      const storeKeys = node.steps.map((step) => step.storeAs);
+      if (new Set(storeKeys).size !== storeKeys.length) push("error", "system", `${node.id}: 各ページの回答保存先を分けてください。`);
+      node.steps.forEach((step) => {
+        if (!step.linkResponse.includes(`{{${step.storeAs}}}`)) {
+          push("error", "story", `${step.id}: 本を見た後のプレイヤー回答を、リンクが短く受け取る会話に使ってください。`);
+        }
+      });
     }
   });
 

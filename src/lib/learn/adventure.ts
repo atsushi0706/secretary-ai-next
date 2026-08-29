@@ -61,6 +61,8 @@ const recallNodeSchema = z.object({
   storeAs: z.string().min(1),
   skipLabel: z.string().optional(),
   skipValue: z.string().optional(),
+  /** AI応答が作れない時も、回答を引用せず自然に次へ渡す台詞 */
+  replyFallback: z.string().min(1),
 });
 
 const guidedInvestigationNodeSchema = z.object({
@@ -80,6 +82,8 @@ const guidedInvestigationNodeSchema = z.object({
     storeAs: z.string().min(1),
     skipLabel: z.string().optional(),
     skipValue: z.string().optional(),
+    /** AI応答が作れない時も、回答を引用せず自然に次へ渡す台詞 */
+    replyFallback: z.string().min(1),
     linkResponse: z.string().min(1),
     nextLabel: z.string().optional(),
   })).min(1),
@@ -103,6 +107,8 @@ const deductionNodeSchema = z.object({
     subject: z.string().min(1),
     before: z.string().min(1),
     asks: z.string().min(1),
+    /** この問いに答えた結果、学習者・登場人物が何をできるようにするか */
+    goal: z.string().min(1),
   }),
   hint: z.string().optional(),
   options: z.array(optionSchema).min(3),
@@ -118,6 +124,8 @@ const applyNodeSchema = z.object({
     subject: z.string().min(1),
     before: z.string().min(1),
     asks: z.string().min(1),
+    /** この問いに答えた結果、学習者・登場人物が何をできるようにするか */
+    goal: z.string().min(1),
   }),
   storeAs: z.string().min(1),
   options: z.array(optionSchema.extend({ value: z.string().min(1) })).min(3),
@@ -263,6 +271,9 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
       if (/[こそ]れ|その後|何が違/.test(node.title) && !node.title.includes(node.questionBasis.subject)) {
         push("warning", "beginner", `${node.id}: 問いの主語・比較する場面を画面の文だけで取り戻せるか確認してください。`);
       }
+      if (node.questionBasis.goal.length < 12) {
+        push("error", "story", `${node.id}: 問いの目的が抽象的です。答えた結果、誰をどうする・何を理解するのかまで定義してください。`);
+      }
 
       if (node.kind === "deduction" && correct.length === 1) {
         const normalize = (text: string) => text.replace(/[\s『』「」、。？?！!・→]/g, "");
@@ -276,6 +287,15 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
       }
 
     }
+    if (node.kind === "recall") {
+      const nextDialogue = scenario.nodes.slice(nodeIndex + 1).find((candidate) => candidate.kind === "dialogue");
+      if (!nextDialogue || nextDialogue.kind !== "dialogue" || !nextDialogue.line.text.includes(`{{${node.storeAs}Reply}}`)) {
+        push("error", "story", `${node.id}: 自由回答の直後は、生の回答ではなく、AIが核を理解して作る返答を会話へ入れてください。`);
+      }
+      if (nextDialogue?.kind === "dialogue" && (nextDialogue.line.text.includes(`{{${node.storeAs}}}`) || /つまり|なるほど/.test(nextDialogue.line.text))) {
+        push("error", "story", `${node.id}: 自由回答を引用する『つまり〜』『なるほど〜』型のオウム返しは禁止です。`);
+      }
+    }
     if (node.kind === "reveal" && node.evidenceIds?.length) {
       push("warning", "beginner", `${node.id}: 結論画面に証拠一覧を重ねています。見出し・短い説明・次への操作だけで意味が通るなら削除してください。`);
     }
@@ -283,8 +303,11 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
       const storeKeys = node.steps.map((step) => step.storeAs);
       if (new Set(storeKeys).size !== storeKeys.length) push("error", "system", `${node.id}: 各ページの回答保存先を分けてください。`);
       node.steps.forEach((step) => {
-        if (!step.linkResponse.includes(`{{${step.storeAs}}}`)) {
-          push("error", "story", `${step.id}: 本を見た後のプレイヤー回答を、リンクが短く受け取る会話に使ってください。`);
+        if (!step.linkResponse.includes(`{{${step.storeAs}Reply}}`)) {
+          push("error", "story", `${step.id}: 回答をそのまま復唱せず、AIが核を理解して作る返答をリンクの会話に使ってください。`);
+        }
+        if (step.linkResponse.includes(`{{${step.storeAs}}}`) || /つまり|なるほど/.test(step.linkResponse)) {
+          push("error", "story", `${step.id}: 生の回答を引用する『つまり〜』『なるほど〜』型のオウム返しは禁止です。`);
         }
       });
     }

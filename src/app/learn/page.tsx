@@ -2,7 +2,6 @@ import Link from "next/link";
 import { EPISODES } from "@/lib/learn";
 import type { Part } from "@/lib/learn/types";
 import { MangaArt } from "@/components/learn/MangaArt";
-import { CardShelf } from "@/components/learn/CardShelf";
 
 export default function LearnHome() {
   const eps = Object.values(EPISODES);
@@ -32,15 +31,14 @@ export default function LearnHome() {
           </Link>
         ))}
 
-        <div className="lrn-goal">
-          <h2>この回で変わること</h2>
-          <div className="cols">
-            <div>{ep1.goal.before.map((t, i) => <div key={i}>{i ? "↓ " : ""}{t}</div>)}</div>
-            <div className="arrow">→</div>
-            <div className="after">{ep1.goal.after.map((t, i) => <div key={i}>{i ? "↓ " : ""}{t}</div>)}</div>
-          </div>
-          <div className="take">「{ep1.goal.takeaway}」</div>
-        </div>
+        <Link href="/learn/treasure" className="lrn-treasure-door">
+          <span className="lrn-treasure-icon" aria-hidden="true"><i /></span>
+          <span className="lrn-treasure-copy">
+            <b>原理の宝物庫</b>
+            <small>獲得した催眠の原理を、使いどころと一緒に見返す</small>
+          </span>
+          <span className="lrn-treasure-arrow" aria-hidden="true">›</span>
+        </Link>
 
         {teaser && (
           <div className="lrn-epcard is-locked">
@@ -55,8 +53,6 @@ export default function LearnHome() {
             </div>
           </div>
         )}
-
-        <CardShelf />
       </div>
     </main>
   );

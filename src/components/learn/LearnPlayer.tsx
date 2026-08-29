@@ -836,14 +836,46 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     return firstSentence.length <= 70 ? firstSentence : `${firstSentence.slice(0, 69)}…`;
   }
 
+  async function createDialogueReply(
+    raw: string,
+    question: string,
+    fallback: string,
+    speaker: "teacher" | "link" = "link",
+  ) {
+    try {
+      const response = await fetch("/api/learn/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: raw, question, mode: "reply", speaker }),
+      });
+      const payload = await response.json().catch(() => ({}));
+      const reply = typeof payload?.summary === "string" ? payload.summary.trim() : "";
+      const comparable = (value: string) => value.replace(/[\s『』「」、。！？?!・ー〜～]/g, "").toLowerCase();
+      const rawCore = comparable(raw);
+      const replyCore = comparable(reply);
+      const repeatsInput = rawCore.length >= 6 && (replyCore.includes(rawCore) || rawCore.includes(replyCore));
+      const usesParrotTemplate = /なるほど|つまり|ってことだね|と考えたんだね|と見たんだね/.test(reply);
+      if (response.ok && reply && !repeatsInput && !usesParrotTemplate) return reply;
+    } catch { /* 会話を止めず、台本で用意した自然な返答を使う */ }
+    return fallback;
+  }
+
   async function submitRecall(recall: Extract<AdventureNode, { kind: "recall" }>, forcedValue?: string) {
     const raw = (forcedValue ?? values[recall.storeAs] ?? "").trim();
     if (!raw || summarizingKey) return;
     setSummarizingKey(recall.storeAs);
-    const value = forcedValue ? raw : await summarizePlayerAnswer(raw, resolve(recall.title));
-    setValues((old) => ({ ...old, [recall.storeAs]: value }));
+    const question = resolve(recall.title);
+    const [value, reply] = forcedValue
+      ? [raw, recall.replyFallback]
+      : await Promise.all([
+        summarizePlayerAnswer(raw, question),
+        createDialogueReply(raw, question, recall.replyFallback, recall.purpose === "reflection" ? "teacher" : "link"),
+      ]);
+    const replyKey = `${recall.storeAs}Reply`;
+    setValues((old) => ({ ...old, [recall.storeAs]: value, [replyKey]: reply }));
     try {
       localStorage.setItem(`learn:${ep}:${recall.storeAs}`, value);
+      localStorage.setItem(`learn:${ep}:${replyKey}`, reply);
       if (!forcedValue) localStorage.setItem(`learn:${ep}:${recall.storeAs}Raw`, raw);
     } catch { /* ignore */ }
     setSummarizingKey(null);
@@ -857,10 +889,18 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     const raw = (forcedValue ?? values[step.storeAs] ?? "").trim();
     if (!raw || summarizingKey) return;
     setSummarizingKey(step.storeAs);
-    const value = forcedValue ? raw : await summarizePlayerAnswer(raw, resolve(step.reflectionPrompt));
-    setValues((old) => ({ ...old, [step.storeAs]: value }));
+    const question = resolve(step.reflectionPrompt);
+    const [value, reply] = forcedValue
+      ? [raw, step.replyFallback]
+      : await Promise.all([
+        summarizePlayerAnswer(raw, question),
+        createDialogueReply(raw, question, step.replyFallback),
+      ]);
+    const replyKey = `${step.storeAs}Reply`;
+    setValues((old) => ({ ...old, [step.storeAs]: value, [replyKey]: reply }));
     try {
       localStorage.setItem(`learn:${ep}:${step.storeAs}`, value);
+      localStorage.setItem(`learn:${ep}:${replyKey}`, reply);
       if (!forcedValue) localStorage.setItem(`learn:${ep}:${step.storeAs}Raw`, raw);
     } catch { /* ignore */ }
     setGuidedSubmittedId(step.id);

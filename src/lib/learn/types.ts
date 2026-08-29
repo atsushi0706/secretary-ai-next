@@ -170,6 +170,14 @@ export type PrincipleCard = {
   reading?: string;
   /** 大きく出す一文（行で分ける） */
   principle: string[];
+  /** 宝物庫で、初見でも原理の意味を取り戻せる一文 */
+  summary: string;
+  /** この原理を使うと、何が変わりやすくなるか */
+  effect: string;
+  /** この原理が役立つ具体的な場面 */
+  useWhen: string[];
+  /** 実際に使う時の順番。短い三段階で固定する */
+  howTo: [string, string, string];
 };
 
 export type Part =

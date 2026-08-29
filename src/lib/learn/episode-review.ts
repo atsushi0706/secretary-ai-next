@@ -62,6 +62,9 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
   if (!foundation.link.learnerState.trim() || !foundation.link.role.trim()) {
     push("error", "beginner", "リンクがどこで分からなくなり、何を読者の代わりに聞くかを定義してください。");
   }
+  if (episode.no >= 6 && (!foundation.player.wound?.trim() || !foundation.player.reasonForEnrolling?.trim() || !foundation.player.worldToCreate?.trim())) {
+    push("error", "story", "第6話以降は、主人公の痛み・催眠学校へ入った理由・作りたい世界を定義し、技法を学ぶ意味を人物の人生へつないでください。");
+  }
   if (foundation.causalChain.length < 5 || foundation.causalChain.some((beat) => !beat.trim())) {
     push("error", "story", "前の出来事が次の台詞を生む因果の鎖を、少なくとも5段階で定義してください。");
   }

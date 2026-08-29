@@ -13,8 +13,8 @@ export const dynamic = "force-dynamic";
 export default async function DevLearnPage({ searchParams }: { searchParams: Promise<{ part?: string; ep?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const sp = await searchParams;
-  const episodeKey = /^(ep1|ep2|ep3|ep4|ep5)$/.test(sp.ep ?? "")
-    ? sp.ep as "ep1" | "ep2" | "ep3" | "ep4" | "ep5"
+  const episodeKey = /^(ep1|ep2|ep3|ep4|ep5|ep6|ep7|ep8|ep9|ep10)$/.test(sp.ep ?? "")
+    ? sp.ep as "ep1" | "ep2" | "ep3" | "ep4" | "ep5" | "ep6" | "ep7" | "ep8" | "ep9" | "ep10"
     : "ep1";
   return <LearnHarness part={Number(sp.part ?? 0) || 0} episodeKey={episodeKey} />;
 }

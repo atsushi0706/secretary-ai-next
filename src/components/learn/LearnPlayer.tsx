@@ -91,6 +91,41 @@ function episodeQuestionContext(ep: string, read: ReadLearningValue) {
     clue: read("ep5Move", "事実を分けて、次に確認する一手を選ばせた"),
     resource: "今確認できる事実、まだ分からない意味、次に選べる確認行動を分ける",
   };
+  if (ep === "ep6") return {
+    objective: "文化や会話から受け取った前提を事実と分け、自分が採用するか選び直す",
+    theme: read("culturalTrance", "迷惑をかけてはいけないと思い、助けを求められない"),
+    exception: "相手が実際に言った言葉と、自分が読み取った前提を分けた場面",
+    clue: read("ep6Move", "事実と推測を分け、前提を本人へ確かめた"),
+    resource: "事実・読み取った前提・まだ分からないことを分けて、採用する前に確かめる",
+  };
+  if (ep === "ep7") return {
+    objective: "二択に共通する前提を見抜き、拒否・保留・別案を含む本当の選択を取り戻す",
+    theme: read("forcedChoice", "我慢するか迷惑をかけるかを迫られる"),
+    exception: "今か一分後かの二択から、一人で入る前提を見抜いた場面",
+    clue: read("ep7Move", "断る・待つ・一緒に進む道を本人へ返した"),
+    resource: "二択の共通点を見て、断る・待つ・別の道が残る形へ直す",
+  };
+  if (ep === "ep8") return {
+    objective: "正解を直接説明せず、似た構造の物語から本人が自分の意味を見つける体験を作る",
+    theme: read("blockedExplanation", "正論で考え方を変えるよう言われると心が閉じる"),
+    exception: "鍵を運ぶ鳥の結末から、ミオの行動の意味を自分で見つけた場面",
+    clue: read("ep8Move", "教訓を言わず、重なった場面を本人へ聞いた"),
+    resource: "相手の問題と似た構造の短い物語を示し、どこが重なったか本人へ聞く",
+  };
+  if (ep === "ep9") return {
+    objective: "しない自由を残し、本人が選べる最小の変化を許可形で提案する",
+    theme: read("helpingRush", "助けたい相手へ今すぐ動くよう求めてしまう"),
+    exception: "戻らなくてもよいと伝えた後、ミオが自分で一歩を選んだ場面",
+    clue: read("ep9Move", "怖さと拒否を認め、一歩を本人の選択として提案した"),
+    resource: "今の気持ちを認め、しない自由を言葉にし、一つの可能性だけを許可形で置く",
+  };
+  if (ep === "ep10") return {
+    objective: "催眠の前に目的・方法・同意・停止の自由を確認し、必要なら使わない",
+    theme: read("ethicalConflict", "相手のためと思い方法まで決めてしまう"),
+    exception: "暗示を使わず、三人が自分で同意して解除板を押した場面",
+    clue: read("ep10Move", "目的と方法を示し、選択と停止の自由を確認した"),
+    resource: "目的と方法を分け、本人の同意・安全・止める自由がなければ催眠を使わない",
+  };
   return {
     objective: "命令と暗示の違い、自己暗示とUtilizationのつながりを理解する",
     theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
@@ -822,6 +857,16 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
       ep4Move: read("ep4Move", "二つの事実から、次の一動作を提案した"),
       shockScene: read("shockScene", "予想外の出来事で、最初の答えを決めつけそうになる"),
       ep5Move: read("ep5Move", "事実を分けて、次に確認する一手を選ばせた"),
+      culturalTrance: read("culturalTrance", "迷惑をかけてはいけないと思い、助けを求められない"),
+      ep6Move: read("ep6Move", "事実と推測を分け、前提を本人へ確かめた"),
+      forcedChoice: read("forcedChoice", "我慢するか迷惑をかけるかを迫られる"),
+      ep7Move: read("ep7Move", "断る・待つ・一緒に進む道を本人へ返した"),
+      blockedExplanation: read("blockedExplanation", "正論で考え方を変えるよう言われると心が閉じる"),
+      ep8Move: read("ep8Move", "教訓を言わず、重なった場面を本人へ聞いた"),
+      helpingRush: read("helpingRush", "助けたい相手へ今すぐ動くよう求めてしまう"),
+      ep9Move: read("ep9Move", "怖さと拒否を認め、一歩を本人の選択として提案した"),
+      ethicalConflict: read("ethicalConflict", "相手のためと思い方法まで決めてしまう"),
+      ep10Move: read("ep10Move", "目的と方法を示し、選択と停止の自由を確認した"),
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -1022,6 +1067,31 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
         correct: /(カード|印|鍵|映像|声|今|事実)/.test(raw) && /(確認|調べ|次|選|分かる)/.test(raw) && !/(犯人|絶対|全部嘘|忘れろ|従え)/.test(raw),
         ok: "正解です。結論を増やさず、現在の事実から選べる確認行動へ戻しています。",
         ng: "犯人や目的を断定せず、今分かる事実と、本人が選べる次の確認行動を入れてください。",
+      };
+      if (ep === "ep6") return {
+        correct: /(言った|見た|書い|事実|分から)/.test(raw) && /(前提|決めつけ|確認|推測)/.test(raw) && !/(絶対|に違いない|本当は)/.test(raw),
+        ok: "正解です。事実と読み取った前提を分け、採用する前に確かめています。",
+        ng: "起きた事実と、そこから自分が読んだ前提を分け、まだ分からない点を確認してください。",
+      };
+      if (ep === "ep7") return {
+        correct: /(断|待|保留|別|一緒)/.test(raw) && !/(必ず|絶対|一人で)/.test(raw),
+        ok: "正解です。用意された二択の外に、本人が安全に選べる道を戻しています。",
+        ng: "二択に共通する前提を見て、断る・待つ・別案のいずれかを戻してください。",
+      };
+      if (ep === "ep8") return {
+        correct: /(物語|たとえ|話|場面)/.test(raw) && /(思う|重な|どこ|どう感じ)/.test(raw) && !/(答えは|つまり.+だ)/.test(raw),
+        ok: "正解です。答えを説明せず、本人が物語から意味を見つけられる問いになっています。",
+        ng: "教訓を決めつけず、似た物語を示して、どこが重なったか本人へ聞いてください。",
+      };
+      if (ep === "ep9") return {
+        correct: /(しなくても|選べ|一歩|そのまま|待って)/.test(raw) && !/(戻れ|必ず|証明|今すぐ)/.test(raw),
+        ok: "正解です。しない自由を守り、一歩を本人が選べる可能性として置いています。",
+        ng: "今の気持ちを認め、しない自由と、一つの小さな可能性を残してください。",
+      };
+      if (ep === "ep10") return {
+        correct: /(目的|カード)/.test(raw) && /(選ぶ|同意|止め|断)/.test(raw) && !/(必ず|同意してる|一度だけ)/.test(raw),
+        ok: "正解です。目的・方法・本人の選択・停止の自由を、催眠より先に確認しています。",
+        ng: "共有する目的、具体的な方法、断る・止める自由を本人へ確認してください。",
       };
       const correct = !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(raw);
       return { correct, ok: "正解です。完成ではなく、今できる一動作へ注意を移せています。", ng: "まだ『できない完成』へ注意が残っています。今すぐ本当にできる一動作まで小さくしてください。" };
@@ -1323,6 +1393,16 @@ function DialoguePart({
       ep4Move: read("ep4Move", "二つの事実から、次の一動作を提案した"),
       shockScene: read("shockScene", "予想外の出来事で、最初の答えを決めつけそうになる"),
       ep5Move: read("ep5Move", "事実を分けて、次に確認する一手を選ばせた"),
+      culturalTrance: read("culturalTrance", "迷惑をかけてはいけないと思い、助けを求められない"),
+      ep6Move: read("ep6Move", "事実と推測を分け、前提を本人へ確かめた"),
+      forcedChoice: read("forcedChoice", "我慢するか迷惑をかけるかを迫られる"),
+      ep7Move: read("ep7Move", "断る・待つ・一緒に進む道を本人へ返した"),
+      blockedExplanation: read("blockedExplanation", "正論で考え方を変えるよう言われると心が閉じる"),
+      ep8Move: read("ep8Move", "教訓を言わず、重なった場面を本人へ聞いた"),
+      helpingRush: read("helpingRush", "助けたい相手へ今すぐ動くよう求めてしまう"),
+      ep9Move: read("ep9Move", "怖さと拒否を認め、一歩を本人の選択として提案した"),
+      ethicalConflict: read("ethicalConflict", "相手のためと思い方法まで決めてしまう"),
+      ep10Move: read("ep10Move", "目的と方法を示し、選択と停止の自由を確認した"),
       ...questionContext,
     };
   });
@@ -1630,10 +1710,13 @@ export function LearnPlayer({ episode, userName, startPart }: { episode: Episode
   }, [episode.key, pi, progressReady]);
 
   useEffect(() => {
-    if (!progressReady || episode.key !== "ep5") return;
-    // 第5話の喪失は物語上の封印。獲得データ自体は削除しない。
-    try { window.localStorage.setItem("learn:story:archiveBreach", "ep5"); } catch { /* ignore */ }
-  }, [episode.key, progressReady]);
+    if (!progressReady) return;
+    // 第5話では宝物庫だけを封印し、第10話のカード帰還で解除する。獲得データ自体は削除しない。
+    try {
+      if (episode.key === "ep5") window.localStorage.setItem("learn:story:archiveBreach", "ep5");
+      if (episode.key === "ep10" && pi >= 5) window.localStorage.removeItem("learn:story:archiveBreach");
+    } catch { /* ignore */ }
+  }, [episode.key, pi, progressReady]);
 
   const next = useCallback(() => {
     voice.stop();

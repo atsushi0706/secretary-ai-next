@@ -28,6 +28,12 @@ export type EpisodeFoundation = {
     startsAs: string;
     changesBy: string;
     endsAs: string;
+    /** 主人公が催眠を学ばなければならない、過去から続く痛み。 */
+    wound?: string;
+    /** 催眠学校へ入った理由。技法の収集ではなく、人生上の目的を書く。 */
+    reasonForEnrolling?: string;
+    /** 催眠を学んだ先で、主人公が実現したい世界。 */
+    worldToCreate?: string;
   };
   presentation: {
     /** 入口から事件、推理までを貫く、この回で唯一の中心質問。 */

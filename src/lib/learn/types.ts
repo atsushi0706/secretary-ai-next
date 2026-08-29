@@ -121,7 +121,17 @@ export type ExpStep =
     q: string;
     help?: string;
     storeAs?: string;
-    detail?: { id: string; storeAs?: string; label: string; placeholder?: string; helper?: string };
+    /** option-or-detail の時は、三択か自由記述のどちらか一方で進める。 */
+    completion?: "option-required" | "option-or-detail";
+    detail?: {
+      id: string;
+      storeAs?: string;
+      label: string;
+      placeholder?: string;
+      helper?: string;
+      /** 三択を選ばず、自由記述だけで進んだ時の会話。 */
+      then?: ExpStep[];
+    };
     options: { label: string; value?: string; then: ExpStep[] }[];
   }
   | { kind: "fade"; text?: string };
@@ -157,6 +167,7 @@ export type PrincipleCard = {
   series: string;
   no: string;
   name: string;
+  reading?: string;
   /** 大きく出す一文（行で分ける） */
   principle: string[];
 };
@@ -198,7 +209,10 @@ export function allLines(ep: Episode): Line[] {
     for (const s of steps) {
       if (s.kind === "say" && !s.line.dynamic) out.push(s.line);
       if ((s.kind === "input" || s.kind === "scale") && s.line && !s.line.dynamic) out.push(s.line);
-      if (s.kind === "choice") s.options.forEach((o) => fromSteps(o.then));
+      if (s.kind === "choice") {
+        s.options.forEach((o) => fromSteps(o.then));
+        if (s.detail?.then) fromSteps(s.detail.then);
+      }
     }
   };
   for (const p of ep.parts) {

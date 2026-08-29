@@ -29,6 +29,25 @@ export type EpisodeFoundation = {
     changesBy: string;
     endsAs: string;
   };
+  presentation: {
+    /** 入口から事件、推理までを貫く、この回で唯一の中心質問。 */
+    primaryQuestion: string;
+    /**
+     * 主見出しだけで意味が通る時は none。補助質問を足す場合は、
+     * 主見出しだけでは欠ける前提を adds に言語化してから使う。
+     */
+    secondaryQuestion:
+      | { mode: "none" }
+      | { mode: "needed"; text: string; adds: string };
+    /** 第1話は答え方を見せ、以後は段階的に支援を外す。 */
+    recallScaffolding: "full-example" | "partial-cue" | "independent";
+  };
+  interaction: {
+    /** 本人の場面を選択と自由記述のどちらで受け取るか。 */
+    personalResponse: "choice-required" | "detail-required" | "choice-or-detail";
+    /** 証拠を見る前後に、プレイヤー自身の言葉を会話へ返す。 */
+    reflectionMoments: ("memory" | "hypothesis" | "reflection" | "application")[];
+  };
   causalChain: [string, string, string, string, string, ...string[]];
   evidenceBoundary: {
     historical: string;

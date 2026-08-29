@@ -126,6 +126,28 @@ function SlideView({ slide, sceneLabel }: { slide: Slide | null; sceneLabel?: st
 
 /* ═══════════════════════ 教室の舞台 ═══════════════════════ */
 
+function splitJapaneseSentences(text: string) {
+  const sentences: string[] = [];
+  let buffer = "";
+  let quoted = 0;
+  for (const character of text) {
+    buffer += character;
+    if ("『「（【".includes(character)) quoted += 1;
+    if ("』」）】".includes(character)) quoted = Math.max(0, quoted - 1);
+    if (quoted === 0 && "。！？".includes(character)) {
+      sentences.push(buffer);
+      buffer = "";
+    }
+  }
+  if (buffer) sentences.push(buffer);
+  return sentences.length ? sentences : [text];
+}
+
+function SentenceText({ text }: { text: string }) {
+  const sentences = splitJapaneseSentences(text);
+  return <>{sentences.map((sentence, index) => <span className="lrn-sentence-block" key={`${index}-${sentence}`}>{sentence}</span>)}</>;
+}
+
 function Stage({
   line, speaking, slide, sceneLabel, onTap, dim, aside,
 }: { line: Line | null; speaking: boolean; slide: Slide | null; sceneLabel?: string; onTap?: () => void; dim?: boolean; aside?: React.ReactNode }) {
@@ -140,7 +162,7 @@ function Stage({
         {line ? (
           <div className={`lrn-bubble is-${line.who}`} key={line.id}>
             <span className="lrn-name">{line.who === "teacher" ? "エリクソン" : "リンク"}</span>
-            <p>{line.text}</p>
+            <p><SentenceText text={line.text} /></p>
           </div>
         ) : <div className="lrn-bubble is-blank" />}
         {aside}
@@ -438,6 +460,9 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     : step?.kind === "scale"
       ? Number.isFinite(Number(values[step.id])) && Number(values[step.id]) >= (step.min ?? 0) && Number(values[step.id]) <= (step.max ?? 99)
       : true;
+  const detailReady = step?.kind === "choice" && step.detail
+    ? Boolean(values[step.detail.id]?.trim())
+    : false;
 
   useEffect(() => {
     if (!started || !line) return;
@@ -528,6 +553,21 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
     setPendingChoice(null);
     setIdx(idx + 1);
     setSummarizing(false);
+  }
+
+  function confirmChoice() {
+    if (step?.kind !== "choice") return;
+    if (pendingChoice) {
+      void choose(pendingChoice);
+      return;
+    }
+    const detailValue = step.detail ? values[step.detail.id]?.trim() : "";
+    if (step.completion !== "option-or-detail" || !step.detail || !detailValue) return;
+    void choose({
+      label: detailValue,
+      value: detailValue,
+      then: step.detail.then ?? [],
+    });
   }
 
   function skipInput(input: Extract<ExpStep, { kind: "input" }>) {
@@ -627,15 +667,20 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
                   {step.options.map((o, i) => <button key={o.label} className={pendingChoice?.label === o.label ? "is-selected" : ""} onClick={() => step.detail ? setPendingChoice(o) : void choose(o)}><b>{String(i + 1).padStart(2, "0")}</b><span>{resolve(o.label)}</span><i>{pendingChoice?.label === o.label ? "✓" : "→"}</i></button>)}
                 </div>
                 {step.detail && <div className="lrn-exp-choice-detail">
-                  <label htmlFor={`learn-detail-${step.detail.id}`}>{resolve(step.detail.label)} <small>任意</small></label>
+                  <label htmlFor={`learn-detail-${step.detail.id}`}>{resolve(step.detail.label)} <small>{step.completion === "option-or-detail" ? "三択なしでも送れます" : "任意"}</small></label>
                   <div className="lrn-exp-choice-detail-field">
                     <textarea id={`learn-detail-${step.detail.id}`} rows={3} value={values[step.detail.id] ?? ""}
                       onChange={(e) => setValues((old) => ({ ...old, [step.detail!.id]: e.target.value }))}
                       placeholder={step.detail.placeholder ? resolve(step.detail.placeholder) : undefined} />
-                    <VoiceInput mode="learning" compact onText={(text) => setValues((old) => ({
-                      ...old,
-                      [step.detail!.id]: old[step.detail!.id]?.trim() ? `${old[step.detail!.id].trim()}\n${text}` : text,
-                    }))} />
+                    <div className="lrn-exp-choice-detail-actions">
+                      <VoiceInput mode="learning" compact onText={(text) => setValues((old) => ({
+                        ...old,
+                        [step.detail!.id]: old[step.detail!.id]?.trim() ? `${old[step.detail!.id].trim()}\n${text}` : text,
+                      }))} />
+                      {step.completion === "option-or-detail" && <button type="button" className="lrn-exp-choice-send" onClick={confirmChoice} disabled={!detailReady || summarizing} aria-label="自由記述を送る">
+                        {summarizing ? "…" : "送る"}
+                      </button>}
+                    </div>
                   </div>
                   {step.detail.helper && <p>{summarizing ? "話してくれた内容を、一文にまとめています…" : resolve(step.detail.helper)}</p>}
                 </div>}
@@ -650,7 +695,7 @@ function ExperiencePart({ ep, part, userName, voice, onDone }: {
               <button className="lrn-exp-next" onClick={next} disabled={!inputReady}>{step.kind === "input" ? "この答えで進む" : step.kind === "scale" ? "この点数で進む" : "次へ"} →</button>
             )}
             {step?.kind === "choice" && step.detail && (
-              <button className="lrn-exp-next" onClick={() => pendingChoice && void choose(pendingChoice)} disabled={!pendingChoice || summarizing}>{summarizing ? "一文にまとめています…" : "この内容で進む →"}</button>
+              <button className="lrn-exp-next" onClick={confirmChoice} disabled={(!pendingChoice && !(step.completion === "option-or-detail" && detailReady)) || summarizing}>{summarizing ? "一文にまとめています…" : "この内容で進む →"}</button>
             )}
           </div>
         </>
@@ -684,7 +729,9 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
       clue: read("channel", "今、聞こえている声"),
       resource: "『できないのに、やらなきゃ』から目を外し、今できる方向から次の暗示を作る",
       firstJudgment: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
-      channel: read("channel", "作れない海辺から目を外し、今聞こえている声へ注意を移した"),
+      channel: read("channel", "").startsWith("『海辺")
+        ? read("channel", "")
+        : "『海辺はそのままでいい。今、私の声は聞こえますか？』",
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -825,7 +872,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
           {node?.kind === "dialogue" && currentLine && (
             <div className={`lrn-av-dialogue is-${currentLine.who}`} key={node.id}>
               <div className="lrn-av-speaker">{currentLine.who === "teacher" ? "ミルトン・エリクソン" : "清瀬リンク"}</div>
-              <p>{currentLine.text}</p>
+              <p><SentenceText text={currentLine.text} /></p>
               <div className="lrn-av-dialogue-controls">
                 <button onClick={back} disabled={idx === 0}>← 戻る</button>
                 <button className="next" onClick={advance}>{node.nextLabel ?? "会話を続ける"} <span>›</span></button>
@@ -882,7 +929,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
                   <button className="lrn-av-primary" onClick={() => inspectGuided(currentGuidedStep)}>{currentGuidedStep.actionLabel}</button>
                 </>}
                 {guidedDone && !activeEvidence && <>
-                  <p>三つの場面がつながった。先生に、分かったことを話してみよう。</p>
+                  <p>見た場面をつなげて、リンクに気づいたことを一言で話してみよう。</p>
                   <button className="lrn-av-primary" onClick={advance}>{node.nextLabel ?? "会話を続ける"}</button>
                 </>}
               </div>
@@ -915,7 +962,7 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
             <div className="lrn-av-reveal">
               <div className="lrn-av-reveal-kicker">{node.kicker}</div>
               <h3>{resolve(node.title)}</h3>
-              <p>{resolve(node.body)}</p>
+              <p><SentenceText text={resolve(node.body)} /></p>
               {node.evidenceIds && <div className="lrn-av-reveal-evidence">
                 {node.evidenceIds.map((id) => {
                   const evidence = scenario.evidence.find((item) => item.id === id);
@@ -973,7 +1020,9 @@ function DialoguePart({
       clue: read("channel", "今、聞こえている声"),
       resource: "『できないのに、やらなきゃ』から目を外し、今できる方向から次の暗示を作る",
       firstJudgment: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
-      channel: read("channel", "作れない海辺から目を外し、今聞こえている声へ注意を移した"),
+      channel: read("channel", "").startsWith("『海辺")
+        ? read("channel", "")
+        : "『海辺はそのままでいい。今、私の声は聞こえますか？』",
     };
   });
   const rawCur = idx >= 0 ? items[idx] : null;
@@ -1205,6 +1254,7 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
           <div className="lrn-pcard">
             <div className="series">{part.card.series} {part.card.no}</div>
             <div className="name">{part.card.name}</div>
+            {part.card.reading && <div className="reading">{part.card.reading}</div>}
             <div className="principle">{part.card.principle.map((t, i) => <div key={i}>{t}</div>)}</div>
           </div>
           <button className="lrn-cta" onClick={take}>カードを受け取る</button>
@@ -1221,23 +1271,15 @@ function TeaserPart({ part, epNo }: { part: Extract<Part, { kind: "teaser" }>; e
         <img className="lrn-nextcase-bg" src="/learn/adventure/erickson-study-v1.webp" alt="夜の書斎" />
         <div className="lrn-nextcase-shade" />
         <div className="lrn-nextcase-kicker">NEXT CASE 02</div>
-        <h2>「催眠なんか絶対に<br />かかりません」</h2>
+        <h2>{part.next.title}</h2>
         <div className="lrn-nextcase-dialogue is-man"><b>男性</b><span>私は絶対に、催眠なんかにかかりません。</span></div>
         <img className="lrn-nextcase-erickson" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
         <div className="lrn-nextcase-dialogue is-teacher"><b>エリクソン</b><span>では、かからないようにしてください。</span></div>
-        <div className="lrn-nextcase-swipe">上へスワイプして続きへ <span>↑</span></div>
-      </div>
-      <div className="lrn-nextcase-info">
-        <div className="lrn-hook">{part.hook.map((t, i) => <div key={i}>{t}</div>)}</div>
-        <div className="lrn-next">
-          <div className="no">{part.next.no}</div>
-          <div className="title">{part.next.title}</div>
-          <div className="series">{part.next.series}</div>
-          <div className="principle">{part.next.principle}</div>
-        </div>
-        <div className="lrn-manga-end">
-          <p>第{epNo}話 おわり</p>
-          <Link href="/learn" className="lrn-cta">一覧にもどる</Link>
+        <div className="lrn-nextcase-unlock">
+          <b>{part.next.no}｜{part.next.series}</b>
+          <button type="button" disabled>{part.unlock[0] ?? "準備中"}</button>
+          <span>第{epNo}話 おわり</span>
+          <Link href="/learn">一覧にもどる</Link>
         </div>
       </div>
     </div>
@@ -1250,7 +1292,7 @@ const PART_LABEL: Record<Part["kind"], string> = {
   manga: "漫画", experience: "体験", classroom: "教室", adventure: "推理", qa: "質問", card: "原理", outro: "次回へ", teaser: "次回",
 };
 
-const LEARN_PROGRESS_VERSION = "v11";
+const LEARN_PROGRESS_VERSION = "v12";
 
 export function LearnPlayer({ episode, userName, startPart }: { episode: Episode; userName: string; startPart?: number }) {
   const clampPart = useCallback((value: number) => Math.max(0, Math.min(episode.parts.length - 1, value)), [episode.parts.length]);

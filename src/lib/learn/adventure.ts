@@ -53,6 +53,7 @@ const recallNodeSchema = z.object({
   kind: z.literal("recall"),
   id: z.string().min(1),
   scene: z.string().min(1),
+  purpose: z.enum(["memory", "hypothesis", "reflection"]).default("memory"),
   title: z.string().min(1),
   prompt: z.string().min(1),
   placeholder: z.string().optional(),
@@ -193,6 +194,28 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
   if (!scenario.nodes.some((n) => n.kind === "deduction")) push("warning", "game", "証拠から自分で結論を選ぶ場面がありません。この話で本当に不要か確認してください。");
   if (!scenario.nodes.some((n) => n.kind === "apply")) push("warning", "game", "学びを自分や目の前の相手へ使う判断がありません。この話で本当に不要か確認してください。");
   if (!scenario.nodes.some((n) => n.kind === "reveal")) push("error", "story", "発見を回収するリビールがありません。");
+  const guidedIndex = scenario.nodes.findIndex((node) => node.kind === "guided-investigation");
+  const deductionAfterGuide = guidedIndex < 0 ? -1 : scenario.nodes.findIndex((node, index) => index > guidedIndex && node.kind === "deduction");
+  if (guidedIndex >= 0 && deductionAfterGuide >= 0) {
+    const hasHypothesis = scenario.nodes.slice(guidedIndex + 1, deductionAfterGuide)
+      .some((node) => node.kind === "recall" && node.purpose === "hypothesis");
+    if (!hasHypothesis) push("error", "game", "証拠を見た後、正解を選ばせる前に、リンクへ自分の仮説を一言で話す場面を入れてください。");
+  }
+  scenario.nodes.forEach((node, reflectionIndex) => {
+    if (node.kind !== "recall" || node.purpose !== "reflection") return;
+    const priorApplyIndex = scenario.nodes.reduce((found, candidate, index) => (
+      index < reflectionIndex && candidate.kind === "apply" ? index : found
+    ), -1);
+    if (priorApplyIndex < 0) {
+      push("error", "game", `${node.id}: 目の前の相手へ一手を使う前に、変化の理由を聞いています。`);
+      return;
+    }
+    const visibleReactions = scenario.nodes.slice(priorApplyIndex + 1, reflectionIndex)
+      .filter((candidate) => candidate.kind === "dialogue");
+    if (visibleReactions.length === 0) {
+      push("error", "story", `${node.id}: 選んだ一手の後、相手に起きた変化を見せてから理由を聞いてください。`);
+    }
+  });
   if (linkLines.length === 0) push("warning", "story", "初学者の疑問を受け持つ登場人物がいません。この話で別の表現方法があるか確認してください。");
   if (teacherLines.length === 0) push("warning", "story", "先生の判断が会話として現れていません。この話で別の表現方法があるか確認してください。");
 
@@ -220,6 +243,9 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
         if (leaked) push("error", "game", `${node.id}: 推理の直前に正解を台詞で説明しています。仮説や問いで止め、判断はプレイヤーへ渡してください。`);
       }
 
+    }
+    if (node.kind === "reveal" && node.evidenceIds?.length) {
+      push("warning", "beginner", `${node.id}: 結論画面に証拠一覧を重ねています。見出し・短い説明・次への操作だけで意味が通るなら削除してください。`);
     }
   });
 

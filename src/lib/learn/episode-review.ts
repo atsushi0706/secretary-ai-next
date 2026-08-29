@@ -12,7 +12,11 @@ export type EpisodeReview = { ok: boolean; issues: EpisodeReviewIssue[] };
 
 function collectExperienceSteps(steps: ExpStep[]): ExpStep[] {
   return steps.flatMap((step) => {
-    if (step.kind === "choice") return [step, ...step.options.flatMap((option) => collectExperienceSteps(option.then))];
+    if (step.kind === "choice") return [
+      step,
+      ...step.options.flatMap((option) => collectExperienceSteps(option.then)),
+      ...(step.detail?.then ? collectExperienceSteps(step.detail.then) : []),
+    ];
     if (step.kind === "input" && step.skip) return [step, ...collectExperienceSteps(step.skip.then)];
     return [step];
   });
@@ -61,6 +65,11 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
   if (foundation.causalChain.length < 5 || foundation.causalChain.some((beat) => !beat.trim())) {
     push("error", "story", "前の出来事が次の台詞を生む因果の鎖を、少なくとも5段階で定義してください。");
   }
+  if (!foundation.presentation.primaryQuestion.trim()) {
+    push("error", "beginner", "この回で答える中心質問を、一文で定義してください。");
+  } else if (episode.title !== foundation.presentation.primaryQuestion) {
+    push("error", "beginner", "一覧、事件、講義で問いを増やさず、回のタイトルを制作前提の中心質問へ揃えてください。");
+  }
 
   const manga = episode.parts[0]?.kind === "manga" ? episode.parts[0] : null;
   if (!manga?.briefing || !manga.schoolIntro) {
@@ -89,15 +98,45 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
     if (!bridgeBeats.some((beat) => beat.who === "link")) push("warning", "story", "漫画の事件と本人の問題を同一視していないか、リンクに疑問を言わせて確認してください。");
     if (!choices.some((choice) => choice.storeAs && choice.options.length >= 2)) push("error", "game", "学習者が自分に近い場面を選び、後半で使える形で保存してください。");
     if (!choices.some((choice) => choice.detail?.storeAs && choice.detail.storeAs === choice.storeAs)) push("error", "learning", "選択だけで終わらせず、学習者が自分の具体的な場面を文字か音声で補足できるようにしてください。");
+    if (foundation.interaction.personalResponse === "choice-or-detail"
+      && !choices.some((choice) => choice.completion === "option-or-detail" && choice.detail?.then?.length)) {
+      push("error", "game", "本人の場面は、三択か自由記述のどちらか一方だけでも送信できるようにしてください。");
+    }
   }
 
   const adventure = episode.parts.find((part): part is Extract<Part, { kind: "adventure" }> => part.kind === "adventure");
   const nodes: AdventureNode[] = adventure?.scenario.nodes ?? [];
+  if (adventure) {
+    if (adventure.scenario.title !== foundation.presentation.primaryQuestion) {
+      push("error", "beginner", "事件画面の主見出しを、この回の中心質問へ揃えてください。");
+    }
+    if (foundation.presentation.secondaryQuestion.mode === "none" && adventure.scenario.question) {
+      push("error", "beginner", "主見出しだけで意味が通る回に、別の副質問を足さないでください。");
+    }
+    if (foundation.presentation.secondaryQuestion.mode === "needed") {
+      if (!foundation.presentation.secondaryQuestion.adds.trim()) push("error", "beginner", "副質問が補う前提を言語化してください。");
+      if (adventure.scenario.question !== foundation.presentation.secondaryQuestion.text) push("error", "system", "必要と判断した副質問を事件画面へ反映してください。");
+    }
+  }
   if (!nodes.some((node) => node.kind === "investigate" || node.kind === "guided-investigation") || !nodes.some((node) => node.kind === "deduction") || !nodes.some((node) => node.kind === "apply")) {
     push("error", "game", "見る、考える、自分で使うの三つをプレイヤー操作として入れてください。");
   }
   if (!nodes.some((node) => node.kind === "recall")) {
     push("warning", "learning", "教材を見直す前に、学習者が自分の記憶を言葉にする場面がありません。");
+  }
+  const recallNodes = nodes.filter((node): node is Extract<AdventureNode, { kind: "recall" }> => node.kind === "recall");
+  foundation.interaction.reflectionMoments.forEach((moment) => {
+    if (moment === "application") return;
+    if (!recallNodes.some((node) => node.purpose === moment)) {
+      const label = moment === "memory" ? "証拠を見る前の記憶" : moment === "hypothesis" ? "証拠を見た後の仮説" : "目の前で起きた変化の理由";
+      push("error", "game", `${label}を、プレイヤー自身の言葉でリンクへ返す場面が必要です。`);
+    }
+  });
+  const firstRecall = recallNodes[0];
+  if (firstRecall) {
+    const hasFullExample = firstRecall.placeholder?.includes("例：") ?? false;
+    if (foundation.presentation.recallScaffolding === "full-example" && !hasFullExample) push("warning", "learning", "第1話の答え方の支援として、記憶回答に具体例を一つ示してください。");
+    if (foundation.presentation.recallScaffolding === "independent" && hasFullExample) push("error", "learning", "自力回答の回で、入力例に答えをそのまま書かないでください。");
   }
   const linkLines = nodes.filter((node) => node.kind === "dialogue" && node.line.who === "link");
   if (linkLines.length === 0) push("warning", "beginner", "初学者がつまずく地点を、リンクか別の演出で実際に表せているか確認してください。");

@@ -35,6 +35,15 @@ export const EP1_FOUNDATION = defineEpisodeFoundation({
     changesBy: "自分の動けない場面を選び、リンクへの一言と自分への最初の暗示を決める",
     endsAs: "できない方向から目を外し、できる方向へ注意を移す最初の一手を作れる生徒",
   },
+  presentation: {
+    primaryQuestion: "『やらなきゃ』と思うほど動けない時、催眠をどう使う？",
+    secondaryQuestion: { mode: "none" },
+    recallScaffolding: "full-example",
+  },
+  interaction: {
+    personalResponse: "choice-or-detail",
+    reflectionMoments: ["memory", "hypothesis", "reflection", "application"],
+  },
   causalChain: [
     "学習者が『やらなきゃ』と思うほど動けず、できない方向を頑張り続けている自分の場面を思い出す",
     "エリクソンが動かない足へ『動け』と命令し続けても動かなかった",

@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP10_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "ethics",
+    person: "主人公・清瀬リンク・雨宮ミオ",
+    desiredFuture: "失ったカードを取り戻しながら、誰かを正しさで従わせる側にはならない",
+    stuckReality: "ミオへ一言暗示すれば目的は達成できるが、その方法を本人は選んでいない",
+    firstVisibleShift: "催眠を使わない判断をし、目的・方法・停止の自由へ三人が別々に同意して扉を開く",
+    payoff: {
+      mode: "multi-episode-resolution",
+      timing: "第5話から続いたカード消失事件の結末",
+      beat: "三人の選択でカードを取り戻し、主人公は人の選択を守る催眠実習調査員になる",
+      anchorIds: ["ep10-adv-05b", "ep10-adv-07"],
+    },
+    practitionerAppeal: "技法を効かせる力だけでなく、使わない判断まで含めて信頼される支援者になる姿を見せる",
+  },
   learner: {
     problem: "催眠の技術が効きそうな時、目的が正しければ相手の同意を省いてもよいと思ってしまう",
     livedExamples: ["相手のためだから決めてよいと思う", "早く助けるため説明を省く", "結果が出れば方法はよいと思う"],

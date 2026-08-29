@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP9_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "relationships",
+    person: "雨宮ミオ",
+    desiredFuture: "二人のところへ戻り、カードを持ち出した理由を自分の言葉で話したい",
+    stuckReality: "戻りたい気持ちはあるのに、戻れば二人の学びを壊すと思い、出口まで三歩の場所で動けない",
+    firstVisibleShift: "戻らない自由を確認したうえで、自分が選べる一歩だけを踏み出し、カードの場所を話す",
+    payoff: {
+      mode: "in-session-action",
+      timing: "資料室の出口での実習中",
+      beat: "ミオが一歩を自分で選び、隠していた保管室の場所を二人へ伝える",
+      anchorIds: ["ep9-adv-05", "ep9-adv-07"],
+    },
+    practitionerAppeal: "支援者が望む正解へ急がせず、怖さがある本人自身から行動が生まれる瞬間を見せる",
+  },
   learner: {
     problem: "相手を助けたい時ほど、正しい行動を強く求め、相手がさらに動けなくなる",
     livedExamples: ["戻ってきてと強く迫る", "落ち着いてと繰り返す", "早く決めてと相手を急がせる"],

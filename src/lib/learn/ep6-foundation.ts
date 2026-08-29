@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP6_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "communication",
+    person: "主人公と清瀬リンク",
+    desiredFuture: "他人の短い言葉や社会の常識に人生を決められず、自分が本当に望む条件で行動したい",
+    stuckReality: "『旧校舎へ』という一文に『一人ですぐ行け』まで足し、危険を確かめず従いそうになる",
+    firstVisibleShift: "書かれた言葉と自分が足した意味を分け、二人で安全を確かめて行く条件を選ぶ",
+    payoff: {
+      mode: "later-callback",
+      timing: "主人公の入学理由を明かした後の最初の校外行動",
+      beat: "文化的催眠に苦しんだ主人公の目的が、リンクと条件を選び直す行動として初めて外の世界へ表れる",
+      anchorIds: ["ep6-adv-05", "ep6-adv-07"],
+    },
+    practitionerAppeal: "相手が言葉へ足した意味を責めず、どの前提を今も選ぶか一緒に確かめる支援を見せる",
+  },
   learner: {
     problem: "短い言葉を見た時、相手が言っていない意味まで自分で足し、それを事実だと思ってしまう",
     livedExamples: ["返信が短くて嫌われたと思う", "注意されて自分は無能だと思う", "広告の言葉から成功が約束されたと思う"],

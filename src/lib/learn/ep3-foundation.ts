@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP3_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "wellbeing",
+    person: "雨宮ミオ",
+    desiredFuture: "考えが浮かんでも自分を責めず、休む時や次の行動へ戻れるようになりたい",
+    stuckReality: "静かにしよう、考えるなと命令するほど言葉が増え、授業が終わっても席を立てない",
+    firstVisibleShift: "考えが浮かぶたび一呼吸へ戻り、考えが残ったまま次の実習を手伝うと自分で決める",
+    payoff: {
+      mode: "next-scene-consequence",
+      timing: "実習直後から次の授業への参加まで",
+      beat: "一呼吸の小さな間を作ったミオが、次は観察役になると申し出る",
+      anchorIds: ["ep3-adv-06", "ep3-adv-08"],
+    },
+    practitionerAppeal: "無理に頭を空にさせず、今ある思考から本人が行動へ戻る道を作る支援を見せる",
+  },
   learner: {
     problem: "目を閉じても考えが次々に浮かび、考えを止められない自分は催眠に向いていないと思ってしまう",
     livedExamples: ["眠ろうとすると明日のことを考える", "失敗を思い出して頭の中で反省を続ける", "静かにしようとするほど別の言葉が浮かぶ"],

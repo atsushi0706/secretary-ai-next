@@ -32,6 +32,31 @@ function storedDecisionKeys(episode: Episode): string[] {
   return [...new Set([...experienceKeys, ...adventureKeys])];
 }
 
+function implementedAnchorIds(episode: Episode): Set<string> {
+  const ids = new Set<string>();
+  const fromSteps = (steps: ExpStep[]) => {
+    collectExperienceSteps(steps).forEach((step) => {
+      if (step.kind === "say") ids.add(step.line.id);
+      if ((step.kind === "input" || step.kind === "scale") && step.line) ids.add(step.line.id);
+    });
+  };
+
+  episode.parts.forEach((part) => {
+    if (part.kind === "experience") fromSteps(part.steps);
+    if (part.kind === "classroom") part.scenes.forEach((scene) => scene.lines.forEach((line) => ids.add(line.id)));
+    if (part.kind === "adventure") {
+      part.scenario.nodes.forEach((node) => {
+        ids.add(node.id);
+        if (node.kind === "dialogue") ids.add(node.line.id);
+      });
+    }
+    if (part.kind === "card") [...part.lines, ...part.after].forEach((line) => ids.add(line.id));
+    if (part.kind === "outro") part.lines.forEach((line) => ids.add(line.id));
+  });
+
+  return ids;
+}
+
 /**
  * 固有の単語を強制する検査ではなく、学習者の変化と物語の因果が実装に存在するかを見る。
  * コピーの自然さ、漫画の連続性、実機の触り心地は別の通し監査で確認する。
@@ -40,6 +65,18 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
   const issues: EpisodeReviewIssue[] = [];
   const push = (severity: EpisodeReviewIssue["severity"], lens: EpisodeReviewIssue["lens"], message: string) => issues.push({ severity, lens, message });
   const kinds = episode.parts.map((part) => part.kind);
+  const humanArc = foundation.humanArc;
+  if (![humanArc.person, humanArc.desiredFuture, humanArc.stuckReality, humanArc.firstVisibleShift, humanArc.practitionerAppeal].every((value) => value.trim())) {
+    push("error", "story", "技法より先に、誰が何を望み、どこで止まり、この回で何が変わるかを人物の人生として定義してください。");
+  }
+  if (![humanArc.payoff.timing, humanArc.payoff.beat].every((value) => value.trim()) || humanArc.payoff.anchorIds.length === 0) {
+    push("error", "story", "変化を説明だけで終わらせず、物語のどの場面で行動として見せるかを定義してください。");
+  } else {
+    const implemented = implementedAnchorIds(episode);
+    humanArc.payoff.anchorIds.forEach((id) => {
+      if (!implemented.has(id)) push("error", "system", `人物の変化を見せる実装ID「${id}」が、この回に存在しません。`);
+    });
+  }
   const required: Part["kind"][] = ["manga", "adventure", "classroom", "card", "outro"];
   required.forEach((kind) => {
     if (!kinds.includes(kind)) push("error", "system", `学習の因果を回収するため「${kind}」パートが必要です。`);

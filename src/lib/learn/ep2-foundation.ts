@@ -2,6 +2,20 @@ import { defineEpisodeFoundation } from "./episode-foundation";
 
 /** 第2話は、拒否を論破せず、本人の選択権を残して催眠へつなぐ。 */
 export const EP2_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "autonomy",
+    person: "催眠を警戒する男性とリンク",
+    desiredFuture: "自分の意思と主導権を失わずに、催眠が自分に役立つか確かめたい",
+    stuckReality: "操られるのが怖くて、興味はあるのに『絶対にかからない』『目は閉じない』と入口で身を固くする",
+    firstVisibleShift: "拒否を保ったまま身体の変化を確かめ、続けるか、目を閉じるかを本人が選ぶ",
+    payoff: {
+      mode: "other-person-response",
+      timing: "リンクへの実演直後",
+      beat: "リンクが負けて従ったのではなく、自分の感覚を見て自分で選んだと確認する",
+      anchorIds: ["ep2-adv-13"],
+    },
+    practitionerAppeal: "警戒する人を言い負かさず、その人の選択を守ったまま体験を始められる支援を見せる",
+  },
   learner: {
     problem: "催眠をかけたい相手から『かかりたくない』『目を閉じたくない』と拒否されると、説得するか諦めるしかないと思ってしまう",
     livedExamples: [

@@ -5,6 +5,20 @@ import { defineEpisodeFoundation } from "./episode-foundation";
  * 旧台本の個別指定ではなく、「学習者の注意がどう移るか」を中心に置く。
  */
 export const EP1_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "productivity",
+    person: "主人公",
+    desiredFuture: "自分で決めた企画や挑戦を、怖さや面倒さがあっても最初の一歩から進めたい",
+    stuckReality: "『今日こそ全部やらなきゃ』と自分へ命令するほど、画面や道具を開く前で止まる",
+    firstVisibleShift: "完成を命じる代わりに、今できる一動作を自分で選び、その場で始める",
+    payoff: {
+      mode: "in-session-action",
+      timing: "第1話の実習中",
+      beat: "主人公が自分の場面に使う最初の一動作を選び、リンクが注意を外す順番を言葉にする",
+      anchorIds: ["adv-11b", "adv-12"],
+    },
+    practitionerAppeal: "『頑張れ』を増やさず、その人が本当に始められる一歩を一緒に作る仕事として催眠を見せる",
+  },
   learner: {
     problem: "『やらなきゃ』と思うほど、やりたいことを始められない、または続けられない",
     livedExamples: [

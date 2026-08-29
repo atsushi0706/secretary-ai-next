@@ -1,8 +1,12 @@
+import type { HumanChangeArc } from "./coaching-world";
+
 /**
  * 台詞の禁止語集ではなく、人物と学習体験の因果を先に定める。
  * 各話のコピー、漫画、選択、講義はこの状態遷移から作る。
  */
 export type EpisodeFoundation = {
+  /** 技法ではなく、人物の望みから始まるこの回の人間ドラマ。 */
+  humanArc: HumanChangeArc;
   learner: {
     problem: string;
     livedExamples: [string, string, string];

@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP8_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "communication",
+    person: "清瀬リンク",
+    desiredFuture: "一度間違えても自分を無能と決めず、相手の話を聞き直して関係と仕事を続けたい",
+    stuckReality: "ミオを裏切り者と決めた自分を責め、『調査役に向いていない』と次の証拠を読む手が止まる",
+    firstVisibleShift: "物語を自分へ重ね、間違いより見直した行動に気づき、調査を続けると決める",
+    payoff: {
+      mode: "other-person-response",
+      timing: "物語の意味を自分で見つけた後",
+      beat: "リンクが『まだ続けられる』と話した直後、ミオが自分の言葉を聞きに来るよう応答する",
+      anchorIds: ["ep8-adv-05", "ep8-adv-07"],
+    },
+    practitionerAppeal: "正論で納得させず、本人が自分の経験から次の可能性を見つける会話を見せる",
+  },
   learner: {
     problem: "正しい説明を長くされるほど、自分が責められているように感じて内容が入らなくなる",
     livedExamples: ["注意されると反論だけが浮かぶ", "説明が長いと心を閉じる", "自分の話だと認めるのが怖い"],

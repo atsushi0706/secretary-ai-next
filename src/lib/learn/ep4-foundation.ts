@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP4_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "confidence",
+    person: "清瀬リンクと雨宮ミオ",
+    desiredFuture: "人前で緊張しても、自分の言葉で最初の一言を伝えたい",
+    stuckReality: "実習の前へ出ると手が冷たくなり、『落ち着いて』と励まされるほど声が出ない",
+    firstVisibleShift: "緊張や震えを消さず、足と呼吸を確かめた続きに自分の名前を一言伝える",
+    payoff: {
+      mode: "other-person-response",
+      timing: "二回目の公開実習",
+      beat: "ミオが名前まで言えたと報告し、リンクも自分の体験と重ねて言葉の順番を理解する",
+      anchorIds: ["ep4-adv-06", "ep4-adv-07"],
+    },
+    practitionerAppeal: "相手の緊張を消したふりにせず、その場で本人が言えた一言を一緒に作る仕事として見せる",
+  },
   learner: {
     problem: "緊張している相手へ『落ち着いて』『大丈夫』と言っても届かず、次に何を言えばよいか分からない",
     livedExamples: ["人前で声が出なくなった相手を励ます", "怖がる相手へ大丈夫と言い続ける", "相手が今分かるものを確かめず助言する"],

@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP7_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "career",
+    person: "清瀬リンク",
+    desiredFuture: "用意された正解だけに人生を狭めず、安全と望みを守る自分の選択を作りたい",
+    stuckReality: "今入るか一分後に入るかを迫られ、一人で入らない選択が消えて決められない",
+    firstVisibleShift: "保留と撤退を含む選択を取り戻し、相棒と入口だけ確かめる一歩を選ぶ",
+    payoff: {
+      mode: "next-scene-consequence",
+      timing: "第三の選択を作った直後",
+      beat: "リンクが自分で決めると足が動くと話し、二人で管理用通路へ進む",
+      anchorIds: ["ep7-adv-05", "ep7-adv-07"],
+    },
+    practitionerAppeal: "辞めるか我慢するかのような狭い二択から、本人の目的に合う試せる第三案を作る支援を見せる",
+  },
   learner: {
     problem: "二つの選択肢を出されると、その外にも選べる道があることを忘れる",
     livedExamples: ["今やるか後でやるかだけを迫られる", "買う二択だけを見せられる", "断る選択を言い出せない"],

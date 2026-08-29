@@ -1,6 +1,20 @@
 import { defineEpisodeFoundation } from "./episode-foundation";
 
 export const EP5_FOUNDATION = defineEpisodeFoundation({
+  humanArc: {
+    theme: "relationships",
+    person: "清瀬リンク",
+    desiredFuture: "大切な相手に予想外のことをされても、関係を壊す結論を急がず本当の理由を確かめたい",
+    stuckReality: "カードとミオが消えた瞬間、『最初から全部嘘だった』という答えで頭がいっぱいになり動けない",
+    firstVisibleShift: "ショックを抱えたまま事実と解釈を分け、映像の送信元を確認する行動を自分で選ぶ",
+    payoff: {
+      mode: "setback-and-retry",
+      timing: "仲間と学びを失った直後",
+      beat: "一度は裏切りと決めたリンクが、関係の答えを保留し、相棒と調査を続ける",
+      anchorIds: ["ep5-adv-06", "ep5-adv-08"],
+    },
+    practitionerAppeal: "感情を消したり前向きに決めつけたりせず、本人が大切な関係を自分で確かめられるよう支える",
+  },
   learner: {
     problem: "信じていた相手に予想外の行動をされると、最初に浮かんだ意味を事実だと決めて動けなくなる",
     livedExamples: ["仲間が突然いなくなる", "大切に集めたものが失われる", "短いメッセージから相手の全てを決めつける"],

@@ -5,8 +5,8 @@ import { MangaArt } from "@/components/learn/MangaArt";
 
 export default function LearnHome() {
   const eps = Object.values(EPISODES);
-  const ep1 = eps[0];
-  const teaser = ep1.parts.find((p): p is Extract<Part, { kind: "teaser" }> => p.kind === "teaser");
+  const lastEpisode = eps[eps.length - 1];
+  const teaser = lastEpisode?.parts.find((p): p is Extract<Part, { kind: "teaser" }> => p.kind === "teaser");
   return (
     <main className="min-h-screen" style={{ background: "#f3f4f8" }}>
       <div className="lrn-list">
@@ -18,15 +18,15 @@ export default function LearnHome() {
         {eps.map((ep) => (
           <Link key={ep.key} href={`/learn/${ep.key}`} className="lrn-epcard">
             <div className="cover">
-              <img className="episode-cover" src="/learn/ep1/episode-cover.webp" alt="動けという命令をやめ、走るイメージへ注意を移す17歳のミルトン・エリクソン" />
+              <img className="episode-cover" src={ep.listing.cover} alt={ep.listing.coverAlt} />
               <span className="badge">第{ep.no}話</span>
-              <div className="cover-hook"><span>CASE 01</span><b>「やらなきゃ」と思うほど、動けない。</b></div>
+              <div className="cover-hook"><span>{ep.listing.caseNo}</span><b>{ep.listing.hook}</b></div>
             </div>
             <div className="body">
-              <div className="no">エリクソン原理 01</div>
+              <div className="no">{ep.listing.principleNo}</div>
               <div className="title">{ep.title}</div>
               <div className="sub">{ep.subtitle}</div>
-              <div className="meta"><span>📖 漫画5P</span><span>🎓 教室13場面</span><span>🎫 質問チケット×{ep.tickets}</span><span>⏱ 約15分</span></div>
+              <div className="meta"><span>📖 漫画{ep.listing.mangaPages}P</span><span>🎓 講義{ep.listing.classroomScenes}場面</span><span>🎫 質問チケット×{ep.tickets}</span><span>⏱ 約{ep.listing.minutes}分</span></div>
             </div>
           </Link>
         ))}

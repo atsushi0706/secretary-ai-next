@@ -10,8 +10,8 @@ import { LearnHarness } from "./LearnHarness";
 
 export const dynamic = "force-dynamic";
 
-export default async function DevLearnPage({ searchParams }: { searchParams: Promise<{ part?: string }> }) {
+export default async function DevLearnPage({ searchParams }: { searchParams: Promise<{ part?: string; ep?: string }> }) {
   if (process.env.NODE_ENV === "production") notFound();
   const sp = await searchParams;
-  return <LearnHarness part={Number(sp.part ?? 0) || 0} />;
+  return <LearnHarness part={Number(sp.part ?? 0) || 0} episodeKey={sp.ep === "ep2" ? "ep2" : "ep1"} />;
 }

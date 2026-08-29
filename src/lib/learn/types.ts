@@ -90,6 +90,7 @@ export type MangaFrame = {
 
 /** 第1ページより前に出す、作品のサムネイル兼タイトル画面。説明は置かない。 */
 export type EpisodeBriefing = {
+  caseNo: string;
   eyebrow: string;
   title: string;
   principle: string;
@@ -183,18 +184,38 @@ export type PrincipleCard = {
 export type Part =
   | { kind: "manga"; title: string; frames: MangaFrame[]; schoolIntro?: EpisodeSchoolIntro; briefing?: EpisodeBriefing; /** 最後に出す文 */ close?: string[] }
   | { kind: "experience"; title: string; steps: ExpStep[]; minutes?: number; gate?: ExperienceGate; bridge?: ExperienceBridge }
-  | { kind: "classroom"; scenes: Scene[] }
+  | { kind: "classroom"; intro: { title: string; lead: string }; scenes: Scene[] }
   | { kind: "adventure"; scenario: AdventureScenario }
   | { kind: "qa"; title: string }
   | { kind: "card"; lines: Line[]; card: PrincipleCard; after: Line[] }
   | { kind: "outro"; lines: Line[] }
-  | { kind: "teaser"; manga: MangaPage[]; hook: string[]; next: { no: string; title: string; series: string; principle: string }; unlock: string[] };
+  | {
+    kind: "teaser";
+    manga: MangaPage[];
+    hook: string[];
+    next: { no: string; title: string; series: string; principle: string };
+    preview?: { caseNo: string; first: { who: string; text: string }; teacher: string };
+    unlock: string[];
+  };
+
+export type EpisodeListing = {
+  cover: string;
+  coverAlt: string;
+  caseNo: string;
+  hook: string;
+  principleNo: string;
+  mangaPages: number;
+  classroomScenes: number;
+  minutes: number;
+};
 
 export type Episode = {
   key: string;
   no: number;
   title: string;
   subtitle: string;
+  /** 一覧カード専用。各話の固有情報をUIへ直書きしない。 */
+  listing: EpisodeListing;
   /** この回のゴール（一覧に出す） */
   goal: { before: string[]; after: string[]; takeaway: string };
   tickets: number;

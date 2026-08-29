@@ -396,7 +396,7 @@ function MangaPart({ part, userName, onDone, label }: { part: Extract<Part, { ki
             <span>{briefing.title}</span>
             <b>{briefing.principle}</b>
           </div>
-          <div className="lrn-brief-case">CASE 01</div>
+          <div className="lrn-brief-case">{briefing.caseNo}</div>
           <h1>{briefing.hook}</h1>
           <p className="lrn-brief-teaser">{briefing.teaser}</p>
           <button className="lrn-cta" onClick={() => setIntroStep(2)}>{briefing.cta}</button>
@@ -757,6 +757,9 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
       channel: read("channel", "").startsWith("『海辺")
         ? read("channel", "")
         : "『海辺はそのままでいい。今、私の声は聞こえますか？』",
+      resistanceScene: read("resistanceScene", "私は絶対に催眠にかかりません"),
+      openingMove: read("openingMove", "目を閉じない自由を残し、まぶたの感覚を確かめてもらった"),
+      personalMove: read("personalMove", "拒否を認め、今の感覚を本人に確かめてもらった"),
     };
   });
   const [evidenceIds, setEvidenceIds] = useState<string[]>([]);
@@ -932,10 +935,20 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
     const raw = (values[challenge.freeAnswer.storeAs] ?? "").trim();
     if (!raw) return;
     setSummarizingKey(challenge.freeAnswer.storeAs);
-    let correct = !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(raw);
-    let responseText = correct
-      ? "正解です。完成ではなく、今できる一動作へ注意を移せています。"
-      : "まだ『できない完成』へ注意が残っています。今すぐ本当にできる一動作まで小さくしてください。";
+    const isResistanceLesson = ep === "ep2";
+    const acceptsRefusal = /(しなくていい|閉じなくていい|そのまま|やめても|断って|無理に.+ない)/.test(raw);
+    const invitesObservation = /(確かめ|感じ|まぶた|呼吸|声|重さ|軽さ|変化)/.test(raw);
+    const forcesCompliance = /(目を閉じ(?:て|ろ)|絶対|必ず|信じて|従って|気づかれないよう)/.test(raw);
+    let correct = isResistanceLesson
+      ? acceptsRefusal && invitesObservation && !forcesCompliance
+      : !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(raw);
+    let responseText = isResistanceLesson
+      ? correct
+        ? "正解です。拒否する自由を残し、本人が今の感覚を確かめられる一言になっています。"
+        : "拒否を本当に認める言葉と、本人が今確かめられる感覚を一つ入れてください。"
+      : correct
+        ? "正解です。完成ではなく、今できる一動作へ注意を移せています。"
+        : "まだ『できない完成』へ注意が残っています。今すぐ本当にできる一動作まで小さくしてください。";
     try {
       const response = await fetch("/api/learn/evaluate", {
         method: "POST",
@@ -1196,10 +1209,10 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
 type Flat = { line: Line; scene: Scene | null; sceneIdx: number };
 
 function DialoguePart({
-  ep, items, userName, voice, tickets, onUseTicket, onDone, showTickets, startLabel, dim,
+  ep, items, userName, voice, tickets, onUseTicket, onDone, showTickets, startLabel, startTitle, startLead, dim,
 }: {
   ep: string; items: Flat[]; voice: ReturnType<typeof useVoice>; tickets: number; onUseTicket: () => void;
-  userName: string; onDone: () => void; showTickets: boolean; startLabel?: string; dim?: boolean;
+  userName: string; onDone: () => void; showTickets: boolean; startLabel?: string; startTitle?: string; startLead?: string; dim?: boolean;
 }) {
   const [idx, setIdx] = useState(startLabel ? -1 : 0);
   const [asking, setAsking] = useState(false);
@@ -1222,6 +1235,9 @@ function DialoguePart({
       channel: read("channel", "").startsWith("『海辺")
         ? read("channel", "")
         : "『海辺はそのままでいい。今、私の声は聞こえますか？』",
+      resistanceScene: read("resistanceScene", "私は絶対に催眠にかかりません"),
+      openingMove: read("openingMove", "目を閉じない自由を残し、まぶたの感覚を確かめてもらった"),
+      personalMove: read("personalMove", "拒否を認め、今の感覚を本人に確かめてもらった"),
     };
   });
   const rawCur = idx >= 0 ? items[idx] : null;
@@ -1300,8 +1316,8 @@ function DialoguePart({
       {idx < 0 ? (
         <div className="lrn-exp-gate">
           <img src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-          <h2>「できない」から目を外すと、何が変わる？</h2>
-          <p>命令、自己暗示、リンクへの催眠、あなたの最初の一動作。注意がどこからどこへ移ったかを、ここで一つにつなげます。<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
+          <h2>{startTitle ?? "授業を振り返る"}</h2>
+          <p>{startLead ?? "ここまでの体験を、催眠の原理として整理します。"}<br />分からない箇所では、🎫で先生を止めて質問できます。</p>
           <button className="lrn-cta" onClick={() => setIdx(0)}>{startLabel}</button>
         </div>
       ) : (
@@ -1351,14 +1367,25 @@ function QaPart({ ep, part, tickets, onUseTicket, onDone, lastScene }: {
       try { return window.localStorage.getItem(`learn:${ep}:${key}`)?.trim() || fallback; }
       catch { return fallback; }
     };
+    const ep2 = ep === "ep2";
     return {
       location: "講義後の振り返り",
-      objective: "命令と暗示の違い、自己暗示とUtilizationのつながりを理解する",
+      objective: ep2
+        ? "拒否を消そうとせず、相手が今確認できる反応から催眠を始める順番を理解する"
+        : "命令と暗示の違い、自己暗示とUtilizationのつながりを理解する",
       nodeKind: "final-qa",
-      theme: read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
-      exception: "できない方向から目を外し、今分かる感覚へ注意を移した場面",
-      clue: read("channel", "今、聞こえている声"),
-      resource: read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
+      theme: ep2
+        ? read("resistanceScene", "私は絶対に催眠にかかりません")
+        : read("stuckMoment", "やりたいのに、最初の一歩を始められない"),
+      exception: ep2
+        ? "拒否したまま、まぶたや呼吸を本人に確かめてもらった場面"
+        : "できない方向から目を外し、今分かる感覚へ注意を移した場面",
+      clue: ep2
+        ? read("openingMove", "目を閉じない自由を残し、まぶたの感覚を確かめてもらった")
+        : read("channel", "今、聞こえている声"),
+      resource: ep2
+        ? read("personalMove", "拒否を認め、今の感覚を本人に確かめてもらった")
+        : read("firstJudgment", "最初の一動作をする自分へ注意を移した"),
     };
   });
   return (
@@ -1464,16 +1491,21 @@ function CardPart({ ep, part, voice, onDone }: { ep: string; part: Extract<Part,
 }
 
 function TeaserPart({ part, epNo }: { part: Extract<Part, { kind: "teaser" }>; epNo: number }) {
+  const preview = part.preview ?? {
+    caseNo: `NEXT CASE ${String(epNo + 1).padStart(2, "0")}`,
+    first: { who: "次の相談者", text: part.hook.join(" ") },
+    teacher: "続きは、次の事件でお見せしましょう。",
+  };
   return (
     <div className="lrn-teaser">
       <div className="lrn-nextcase-stage">
         <img className="lrn-nextcase-bg" src="/learn/adventure/erickson-study-v1.webp" alt="夜の書斎" />
         <div className="lrn-nextcase-shade" />
-        <div className="lrn-nextcase-kicker">NEXT CASE 02</div>
+        <div className="lrn-nextcase-kicker">{preview.caseNo}</div>
         <h2>{part.next.title}</h2>
-        <div className="lrn-nextcase-dialogue is-man"><b>男性</b><span>私は絶対に、催眠なんかにかかりません。</span></div>
+        <div className="lrn-nextcase-dialogue is-man"><b>{preview.first.who}</b><span>{preview.first.text}</span></div>
         <img className="lrn-nextcase-erickson" src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-        <div className="lrn-nextcase-dialogue is-teacher"><b>エリクソン</b><span>では、かからないようにしてください。</span></div>
+        <div className="lrn-nextcase-dialogue is-teacher"><b>エリクソン</b><span>{preview.teacher}</span></div>
         <div className="lrn-nextcase-unlock">
           <b>{part.next.no}｜{part.next.series}</b>
           <button type="button" disabled>{part.unlock[0] ?? "準備中"}</button>
@@ -1535,7 +1567,7 @@ export function LearnPlayer({ episode, userName, startPart }: { episode: Episode
   }, [voice]);
 
   function restartEpisode() {
-    if (!window.confirm("第1話の途中経過を消して、最初の学校画面から見直しますか？")) return;
+    if (!window.confirm(`第${episode.no}話の途中経過を消して、最初の学校画面から見直しますか？`)) return;
     voice.stop();
     try {
       const prefix = `learn:${episode.key}:`;
@@ -1566,7 +1598,7 @@ export function LearnPlayer({ episode, userName, startPart }: { episode: Episode
       case "classroom": {
         const items: Flat[] = part.scenes.flatMap((s, si) => s.lines.map((l) => ({ line: l, scene: s, sceneIdx: si })));
         return <DialoguePart key={`classroom-${restartKey}`} ep={episode.key} items={items} userName={userName} voice={voice} tickets={tickets} onUseTicket={() => setTickets((t) => Math.max(0, t - 1))}
-          onDone={next} showTickets startLabel="▶ 授業をはじめる" />;
+          onDone={next} showTickets startLabel="▶ 授業をはじめる" startTitle={part.intro.title} startLead={part.intro.lead} />;
       }
       case "adventure":
         return <AdventurePart key={`adventure-${restartKey}`} ep={episode.key} scenario={part.scenario} userName={userName} voice={voice} onDone={next} />;

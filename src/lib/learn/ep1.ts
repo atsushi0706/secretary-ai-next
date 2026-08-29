@@ -70,6 +70,16 @@ export const EP1: Episode = {
   no: 1,
   title: "『やらなきゃ』と思うほど動けない時、催眠をどう使う？",
   subtitle: "変態催眠学者の催眠の極意01｜Utilization",
+  listing: {
+    cover: "/learn/ep1/episode-cover.webp",
+    coverAlt: "動けという命令をやめ、走るイメージへ注意を移す17歳のミルトン・エリクソン",
+    caseNo: "CASE 01",
+    hook: "『やらなきゃ』と思うほど、動けない。",
+    principleNo: "エリクソン原理 01",
+    mangaPages: 5,
+    classroomScenes: 4,
+    minutes: 15,
+  },
   goal: {
     before: ["『やらなきゃ』と自分へ命令する", "できない結果を見て、また自分を責める", "同じ命令をもっと強くする"],
     after: ["できない方向からいったん目を外す", "今分かる感覚・できる動作へ注意を移す", "その方向から最初の一動作を暗示する"],
@@ -93,6 +103,7 @@ export const EP1: Episode = {
         cta: "どういうことか確かめる →",
       },
       briefing: {
+        caseNo: "CASE 01",
         eyebrow: "変態催眠学者｜MILTON H. ERICKSON",
         title: "動けない自分への催眠",
         principle: "第1の催眠事件",
@@ -171,7 +182,14 @@ export const EP1: Episode = {
       ],
     },
     { kind: "adventure", scenario: EP1_ADVENTURE },
-    { kind: "classroom", scenes: SCENES },
+    {
+      kind: "classroom",
+      intro: {
+        title: "『できない』から目を外すと、何が変わる？",
+        lead: "命令、自己暗示、リンクへの催眠、あなたの最初の一動作。注意がどこからどこへ移ったかを、一つにつなげます。",
+      },
+      scenes: SCENES,
+    },
     { kind: "qa", title: "催眠について、エリクソンに聞きたいことはありますか？" },
     {
       kind: "card",
@@ -225,6 +243,11 @@ export const EP1: Episode = {
         title: "『私は絶対に催眠にかかりません』と言う相手へ、どう催眠をかける？",
         series: "変態催眠学者の催眠の極意02",
         principle: "相手の警戒をやめさせず、催眠を始めるきっかけに使う",
+      },
+      preview: {
+        caseNo: "NEXT CASE 02",
+        first: { who: "男性", text: "私は絶対に、催眠なんかにかかりません。" },
+        teacher: "では、かからないようにしてください。",
       },
       unlock: ["🔒 70コインで解放"],
     },

@@ -15,6 +15,27 @@ export default function LearnHome() {
           <h1>📚 AIラーニング</h1>
         </div>
 
+        <section className="lrn-series-block">
+          <div className="lrn-series-heading">
+            <span>MENTAL MODEL COURSE</span>
+            <h2>清瀬 淳の心の構造学</h2>
+          </div>
+          <Link href="/learn/inner-world-map" className="lrn-iwm-door">
+            <div className="lrn-iwm-orbit" aria-hidden="true"><i /><b>✦</b></div>
+            <div className="lrn-iwm-copy">
+              <small>全6章＋実演セッション2本</small>
+              <strong>INNER WORLD MAP</strong>
+              <h3>繰り返す悩みの奥にいる自分を見つけ、未来へ進む地図を作る。</h3>
+              <span>自分の地図を作る →</span>
+            </div>
+          </Link>
+        </section>
+
+        <div className="lrn-series-heading is-erickson">
+          <span>HYPNOSIS ADVENTURE</span>
+          <h2>変態催眠学者 ミルトン・エリクソン編</h2>
+        </div>
+
         {eps.map((ep) => (
           <Link key={ep.key} href={`/learn/${ep.key}`} className="lrn-epcard">
             <div className="cover">

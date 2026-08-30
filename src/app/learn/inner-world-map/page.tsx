@@ -1,0 +1,24 @@
+import { auth } from "@/auth";
+import { InnerWorldMapPlayer } from "@/components/learn/InnerWorldMapPlayer";
+import { getUserSettings } from "@/lib/supabase";
+
+export const metadata = {
+  title: "インナーワールドマップ — SINGA WORLD",
+  description: "繰り返す悩みの奥にある心の構造を可視化し、二つの自分が同じ未来へ進む地図を作る6章の体験教材",
+};
+
+export default async function InnerWorldMapPage() {
+  const session = await auth();
+  const userId = (session?.user as { id?: string } | undefined)?.id;
+  let userName = session?.user?.name?.trim() || "あなた";
+  if (userId) {
+    try {
+      const settings = await getUserSettings(userId);
+      userName = settings?.user_call_name?.trim() || userName;
+    } catch {
+      // ログイン名で継続する。
+    }
+  }
+
+  return <InnerWorldMapPlayer userName={userName} />;
+}

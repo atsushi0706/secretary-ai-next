@@ -2,10 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { VoiceInput } from "@/components/shinga/VoiceInput";
 import {
   INNER_WORLD_ANSWER_LABELS,
   INNER_WORLD_MODULES,
+  INNER_WORLD_PREMISE,
   INNER_WORLD_SESSIONS,
   type InnerWorldAnswerKey,
   type InnerWorldModule,
@@ -13,8 +15,8 @@ import {
 } from "@/lib/inner-world-map/course";
 import styles from "./InnerWorldMap.module.css";
 
-const ANSWERS_KEY = "learn:inner-world-map:answers:v1";
-const COMPLETED_KEY = "learn:inner-world-map:completed:v1";
+const ANSWERS_KEY = "learn:inner-world-map:answers:v2";
+const COMPLETED_KEY = "learn:inner-world-map:completed:v2";
 
 type Answers = Partial<Record<InnerWorldAnswerKey, string>>;
 
@@ -36,6 +38,37 @@ function GuideReply({ children }: { children: React.ReactNode }) {
     <div className={styles.guideReply}>
       <span className={styles.guideAvatar} aria-hidden="true">淳</span>
       <div><b>清瀬 淳</b><p>{children}</p></div>
+    </div>
+  );
+}
+
+function DialogueStage({
+  screen,
+  visibleText,
+}: {
+  screen: Extract<InnerWorldScreen, { kind: "dialogue" }>;
+  visibleText: string;
+}) {
+  const linkImage = screen.mood === "smile"
+    ? "/learn/chars/link-smile.webp"
+    : screen.mood === "worry"
+      ? "/learn/chars/link-worry.webp"
+      : "/learn/chars/link-neutral.webp";
+  const isJun = screen.speaker === "jun";
+
+  return (
+    <div className={`${styles.dialogueStage} ${isJun ? styles.junSpeaking : styles.linkSpeaking}`}>
+      {screen.scene && <span className={styles.sceneLabel}>{screen.scene}</span>}
+      <div className={styles.stageCharacters} aria-hidden="true">
+        <div className={styles.junPortrait}>
+          <span>JUN</span><b>淳</b><small>MENTAL MODEL GUIDE</small>
+        </div>
+        <Image className={styles.linkPortrait} src={linkImage} alt="" width={520} height={1040} priority />
+      </div>
+      <div className={`${styles.dialogueBox} ${isJun ? styles.junBox : styles.linkBox}`}>
+        <span>{isJun ? "清瀬 淳" : "清瀬リンク"}</span>
+        <p aria-live="polite">{visibleText}<i aria-hidden="true" /></p>
+      </div>
     </div>
   );
 }
@@ -71,8 +104,8 @@ function CourseMap({
             onClick={() => onOpen(module)}
           >
             <span className={styles.nodeNo}>{done ? "✓" : String(module.id).padStart(2, "0")}</span>
-            <span className={styles.nodeCopy}><small>{module.zone}</small><b>{module.shortTitle}</b></span>
-            <span className={styles.nodeState}>{done ? "見返す" : unlocked ? "入る" : "未到達"}</span>
+            <span className={styles.nodeCopy}><small>第{module.id}講｜{module.zone}</small><b>{module.shortTitle}</b></span>
+            <span className={styles.nodeState}>{done ? "復習する" : unlocked ? "学ぶ" : "未到達"}</span>
           </button>
         );
       })}
@@ -82,12 +115,11 @@ function CourseMap({
 
 function FullMap({ answers, onClose }: { answers: Answers; onClose: () => void }) {
   const groups: { title: string; tone: string; refs: InnerWorldAnswerKey[] }[] = [
-    { title: "現在の綱引き", tone: "mist", refs: ["currentProblem", "desiredState"] },
-    { title: "繰り返す反応", tone: "pattern", refs: ["currentPattern", "shadowSelf1", "pastPattern"] },
-    { title: "陽の自分", tone: "light", refs: ["lightSelf"] },
-    { title: "陰の流れ", tone: "shadow", refs: ["turningPoint", "bornThought", "bornAction", "bornValue", "deepSelf"] },
-    { title: "二つをつなぐ橋", tone: "bridge", refs: ["consciousPurpose", "deepPurpose", "sharedPurpose", "newRoute"] },
-    { title: "未来への方角", tone: "compass", refs: ["higherCompass", "geniusKey", "firstMove"] },
+    { title: "望みと実際の反応", tone: "mist", refs: ["currentConflict"] },
+    { title: "自動再生される前提", tone: "pattern", refs: ["culturalVoice", "automaticPattern"] },
+    { title: "深層自己の仮説", tone: "shadow", refs: ["deepSelfHypothesis"] },
+    { title: "二つをつなぐ橋", tone: "bridge", refs: ["sharedPurpose", "newRoute"] },
+    { title: "未来への方角", tone: "compass", refs: ["lightDirection", "firstMove"] },
   ];
 
   const copy = async () => {
@@ -102,10 +134,10 @@ function FullMap({ answers, onClose }: { answers: Answers; onClose: () => void }
   return (
     <div className={styles.fullMap}>
       <header className={styles.fullMapHead}>
-        <div><small>INNER WORLD MAP</small><h2>完成した心の地図</h2></div>
+        <div><small>YOUR LEARNING MAP</small><h2>学びを自分の一場面へつないだノート</h2></div>
         <button type="button" onClick={onClose}>閉じる</button>
       </header>
-      <p className={styles.fullMapIntro}>これは診断結果ではありません。いま見えている心の構造を、選び直せる形にした地図です。</p>
+      <p className={styles.fullMapIntro}>これは診断結果でも、変わるための強制課題でもありません。講義で学んだ心の構造を、自分の一場面から見返すための仮説ノートです。</p>
       <div className={styles.fullMapFlow}>
         {groups.map((group, index) => (
           <section className={`${styles.mapGroup} ${styles[group.tone]}`} key={group.title}>
@@ -120,7 +152,7 @@ function FullMap({ answers, onClose }: { answers: Answers; onClose: () => void }
           </section>
         ))}
       </div>
-      <button type="button" className={styles.copyButton} onClick={() => void copy()}>地図を文章でコピーする</button>
+      <button type="button" className={styles.copyButton} onClick={() => void copy()}>学習ノートを文章でコピーする</button>
     </div>
   );
 }
@@ -184,8 +216,34 @@ function ModuleScreen({
   const [draft, setDraft] = useState(savedDraft);
   const [reply, setReply] = useState(savedDraft ? "前に書いた答えを読み込みました。このまま続けることも、書き直すこともできます。" : "");
   const [busy, setBusy] = useState(false);
+  const [selectedChoice, setSelectedChoice] = useState<string | null>(null);
+  const dialogueText = screen.kind === "dialogue" ? screen.text.replaceAll("{name}", userName) : "";
+  const [visibleCharacters, setVisibleCharacters] = useState(screen.kind === "dialogue" ? 0 : dialogueText.length);
 
   const progress = ((screenIndex + 1) / module.screens.length) * 100;
+
+  useEffect(() => {
+    if (screen.kind !== "dialogue") return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      const revealTimer = window.setTimeout(() => setVisibleCharacters(dialogueText.length), 0);
+      return () => window.clearTimeout(revealTimer);
+    }
+    const timer = window.setInterval(() => {
+      setVisibleCharacters((current) => {
+        if (current >= dialogueText.length) {
+          window.clearInterval(timer);
+          return current;
+        }
+        return Math.min(dialogueText.length, current + 1);
+      });
+    }, 22);
+    return () => window.clearInterval(timer);
+  }, [dialogueText, screen.kind]);
+
+  const dialogueComplete = screen.kind !== "dialogue" || visibleCharacters >= dialogueText.length;
+  const selectedOption = screen.kind === "choice"
+    ? screen.options.find((option) => option.id === selectedChoice) ?? null
+    : null;
 
   const submit = async (value: string, skipped = false) => {
     if (screen.kind !== "input") return;
@@ -221,19 +279,54 @@ function ModuleScreen({
     <main className={styles.lesson} style={{ "--zone": module.color } as React.CSSProperties}>
       <header className={styles.lessonHead}>
         <button type="button" onClick={onExit} aria-label="コースマップへ戻る">←</button>
-        <div><small>ZONE {String(module.id).padStart(2, "0")}</small><b>{module.shortTitle}</b></div>
+        <div><small>LESSON {String(module.id).padStart(2, "0")}</small><b>{module.shortTitle}</b></div>
         <span>{screenIndex + 1}/{module.screens.length}</span>
       </header>
       <div className={styles.progress}><span style={{ width: `${progress}%` }} /></div>
 
       <section className={styles.screen}>
-        {screen.kind === "guide" && (
-          <div className={`${styles.guideScreen} ${screen.tone ? styles[screen.tone] : ""}`}>
+        {screen.kind === "dialogue" && <DialogueStage screen={screen} visibleText={dialogueText.slice(0, visibleCharacters)} />}
+
+        {screen.kind === "lesson" && (
+          <div className={styles.lessonScreen}>
             <span className={styles.eyebrow}>{screen.eyebrow}</span>
             <h1>{screen.title}</h1>
             <div className={styles.guideParagraphs}>{screen.paragraphs.map((paragraph) => <p key={paragraph}>{paragraph}</p>)}</div>
-            {screen.bullets && <ul>{screen.bullets.map((item) => <li key={item}>{item}</li>)}</ul>}
-            <GuideReply>{userName}さん。分からない言葉を覚えるのではなく、自分の場面がどこへ入るかを確かめながら進みましょう。</GuideReply>
+            {screen.diagram && (
+              <div className={styles.conceptDiagram}>
+                {screen.diagram.map((item, index) => (
+                  <div className={`${styles.conceptNode} ${styles[item.tone]}`} key={item.label}>
+                    <small>{String(index + 1).padStart(2, "0")}</small><b>{item.label}</b><p>{item.detail}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className={styles.takeaway}><span>ここで覚えること</span><p>{screen.takeaway}</p></div>
+          </div>
+        )}
+
+        {screen.kind === "choice" && (
+          <div className={styles.choiceScreen}>
+            <span className={styles.eyebrow}>{screen.eyebrow}</span>
+            <h1>{screen.title}</h1>
+            <p className={styles.choiceContext}>{screen.context}</p>
+            <div className={styles.choiceList}>
+              {screen.options.map((option, index) => (
+                <button
+                  type="button"
+                  key={option.id}
+                  className={`${selectedChoice === option.id ? styles.selected : ""} ${selectedChoice === option.id ? (option.correct ? styles.correct : styles.incorrect) : ""}`}
+                  onClick={() => setSelectedChoice(option.id)}
+                >
+                  <small>{String(index + 1).padStart(2, "0")}</small><span>{option.label}</span><b>{selectedChoice === option.id ? (option.correct ? "✓" : "×") : "→"}</b>
+                </button>
+              ))}
+            </div>
+            {selectedOption && (
+              <div className={`${styles.choiceFeedback} ${selectedOption.correct ? styles.feedbackCorrect : styles.feedbackIncorrect}`}>
+                <b>{selectedOption.correct ? "正解" : "ここは違います"}</b><p>{selectedOption.feedback}</p>
+              </div>
+            )}
           </div>
         )}
 
@@ -259,7 +352,7 @@ function ModuleScreen({
             {!reply && (
               <div className={styles.inputActions}>
                 {screen.skipLabel && <button type="button" className={styles.ghostButton} disabled={busy} onClick={() => void submit("", true)}>{screen.skipLabel}</button>}
-                <button type="button" className={styles.primaryButton} disabled={busy || !draft.trim()} onClick={() => void submit(draft)}>{busy ? "言葉を受け取っています…" : "淳に話す →"}</button>
+                <button type="button" className={styles.primaryButton} disabled={busy || !draft.trim()} onClick={() => void submit(draft)}>{busy ? "一文を整理しています…" : "学習ノートに残す →"}</button>
               </div>
             )}
             {reply && (
@@ -292,8 +385,8 @@ function ModuleScreen({
             <h1>{screen.title}</h1>
             <p>{screen.lead}</p>
             <div className={styles.finalThree}>
-              <div><small>HIGHER COMPASS</small><MapValue value={answers.higherCompass} /></div>
-              <div><small>GENIUS KEY</small><MapValue value={answers.geniusKey} /></div>
+              <div><small>CULTURAL HYPNOSIS</small><MapValue value={answers.culturalVoice} /></div>
+              <div><small>NEW ROUTE</small><MapValue value={answers.newRoute} /></div>
               <div><small>FIRST MOVE</small><MapValue value={answers.firstMove} /></div>
             </div>
           </div>
@@ -302,7 +395,10 @@ function ModuleScreen({
 
       <footer className={styles.lessonFoot}>
         <button type="button" className={styles.footBack} onClick={onBack} disabled={screenIndex === 0}>← 戻る</button>
-        {screen.kind !== "input" && <button type="button" className={styles.footNext} onClick={onNext}>{screen.kind === "complete" ? "地図を完成する" : "次へ"} →</button>}
+        {screen.kind === "dialogue" && !dialogueComplete && <button type="button" className={styles.footNext} onClick={() => setVisibleCharacters(dialogueText.length)}>台詞を表示</button>}
+        {screen.kind === "dialogue" && dialogueComplete && <button type="button" className={styles.footNext} onClick={onNext}>次へ →</button>}
+        {screen.kind === "choice" && <button type="button" className={styles.footNext} disabled={!selectedOption} onClick={onNext}>解説を受け取って次へ →</button>}
+        {(screen.kind === "lesson" || screen.kind === "map" || screen.kind === "complete") && <button type="button" className={styles.footNext} onClick={onNext}>{screen.kind === "complete" ? "学習ノートを見る" : "次へ"} →</button>}
         {screen.kind === "input" && reply && <button type="button" className={styles.footNext} onClick={onNext}>次へ →</button>}
       </footer>
       <SourceLink module={module} />
@@ -355,7 +451,7 @@ export function InnerWorldMapPlayer({ userName }: { userName: string }) {
   };
 
   const reset = () => {
-    if (!window.confirm("この端末に保存したインナーワールドマップを消して、最初から作り直しますか？")) return;
+    if (!window.confirm("この端末に保存した学習進捗とノートを消して、最初から学び直しますか？")) return;
     window.localStorage.removeItem(ANSWERS_KEY);
     window.localStorage.removeItem(COMPLETED_KEY);
     setAnswers({});
@@ -364,7 +460,7 @@ export function InnerWorldMapPlayer({ userName }: { userName: string }) {
     setView("course");
   };
 
-  if (!ready) return <div className={styles.loading}>地図を開いています…</div>;
+  if (!ready) return <div className={styles.loading}>講義室を開いています…</div>;
   if (view === "full-map") return <FullMap answers={answers} onClose={() => setView("course")} />;
   if (view === "sessions") return <SessionRoom onClose={() => setView("course")} />;
 
@@ -392,35 +488,36 @@ export function InnerWorldMapPlayer({ userName }: { userName: string }) {
       <div className={styles.starField} aria-hidden="true" />
       <header className={styles.courseHead}>
         <Link href="/learn">← AIラーニング</Link>
-        <span>MENTAL MODEL COURSE</span>
+        <span>MENTAL MODEL CLASS</span>
       </header>
 
       <section className={styles.hero}>
-        <p className={styles.heroKicker}>清瀬 淳の心の構造学</p>
+        <p className={styles.heroKicker}>清瀬 淳 × 清瀬リンクの心の構造学</p>
         <h1>INNER WORLD<br /><em>MAP</em></h1>
-        <h2>繰り返す悩みの奥にいる自分を見つけ、<br />二つの目的が同じ未来へ進める地図を作る。</h2>
-        <p>6つの領域へ入り、あなた自身の言葉で一枚の地図を完成させます。</p>
+        <h2>なぜ、変わろうとしても<br />同じ問題へ戻ってしまうのか？</h2>
+        <p>淳とリンクの掛け合いを追いながら、顕在意識、潜在意識、文化的催眠、深層自己を順番に学びます。自分のノートを書くのは、意味が分かった後だけです。</p>
         <div className={styles.heroActions}>
-          {nextModule ? <button type="button" onClick={() => openModule(nextModule)}>{completed.length ? `ZONE ${String(nextModule.id).padStart(2, "0")}から続ける` : "地図を作り始める"} →</button> : <button type="button" onClick={() => setView("full-map")}>完成した地図を見る →</button>}
-          <button type="button" className={styles.secondaryButton} onClick={() => setView("sessions")}>実演セッションを見る</button>
+          {nextModule ? <button type="button" onClick={() => openModule(nextModule)}>{completed.length ? `第${nextModule.id}講から続ける` : "第1講をはじめる"} →</button> : <button type="button" onClick={() => setView("full-map")}>学習ノートを見る →</button>}
+          <button type="button" className={styles.secondaryButton} onClick={() => setView("sessions")}>学んだ後に実演を見る</button>
         </div>
         <div className={styles.courseProgress}><span style={{ width: `${(completed.length / INNER_WORLD_MODULES.length) * 100}%` }} /><b>{completed.length}/6</b></div>
       </section>
 
       <section className={styles.mapSection}>
-        <div className={styles.sectionTitle}><small>YOUR JOURNEY</small><h2>心の中を、順番に歩く</h2><p>前の領域を終えると、次の場所が開きます。終えた章は何度でも書き直せます。</p></div>
+        <div className={styles.sectionTitle}><small>SIX LESSONS</small><h2>心の構造を、一段ずつ理解する</h2><p>掛け合い、図解、選択問題、自分への短い当てはめを一つ終えると、次の講義が開きます。</p></div>
         <CourseMap completed={completed} onOpen={openModule} />
       </section>
 
       <section className={styles.modelNote}>
-        <span>この教材の前提</span>
-        <h2>「あなたが悪い」を証明する地図ではありません。</h2>
-        <p>問題の外的要因を否定せず、自分で選び直せる心の構造を見つけるためのメンタルモデルです。医療上の診断や治療の代わりにはなりません。</p>
+        <span>この講義で学ぶこと</span>
+        <h2>変わらないのは、意志が弱いからとは限らない。</h2>
+        <p>言葉で望む方向とは別に、文化の中で覚えたルールや昔の守り方が、自動的な選択として残ることがあります。その構造を理解し、今の自分が使う方法を選び直します。</p>
+        <a href={INNER_WORLD_PREMISE.url} target="_blank" rel="noreferrer">前提になった講義を見る ↗ <small>{INNER_WORLD_PREMISE.title}</small></a>
       </section>
 
       <div className={styles.homeTools}>
-        {completed.length > 0 && <button type="button" onClick={() => setView("full-map")}>現在の地図を見る</button>}
-        <button type="button" onClick={reset}>最初から作り直す</button>
+        {completed.length > 0 && <button type="button" onClick={() => setView("full-map")}>現在の学習ノートを見る</button>}
+        <button type="button" onClick={reset}>最初から学び直す</button>
       </div>
     </main>
   );

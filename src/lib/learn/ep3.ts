@@ -12,6 +12,7 @@ const SCENES: Scene[] = [
   { no: 1, title: "催眠は、無心になる試験ではない", lines: [
     L("ep3-lec1-1", "僕は、催眠に入るなら頭を空にしなきゃいけないと思っていました。", { face: "think", slide: S({ h: "考えが浮かぶ\n＝ 催眠失敗？", style: "cross" }) }),
     T("ep3-lec1-2", "考えが浮かぶのは失敗ではありません。止めようと命令すると、できたかどうかを何度も確認するため、かえって考えへ注意が戻ります。"),
+    T("ep3-lec1-2b", "『こんなので、本当に変われるわけない』が自分の声に聞こえても、親や学校や周囲の評価から覚えた文化的催眠かもしれません。内容を真実と決めず、浮かんだ後の行動を選びます。"),
     T("ep3-lec1-3", "今回変えたのは、考えの有無ではなく、考えが浮かんだ後にすることです。"),
   ], ticketHint: "考えが多い時の催眠について質問できます" },
   { no: 2, title: "浮かんだ一つを、次の合図にする", lines: [
@@ -34,20 +35,20 @@ const SCENES: Scene[] = [
 
 export const EP3: Episode = {
   key: "ep3", no: 3,
-  title: "目を閉じても頭の中のおしゃべりが止まらない時、催眠をどう使う？",
+  title: "やりたいことを始める時、『こんなので、本当に変われるわけない』と浮かんだら、催眠をどう使う？",
   subtitle: "変態催眠学者の催眠の極意03｜内的対話のUtilization",
   listing: { cover: "/learn/ep3/manga-v1/01.webp", coverAlt: "授業後も考えを止められず席に残る雨宮ミオ", caseNo: "CASE 03", hook: "止めるほど、頭の声が大きくなる。", principleNo: "エリクソン原理 03", mangaPages: 5, classroomScenes: 4, minutes: 18 },
   goal: { before: ["考えを止めようと命令する", "浮かぶたび催眠失敗だと思う", "内容を延々と分析する"], after: ["浮かんだ一つを確認する", "一呼吸の合図へ変える", "考えが残っても次へ戻る"], takeaway: "止まらない頭の声を消さず、今できる感覚へ戻る合図として使う。" },
   tickets: 5,
   parts: [
     { kind: "manga", title: "第3の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校", beats: [
-      { who: "teacher", tone: "question", text: "休みたい。次のことを始めたい。それなのに、頭の中の言葉が止まらず動けないことはありませんか？" },
-      { who: "teacher", tone: "example", text: "眠ろうとするほど明日を考える。席を立とうとするほど、さっきの失敗が浮かぶ。" },
-      { who: "link", tone: "reaction", text: "それ、僕なら『考えないで』と言います。でも、言われて止まったことはないです。" },
-      { who: "teacher", tone: "reveal", text: "止めなくて結構です。その声を、催眠の次の合図にします。" },
-      { who: "link", tone: "reaction", text: "止まらないものを、そのまま使うんですか？" },
+      { who: "teacher", tone: "question", text: "本当にやりたいことを始めようとした途端、頭の中の言葉で手が止まることはありませんか？" },
+      { who: "teacher", tone: "example", text: "理想の自分を言葉にする動画を試した翌朝、やりたい企画の申込画面を開く。そこで『こんなので、本当に変われるわけない』『好きなことばかりして、人にどう思われる？』と浮かぶ。" },
+      { who: "link", tone: "reaction", text: "自分の考えだと思ってた。でも、親や学校や周りの目から覚えた言葉も混ざってるのか。" },
+      { who: "teacher", tone: "reveal", text: "自分の声のように選択を止める。それが文化的催眠です。止めずに、次の合図へ変えます。" },
+      { who: "link", tone: "reaction", text: "その声を消さなくても、自分がやりたい方へ戻れるんですか？" },
       { who: "teacher", tone: "address", text: "{{userName}}。新しい実習生ミオと、声が合図へ変わった夜を見てください。" },
-    ], cta: "ミオの事件を見る →" }, briefing: { caseNo: "CASE 03", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "止まらない頭の声", principle: "第3の催眠事件", hook: "考えが消えていないのに、なぜミオは席を立てた？", teaser: "無心になることを目標にせず、考えが浮かんだ後に戻る道を作った。", cta: "事件の漫画を見る →", note: "EPISODE 03｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep3/manga-v1/0${n}.webp`, alt: `雨宮ミオの止まらない内的対話を追う漫画 ${n}ページ目` })) },
+    ], cta: "ミオの事件を見る →" }, briefing: { caseNo: "CASE 03", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "自分の声に聞こえる常識", principle: "第3の催眠事件", hook: "『こんなので、本当に変われるわけない』が消えていないのに、なぜミオは席を立てた？", teaser: "文化的催眠を論破せず、その声が浮かんだ後に自分へ戻る道を作った。", cta: "事件の漫画を見る →", note: "EPISODE 03｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep3/manga-v1/0${n}.webp`, alt: `雨宮ミオが文化的催眠の声から自分の選択へ戻る漫画 ${n}ページ目` })) },
     { kind: "experience", title: "自分の頭の声を一つ選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "ミオが望んだのは、頭を完全に空にすることではありません。考えが浮かんでも、休む時や次の行動へ自分で戻れることでした。" },
       { who: "link", text: "考えは残ってるのに、ミオは息を一つ確かめて、次の実習を手伝うと決められた。僕たちにも似た場面はありますか？" },
@@ -58,7 +59,7 @@ export const EP3: Episode = {
       { label: "集中したいのに、別の言葉が浮かぶ", value: "集中したい時に別の言葉が浮かぶ", then: [{ kind: "say", line: T("ep3-exp-c", "浮かぶたび失敗にせず、戻る動作を一つ作ります。") }, { kind: "fade", text: "ミオと催眠を組み立てる" }] },
     ] }] },
     { kind: "adventure", scenario: EP3_ADVENTURE },
-    { kind: "classroom", intro: { title: "考えを消していないのに、なぜ催眠を続けられた？", lead: "ミオは無心になったのではありません。考えが浮かんだ後の注意と行動を変えました。" }, scenes: SCENES },
+    { kind: "classroom", intro: { title: "考えを止められないミオが、なぜ席を立てた？", lead: "エリクソンは、ミオの考えを消そうとせず、考えが浮かぶたび一呼吸を確かめる合図にしました。考えが残ったまま次の行動へ戻る催眠の順番を整理します。", basis: { subjectAnchor: "ミオ", eventAnchor: "考え", learningGoal: "止まらない考えを、次の行動へ戻る合図として使う順番" } }, scenes: SCENES },
     { kind: "qa", title: "止まらない考えを使う催眠について、エリクソンに聞きたいことはありますか？" },
     { kind: "card", lines: [T("ep3-card-01", "止まらない声と戦わず、次へ戻る順番を持って帰ってください。")], card: { series: "ERICKSON PRINCIPLE", no: "03", name: "INNER DIALOGUE UTILIZATION", reading: "内的対話のユーティライゼーション", principle: ["考えを止めようとしない。", "浮かんだ一つを、今できる感覚の合図にする。"], summary: "頭に浮かぶ言葉を失敗として消そうとせず、呼吸など今確かめられる感覚へ戻る合図として使う方法。", effect: "考えが残っていても、追いかけ続けず、自分で次の注意へ戻る道を作れる。", useWhen: ["眠る前に考えが次々に浮かぶ時", "静かにしようとするほど頭が騒がしくなる時", "集中から外れた自分を責め続ける時"], howTo: ["考えが浮かんだ事実だけを確認する", "一呼吸や接触感覚へ一つだけつなぐ", "考えが来るたび同じ戻り方を選ぶ"] }, after: [T("ep3-card-02", "考えを消せたかではなく、考えの次に何を選べたかを見てください。", { face: "smile" })] },
     { kind: "outro", lines: [

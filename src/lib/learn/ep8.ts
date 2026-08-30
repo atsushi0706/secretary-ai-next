@@ -12,6 +12,7 @@ const SCENES: Scene[] = [
   { no: 1, title: "説明は、正しくても届かないことがある", lines: [
     L("ep8-lec1-1", "僕は『決めつけは間違い』と説明されるより、鳥の見え方が変わった時に自分の決めつけへ気づきました。", { face: "aha", slide: S({ h: "説明\n正解を聞く\n≠\n体験\n自分で気づく", style: "cross" }) }),
     T("ep8-lec1-2", "情報を覚えるなら説明が役立ちます。状態や見方を変える時は、本人が経験する気づきが必要なことがあります。"),
+    T("ep8-lec1-2b", "『反論したら面倒な人と思われる』という文化的催眠がある時、正しい説明を重ねても本人の言葉は出てきません。"),
     T("ep8-lec1-3", "催眠は情報を押し込むのではなく、別の体験を呼び起こすためにも使われます。"),
   ], ticketHint: "説明と体験の違いを質問できます" },
   { no: 2, title: "Metaphor は、似た構造を渡す", lines: [
@@ -41,6 +42,7 @@ export const EP8: Episode = {
   parts: [
     { kind: "manga", title: "第8の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜資料室", beats: [
       { who: "teacher", tone: "question", text: "一度相手を誤解しただけで、『自分は人の話を聞く仕事に向いていない』と、次まで諦めたくなることはありませんか？" },
+      { who: "teacher", tone: "example", text: "友人へ『仕事がしんどい』と話すと、『考え方を変えればいい』と返ってきた。『でも、そんな単純じゃないと言ったら、面倒な人だと思われそう』と黙る。それも文化的催眠です。" },
       { who: "link", tone: "reaction", text: "今の僕です。ミオを裏切り者と決めた。調査役なのに、人を見る目がなかった。" },
       { who: "teacher", tone: "reveal", text: "間違いを正論で責めても、次の話は聞けません。本人が自分で別の見方を見つける物語を使う催眠があります。" },
       { who: "link", tone: "example", text: "資料室に、ミオが残した『鍵を運ぶ鳥』の話があります。答えは書いてません。" },
@@ -56,7 +58,7 @@ export const EP8: Episode = {
       { label: "できない自分を励まされ続ける時", value: "できない自分を励まされ続ける時", then: [{ kind: "say", line: T("ep8-exp-c", "反対の評価ではなく、自分で力に気づける物語を使います。") }, { kind: "fade", text: "ミオの物語を読む" }] },
     ] }] },
     { kind: "adventure", scenario: EP8_ADVENTURE },
-    { kind: "classroom", intro: { title: "正解を説明していないのに、なぜ見方が変わった？", lead: "物語の場面を追い、自分に重なる意味を本人が選んだからです。" }, scenes: SCENES },
+    { kind: "classroom", intro: { title: "ミオを裏切り者と決めた自分を責めていたリンクが、なぜ調査を続けると決めた？", lead: "鍵を運ぶ鳥の物語を読んだリンクは、最初の判断を間違えたことより、証拠を増やして見直した行動に気づきました。正解を説明せず、本人が物語から別の見方を見つける催眠を整理します。", basis: { subjectAnchor: "リンク", eventAnchor: "裏切り者", learningGoal: "似た物語から、本人自身が別の意味を見つける催眠" } }, scenes: SCENES },
     { kind: "qa", title: "Therapeutic Metaphor、物語の作り方、意味の聞き方について質問はありますか？" },
     { kind: "card", lines: [T("ep8-card-01", "物語から得た原理を、事件記録へ加えます。")], card: { series: "ERICKSON PRINCIPLE", no: "08", name: "THERAPEUTIC METAPHOR", reading: "セラピューティック・メタファー（治療的メタファー）", principle: ["似た構造の物語で、", "本人が自分の意味を見つける。"], summary: "正解を直接説明する代わりに、相手の状況と似た構造の物語を示し、本人が重なる意味を発見できるようにする方法。", effect: "説明へ身構えている時も、責められずに別の見方や可能性へ気づきやすくする。", useWhen: ["正論が届かず会話が止まる時", "自分を責めず別の見方を試したい時", "複雑な原理を体験として伝えたい時"], howTo: ["相手の問題と似た構造を一つ見つける", "短い物語として結末まで語る", "どこが重なったか本人へ聞く"] }, after: [T("ep8-card-02", "物語の奥から、ミオ本人の声が聞こえました。", { face: "think" })] },
     { kind: "outro", lines: [

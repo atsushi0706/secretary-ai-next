@@ -12,6 +12,7 @@ const SCENES: Scene[] = [
   { no: 1, title: "『落ち着いて』が届かない理由", lines: [
     T("ep4-lec1-1", "緊張している人に『落ち着いて』と言っても、その人が落ち着きを確認できなければ、言葉と体験はつながりません。", { slide: S({ h: "まだ分からない結論\n『落ち着いて』\n×\n今、確かめられる体験", style: "cross" }) }),
     L("ep4-lec1-2", "あの時は『落ち着けない自分はだめだ』まで増えました。", { face: "think" }),
+    T("ep4-lec1-2b", "『堂々と話せなければ、仕事ができないと思われる』という文化的催眠がある時、結果を命じるほど失敗へ注意が集まります。"),
     T("ep4-lec1-3", "だから先に、本人が今うなずける事実へ言葉を合わせます。"),
   ], ticketHint: "抽象的な励ましとの違いを質問できます" },
   { no: 2, title: "二つ合わせて、一つ導く", lines: [
@@ -41,9 +42,9 @@ export const EP4: Episode = {
   parts: [
     { kind: "manga", title: "第4の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校", beats: [
       { who: "teacher", tone: "question", text: "伝えたいことはあるのに、人前へ出た瞬間、声が出なくなったことはありませんか？" },
-      { who: "teacher", tone: "example", text: "本人は最後まで話したい。それでも『大丈夫』『落ち着いて』と言われるほど、何をすればよいか分からなくなる。" },
+      { who: "teacher", tone: "example", text: "会議で名前を呼ばれた瞬間、『また声が震えたら、仕事ができない人だと思われる』と浮かび、最初の一言が出なくなる。" },
       { who: "link", tone: "reaction", text: "今日の僕です。実習をやり切りたいのに、大丈夫と言われても、最初の一言が出ませんでした。" },
-      { who: "teacher", tone: "reveal", text: "そこでミオは、足と呼吸という二つの事実から始めました。" },
+      { who: "teacher", tone: "reveal", text: "人前では堂々と話すべき、という文化的催眠です。ミオは足と呼吸という二つの事実から始めました。" },
       { who: "link", tone: "reaction", text: "ただ事実を言うだけで、催眠の言葉になるんですか？" },
       { who: "teacher", tone: "address", text: "{{userName}}。三人で初めて実習をつないだ順番を、あなたが完成させてください。" },
     ], cta: "公開実習を見る →" }, briefing: { caseNo: "CASE 04", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "声が出ない公開実習", principle: "第4の催眠事件", hook: "『落ち着いて』で固まったリンクが、なぜ一言を話せた？", teaser: "ミオは二つの事実を言い、その続きに一つだけ提案した。", cta: "事件の漫画を見る →", note: "EPISODE 04｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep4/manga-v1/0${n}.webp`, alt: `リンクとミオの公開催眠実習を追う漫画 ${n}ページ目` })) },
@@ -57,7 +58,7 @@ export const EP4: Episode = {
       { label: "失敗が怖くて、最初の一言を言えない", value: "失敗が怖くて最初の一言を言えない相手", then: [{ kind: "say", line: T("ep4-exp-c", "完成ではなく、次の一言までを催眠でつなぎます。") }, { kind: "fade", text: "三人で実習を始める" }] },
     ] }] },
     { kind: "adventure", scenario: EP4_ADVENTURE },
-    { kind: "classroom", intro: { title: "なぜ、二つの事実の後なら一言を試せた？", lead: "今の体験へ言葉を合わせ、その続きに小さな提案を置く順番を整理します。" }, scenes: SCENES },
+    { kind: "classroom", intro: { title: "公開実習で声が出なかったミオが、なぜ自分の名前を言えた？", lead: "ミオは、足が床に触れていることと息を吐けることを確かめた後、自分の名前だけを言いました。緊張を消さず、本人が今分かる事実から次の一言へつなぐ順番を整理します。", basis: { subjectAnchor: "ミオ", eventAnchor: "声が出なかった", learningGoal: "確認できる事実から、本人が望む最初の一言へつなぐ順番" } }, scenes: SCENES },
     { kind: "qa", title: "緊張している相手へ言葉を合わせる催眠について、質問はありますか？" },
     { kind: "card", lines: [T("ep4-card-01", "相手へ言葉を置く順番を、三段階で持って帰ってください。")], card: { series: "ERICKSON PRINCIPLE", no: "04", name: "PACING AND LEADING", reading: "ペーシング＆リーディング", principle: ["今確かめられる事実を二つ。", "その続きへ、選べる暗示を一つ。"], summary: "本人が今うなずける事実へ言葉を合わせ、その延長に小さな変化の提案を置く催眠の順番。", effect: "抽象的な励ましで押さず、本人の現在の体験から次の一動作を選びやすくする。", useWhen: ["人前で緊張して声が出ない時", "『落ち着いて』が相手に届かない時", "催眠の導入で相手の反応を確かめながら進む時"], howTo: ["観察できる事実を一つ言う", "もう一つ確かめられる事実を言う", "その続きに選べる一動作を提案する"] }, after: [T("ep4-card-02", "二つと一つは暗記の呪文ではありません。相手の返事が違えば止まり、別の事実へ戻ってください。", { face: "smile" })] },
     { kind: "outro", lines: [

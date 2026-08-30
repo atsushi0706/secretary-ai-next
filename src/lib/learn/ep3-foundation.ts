@@ -15,6 +15,14 @@ export const EP3_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "無理に頭を空にさせず、今ある思考から本人が行動へ戻る道を作る支援を見せる",
   },
+  culturalHypnosis: {
+    situation: "理想の自分を言葉にする動画を試した翌朝、やりたい企画の申込画面を開いたまま手が止まる",
+    source: "親や学校の評価、周囲の目、成功例を並べるSNSから受け取った『現実的で正しくなければ認められない』という空気",
+    voiceAnchor: "こんなので、本当に変われるわけない",
+    authenticWish: "人の評価に合わせた正解ではなく、本当にやりたい一歩を自分で選びたい",
+    releaseMove: "頭の声を消そうとせず、誰の常識かに気づき、今できる一呼吸から自分の選択へ戻る",
+    evidenceSources: ["https://note.com/tk_205014/n/nf5d77cc37863"],
+  },
   learner: {
     problem: "目を閉じても考えが次々に浮かび、考えを止められない自分は催眠に向いていないと思ってしまう",
     livedExamples: ["眠ろうとすると明日のことを考える", "失敗を思い出して頭の中で反省を続ける", "静かにしようとするほど別の言葉が浮かぶ"],
@@ -41,7 +49,7 @@ export const EP3_FOUNDATION = defineEpisodeFoundation({
     changesBy: "ミオの考えを消さず、次の呼吸へつなぐ一言を自分で作る",
     endsAs: "目の前の反応を観察し、短い催眠の一手を組み立てられる実習生",
   },
-  presentation: { primaryQuestion: "目を閉じても頭の中のおしゃべりが止まらない時、催眠をどう使う？", secondaryQuestion: { mode: "none" }, recallScaffolding: "partial-cue" },
+  presentation: { primaryQuestion: "やりたいことを始める時、『こんなので、本当に変われるわけない』と浮かんだら、催眠をどう使う？", secondaryQuestion: { mode: "none" }, recallScaffolding: "partial-cue" },
   interaction: { personalResponse: "choice-or-detail", reflectionMoments: ["memory", "hypothesis", "reflection", "application"] },
   causalChain: [
     "授業後も考えを止めようとして疲れているミオと出会う",

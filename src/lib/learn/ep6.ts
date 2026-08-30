@@ -41,6 +41,7 @@ export const EP6: Episode = {
   parts: [
     { kind: "manga", title: "第6の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜入学理由", beats: [
       { who: "teacher", tone: "question", text: "助けてほしいのに『迷惑をかけるな』。本音を伝えたいのに『目立つな』。望みがあるのに、昔からの常識で止まることはありませんか？" },
+      { who: "teacher", tone: "example", text: "締切前の夜、一人では終わらない仕事を抱え、相談の文章を書いて消す。『ここで人に頼ったら、迷惑をかける』と浮かぶ。それが文化的催眠です。" },
       { who: "link", tone: "reaction", text: "それは催眠じゃなく、普通の常識じゃないんですか？" },
       { who: "teacher", tone: "reveal", text: "何度も聞いた常識が、自分の選択を狭める時。それは、見えない文化的催眠として働きます。" },
       { who: "teacher", tone: "example", text: "{{userName}}の入学願書には『周りの普通を自分の声だと思い、本当の望みが分からなくなった』とあります。" },
@@ -57,7 +58,7 @@ export const EP6: Episode = {
       { label: "良い成績・学校・仕事が人の価値だ", value: "良い成績や学校や仕事が人の価値を決める", then: [{ kind: "say", line: T("ep6-exp-c", "評価を得ることと、人の価値が一つの基準で決まることを分けます。") }, { kind: "fade", text: "旧校舎からの言葉を追う" }] },
     ] }] },
     { kind: "adventure", scenario: EP6_ADVENTURE },
-    { kind: "classroom", intro: { title: "言われていないのに、なぜ命令されたように感じた？", lead: "言葉そのものと、聞き手が補った意味を分けると、受け入れた前提が見えてきます。" }, scenes: SCENES },
+    { kind: "classroom", intro: { title: "『旧校舎へ』と読んだリンクが、なぜ『一人ですぐ行け』と命令されたように感じた？", lead: "送られた文に書かれていたのは『旧校舎へ』だけでした。リンクが自分で足した『一人で』『今すぐ』を元の言葉から分け、無意識に受け入れた前提を見つけます。", basis: { subjectAnchor: "リンク", eventAnchor: "旧校舎へ", learningGoal: "実際の言葉と、自分が補った意味を分ける" } }, scenes: SCENES },
     { kind: "qa", title: "文化的催眠、言葉の含意、前提の見抜き方について質問はありますか？" },
     { kind: "card", lines: [T("ep6-card-01", "今は保管庫へ戻せません。この原理も事件記録として持って進んでください。")], card: { series: "ERICKSON PRINCIPLE", no: "06", name: "VERBAL IMPLICATION", reading: "ヴァーバル・インプリケーション（言葉の含意）", principle: ["実際に言われたことと、", "自分が補った意味を分ける。"], summary: "言葉が直接述べていない意味を聞き手が推論して受け取る働きに気づき、受け入れる前提を選び直す方法。", effect: "短い言葉や周囲の常識から自動的に作った意味を、事実と混同せず見直しやすくする。", useWhen: ["短い返信から嫌われたと思った時", "広告や強い言葉で急いで決めそうな時", "昔からの常識を自分の本心だと思う時"], howTo: ["実際に言われた言葉だけを取り出す", "自分がそこへ足した意味を書く", "その前提を今も選ぶか決める"] }, after: [T("ep6-card-02", "言葉の暗示を見抜く力は、旧校舎の扉でも必要になります。", { face: "think" })] },
     { kind: "outro", lines: [

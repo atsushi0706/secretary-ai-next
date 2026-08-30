@@ -184,7 +184,23 @@ export type PrincipleCard = {
 export type Part =
   | { kind: "manga"; title: string; frames: MangaFrame[]; schoolIntro?: EpisodeSchoolIntro; briefing?: EpisodeBriefing; /** 最後に出す文 */ close?: string[] }
   | { kind: "experience"; title: string; steps: ExpStep[]; minutes?: number; gate?: ExperienceGate; bridge?: ExperienceBridge }
-  | { kind: "classroom"; intro: { title: string; lead: string }; scenes: Scene[] }
+  | {
+    kind: "classroom";
+    intro: {
+      title: string;
+      lead: string;
+      /**
+       * 講義導入が、前画面を覚えている読解力に依存していないことを検査する根拠。
+       * subjectAnchor と eventAnchor は title + lead に実際に表示されていなければならない。
+       */
+      basis: {
+        subjectAnchor: string;
+        eventAnchor: string;
+        learningGoal: string;
+      };
+    };
+    scenes: Scene[];
+  }
   | { kind: "adventure"; scenario: AdventureScenario }
   | { kind: "qa"; title: string }
   | { kind: "card"; lines: Line[]; card: PrincipleCard; after: Line[] }

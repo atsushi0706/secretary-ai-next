@@ -15,6 +15,14 @@ export const EP5_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "感情を消したり前向きに決めつけたりせず、本人が大切な関係を自分で確かめられるよう支える",
   },
+  culturalHypnosis: {
+    situation: "大切な人から返信が来ない夜や、仲間が説明なく姿を消した直後に、何度も履歴を見返す",
+    source: "すぐ返すのが誠実、隠し事をしないのが仲間という人間関係の常識と、過去に裏切られた経験",
+    voiceAnchor: "返事がない。嫌われたかもしれない",
+    authenticWish: "関係を切る答えへ急がず、相手に何が起きたのか確かめたい",
+    releaseMove: "連絡がない事実と、嫌われたという解釈を分け、次に確認できる一手を選ぶ",
+    evidenceSources: ["https://note.com/rinka_rnai/n/n35fabbecbac2"],
+  },
   learner: {
     problem: "信じていた相手に予想外の行動をされると、最初に浮かんだ意味を事実だと決めて動けなくなる",
     livedExamples: ["仲間が突然いなくなる", "大切に集めたものが失われる", "短いメッセージから相手の全てを決めつける"],

@@ -15,6 +15,14 @@ export const EP10_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "技法を効かせる力だけでなく、使わない判断まで含めて信頼される支援者になる姿を見せる",
   },
+  culturalHypnosis: {
+    situation: "相談された相手の答えが見えた時、本人が迷っている間に方法まで決めて教えたくなる",
+    source: "先生、親、上司、コーチは正解を示し、早く結果を出させるほど有能だという評価の常識",
+    voiceAnchor: "答えが見えているのに、黙っているのは無責任だ",
+    authenticWish: "答えを奪わず、本人が納得して自分の人生を選べるよう支えたい",
+    releaseMove: "目的への賛成と方法への同意を分け、使わない選択まで本人と共有する",
+    evidenceSources: ["https://note.com/quick_orchid2180/n/nc407fb323456", "https://note.com/yotuba03/n/n2ea8fee0ff89"],
+  },
   learner: {
     problem: "催眠の技術が効きそうな時、目的が正しければ相手の同意を省いてもよいと思ってしまう",
     livedExamples: ["相手のためだから決めてよいと思う", "早く助けるため説明を省く", "結果が出れば方法はよいと思う"],

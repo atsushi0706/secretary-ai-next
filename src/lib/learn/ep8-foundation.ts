@@ -15,6 +15,14 @@ export const EP8_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "正論で納得させず、本人が自分の経験から次の可能性を見つける会話を見せる",
   },
+  culturalHypnosis: {
+    situation: "悩みを話した直後に『考え方を変えればいい』『気にしすぎ』と説明され、黙って聞く",
+    source: "正しい助言は素直に受け入れるべきで、分からないと言うのは理解力がないという学校や人間関係の空気",
+    voiceAnchor: "でも、そんな単純じゃないと言ったら、面倒な人だと思われそう",
+    authenticWish: "責められずに自分の速さで意味をつかみ、納得した言葉で次を選びたい",
+    releaseMove: "正解を押し込まず、似た物語を通して本人が重なる意味を選ぶ",
+    evidenceSources: ["https://note.com/t_nachi/n/n1a3045ea154e"],
+  },
   learner: {
     problem: "正しい説明を長くされるほど、自分が責められているように感じて内容が入らなくなる",
     livedExamples: ["注意されると反論だけが浮かぶ", "説明が長いと心を閉じる", "自分の話だと認めるのが怖い"],

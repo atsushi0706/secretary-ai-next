@@ -15,6 +15,14 @@ export const EP9_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "支援者が望む正解へ急がせず、怖さがある本人自身から行動が生まれる瞬間を見せる",
   },
+  culturalHypnosis: {
+    situation: "落ち込んだ友人や迷っている相手を前に、沈黙へ耐えられず『早く元気になって』と重ねて言う",
+    source: "良い友人や支援者なら、相手を早く立ち直らせて正しい行動へ導くべきだという空気",
+    voiceAnchor: "相談されたんだから、早く元気にしてあげなきゃ",
+    authenticWish: "相手を置き去りにせず、本人が自分の時間で次の一歩を選べるよう支えたい",
+    releaseMove: "助ける側の期限を外し、しない自由と小さな可能性を相手へ返す",
+    evidenceSources: ["https://note.com/yotuba03/n/n2ea8fee0ff89"],
+  },
   learner: {
     problem: "相手を助けたい時ほど、正しい行動を強く求め、相手がさらに動けなくなる",
     livedExamples: ["戻ってきてと強く迫る", "落ち着いてと繰り返す", "早く決めてと相手を急がせる"],

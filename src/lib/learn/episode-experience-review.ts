@@ -53,6 +53,19 @@ export function reviewEpisodeExperience(episode: Episode): ExperienceReviewRepor
     if (beat.text.length > 82) push("warning", "designer", `冒頭${index + 1}拍目が長めです。スマホ実機で3〜4行に収まるか確認してください。`);
   });
   if (!classroom?.intro.title || !classroom.intro.lead) push("error", "designer", "講義へ入る前に、この講義で整理する一つの問いを表示してください。");
+  if (classroom) {
+    const visibleIntro = `${classroom.intro.title}${classroom.intro.lead}`;
+    const basis = classroom.intro.basis;
+    if (![basis.subjectAnchor, basis.eventAnchor, basis.learningGoal].every((value) => value.trim())) {
+      push("error", "writer", "講義導入には、誰の話か・直前に何が起きたか・何を学ぶかを定義してください。");
+    }
+    if (!visibleIntro.includes(basis.subjectAnchor)) {
+      push("error", "beginner", `講義導入の画面に主語「${basis.subjectAnchor}」が表示されていません。前画面を覚えている前提で省略しないでください。`);
+    }
+    if (!visibleIntro.includes(basis.eventAnchor)) {
+      push("error", "beginner", `講義導入の画面に直前の出来事「${basis.eventAnchor}」が表示されていません。何の続きかを同じ画面で復元してください。`);
+    }
+  }
   classroom?.scenes.forEach((scene) => {
     if (scene.lines.length > 5) push("error", "designer", `講義SCENE ${scene.no}は5台詞以内に分割してください。`);
   });

@@ -15,6 +15,14 @@ export const EP7_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "辞めるか我慢するかのような狭い二択から、本人の目的に合う試せる第三案を作る支援を見せる",
   },
+  culturalHypnosis: {
+    situation: "仕事がつらくなった時、辞める決心もつかず、毎朝同じ場所へ向かいながら考え続ける",
+    source: "仕事は簡単に辞めるべきではない、周りへ迷惑をかけず我慢するのが大人だという職場と家庭の常識",
+    voiceAnchor: "ここで辞めたら逃げだ。みんな我慢している",
+    authenticWish: "生活と安全を守りながら、相談、休む、条件を変える道も自分で選びたい",
+    releaseMove: "二択に共通する前提を見つけ、保留・拒否・別案を選択肢へ戻す",
+    evidenceSources: ["https://tomoribase.com/quit-or-endure/"],
+  },
   learner: {
     problem: "二つの選択肢を出されると、その外にも選べる道があることを忘れる",
     livedExamples: ["今やるか後でやるかだけを迫られる", "買う二択だけを見せられる", "断る選択を言い出せない"],

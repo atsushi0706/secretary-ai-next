@@ -16,6 +16,14 @@ export const EP2_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "警戒する人を言い負かさず、その人の選択を守ったまま体験を始められる支援を見せる",
   },
+  culturalHypnosis: {
+    situation: "初めて催眠体験へ来て、目を閉じるよう促された瞬間に『このまま意識を失うのでは』と身構える",
+    source: "テレビ番組や人づてに繰り返された、催眠は意識や意思を奪われて操られるものだという描写",
+    voiceAnchor: "催眠にかかったら、自分の意思がなくなるんじゃないか",
+    authenticWish: "自分の意思と断る自由を保ったまま、催眠が役立つか試したい",
+    releaseMove: "拒否を消さず、何をしないかと続けるかを本人へ返す",
+    evidenceSources: ["https://note.com/satsu_hypno/n/n3353e2009e13"],
+  },
   learner: {
     problem: "催眠をかけたい相手から『かかりたくない』『目を閉じたくない』と拒否されると、説得するか諦めるしかないと思ってしまう",
     livedExamples: [

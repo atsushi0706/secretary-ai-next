@@ -15,6 +15,14 @@ export const EP4_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "相手の緊張を消したふりにせず、その場で本人が言えた一言を一緒に作る仕事として見せる",
   },
+  culturalHypnosis: {
+    situation: "発表や初対面の自己紹介で全員の視線が集まり、最初の一言が出なくなる",
+    source: "学校や職場で、間違えず、堂々と、最後まで話せる人が評価される場面を重ねて見たこと",
+    voiceAnchor: "また声が震えたら、仕事ができない人だと思われる",
+    authenticWish: "緊張があっても、自分が伝えたい最初の一言を話したい",
+    releaseMove: "成功した姿を求める前に、足と呼吸など今確かめられる事実へ注意を戻す",
+    evidenceSources: ["https://note.com/as_azuki/n/n160fc624d9f0"],
+  },
   learner: {
     problem: "緊張している相手へ『落ち着いて』『大丈夫』と言っても届かず、次に何を言えばよいか分からない",
     livedExamples: ["人前で声が出なくなった相手を励ます", "怖がる相手へ大丈夫と言い続ける", "相手が今分かるものを確かめず助言する"],

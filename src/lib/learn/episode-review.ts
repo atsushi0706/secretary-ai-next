@@ -120,6 +120,27 @@ export function reviewEpisodeLearningFlow(episode: Episode, foundation: EpisodeF
     if (!introBeats[0]?.text.includes("？")) push("error", "story", "冒頭の最初の一拍は、学習者が自分事として答えられる問いにしてください。");
     if (!introBeats.some((beat) => beat.who === "link")) push("error", "beginner", "冒頭でリンクが初学者の驚きか疑問を口にしてください。");
     if (!introBeats.some((beat) => beat.text.includes("{{userName}}"))) push("error", "story", "冒頭の最後は、登録名でプレイヤーを授業へ招いてください。");
+    if (episode.no >= 2) {
+      const culturalHypnosis = foundation.culturalHypnosis;
+      const introText = introBeats.map((beat) => beat.text).join("");
+      if (!culturalHypnosis || ![
+        culturalHypnosis.situation,
+        culturalHypnosis.source,
+        culturalHypnosis.voiceAnchor,
+        culturalHypnosis.authenticWish,
+        culturalHypnosis.releaseMove,
+      ].every((value) => value.trim())) {
+        push("error", "story", "第2話以降は、場面・由来・実際に浮かぶ言葉・本当の望み・解き方として、この回の文化的催眠を定義してください。");
+      } else {
+        if (!culturalHypnosis.evidenceSources?.length || !culturalHypnosis.evidenceSources.every((source) => /^https:\/\//.test(source))) {
+          push("error", "story", "文化的催眠を制作者の想像だけで作らず、実際の悩みの場面を確認した公開情報を一件以上残してください。");
+        }
+        if (!introText.includes("文化的催眠")) push("error", "beginner", "冒頭で、この回の問題が文化的催眠の一つだと明示してください。");
+        if (!introText.includes(culturalHypnosis.voiceAnchor)) {
+          push("error", "beginner", `文化的催眠を抽象語で済ませず、実際に頭へ浮かぶ言葉「${culturalHypnosis.voiceAnchor}」を冒頭に表示してください。`);
+        }
+      }
+    }
     if (!manga.briefing.hook.includes("？")) push("error", "story", "漫画へ入る前に、答えを知りたくなる問いを一つ置いてください。");
     const coverLength = [manga.briefing.eyebrow, manga.briefing.title, manga.briefing.principle, manga.briefing.hook, manga.briefing.teaser].join("").length;
     if (coverLength > 155) push("warning", "game", "冒頭タイトルの情報量が多めです。実画面で、問いより説明が先に立っていないか確認してください。");

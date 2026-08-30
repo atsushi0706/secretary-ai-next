@@ -12,6 +12,7 @@ const SCENES: Scene[] = [
   { no: 1, title: "助けたい焦りは、命令に変わる", lines: [
     L("ep9-lec1-1", "戻ってほしいから『戻れ』と言いたくなりました。でも、その瞬間にミオの体が固まった。", { face: "think", slide: S({ h: "助けたい\n↓\n今すぐ戻れ\n↓\n相手の選択が消える", style: "flow" }) }),
     T("ep9-lec1-2", "善意でも、相手が断れない言葉になれば命令です。まず、望みと怖さを両方聞きます。"),
+    T("ep9-lec1-2b", "『相談されたなら、早く元気にすべきだ』という文化的催眠は、助ける側を急がせ、相手の時間を見えなくします。"),
     L("ep9-lec1-3", "戻りたい気持ちだけを本音だと決めなかったんですね。", { face: "aha" }),
   ], ticketHint: "善意が命令へ変わる境目を質問できます" },
   { no: 2, title: "しない自由を、先に言葉へ入れる", lines: [
@@ -41,6 +42,7 @@ export const EP9: Episode = {
   parts: [
     { kind: "manga", title: "第9の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜資料室の奥", beats: [
       { who: "teacher", tone: "question", text: "助けたい相手ほど、『今すぐこうして』と強く言いたくなることはありませんか？" },
+      { who: "teacher", tone: "example", text: "落ち込んだ友人から相談を受けた夜、返事が薄いほど『相談されたんだから、早く元気にしてあげなきゃ』と、励ます言葉を重ねる。それも文化的催眠です。" },
       { who: "link", tone: "reaction", text: "ミオを見つけたら、僕は絶対『戻れ』と言ってしまいます。" },
       { who: "teacher", tone: "reveal", text: "相手を早く正解へ動かすことと、相手が自分で動けることは違います。" },
       { who: "link", tone: "example", text: "資料室の奥にミオがいます。戻りたいのに、出口の前から動けない。" },
@@ -56,7 +58,7 @@ export const EP9: Episode = {
       { label: "離れた人へ『戻ってきて』と言う時", value: "離れた人へ戻るよう強く求める時", then: [{ kind: "say", line: T("ep9-exp-c", "戻らない自由も残したうえで、本人の望みを聞きます。") }, { kind: "fade", text: "ミオのもとへ行く" }] },
     ] }] },
     { kind: "adventure", scenario: EP9_ADVENTURE },
-    { kind: "classroom", intro: { title: "『戻れ』と言わなかったのに、なぜミオは一歩を選んだ？", lead: "戻らない自由が守られ、一歩が本人の選べる可能性になったからです。" }, scenes: SCENES },
+    { kind: "classroom", intro: { title: "『戻れ』と言われなかったミオが、なぜ出口へ一歩進んだ？", lead: "ミオには、二人のもとへ戻りたい気持ちと、戻れば学びを壊すという怖さがありました。リンクたちは戻らない自由を残し、出口へ一歩だけ進む可能性を渡しました。本人が自分で選べる許可形の暗示を整理します。", basis: { subjectAnchor: "ミオ", eventAnchor: "戻れ", learningGoal: "しない自由を残し、本人が選べる一歩を許可形で提案する" } }, scenes: SCENES },
     { kind: "qa", title: "Permissive Suggestion、許可と操作、断れる言葉について質問はありますか？" },
     { kind: "card", lines: [T("ep9-card-01", "ミオが自分で選んだ一歩を、原理カードへ記録します。")], card: { series: "ERICKSON PRINCIPLE", no: "09", name: "PERMISSIVE SUGGESTION", reading: "パーミッシブ・サジェスチョン（許可形の暗示）", principle: ["しない自由を残し、", "一歩を可能性として提案する。"], summary: "今の気持ちを否定せず、しない自由を言葉にしたうえで、小さな変化を『してもよい』という可能性として渡す方法。", effect: "正解を迫られて固まった人が、自分の時間と意思で次の一歩を選びやすくする。", useWhen: ["戻りたいが怖くて動けない時", "助けたい相手を急がせそうな時", "自分へ強い命令をかけている時"], howTo: ["望みとためらいを両方認める", "しない・待つ自由を言葉にする", "最小の一歩を可能性として一つ提案する"] }, after: [T("ep9-card-02", "ミオは保管室の扉を指しました。そこには、最後の選択が待っています。", { face: "think" })] },
     { kind: "outro", lines: [

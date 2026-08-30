@@ -7,6 +7,19 @@ import type { HumanChangeArc } from "./coaching-world";
 export type EpisodeFoundation = {
   /** 技法ではなく、人物の望みから始まるこの回の人間ドラマ。 */
   humanArc: HumanChangeArc;
+  /**
+   * SINGA WORLD 全体を貫く「文化的催眠」の、この回での具体像。
+   * 抽象的な教訓ではなく、どの場面で・どこから受け取り・頭に何と流れるかを書く。
+   */
+  culturalHypnosis?: {
+    situation: string;
+    source: string;
+    voiceAnchor: string;
+    authenticWish: string;
+    releaseMove: string;
+    /** 実際の悩みの場面と言い回しを確認した公開情報。画面文言は複数事例を要約して作る。 */
+    evidenceSources: string[];
+  };
   learner: {
     problem: string;
     livedExamples: [string, string, string];

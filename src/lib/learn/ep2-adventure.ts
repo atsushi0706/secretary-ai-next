@@ -272,7 +272,7 @@ export const EP2_ADVENTURE = defineAdventureScenario({
       scene: "リンクに起きた変化",
       purpose: "reflection",
       title: "リンクは、なぜ自分から目を閉じられたと思う？",
-      prompt: "リンク「怖さは消えてない。でも自分で閉じられた。君は、何が違ったと思う？」",
+      prompt: "リンク「『閉じて』と説得された時と、閉じないためにまぶたを見た時。何が違ったと思う？」",
       placeholder: "選んだ一言と、リンクの変化をつなげて書く",
       helper: "『誰が決めたか』を手がかりにしてください。",
       storeAs: "ep2LinkChange",
@@ -292,7 +292,7 @@ export const EP2_ADVENTURE = defineAdventureScenario({
       kind: "deduction",
       id: "ep2-deduce-choice",
       scene: "第二推理",
-      title: "男性とリンク。二人に最後まで残されていたものは？",
+      title: "男性とリンクが目を閉じる直前まで、二人に残されていた選択は？",
       prompt: "二人が目を閉じた直前の会話を比べてください。",
       questionBasis: {
         subject: "漫画の男性とリンク",
@@ -319,7 +319,7 @@ export const EP2_ADVENTURE = defineAdventureScenario({
       kind: "apply",
       id: "ep2-apply-own",
       scene: "あなたの一言を作る",
-      title: "『{{resistanceScene}}』と言う相手へ、あなたなら何と言う？",
+      title: "『{{resistanceScene}}』と言う相手が、断れるまま催眠を試すには何と言う？",
       prompt: "相手を言い負かすのではなく、拒否する自由を残したまま、自分で確かめられる感覚や選択へつなげます。",
       questionBasis: {
         subject: "{{resistanceScene}}と言う相手",

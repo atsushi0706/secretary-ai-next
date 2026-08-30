@@ -3,8 +3,8 @@ import { defineAdventureScenario, reviewAdventureScenario } from "./adventure";
 export const EP3_ADVENTURE = defineAdventureScenario({
   id: "ep3-inner-dialogue",
   caseNo: "CASE 03",
-  title: "目を閉じても頭の中のおしゃべりが止まらない時、催眠をどう使う？",
-  objective: "考えを消さず、次の呼吸を確かめる合図へ変える",
+  title: "やりたいことを始める時、『こんなので、本当に変われるわけない』と浮かんだら、催眠をどう使う？",
+  objective: "文化的催眠の声を消さず、自分で選ぶ次の一呼吸へ戻る",
   startLabel: "ミオと実習を始める",
   background: "/learn/adventure/erickson-study-v1.webp",
   teacherSprite: "/learn/adventure/erickson-cutout-v1.webp",

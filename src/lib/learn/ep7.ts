@@ -12,6 +12,7 @@ const SCENES: Scene[] = [
   { no: 1, title: "二択は、共通する前提を隠せる", lines: [
     T("ep7-lec1-1", "『今入る』『一分後に入る』は時間の選択です。しかし、どちらも一人で入る前提でした。", { slide: S({ h: "今、一人で入る\n／\n一分後、一人で入る", style: "vs", left: "違う\n時間", right: "同じ\n一人で入る" }) }),
     L("ep7-lec1-2", "選んでいる間に、もっと大きな決定をしたことになっていました。", { face: "aha" }),
+    T("ep7-lec1-2b", "仕事でも『ここで辞めたら逃げだ』という文化的催眠が残ると、我慢するか、全部捨てるかの二択しか見えなくなります。"),
     T("ep7-lec1-3", "まず違う部分ではなく、二つに共通する行動を見ます。"),
   ], ticketHint: "二択の隠れた前提を質問できます" },
   { no: 2, title: "Therapeutic Bind は、動ける道を増やす", lines: [
@@ -41,7 +42,8 @@ export const EP7: Episode = {
   parts: [
     { kind: "manga", title: "第7の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜旧校舎", beats: [
       { who: "teacher", tone: "question", text: "今の仕事を我慢して続けるか、すぐ辞めるか。二つから選べるのに、どちらでも望む未来へ進めないことはありませんか？" },
-      { who: "link", tone: "example", text: "続けるか辞めるかだけを見ていると、相談する、条件を変える、小さく試す道が消えます。" },
+      { who: "teacher", tone: "example", text: "眠れないまま会社へ向かう朝、『ここで辞めたら逃げだ。みんな我慢している』と浮かび、今日も何も相談せず電車に乗る。それも文化的催眠です。" },
+      { who: "link", tone: "example", text: "辞めたい。でも逃げたと思われたくない。そうなると、我慢するか、全部捨てて辞めるかしか見えなくなるんだ。" },
       { who: "teacher", tone: "reveal", text: "選択肢の違いへ注意を向けると、両方に共通する前提が見えなくなります。" },
       { who: "link", tone: "reaction", text: "旧校舎の扉も同じだ。今か一分後かは選べても、一人で入ることは決まってる。" },
       { who: "teacher", tone: "address", text: "{{userName}}。用意された二択の外から、安全な第三の道を見つけてください。" },
@@ -56,7 +58,7 @@ export const EP7: Episode = {
       { label: "我慢するか、迷惑をかけるか", value: "我慢するか迷惑をかけるかを迫られる時", then: [{ kind: "say", line: T("ep7-exp-c", "相談する、範囲を決める、断る道も探せます。") }, { kind: "fade", text: "旧校舎の扉を調べる" }] },
     ] }] },
     { kind: "adventure", scenario: EP7_ADVENTURE },
-    { kind: "classroom", intro: { title: "二つから選んだのに、なぜ選ばされた感じがした？", lead: "二択の違いへ注意を向ける間に、共通する行動を受け入れていました。" }, scenes: SCENES },
+    { kind: "classroom", intro: { title: "『今一人で入る』『一分後に一人で入る』から選んだリンクが、なぜ追い込まれた？", lead: "二つの選択肢は時間だけが違い、どちらもリンクが一人で旧校舎へ入ることを前提にしていました。二択に共通する前提を見つけ、断る・待つ・別案を選択肢へ戻す方法を整理します。", basis: { subjectAnchor: "リンク", eventAnchor: "一人で入る", learningGoal: "二択に隠れた共通の前提を見抜き、第三の道を戻す" } }, scenes: SCENES },
     { kind: "qa", title: "二択の前提、Therapeutic Bind、断る自由について質問はありますか？" },
     { kind: "card", lines: [T("ep7-card-01", "この原理も、カードが戻るまで事件記録へ残します。")], card: { series: "ERICKSON PRINCIPLE", no: "07", name: "THERAPEUTIC BIND", reading: "セラピューティック・バインド（治療的な選択）", principle: ["二択の共通点を見て、", "断る・待つ・別案を戻す。"], summary: "選択肢に共通する前提を見抜き、本人の目的に合う安全な道と、選ばない自由を見える形へ戻す方法。", effect: "出された選択肢の中だけで追い込まれず、自分の目的と安全に合う道を選びやすくする。", useWhen: ["二択を迫られて苦しくなった時", "買う・従う前提で選ばされる時", "相手へ催眠で選択を提案する時"], howTo: ["選択肢に共通する行動を探す", "拒否・保留・別案が残るか確認する", "罰なく選べる形で本人へ返す"] }, after: [T("ep7-card-02", "選択を取り戻した二人は、管理用通路から資料室へ入ります。", { face: "smile" })] },
     { kind: "outro", lines: [

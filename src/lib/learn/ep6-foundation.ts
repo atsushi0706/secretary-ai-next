@@ -15,6 +15,14 @@ export const EP6_FOUNDATION = defineEpisodeFoundation({
     },
     practitionerAppeal: "相手が言葉へ足した意味を責めず、どの前提を今も選ぶか一緒に確かめる支援を見せる",
   },
+  culturalHypnosis: {
+    situation: "締切前の夜、一人では終わらない仕事を抱えているのに、同僚へ相談する文章を書いて消す",
+    source: "親、学校、会社で繰り返された『迷惑をかけるな』『目立つな』『言われたことを察して動け』という常識",
+    voiceAnchor: "ここで人に頼ったら、迷惑をかける",
+    authenticWish: "他人が決めた普通ではなく、自分が望む条件を言葉にして選びたい",
+    releaseMove: "実際に言われた言葉と自分が足した意味を分け、その前提を今も選ぶか決める",
+    evidenceSources: ["https://note.com/real_coyote5695/n/nfbd37f369408", "https://note.0101maruigroup.co.jp/n/nd695013cfb2b"],
+  },
   learner: {
     problem: "短い言葉を見た時、相手が言っていない意味まで自分で足し、それを事実だと思ってしまう",
     livedExamples: ["返信が短くて嫌われたと思う", "注意されて自分は無能だと思う", "広告の言葉から成功が約束されたと思う"],

@@ -180,8 +180,9 @@ function ModuleScreen({
   onBack: () => void;
   onExit: () => void;
 }) {
-  const [draft, setDraft] = useState(screen.kind === "input" ? answers[screen.key] ?? "" : "");
-  const [reply, setReply] = useState("");
+  const savedDraft = screen.kind === "input" ? answers[screen.key]?.trim() ?? "" : "";
+  const [draft, setDraft] = useState(savedDraft);
+  const [reply, setReply] = useState(savedDraft ? "前に書いた答えを読み込みました。このまま続けることも、書き直すこともできます。" : "");
   const [busy, setBusy] = useState(false);
 
   const progress = ((screenIndex + 1) / module.screens.length) * 100;
@@ -261,7 +262,12 @@ function ModuleScreen({
                 <button type="button" className={styles.primaryButton} disabled={busy || !draft.trim()} onClick={() => void submit(draft)}>{busy ? "言葉を受け取っています…" : "淳に話す →"}</button>
               </div>
             )}
-            {reply && <GuideReply>{reply}</GuideReply>}
+            {reply && (
+              <>
+                <GuideReply>{reply}</GuideReply>
+                <button type="button" className={styles.rewriteButton} onClick={() => setReply("")}>答えを書き直す</button>
+              </>
+            )}
           </div>
         )}
 

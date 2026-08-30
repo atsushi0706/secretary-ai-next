@@ -326,6 +326,7 @@
 .homeTools button,
 .fullMapHead button,
 .ghostButton,
+.rewriteButton,
 .footBack {
   border: 1px solid var(--line);
   border-radius: 7px;
@@ -334,6 +335,13 @@
   background: rgba(6, 15, 26, 0.8);
   font-weight: 800;
   cursor: pointer;
+}
+
+.rewriteButton {
+  display: block;
+  margin: 0.7rem 0 0 auto;
+  padding: 0.55rem 0.8rem;
+  font-size: 0.75rem;
 }
 
 /* Lesson */

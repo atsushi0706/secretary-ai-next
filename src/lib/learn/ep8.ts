@@ -40,15 +40,15 @@ export const EP8: Episode = {
   tickets: 5,
   parts: [
     { kind: "manga", title: "第8の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜資料室", beats: [
-      { who: "teacher", tone: "question", text: "正しい説明を聞くほど、責められた気がして内容が入らなくなることはありませんか？" },
-      { who: "link", tone: "reaction", text: "あります。分からないと言えなくて、分かったふりをします。" },
-      { who: "teacher", tone: "reveal", text: "説明を増やす代わりに、本人が自分で意味を見つける物語を使う催眠があります。" },
+      { who: "teacher", tone: "question", text: "一度相手を誤解しただけで、『自分は人の話を聞く仕事に向いていない』と、次まで諦めたくなることはありませんか？" },
+      { who: "link", tone: "reaction", text: "今の僕です。ミオを裏切り者と決めた。調査役なのに、人を見る目がなかった。" },
+      { who: "teacher", tone: "reveal", text: "間違いを正論で責めても、次の話は聞けません。本人が自分で別の見方を見つける物語を使う催眠があります。" },
       { who: "link", tone: "example", text: "資料室に、ミオが残した『鍵を運ぶ鳥』の話があります。答えは書いてません。" },
       { who: "teacher", tone: "address", text: "{{userName}}。一場面ずつ読み、見方が変わる瞬間を自分で見つけてください。" },
     ], cta: "ミオの物語を開く →" }, briefing: { caseNo: "CASE 08", eyebrow: "SINGA WORLD｜THE STORY IN THE ARCHIVE", title: "鍵を運ぶ鳥", principle: "変態催眠学者の催眠の極意", hook: "盗んだ鳥は、なぜ鍵を壊さず隠した？", teaser: "物語の続きを見るたび、ミオの行動の意味が変わっていく。", cta: "事件の漫画を見る →", note: "EPISODE 08｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep8/manga-v1/0" + n + ".webp", alt: "鍵を運ぶ鳥とミオの意味を読む漫画 " + n + "ページ目" })) },
     { kind: "experience", title: "説明が届かなかった場面を選ぶ", minutes: 2, bridge: { beats: [
-      { who: "teacher", text: "鳥の物語は、ミオが善人だと説明してはいません。二人に別の見方を体験させました。" },
-      { who: "link", text: "あなたも、正しい説明をされるほど心が閉じたことはありますか？" },
+      { who: "teacher", text: "鳥の物語は、ミオが善人だと説明してはいません。リンク自身が、間違えた事実より、見直してここまで来た行動へ気づく体験になりました。" },
+      { who: "link", text: "一度間違えても、聞き直して調査を続けられる。あなたも、正しい説明をされるほど心が閉じたことはありますか？" },
       { who: "teacher", text: "{{userName}}。近い場面を選んでください。後で、説明を短い物語へ変えます。" },
     ], cta: "自分の場面を選ぶ →" }, steps: [{ kind: "choice", q: "説明されるほど、受け取りにくくなるのはどんな時ですか？", help: "近いものを選ぶか、自分の場面を一文で書けます。", storeAs: "blockedExplanation", completion: "option-or-detail", detail: { id: "ep8Detail", storeAs: "blockedExplanation", label: "どんな説明が届きにくいですか？", placeholder: "失敗の理由を長く説明される時、など", helper: "誰の話かはぼかして大丈夫です。", then: [{ kind: "say", line: T("ep8-exp-detail", "その場面と似た構造を持つ、短い物語を考えます。") }, { kind: "fade", text: "ミオの物語を読む" }] }, options: [
       { label: "失敗の理由を長く説明される時", value: "失敗の理由を長く説明される時", then: [{ kind: "say", line: T("ep8-exp-a", "間違いの説明ではなく、見直した体験を物語にします。") }, { kind: "fade", text: "ミオの物語を読む" }] },

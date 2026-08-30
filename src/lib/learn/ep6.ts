@@ -40,7 +40,7 @@ export const EP6: Episode = {
   tickets: 5,
   parts: [
     { kind: "manga", title: "第6の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜入学理由", beats: [
-      { who: "teacher", tone: "question", text: "『人に迷惑をかけるな』『我慢しろ』『目立つな』。それを、自分の本心だと思ったことはありませんか？" },
+      { who: "teacher", tone: "question", text: "助けてほしいのに『迷惑をかけるな』。本音を伝えたいのに『目立つな』。望みがあるのに、昔からの常識で止まることはありませんか？" },
       { who: "link", tone: "reaction", text: "それは催眠じゃなく、普通の常識じゃないんですか？" },
       { who: "teacher", tone: "reveal", text: "何度も聞いた常識が、自分の選択を狭める時。それは、見えない文化的催眠として働きます。" },
       { who: "teacher", tone: "example", text: "{{userName}}の入学願書には『周りの普通を自分の声だと思い、本当の望みが分からなくなった』とあります。" },
@@ -48,8 +48,8 @@ export const EP6: Episode = {
       { who: "teacher", tone: "address", text: "そして、誰もが受け入れる前提を自分で選べる世界をつくる。その最初の校外実習が始まります。" },
     ], cta: "入学の理由から事件へ →" }, briefing: { caseNo: "CASE 06", eyebrow: "SINGA WORLD｜FIRST FIELDWORK", title: "見えない命令", principle: "変態催眠学者の催眠の極意", hook: "言われていないのに、なぜ一人で行かなければと思った？", teaser: "ミオの映像を追う二人へ、旧校舎から一文だけが届く。", cta: "事件の漫画を見る →", note: "EPISODE 06｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep6/manga-v1/0" + n + ".webp", alt: "文化的催眠と旧校舎の暗示を追う漫画 " + n + "ページ目" })) },
     { kind: "experience", title: "自分の中に残る言葉を選ぶ", minutes: 2, bridge: { beats: [
-      { who: "teacher", text: "昔のあなたも、周囲の言葉を自分の本心だと思い、苦しみました。" },
-      { who: "link", text: "事件の言葉だけじゃない。今も自分を止める『当然』はありますか？" },
+      { who: "teacher", text: "昔のあなたも、助けを求めることや本当の望みを話すことを止め、周囲の言葉を自分の本心だと思って苦しみました。" },
+      { who: "link", text: "だから入学したんだ。誰かの普通に従うためじゃなく、自分が望む条件を選び直すために。今も自分を止める『当然』はありますか？" },
       { who: "teacher", text: "{{userName}}。今の自分に近い文化的催眠を一つ選んでください。後で、言葉と前提を分けます。" },
     ], cta: "自分の中の言葉を選ぶ →" }, steps: [{ kind: "choice", q: "今も自分を縛りやすい『当然』はどれですか？", help: "近いものを選ぶか、自分の言葉を一文で書けます。", storeAs: "culturalTrance", completion: "option-or-detail", detail: { id: "ep6Detail", storeAs: "culturalTrance", label: "自分を縛る『当然』を一文にすると？", placeholder: "迷惑をかけてはいけない、など", helper: "誰が言ったか分からなくても大丈夫です。", then: [{ kind: "say", line: T("ep6-exp-detail", "その言葉が、本当に今のあなたが選んだ前提かを確かめます。") }, { kind: "fade", text: "旧校舎からの言葉を追う" }] }, options: [
       { label: "人に迷惑をかけてはいけない", value: "人に迷惑をかけてはいけない", then: [{ kind: "say", line: T("ep6-exp-a", "配慮することと、一度も助けを求めないことは同じかを分けます。") }, { kind: "fade", text: "旧校舎からの言葉を追う" }] },

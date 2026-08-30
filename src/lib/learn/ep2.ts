@@ -91,9 +91,9 @@ export const EP2: Episode = {
       schoolIntro: {
         kicker: "SINGA WORLD 催眠学校",
         beats: [
-          { who: "teacher", tone: "question", text: "『私は絶対に催眠にかかりません』。そう言われたら、あなたは何と答えますか？" },
-          { who: "teacher", tone: "example", text: "説得しますか。もっと強い暗示をかけますか。それとも、催眠を諦めますか？" },
-          { who: "link", tone: "reaction", text: "始まる前から完全拒否ですよ。これ、もう無理じゃないですか？" },
+          { who: "teacher", tone: "question", text: "催眠が自分に役立つなら試したい。でも、誰かに操られるのは怖い。そう話す人が来たら、どうしますか？" },
+          { who: "teacher", tone: "example", text: "この男性も、友人に勧められて自分から来ました。けれど、主導権は渡したくない。だから『私は絶対に催眠にかかりません』と言ったのです。" },
+          { who: "link", tone: "reaction", text: "受けたい気持ちもあるのに、怖くて入口で止まってるんだ。説得したら、余計に警戒されそうです。" },
           { who: "teacher", tone: "reveal", text: "私は、その人へ『では、かからないようにしてください』と答えました。" },
           { who: "link", tone: "reaction", text: "拒否している人に、もっと拒否してって言うんですか？" },
           { who: "teacher", tone: "address", text: "{{userName}}。拒否が残ったまま、なぜ催眠が始まったのか。事件を見てください。" },
@@ -106,7 +106,7 @@ export const EP2: Episode = {
         title: "催眠を拒む男",
         principle: "第2の催眠事件",
         hook: "『絶対にかからない』と警戒した男が、なぜ自分から目を閉じたのか？",
-        teaser: "エリクソンは説得せず、男の拒否を催眠の始まりに変えた。",
+        teaser: "変わりたい気持ちと、操られたくない拒否。その両方を残したまま催眠を始めた。",
         cta: "事件の漫画を見る →",
         note: "EPISODE 02｜漫画は1ページずつ進みます",
       },
@@ -124,8 +124,8 @@ export const EP2: Episode = {
       minutes: 2,
       bridge: {
         beats: [
-          { who: "teacher", text: "この男性は、私を信じたから目を閉じたのではありません。最後まで、自分で決めようとしていました。" },
-          { who: "link", text: "でも先生。最初は、催眠にかからないと証明するつもりでしたよね？" },
+          { who: "teacher", text: "この男性が欲しかったのは、命令どおりに目を閉じることではありません。自分の意思を保ったまま、催眠が役立つか確かめることでした。" },
+          { who: "link", text: "だから、拒否したまま自分の変化を確かめて、最後は続けるかどうかも自分で決めたんですね。" },
           { who: "teacher", text: "その通りです。{{userName}}。あなたが催眠をかける側なら、相手のどの拒否が一番難しいと思いますか？" },
         ],
         cta: "難しい拒否を一つ選ぶ →",

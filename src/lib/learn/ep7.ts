@@ -40,19 +40,19 @@ export const EP7: Episode = {
   tickets: 5,
   parts: [
     { kind: "manga", title: "第7の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜旧校舎", beats: [
-      { who: "teacher", tone: "question", text: "二つから選べるのに、どちらを選んでも苦しくなることはありませんか？" },
-      { who: "link", tone: "example", text: "やるか、あとでやるか。結局やるしかない二択なら、よくあります。" },
+      { who: "teacher", tone: "question", text: "今の仕事を我慢して続けるか、すぐ辞めるか。二つから選べるのに、どちらでも望む未来へ進めないことはありませんか？" },
+      { who: "link", tone: "example", text: "続けるか辞めるかだけを見ていると、相談する、条件を変える、小さく試す道が消えます。" },
       { who: "teacher", tone: "reveal", text: "選択肢の違いへ注意を向けると、両方に共通する前提が見えなくなります。" },
       { who: "link", tone: "reaction", text: "旧校舎の扉も同じだ。今か一分後かは選べても、一人で入ることは決まってる。" },
       { who: "teacher", tone: "address", text: "{{userName}}。用意された二択の外から、安全な第三の道を見つけてください。" },
     ], cta: "旧校舎の扉へ →" }, briefing: { caseNo: "CASE 07", eyebrow: "SINGA WORLD｜THE FALSE CHOICE", title: "逃げ道のない二択", principle: "変態催眠学者の催眠の極意", hook: "『今入る』『一分後に入る』。本当に選べている？", teaser: "一人で入ることだけは、どちらにも書かれていた。", cta: "事件の漫画を見る →", note: "EPISODE 07｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep7/manga-v1/0" + n + ".webp", alt: "旧校舎の二択と第三の道を探す漫画 " + n + "ページ目" })) },
     { kind: "experience", title: "自分を狭める二択を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "扉の二択は、時間を選ばせながら、一人で入ることを前提にしていました。" },
-      { who: "link", text: "あなたの日常にも、選んでいるつもりで逃げ道が消える二択はありますか？" },
+      { who: "link", text: "仕事を我慢するか辞めるかみたいに、人生でも第三の道が消えることがあります。あなたにも近い二択はありますか？" },
       { who: "teacher", text: "{{userName}}。近い場面を一つ選んでください。断る道を戻す練習に使います。" },
     ], cta: "自分の二択を選ぶ →" }, steps: [{ kind: "choice", q: "選択肢があるのに、追い込まれやすいのはどんな時ですか？", help: "近いものを選ぶか、自分の場面を一文で書けます。", storeAs: "forcedChoice", completion: "option-or-detail", detail: { id: "ep7Detail", storeAs: "forcedChoice", label: "どんな二択に追い込まれますか？", placeholder: "今やるか、失敗するか、など", helper: "二つに共通する前提も思い出せれば書いてください。", then: [{ kind: "say", line: T("ep7-exp-detail", "その二択に共通する前提と、消された選択を探します。") }, { kind: "fade", text: "旧校舎の扉を調べる" }] }, options: [
-      { label: "今すぐやるか、諦めるか", value: "今すぐやるか諦めるかを迫られる時", then: [{ kind: "say", line: T("ep7-exp-a", "待つ、準備する、助けを求める選択も戻せます。") }, { kind: "fade", text: "旧校舎の扉を調べる" }] },
-      { label: "買うならAかBか", value: "買う前提でAかBかを迫られる時", then: [{ kind: "say", line: T("ep7-exp-b", "買わない、後で決める選択も残っています。") }, { kind: "fade", text: "旧校舎の扉を調べる" }] },
+      { label: "今の仕事を我慢するか、すぐ辞めるか", value: "仕事を我慢して続けるか、すぐ辞めるかで迷う時", then: [{ kind: "say", line: T("ep7-exp-a", "相談する、条件を変える、小さく試す選択も戻せます。") }, { kind: "fade", text: "旧校舎の扉を調べる" }] },
+      { label: "完璧に準備して始めるか、諦めるか", value: "完璧に準備して始めるか、諦めるかで迷う時", then: [{ kind: "say", line: T("ep7-exp-b", "小さく試す、助けを借りる、期限を決めて保留する道もあります。") }, { kind: "fade", text: "旧校舎の扉を調べる" }] },
       { label: "我慢するか、迷惑をかけるか", value: "我慢するか迷惑をかけるかを迫られる時", then: [{ kind: "say", line: T("ep7-exp-c", "相談する、範囲を決める、断る道も探せます。") }, { kind: "fade", text: "旧校舎の扉を調べる" }] },
     ] }] },
     { kind: "adventure", scenario: EP7_ADVENTURE },

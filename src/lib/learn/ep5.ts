@@ -40,7 +40,7 @@ export const EP5: Episode = {
   goal: { before: ["最初の解釈を事実だと決める", "混乱を急いで消そうとする", "誰かの命令へ判断を渡す"], after: ["今分かる事実を三つ挙げる", "まだ分からない意味を残す", "確認できる次の一手を選ぶ"], takeaway: "混乱を結論で埋めず、事実と未確定を分けて、選択を現在へ戻す。" }, tickets: 5,
   parts: [
     { kind: "manga", title: "第5の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校", beats: [
-      { who: "teacher", tone: "question", text: "信じていた相手が予想を裏切った時、最初に浮かんだ答えを事実だと思ったことはありませんか？" },
+      { who: "teacher", tone: "question", text: "大切な相手との関係を壊したくないのに、予想外の行動を見た瞬間、『もう信じられない』と答えを決めたことはありませんか？" },
       { who: "link", tone: "reaction", text: "先生、講義どころじゃない。保管庫が開いてる。原理カードが全部ありません。" },
       { who: "teacher", tone: "example", text: "今分かるのは、扉が開いていることと、カードがないことです。" },
       { who: "link", tone: "reaction", text: "ミオもいない。昨日、鍵の場所を見ていた。あいつが裏切ったんだ。" },
@@ -48,8 +48,8 @@ export const EP5: Episode = {
       { who: "teacher", tone: "address", text: "{{userName}}。今まで学んだものを失った事件を、事実から調べてください。" },
     ], cta: "空の保管庫へ入る →" }, briefing: { caseNo: "CASE 05", eyebrow: "SINGA WORLD｜ARCHIVE INCIDENT", title: "原理カード消失", principle: "第5の催眠事件", hook: "信じていたミオは、本当に最初から二人を騙していた？", teaser: "カードが消え、ミオが残した短い映像だけが見つかった。", cta: "事件の漫画を見る →", note: "EPISODE 05｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep5/manga-v1/0${n}.webp`, alt: `原理カード消失とミオの失踪を追う漫画 ${n}ページ目` })) },
     { kind: "experience", title: "予想を裏切られた場面を選ぶ", minutes: 2, bridge: { beats: [
-      { who: "teacher", text: "ミオがカードを持ち出した事実は分かりました。けれど、目的も、過去の全てが嘘だったかも、まだ分かりません。" },
-      { who: "link", text: "頭では分かっても、感情は『裏切られた』から動きません。あなたなら、どんな時に答えを急ぎますか？" },
+      { who: "teacher", text: "ミオがカードを持ち出した事実は分かりました。けれどリンクが本当に望むのは、関係を切ることではなく、なぜそうしたのか本人の理由を確かめることです。" },
+      { who: "link", text: "裏切られた気持ちは消えません。でも、全部嘘だったと決める前に、本当の理由は知りたい。あなたなら、どんな時に答えを急ぎますか？" },
       { who: "teacher", text: "{{userName}}。自分に近い混乱を一つ選んでください。その場面で、現在へ戻る一言を作ります。" },
     ], cta: "自分の混乱を一つ選ぶ →" }, steps: [{ kind: "choice", q: "予想外の出来事で、意味を決めつけやすいのはどんな時ですか？", help: "近いものを選ぶか、自分の出来事を一文で書けます。", storeAs: "shockScene", completion: "option-or-detail", detail: { id: "ep5Detail", storeAs: "shockScene", label: "何が起きた時、最初の答えへ飛びつきますか？", placeholder: "例：返信がなく、嫌われたと決める", helper: "個人名は書かなくて大丈夫です。", then: [{ kind: "say", line: T("ep5-exp-detail", "その出来事を、事実とまだ分からない意味へ分けます。") }, { kind: "fade", text: "保管庫事件を調べる" }] }, options: [
       { label: "返事がなく、嫌われたと決める", value: "返事がないだけで嫌われたと決める時", then: [{ kind: "say", line: T("ep5-exp-a", "返事がない事実と、その理由の解釈を分けます。") }, { kind: "fade", text: "保管庫事件を調べる" }] },

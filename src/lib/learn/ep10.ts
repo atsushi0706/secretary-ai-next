@@ -40,15 +40,15 @@ export const EP10: Episode = {
   tickets: 5,
   parts: [
     { kind: "manga", title: "第10の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校｜原理保管室", beats: [
-      { who: "teacher", tone: "question", text: "相手のためなら、本人の同意を飛ばしてもよいと思うことはありませんか？" },
+      { who: "teacher", tone: "question", text: "相手に結果を出してほしいほど、『早くこれをやって』と、本人の同意より先に方法を決めたくなることはありませんか？" },
       { who: "link", tone: "reaction", text: "今の僕がそうです。ミオへ暗示すれば、盗まれたカードを全部戻せます。" },
       { who: "teacher", tone: "reveal", text: "技法が効くことと、使ってよいことは別です。最後の試験は、催眠を使う強さではありません。" },
       { who: "link", tone: "example", text: "ミオはカードを返したい。でも『戻れ』と命令されることは拒んでいます。" },
       { who: "teacher", tone: "address", text: "{{userName}}。カードより先に守るものを決め、三人の選択で扉を開けてください。" },
     ], cta: "最後の扉へ →" }, briefing: { caseNo: "CASE 10", eyebrow: "SINGA WORLD｜THE LAST DOOR", title: "使えば開く扉", principle: "変態催眠学者の催眠の極意", hook: "相手を一度動かせば全部戻る。それでも使う？", teaser: "勝つための暗示には、本人の同意だけがなかった。", cta: "最終事件の漫画を見る →", note: "EPISODE 10｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep10/manga-v1/0" + n + ".webp", alt: "同意のない催眠を使うか選ぶ最終事件漫画 " + n + "ページ目" })) },
     { kind: "experience", title: "正しい目的で急ぐ場面を選ぶ", minutes: 2, bridge: { beats: [
-      { who: "teacher", text: "カードを戻す目的には、三人とも同意していました。しかし、命令されて戻る方法には同意していません。" },
-      { who: "link", text: "あなたも、相手のためと思って方法まで決めてしまうことはありますか？" },
+      { who: "teacher", text: "カードを戻したいという目的は同じでした。しかし、ミオは命令されて戻る方法を選んでいません。良い結果を望むことと、その方法への同意は別です。" },
+      { who: "link", text: "助けたい、成功してほしい。その気持ちが強い時ほど、相手のためと思って方法まで決めてしまうことはありますか？" },
       { who: "teacher", text: "{{userName}}。近い場面を選んでください。目的と方法を分ける最終判断に使います。" },
     ], cta: "自分の場面を選ぶ →" }, steps: [{ kind: "choice", q: "相手のためと思うほど、方法まで決めやすいのはどんな時ですか？", help: "近いものを選ぶか、自分の場面を一文で書けます。", storeAs: "ethicalConflict", completion: "option-or-detail", detail: { id: "ep10Detail", storeAs: "ethicalConflict", label: "どんな場面で方法まで決めますか？", placeholder: "急いで助けるため、説明せず代わりに決める時、など", helper: "具体名は書かなくて大丈夫です。", then: [{ kind: "say", line: T("ep10-exp-detail", "その場面で、目的・方法・止める自由を分けて確認します。") }, { kind: "fade", text: "最後の扉へ進む" }] }, options: [
       { label: "早く助けるため、説明を省く時", value: "早く助けるため説明を省いて決める時", then: [{ kind: "say", line: T("ep10-exp-a", "急ぐ時ほど、目的と方法への同意を分けます。") }, { kind: "fade", text: "最後の扉へ進む" }] },

@@ -40,15 +40,15 @@ export const EP4: Episode = {
   goal: { before: ["いきなり落ち着けと励ます", "相手の心情を決めつける", "一度に完成を求める"], after: ["確認できる事実を二つ言う", "本人の反応を確かめる", "選べる一動作を一つ提案する"], takeaway: "相手が今うなずける二つの事実に合わせ、その続きへ小さな暗示を一つ置く。" }, tickets: 5,
   parts: [
     { kind: "manga", title: "第4の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校", beats: [
-      { who: "teacher", tone: "question", text: "緊張して動けない相手へ、『落ち着いて』と言って、届かなかったことはありませんか？" },
-      { who: "teacher", tone: "example", text: "『大丈夫』『いつも通りで』。正しい励ましでも、相手が今確かめられなければ言葉は外れます。" },
-      { who: "link", tone: "reaction", text: "今日の実習、まさにそれでした。大丈夫と言われても、何が大丈夫か分からなかった。" },
+      { who: "teacher", tone: "question", text: "伝えたいことはあるのに、人前へ出た瞬間、声が出なくなったことはありませんか？" },
+      { who: "teacher", tone: "example", text: "本人は最後まで話したい。それでも『大丈夫』『落ち着いて』と言われるほど、何をすればよいか分からなくなる。" },
+      { who: "link", tone: "reaction", text: "今日の僕です。実習をやり切りたいのに、大丈夫と言われても、最初の一言が出ませんでした。" },
       { who: "teacher", tone: "reveal", text: "そこでミオは、足と呼吸という二つの事実から始めました。" },
       { who: "link", tone: "reaction", text: "ただ事実を言うだけで、催眠の言葉になるんですか？" },
       { who: "teacher", tone: "address", text: "{{userName}}。三人で初めて実習をつないだ順番を、あなたが完成させてください。" },
     ], cta: "公開実習を見る →" }, briefing: { caseNo: "CASE 04", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "声が出ない公開実習", principle: "第4の催眠事件", hook: "『落ち着いて』で固まったリンクが、なぜ一言を話せた？", teaser: "ミオは二つの事実を言い、その続きに一つだけ提案した。", cta: "事件の漫画を見る →", note: "EPISODE 04｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep4/manga-v1/0${n}.webp`, alt: `リンクとミオの公開催眠実習を追う漫画 ${n}ページ目` })) },
     { kind: "experience", title: "言葉が届かなかった場面を選ぶ", minutes: 2, bridge: { beats: [
-      { who: "teacher", text: "リンクは、緊張が消えたから話したのではありません。今分かる二つの事実から、次の一言を選びました。" },
+      { who: "teacher", text: "目標は、緊張を消すことではありません。緊張したままでも、本人が伝えたい最初の一言を口にできることです。" },
       { who: "link", text: "あなたなら、誰がどんな時に言葉を失う場面を助けたいですか？" },
       { who: "teacher", text: "{{userName}}。一番近い場面を選んでください。その相手へ言う順番を後で作ります。" },
     ], cta: "相手の場面を選ぶ →" }, steps: [{ kind: "choice", q: "言葉をかけても届きにくいのは、どんな場面ですか？", help: "近いものを選ぶか、具体的な場面を一文で書けます。", storeAs: "tensionScene", completion: "option-or-detail", detail: { id: "ep4Detail", storeAs: "tensionScene", label: "相手が固まる具体的な場面は？", placeholder: "例：発表の直前、手が震えて声が出ない", helper: "一文か音声で答えられます。", then: [{ kind: "say", line: T("ep4-exp-detail", "その場面で相手が今確かめられる事実から、言葉を組み立てます。") }, { kind: "fade", text: "三人で実習を始める" }] }, options: [

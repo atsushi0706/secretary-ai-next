@@ -41,16 +41,16 @@ export const EP3: Episode = {
   tickets: 5,
   parts: [
     { kind: "manga", title: "第3の催眠事件", schoolIntro: { kicker: "SINGA WORLD 催眠学校", beats: [
-      { who: "teacher", tone: "question", text: "目を閉じたのに、頭の中だけがずっとしゃべっていることはありませんか？" },
-      { who: "teacher", tone: "example", text: "眠ろうとするほど明日を考える。静かにしようとするほど、失敗の言葉が浮かぶ。" },
+      { who: "teacher", tone: "question", text: "休みたい。次のことを始めたい。それなのに、頭の中の言葉が止まらず動けないことはありませんか？" },
+      { who: "teacher", tone: "example", text: "眠ろうとするほど明日を考える。席を立とうとするほど、さっきの失敗が浮かぶ。" },
       { who: "link", tone: "reaction", text: "それ、僕なら『考えないで』と言います。でも、言われて止まったことはないです。" },
       { who: "teacher", tone: "reveal", text: "止めなくて結構です。その声を、催眠の次の合図にします。" },
       { who: "link", tone: "reaction", text: "止まらないものを、そのまま使うんですか？" },
       { who: "teacher", tone: "address", text: "{{userName}}。新しい実習生ミオと、声が合図へ変わった夜を見てください。" },
-    ], cta: "ミオの事件を見る →" }, briefing: { caseNo: "CASE 03", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "止まらない頭の声", principle: "第3の催眠事件", hook: "考えが消えていないのに、なぜミオは席を立てた？", teaser: "考えを止める代わりに、その一つ一つを呼吸の合図へ変えた。", cta: "事件の漫画を見る →", note: "EPISODE 03｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep3/manga-v1/0${n}.webp`, alt: `雨宮ミオの止まらない内的対話を追う漫画 ${n}ページ目` })) },
+    ], cta: "ミオの事件を見る →" }, briefing: { caseNo: "CASE 03", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "止まらない頭の声", principle: "第3の催眠事件", hook: "考えが消えていないのに、なぜミオは席を立てた？", teaser: "無心になることを目標にせず、考えが浮かんだ後に戻る道を作った。", cta: "事件の漫画を見る →", note: "EPISODE 03｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep3/manga-v1/0${n}.webp`, alt: `雨宮ミオの止まらない内的対話を追う漫画 ${n}ページ目` })) },
     { kind: "experience", title: "自分の頭の声を一つ選ぶ", minutes: 2, bridge: { beats: [
-      { who: "teacher", text: "ミオの考えは消えていません。それでも、考えが浮かんだ後の行動は変わりました。" },
-      { who: "link", text: "僕たちの場合は、どんな時に頭のおしゃべりが止まらなくなるんだろう？" },
+      { who: "teacher", text: "ミオが望んだのは、頭を完全に空にすることではありません。考えが浮かんでも、休む時や次の行動へ自分で戻れることでした。" },
+      { who: "link", text: "考えは残ってるのに、ミオは息を一つ確かめて、次の実習を手伝うと決められた。僕たちにも似た場面はありますか？" },
       { who: "teacher", text: "{{userName}}。あなたに一番近い場面を一つ選んでください。後で、その場面に使う暗示を作ります。" },
     ], cta: "自分の場面を選ぶ →" }, steps: [{ kind: "choice", q: "考えを止めようとして、余計に続くのはどんな時ですか？", help: "近いものを選ぶか、自分の場面を一文で書いてください。", storeAs: "innerDialogueScene", completion: "option-or-detail", detail: { id: "ep3Detail", storeAs: "innerDialogueScene", label: "あなたの場合は、どんな言葉が頭に浮かびますか？", placeholder: "例：明日の失敗を何度も考える", helper: "一文か音声で答えられます。", then: [{ kind: "say", line: T("ep3-exp-detail", "その言葉を消さず、次に戻る合図へ変えてみましょう。") }, { kind: "fade", text: "ミオと催眠を組み立てる" }] }, options: [
       { label: "眠る前に、明日のことを考え続ける", value: "眠る前に明日のことを考え続ける", then: [{ kind: "say", line: T("ep3-exp-a", "眠るために考えを消すのではなく、浮かんだ後の一呼吸を作ります。") }, { kind: "fade", text: "ミオと催眠を組み立てる" }] },

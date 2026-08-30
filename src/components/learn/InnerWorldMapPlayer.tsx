@@ -60,9 +60,14 @@ function DialogueStage({
     <div className={`${styles.dialogueStage} ${isJun ? styles.junSpeaking : styles.linkSpeaking}`}>
       {screen.scene && <span className={styles.sceneLabel}>{screen.scene}</span>}
       <div className={styles.stageCharacters} aria-hidden="true">
-        <div className={styles.junPortrait}>
-          <span>JUN</span><b>淳</b><small>MENTAL MODEL GUIDE</small>
-        </div>
+        <Image
+          className={styles.junPortrait}
+          src="/learn/chars/jun-neutral-v1.png"
+          alt=""
+          width={948}
+          height={1659}
+          priority
+        />
         <Image className={styles.linkPortrait} src={linkImage} alt="" width={520} height={1040} priority />
       </div>
       <div className={`${styles.dialogueBox} ${isJun ? styles.junBox : styles.linkBox}`}>

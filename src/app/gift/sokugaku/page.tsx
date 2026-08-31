@@ -101,13 +101,14 @@ export default async function SokugakuGiftPage() {
         </div>
 
         {/* ダウンロード */}
-        <a href={PDF} download="速学力_最速で学びを力に変える.pdf"
+        <a href={PDF} download="速学力_最速で学びを力に変える.pdf" target="_blank" rel="noopener"
           className="block w-full text-center font-bold py-4 rounded-xl text-base"
           style={{ background: "#f0862e", color: "#1a1206" }}>
-          📕 本をダウンロードする（PDF・1.1MB）
+          📕 本を開く・ダウンロードする（PDF・1.1MB）
         </a>
         <p className="text-[11px] text-white/50 mt-3 leading-relaxed text-center">
-          スマホで開いた場合は、表示されたPDFの共有ボタンから「ファイルに保存」でも保存できます。
+          スマホでは本が開いたら、共有ボタン →「ファイルに保存」で手元に残せます。<br />
+          保存しなくても大丈夫。この本は、地図の棚の <b>📕 速学力</b> からいつでも開けます。
         </p>
 
         <div className="text-center mt-8">

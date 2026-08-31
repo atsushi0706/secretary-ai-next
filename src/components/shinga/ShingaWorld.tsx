@@ -224,6 +224,8 @@ export function ShingaWorld({
   const [isAdmin, setIsAdmin] = useState(false);
   /** 速学力の贈り物の帯（8月の上位10名）。「あとで」でこの滞在だけ引っ込む */
   const [gift, setGift] = useState<{ rank: number | null } | null>(null);
+  /** 本を持っているか。帯を消したあとも、地図の扉「📕 速学力」はずっと出す */
+  const [giftOwned, setGiftOwned] = useState(false);
   // ひとりずつ開ける機能。**既定は鍵**。管理画面で開けた人だけ true になる
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   // 届いているのに、まだ開いていない週次レポートの数（宝箱に印を出す）
@@ -582,8 +584,10 @@ export function ShingaWorld({
       if (d?.features && typeof d.features === "object") setFeatures(d.features);
       setUnreadWeekly(Number(d?.unreadWeekly) || 0);
       if (d?.flags && typeof d.flags === "object") setFlags(d.flags);
-      // 速学力の贈り物。通知を押しても開かない端末があるので、地図に帯で出す
+      // 速学力の贈り物。通知を押しても開かない端末があるので、地図に帯で出す。
+      // 受け取ったあとも、扉「📕 速学力」からいつでも開き直せる
       if (d?.gift && typeof d.gift === "object") {
+        setGiftOwned(true);
         try { if (!localStorage.getItem("gift:sokugaku:done")) setGift({ rank: d.gift.rank ?? null }); }
         catch { setGift({ rank: d.gift.rank ?? null }); }
       }
@@ -1686,6 +1690,7 @@ export function ShingaWorld({
           lockedWorks={lockedWorks}
           isAdmin={isAdmin}
           gift={gift}
+          giftOwned={giftOwned}
           onGift={() => { try { localStorage.setItem("gift:sokugaku:done", "1"); } catch { /* ignore */ } window.location.href = "/gift/sokugaku"; }}
           onHideGift={() => setGift(null)}
           features={features}
@@ -2360,7 +2365,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, weeklyNudge = false, onHideWeekly, moneyOpen = false, flags = {}, gift = null, onGift, onHideGift,
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, weeklyNudge = false, onHideWeekly, moneyOpen = false, flags = {}, gift = null, giftOwned = false, onGift, onHideGift,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -2372,6 +2377,8 @@ function Home({
   isAdmin?: boolean;
   /** 速学力の贈り物の帯（rank=1〜10、上位10名の外の運営は null） */
   gift?: { rank: number | null } | null;
+  /** 本を持っている（上位10名）。地図の棚に「📕 速学力」の扉をずっと出す */
+  giftOwned?: boolean;
   onGift?: () => void;
   onHideGift?: () => void;
   /** ひとりずつ開ける機能。既定は鍵で、開けた人だけ true */
@@ -2544,6 +2551,13 @@ function Home({
           <span className="emoji">🎨</span>
           <span className="ja">じぶんワークを{customWorks.length ? "つくる" : "つくってみる"}</span>
         </button>
+        {/* もらった本。上位10名は、受け取ったあともここからいつでも開ける */}
+        {giftOwned && (
+          <a className="iw-door is-sub" href="/gift/sokugaku" onClick={() => { try { localStorage.setItem("gift:sokugaku:done", "1"); } catch { /* ignore */ } }}>
+            <span className="emoji">📕</span>
+            <span className="ja">速学力</span>
+          </a>
+        )}
         {/* AIラーニング（学びのピッコマ）。いまは淳くんだけ。鍵はかけず、管理者以外には出さない */}
         {isAdmin && (
           <a className="iw-door is-sub" href="/learn">

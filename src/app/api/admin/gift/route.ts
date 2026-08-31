@@ -10,7 +10,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { isAdmin } from "@/lib/admin";
-import { ranking } from "@/lib/points";
+import { storeGiftTop10 } from "@/lib/points";
 import { sendPushToUser } from "@/lib/push";
 
 export const dynamic = "force-dynamic";
@@ -28,7 +28,8 @@ export async function POST(req: Request) {
   const test = b?.test !== false;
 
   if (test) {
-    // まず清瀬だけ：自分に送って、通知→ページ→ダウンロードまでの流れを確かめる
+    // まず清瀬だけ：順位表を保存し（まだ公開しない）、自分に通知を送って流れを確かめる
+    await storeGiftTop10(false);
     const r = await sendPushToUser(userId, {
       title: "📕 テスト：速学力の贈り物",
       body: "開くと、贈り物ページが見えるか確かめられるよ",
@@ -37,7 +38,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ ok: true, test: true, sent: r.sent, found: r.found });
   }
 
-  const top = await ranking(10);
+  const stored = await storeGiftTop10(true);   // 保存して公開 → 全員の地図に帯が出る
+  const top = stored.map((x) => ({ userId: x.userId, name: x.name }));
   const results: { rank: number; name: string; sent: number; found: number }[] = [];
   for (let i = 0; i < top.length; i++) {
     const rank = i + 1;

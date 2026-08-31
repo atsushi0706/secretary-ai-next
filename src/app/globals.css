@@ -7866,3 +7866,6 @@ body:has(.realverse-bg) { background: transparent; }
 }
 .czl-chips button.is-on { color: #2a1f10; background: linear-gradient(160deg, #ffe3a8, #e0bd72); border-color: #ffe3a8; }
 .czl-when input[type="date"] { color-scheme: dark; }
+
+/* 速学力の贈り物の帯：週次の帯を流用して、金色に */
+.iw-weekly-arrived.is-gift .main { background: linear-gradient(135deg, #7a5adf, #b8892e); border-color: rgba(255,215,130,.65); box-shadow: 0 8px 26px rgba(0,0,0,.45), 0 0 18px rgba(244,182,63,.35); }

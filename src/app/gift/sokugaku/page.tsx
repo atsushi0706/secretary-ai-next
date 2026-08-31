@@ -9,7 +9,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { isAdmin } from "@/lib/admin";
-import { ranking, CAMPAIGN } from "@/lib/points";
+import { ranking, giftStatus, CAMPAIGN } from "@/lib/points";
 import { getUserSettings } from "@/lib/supabase";
 
 export const dynamic = "force-dynamic";
@@ -24,12 +24,19 @@ export default async function SokugakuGiftPage() {
   const userId = (session?.user as any)?.id as string | undefined;
   if (!userId) redirect("/login");
 
-  const [top, s] = await Promise.all([
-    ranking(10),
+  const [g, s] = await Promise.all([
+    giftStatus(userId),
     getUserSettings(userId).catch(() => null),
   ]);
-  const idx = top.findIndex((r) => r.userId === userId);
   const admin = isAdmin(userId);
+  // 保存済みの順位表（配布時に凍結）を使う。まだ無ければ、その場で数える（重いので保険だけ）
+  let rankNo: number | null = g.stored ? g.rank : null;
+  if (!g.stored) {
+    const top = await ranking(10);
+    const i = top.findIndex((r) => r.userId === userId);
+    rankNo = i >= 0 ? i + 1 : null;
+  }
+  const idx = rankNo !== null ? rankNo - 1 : -1;
   const who = ((s as any)?.user_call_name || (s as any)?.display_name || "あなた") as string;
 
   if (idx < 0 && !admin) {

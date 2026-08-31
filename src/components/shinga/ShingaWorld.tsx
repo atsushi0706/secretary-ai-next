@@ -222,6 +222,8 @@ export function ShingaWorld({
   const [lockedWorks, setLockedWorks] = useState<string[]>([]);
   // 親アカウントか（管理用の表示に使う）
   const [isAdmin, setIsAdmin] = useState(false);
+  /** 速学力の贈り物の帯（8月の上位10名）。「あとで」でこの滞在だけ引っ込む */
+  const [gift, setGift] = useState<{ rank: number | null } | null>(null);
   // ひとりずつ開ける機能。**既定は鍵**。管理画面で開けた人だけ true になる
   const [features, setFeatures] = useState<Record<string, boolean>>({});
   // 届いているのに、まだ開いていない週次レポートの数（宝箱に印を出す）
@@ -580,6 +582,11 @@ export function ShingaWorld({
       if (d?.features && typeof d.features === "object") setFeatures(d.features);
       setUnreadWeekly(Number(d?.unreadWeekly) || 0);
       if (d?.flags && typeof d.flags === "object") setFlags(d.flags);
+      // 速学力の贈り物。通知を押しても開かない端末があるので、地図に帯で出す
+      if (d?.gift && typeof d.gift === "object") {
+        try { if (!localStorage.getItem("gift:sokugaku:done")) setGift({ rank: d.gift.rank ?? null }); }
+        catch { setGift({ rank: d.gift.rank ?? null }); }
+      }
     }).catch(() => {});
   }, []);
 
@@ -1678,6 +1685,9 @@ export function ShingaWorld({
           customWorks={customWorks}
           lockedWorks={lockedWorks}
           isAdmin={isAdmin}
+          gift={gift}
+          onGift={() => { try { localStorage.setItem("gift:sokugaku:done", "1"); } catch { /* ignore */ } window.location.href = "/gift/sokugaku"; }}
+          onHideGift={() => setGift(null)}
           features={features}
           unreadWeekly={unreadWeekly}
           weeklyNudge={weeklyNudge && unreadWeekly > 0}
@@ -2350,7 +2360,7 @@ function MoodCheck({ guideName, avatarUrl, onPick }: { guideName: string; avatar
 }
 
 function Home({
-  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, weeklyNudge = false, onHideWeekly, moneyOpen = false, flags = {},
+  guideName, avatarUrl, onPick, onTalk, onDaily, onHero, onVault, onCrystalVault, onWeekly, onLetter, onCard, onBalance, onCast, onManual, onWeight, onMeal, customWorks, onRunCustom, onEditCustom, onMake, isAdventurer, sending, lockedWorks = [], isAdmin = false, features = {}, unreadWeekly = 0, weeklyNudge = false, onHideWeekly, moneyOpen = false, flags = {}, gift = null, onGift, onHideGift,
 }: {
   guideName: string;
   avatarUrl: string;
@@ -2360,6 +2370,10 @@ function Home({
   onMeal: () => void;
   /** 親アカウントか（まだ配っていない機能を出し分ける） */
   isAdmin?: boolean;
+  /** 速学力の贈り物の帯（rank=1〜10、上位10名の外の運営は null） */
+  gift?: { rank: number | null } | null;
+  onGift?: () => void;
+  onHideGift?: () => void;
   /** ひとりずつ開ける機能。既定は鍵で、開けた人だけ true */
   features?: Record<string, boolean>;
   /** まだ開いていない週次レポートの数 */
@@ -2424,6 +2438,20 @@ function Home({
         「あとで」を押したら、この滞在のあいだだけ引っ込む——
         まだ読んでいないので、次に来たらまた声をかける。
       */}
+      {/* 速学力の贈り物（8月の上位10名）。通知が開けない端末でも、ここから受け取れる */}
+      {gift && onGift && (
+        <div className="iw-weekly-arrived is-gift">
+          <button className="main" onClick={onGift}>
+            <span className="ico">📕</span>
+            <span className="tx">
+              <b>{gift.rank !== null && gift.rank <= 3 ? `8月 第${gift.rank}位！『速学力』が届いてるよ` : "『速学力』が届いてるよ"}</b>
+              <small>1ヶ月おつかれさま。タップして受け取ってね</small>
+            </span>
+            <span className="arr">→</span>
+          </button>
+          <button className="later" onClick={onHideGift} aria-label="あとで">あとで</button>
+        </div>
+      )}
       {weeklyNudge && onWeekly && (
         <div className="iw-weekly-arrived">
           <button className="main" onClick={onWeekly}>

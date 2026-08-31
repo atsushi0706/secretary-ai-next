@@ -384,3 +384,39 @@ export async function ranking(limit = 20): Promise<{ userId: string; name: strin
   }
   return out.sort((a, b) => b.total - a.total || b.days - a.days).slice(0, limit);
 }
+
+/* ── 速学力の贈り物（8月の上位10名） ─────────────────────
+ * 順位表は app_config に保存する。地図を開くたびに全員ぶん数え直すと重すぎるため。
+ * 企画は 8/31 で終わっているので、一度保存すれば順位は変わらない。
+ * published=false のうちは淳くんのテストだけ。②で配ると true になり、全員の画面に出る。
+ */
+const GIFT_KEY = "sokugaku_top10";
+export type GiftTop = { userId: string; name: string; rank: number }[];
+
+export async function storeGiftTop10(published: boolean): Promise<GiftTop> {
+  const top = await ranking(10);
+  const list: GiftTop = top.map((t, i) => ({ userId: t.userId, name: t.name, rank: i + 1 }));
+  const supa = supabaseAdmin();
+  // テストで作った表を、配布(②)が上書きして published にする。逆に落とすことはしない
+  const { data } = await supa.from("app_config").select("value").eq("key", GIFT_KEY).maybeSingle();
+  const wasPublished = Boolean((data?.value as any)?.published);
+  await supa.from("app_config").upsert(
+    { key: GIFT_KEY, value: { list, published: published || wasPublished, at: new Date().toISOString() }, updated_at: new Date().toISOString() },
+    { onConflict: "key" },
+  );
+  return list;
+}
+
+export async function giftStatus(userId: string): Promise<{ rank: number | null; published: boolean; stored: boolean }> {
+  try {
+    const supa = supabaseAdmin();
+    const { data } = await supa.from("app_config").select("value").eq("key", GIFT_KEY).maybeSingle();
+    const v = data?.value as any;
+    const list = Array.isArray(v?.list) ? v.list : null;
+    if (!list) return { rank: null, published: false, stored: false };
+    const hit = list.find((x: any) => String(x.userId) === userId);
+    return { rank: hit ? Number(hit.rank) : null, published: Boolean(v?.published), stored: true };
+  } catch {
+    return { rank: null, published: false, stored: false };
+  }
+}

@@ -115,6 +115,30 @@ export default function AdminPage() {
   // 速学力プレゼント企画の上位（数えるのに時間がかかるので、押したときだけ）
   const [rank, setRank] = useState<{ userId: string; name: string; total: number; days: number }[] | null>(null);
   const [rankBusy, setRankBusy] = useState(false);
+  /** 速学力の贈り物（本の配布）。まず自分に送って確かめてから、上位10名へ */
+  const [giftBusy, setGiftBusy] = useState(false);
+  const [giftMsg, setGiftMsg] = useState("");
+  async function sendGift(test: boolean) {
+    if (!test && !confirm("8月の上位10名に『速学力』の通知を送ります。よろしいですか？")) return;
+    setGiftBusy(true); setGiftMsg("");
+    try {
+      const r = await fetch("/api/admin/gift", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ test }),
+      });
+      const d = await r.json();
+      if (!r.ok) { setGiftMsg(d.error || `HTTP ${r.status}`); return; }
+      if (d.test) {
+        setGiftMsg(d.sent > 0
+          ? "自分に送りました。通知を開いて、ページとダウンロードを確かめてください"
+          : "送れませんでした。この端末で通知を許可しているか確かめてください（found=" + d.found + "）");
+      } else {
+        const lines = (d.results ?? []).map((x: any) => `${x.rank}位 ${x.name}：通知${x.sent > 0 ? "送信" : "届かず（未許可）"}`);
+        setGiftMsg(lines.join("　／　"));
+      }
+    } catch (e: any) { setGiftMsg(String(e?.message ?? e)); }
+    finally { setGiftBusy(false); }
+  }
 
   async function loadDrafts() {
     try {
@@ -536,6 +560,25 @@ export default function AdminPage() {
         >
           {rankBusy ? "数えてる…" : rank ? "数え直す" : "上位を出す"}
         </button>
+        {/* 本の配布。企画が終わったら、まず自分で確かめて、それから上位10名へ */}
+        <div className="mt-3 border-t pt-3">
+          <div className="text-xs font-bold mb-1">📕 『速学力』を配る（8月の上位10名）</div>
+          <p className="text-[11px] text-gray-500 mb-2">
+            通知を開くと贈り物ページ（1〜3位には順位入り）→ その場でダウンロードできます。
+            ページ側でも上位10名かを数え直すので、他の人には見えません。
+          </p>
+          <div className="flex gap-2">
+            <button className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded font-bold disabled:opacity-40"
+              disabled={giftBusy} onClick={() => void sendGift(true)}>
+              {giftBusy ? "送信中…" : "① まず自分に送って確かめる"}
+            </button>
+            <button className="text-xs bg-white border border-purple-400 text-purple-700 px-3 py-1.5 rounded font-bold disabled:opacity-40"
+              disabled={giftBusy} onClick={() => void sendGift(false)}>
+              ② 上位10名に送る
+            </button>
+          </div>
+          {giftMsg && <p className="text-[11px] text-gray-700 mt-2 whitespace-pre-wrap">{giftMsg}</p>}
+        </div>
         {rank && (
           <div className="mt-3 space-y-1">
             {rank.length === 0 && <p className="text-xs text-gray-500">まだポイントのある人がいません。</p>}

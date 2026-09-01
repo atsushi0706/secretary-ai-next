@@ -202,7 +202,8 @@ function OnboardingInner() {
             </p>
             <div className="ob-why">
               <div className="ob-why-t">💰 お金は<b>一切かかりません</b></div>
-              <p>Google が無料で配っている鍵です。クレジットカードの登録も要りません。</p>
+              <p>Google が無料で配っている鍵です。<b>クレジットカードの登録は要りません</b>。</p>
+              <p>カードを登録しない限り、<b>お金が引き落とされることは絶対にありません</b>。無料枠を使い切っても、課金ではなく「今日はここまで」と止まるだけです。</p>
             </div>
             <div className="ob-why">
               <div className="ob-why-t">🛡 なぜ、ご自身の鍵が要るのか</div>

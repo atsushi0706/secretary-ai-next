@@ -498,6 +498,11 @@ export default function SettingsPage() {
           秘書AIを動かすために、Google の Gemini API キーをご自身で取得して貼り付けてください。
           <strong className="text-purple-700">無料枠で1日1,000回までの利用が可能</strong>です（毎日リセット）。
         </p>
+        <p className="text-xs text-gray-600 leading-relaxed">
+          💳 取得に<strong>クレジットカードの登録は不要</strong>です。カードを登録しない限り、
+          <strong>お金が引き落とされることは絶対にありません</strong>。
+          無料枠を使い切っても、課金ではなくエラーで止まるだけです。
+        </p>
 
         <div className="bg-purple-50 border border-purple-200 rounded-lg p-3 text-xs leading-relaxed">
           <div className="font-bold text-purple-700 mb-2">📝 取得手順（3分くらい）</div>

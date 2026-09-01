@@ -7,6 +7,7 @@ import type { AdventureEvidence, AdventureNode, AdventureScenario } from "@/lib/
 import { interpolateAdventureText } from "@/lib/learn/adventure";
 import { VoiceInput } from "@/components/shinga/VoiceInput";
 import { MangaArt } from "./MangaArt";
+import { CanonicalMangaSceneView } from "./CanonicalMangaScene";
 
 /* ═══════════════════════ 声 ═══════════════════════
  * 第1話の音声は品質が揃うまで停止する。画面遷移側の呼び出し規約は残し、
@@ -361,7 +362,7 @@ function AskSheet({
       <div className="lrn-sheet-card">
         <div className="lrn-sheet-head">
           <span>🎫 {title}</span>
-          <span className="rest">{ticketUsed ? "この対話は追加消費なし" : `残り 🎫 × ${tickets}`}</span>
+          <span className="rest">{ticketUsed ? "この続きは、チケットを使わず聞ける" : `残り 🎫 × ${tickets}`}</span>
         </div>
         <p className="lrn-sheet-lead">
           {context?.location ? `「${context.location}」で時間を止めています。` : "授業はここで止まっています。"}
@@ -430,7 +431,9 @@ function MangaPart({ part, userName, onDone, label }: { part: Extract<Part, { ki
     const intro = part.schoolIntro;
     const beat = intro.beats[Math.min(schoolBeatIndex, intro.beats.length - 1)];
     const isLastBeat = schoolBeatIndex >= intro.beats.length - 1;
-    const speakerName = beat.who === "teacher" ? "エリクソン" : "清瀬リンク";
+    const speakerName = beat.who === "teacher" ? "エリクソン" : beat.who === "mio" ? "雨宮ミオ" : "清瀬リンク";
+    const supportSrc = beat.who === "mio" ? "/learn/chars/mio-neutral-v1.webp" : linkSrc(beat.who === "link" ? "think" : "neutral", false);
+    const supportAlt = beat.who === "mio" ? "雨宮ミオ" : "清瀬リンク";
     const beatContent = <>
       <b>{speakerName}</b>
       <span key={schoolBeatIndex}>{resolveIntro(beat.text)}</span>
@@ -442,7 +445,7 @@ function MangaPart({ part, userName, onDone, label }: { part: Extract<Part, { ki
         <div className="lrn-school-shade" />
         <div className="lrn-school-sign"><b>{intro.kicker}</b><span>HYPNOSIS SCHOOL</span></div>
         <img className={`lrn-school-erickson ${beat.who === "teacher" ? "is-speaking" : "is-listening"}`} src={ERICKSON_CUTOUT} alt="ミルトン・エリクソン" />
-        <img className={`lrn-school-link ${beat.who === "link" ? "is-speaking" : "is-listening"}`} src={linkSrc(beat.who === "link" ? "think" : "neutral", false)} alt="清瀬リンク" />
+        <img className={`lrn-school-link ${beat.who !== "teacher" ? "is-speaking" : "is-listening"}`} src={supportSrc} alt={supportAlt} />
         <div className="lrn-school-beat-progress" aria-label={`${intro.beats.length}場面中${schoolBeatIndex + 1}場面`}>
           {intro.beats.map((_, i) => <i key={i} className={i <= schoolBeatIndex ? "is-on" : ""} />)}
         </div>
@@ -492,8 +495,10 @@ function MangaPart({ part, userName, onDone, label }: { part: Extract<Part, { ki
         }}
       >
         {part.frames.map((frame, i) => (
-          <section className="lrn-manga-frame" key={frame.img} aria-label={`${i + 1}ページ目`}>
-            <img src={frame.img} alt={frame.alt} draggable={false} />
+          <section className="lrn-manga-frame" key={frame.sceneId ?? frame.img} aria-label={`${i + 1}ページ目`}>
+            {frame.sceneId
+              ? <CanonicalMangaSceneView sceneId={frame.sceneId} />
+              : <img src={frame.img} alt={frame.alt} draggable={false} />}
           </section>
         ))}
       </div>
@@ -1054,9 +1059,9 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
         ng: "拒否を本当に認める言葉と、本人が今確かめられる感覚を一つ入れてください。",
       };
       if (ep === "ep3") return {
-        correct: /(浮か|考え|言葉|声)/.test(raw) && /(息|呼吸|吐|感覚|触れ)/.test(raw) && !/(考えるな|何も考えない|頭を空)/.test(raw),
-        ok: "正解です。浮かんだ考えを消さず、今できる感覚の合図へ変えています。",
-        ng: "考えを止める命令ではなく、浮かんだことから一呼吸など今できる感覚へつないでください。",
+        correct: /(浮か|考え|言葉|声)/.test(raw) && /(息|呼吸|吐|一行|下書|書い|感覚|触れ)/.test(raw) && !/(考えるな|何も考えない|頭を空|今すぐ送)/.test(raw),
+        ok: "正解です。浮かんだ声を消さず、本人が今選べる動作の合図へ変えています。",
+        ng: "声を止める命令ではなく、一呼吸や一行を書くなど、本人が今選べる動作へつないでください。",
       };
       if (ep === "ep4") return {
         correct: new Set(sensoryWords).size >= 2 && /(言って|試して|してみ|一つ|だけ|できますか|できる)/.test(raw) && !/(絶対|必ず|落ち着け|全部)/.test(raw),
@@ -1064,34 +1069,34 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
         ng: "相手が今確かめられる事実を二つ、その後に選べる小さな提案を一つ入れてください。",
       };
       if (ep === "ep5") return {
-        correct: /(カード|印|鍵|映像|声|今|事実)/.test(raw) && /(確認|調べ|次|選|分かる)/.test(raw) && !/(犯人|絶対|全部嘘|忘れろ|従え)/.test(raw),
+        correct: /(ショック|今|事実|未確定|分から)/.test(raw) && /(確認|調べ|記録|次|選)/.test(raw) && !/(犯人|絶対|全部嘘|善人だから)/.test(raw),
         ok: "正解です。結論を増やさず、現在の事実から選べる確認行動へ戻しています。",
         ng: "犯人や目的を断定せず、今分かる事実と、本人が選べる次の確認行動を入れてください。",
       };
       if (ep === "ep6") return {
-        correct: /(言った|見た|書い|事実|分から)/.test(raw) && /(前提|決めつけ|確認|推測)/.test(raw) && !/(絶対|に違いない|本当は)/.test(raw),
-        ok: "正解です。事実と読み取った前提を分け、採用する前に確かめています。",
-        ng: "起きた事実と、そこから自分が読んだ前提を分け、まだ分からない点を確認してください。",
+        correct: /(相談|共有|一緒|先生|リンク|安全|確認)/.test(raw) && !/(証明するため|黙って一人|絶対一人)/.test(raw),
+        ok: "正解です。一人である必要を断り、目的を保ったまま相談と安全確認を選んでいます。",
+        ng: "仲間を証明する条件へ従わず、相談・共有・安全確認のどれかを入れてください。",
       };
       if (ep === "ep7") return {
-        correct: /(断|待|保留|別|一緒)/.test(raw) && !/(必ず|絶対|一人で)/.test(raw),
-        ok: "正解です。用意された二択の外に、本人が安全に選べる道を戻しています。",
-        ng: "二択に共通する前提を見て、断る・待つ・別案のいずれかを戻してください。",
+        correct: /(返信|送る|文|明朝|今夜|待|一緒|保留)/.test(raw) && !/(必ず|絶対|一人で追|従)/.test(raw),
+        ok: "正解です。本人の望みに沿う安全な道と、返事を急がせない自由を残しています。",
+        ng: "リンクの望みに近づき、ミオの返事を急がせない二つの案を作ってください。",
       };
       if (ep === "ep8") return {
-        correct: /(物語|たとえ|話|場面)/.test(raw) && /(思う|重な|どこ|どう感じ)/.test(raw) && !/(答えは|つまり.+だ)/.test(raw),
-        ok: "正解です。答えを説明せず、本人が物語から意味を見つけられる問いになっています。",
-        ng: "教訓を決めつけず、似た物語を示して、どこが重なったか本人へ聞いてください。",
+        correct: /(何|なぜ|どこ|どう|現実|守|起き)/.test(raw) && !/(答えは|善人|悪人|絶対.+だ)/.test(raw),
+        ok: "正解です。物語の答えを入れず、本人の意味と現実の出来事を開いて聞いています。",
+        ng: "物語を証拠にせず、本人へ重なる点か現実に起きたことを開いて聞いてください。",
       };
       if (ep === "ep9") return {
-        correct: /(しなくても|選べ|一歩|そのまま|待って)/.test(raw) && !/(戻れ|必ず|証明|今すぐ)/.test(raw),
-        ok: "正解です。しない自由を守り、一歩を本人が選べる可能性として置いています。",
-        ng: "今の気持ちを認め、しない自由と、一つの小さな可能性を残してください。",
+        correct: /(戻らなくても|話しても|黙|待|今は.+ない|選べ)/.test(raw) && !/(戻れ|必ず|今すぐ戻|許される)/.test(raw),
+        ok: "正解です。戻る結果を急がず、話す・黙る自由を本人へ返しています。",
+        ng: "戻るよう求めず、今は話す・黙る・待つ自由のいずれかを残してください。",
       };
       if (ep === "ep10") return {
-        correct: /(目的|カード)/.test(raw) && /(選ぶ|同意|止め|断)/.test(raw) && !/(必ず|同意してる|一度だけ)/.test(raw),
-        ok: "正解です。目的・方法・本人の選択・停止の自由を、催眠より先に確認しています。",
-        ng: "共有する目的、具体的な方法、断る・止める自由を本人へ確認してください。",
+        correct: /(使わ|調査|記録|保全|第三者|相談)/.test(raw) && !/(一度だけ従|同意してる|無理に)/.test(raw),
+        ok: "正解です。同意のない催眠を使わず、事実を守って問題へ対処する方法を選んでいます。",
+        ng: "拒否された催眠は使わず、記録保全・相談・第三者確認など別の方法を選んでください。",
       };
       const correct = !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(raw);
       return { correct, ok: "正解です。完成ではなく、今できる一動作へ注意を移せています。", ng: "まだ『できない完成』へ注意が残っています。今すぐ本当にできる一動作まで小さくしてください。" };
@@ -1107,6 +1112,8 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
           answer: raw,
           correctCriteria: challenge.freeAnswer.correctCriteria,
           incorrectCriteria: challenge.freeAnswer.incorrectCriteria,
+          episode: ep,
+          context: `${scenario.title}\n${scenario.objective}\n${scenario.evidence.map((item) => `${item.title}: ${item.summary}`).join("\n")}`,
         }),
       });
       const payload = await response.json().catch(() => ({}));
@@ -1343,7 +1350,9 @@ function AdventurePart({ ep, scenario, userName, voice, onDone }: {
                 <div className="lrn-av-evidence-found">{node?.kind === "guided-investigation" ? "MANGA SCENE" : "EVIDENCE FOUND"}</div>
                 <div className="icon">{activeEvidence.evidence.icon}</div>
                 <h3>{activeEvidence.evidence.title}</h3>
-                {activeEvidence.evidence.image && <img className="lrn-av-evidence-scene" src={activeEvidence.evidence.image} alt={activeEvidence.evidence.imageAlt ?? activeEvidence.evidence.title} />}
+                {activeEvidence.evidence.sceneId
+                  ? <CanonicalMangaSceneView sceneId={activeEvidence.evidence.sceneId} compact />
+                  : activeEvidence.evidence.image && <img className="lrn-av-evidence-scene" src={activeEvidence.evidence.image} alt={activeEvidence.evidence.imageAlt ?? activeEvidence.evidence.title} />}
                 <b>{activeEvidence.evidence.summary}</b>
                 <p>{activeEvidence.evidence.detail}</p>
                 <div className="link-comment"><img src={scenario.linkSprite} alt="清瀬リンク" /><span><TypewriterText text={activeEvidence.comment} /></span></div>

@@ -12,9 +12,9 @@ export const EP3_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-neutral-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "stop-failed", title: "止めようとした時", summary: "止めようとするほど別の考えが浮かんだ", detail: "ミオは静かにしようと努力したが、明日や失敗の言葉が次々に浮かんだ。", icon: "1", image: "/learn/ep3/manga-v1/01.webp", imageAlt: "考えを止めようとして疲れているミオの漫画" },
-    { id: "thought-cue", title: "言葉を合図にした時", summary: "浮かんだ一語の後に、息を一つ確かめた", detail: "考えの内容を直さず、言葉が浮かんだ事実を一呼吸の合図にした。", icon: "2", image: "/learn/ep3/manga-v1/03.webp", imageAlt: "浮かんだ言葉を呼吸の合図へ変える漫画" },
-    { id: "thought-remains", title: "考えが残った時", summary: "考えは消えなくても、追いかけずに間を作れた", detail: "成功は無心になることではなく、考えが来ても次の呼吸へ戻れたことだった。", icon: "3", image: "/learn/ep3/manga-v1/05.webp", imageAlt: "考えが残ったまま立ち上がるミオの漫画" },
+    { id: "stop-failed", title: "申込画面で止まった時", summary: "やりたい気持ちと、否定する言葉をミオ自身が話した", detail: "ミオは申込画面を開いている。『やってみたい』も『仕事になるわけないと浮かぶ』も、本人が口にした事実。", icon: "1", sceneId: "ep3-canon-1" },
+    { id: "thought-cue", title: "声を合図にした時", summary: "浮かんだ言葉の後に、一呼吸と下書き保存を選んだ", detail: "エリクソンは声を消す約束をせず、送信も求めなかった。今できる下書き保存へつないだ。", icon: "2", sceneId: "ep3-canon-3" },
+    { id: "thought-remains", title: "下書きを保存した時", summary: "否定の声は残ったまま、企画名を書けた", detail: "ミオは声がまだあると話している。同時に、下書きを保存できたとも話している。", icon: "3", sceneId: "ep3-canon-4" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep3-adv-01", scene: "新しい実習生", camera: "link", line: { id: "ep3-adv-01", who: "link", face: "think", text: "先生、考えを止められないのに催眠なんてできるんですか？ ミオも、止めようとして余計につらそうでした。" }, nextLabel: "覚えている場面を話す" },

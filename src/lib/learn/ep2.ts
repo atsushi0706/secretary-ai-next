@@ -218,7 +218,7 @@ export const EP2: Episode = {
         first: { who: "清瀬リンク", text: "目は閉じたのに、頭の中のおしゃべりが止まりません。" },
         teacher: "止めなくて結構です。その声に、もっと話してもらいましょう。",
       },
-      unlock: ["🔒 70コインで解放"],
+      unlock: ["🔒 次の話は準備中"],
     },
   ],
   sceneSummaries: [

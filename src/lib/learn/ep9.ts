@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP9_ADVENTURE } from "./ep9-adventure";
+import { EP9_ADVENTURE_V2 as EP9_ADVENTURE } from "./erickson-adventures-v2";
 import { EP9_FOUNDATION } from "./ep9-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -47,7 +48,7 @@ export const EP9: Episode = {
       { who: "teacher", tone: "reveal", text: "相手を早く正解へ動かすことと、相手が自分で動けることは違います。" },
       { who: "link", tone: "example", text: "資料室の奥にミオがいます。戻りたいのに、出口の前から動けない。" },
       { who: "teacher", tone: "address", text: "{{userName}}。戻らせるのではなく、ミオが自分で選べる最初の一歩を作ってください。" },
-    ], cta: "ミオのもとへ行く →" }, briefing: { caseNo: "CASE 09", eyebrow: "SINGA WORLD｜THE PERMITTED STEP", title: "戻れないミオ", principle: "変態催眠学者の催眠の極意", hook: "『戻れ』と言わずに、どう一歩を生む？", teaser: "戻りたい。壊したくない。二つの気持ちが同時にあった。", cta: "事件の漫画を見る →", note: "EPISODE 09｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep9/manga-v1/0" + n + ".webp", alt: "出口の前で動けないミオへ言葉を選ぶ漫画 " + n + "ページ目" })) },
+    ], cta: "ミオのもとへ行く →" }, briefing: { caseNo: "CASE 09", eyebrow: "SINGA WORLD｜THE PERMITTED ANSWER", title: "戻れないミオ", principle: "変態催眠学者の催眠の極意", hook: "『戻れ』と言わずに、本人が話せる余地をどう残す？", teaser: "戻りたい気持ちも、罪悪感も、ミオ本人が声にした。", cta: "事件の漫画を見る →", note: "EPISODE 09｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(9) },
     { kind: "experience", title: "助けたい焦りが出る場面を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "戻ってほしいという願いが強いほど、リンクの言葉は命令へ近づきました。" },
       { who: "link", text: "あなたも、相手を助けたくて急がせてしまうことはありますか？" },

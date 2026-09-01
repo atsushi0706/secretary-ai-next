@@ -250,7 +250,7 @@ export const EP1: Episode = {
         first: { who: "男性", text: "私は絶対に、催眠なんかにかかりません。" },
         teacher: "では、かからないようにしてください。",
       },
-      unlock: ["🔒 70コインで解放"],
+      unlock: ["🔒 次の話は準備中"],
     },
   ],
   sceneSummaries: [

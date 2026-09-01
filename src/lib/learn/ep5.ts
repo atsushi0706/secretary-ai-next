@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP5_ADVENTURE } from "./ep5-adventure";
+import { EP5_ADVENTURE_V2 as EP5_ADVENTURE } from "./erickson-adventures-v2";
 import { EP5_FOUNDATION } from "./ep5-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -48,7 +49,7 @@ export const EP5: Episode = {
       { who: "link", tone: "reaction", text: "ミオもいない。昨日、鍵の場所を見ていた。あいつが裏切ったんだ。" },
       { who: "teacher", tone: "reveal", text: "それは答えではなく、混乱が作った最初の物語かもしれません。" },
       { who: "teacher", tone: "address", text: "{{userName}}。今まで学んだものを失った事件を、事実から調べてください。" },
-    ], cta: "空の保管庫へ入る →" }, briefing: { caseNo: "CASE 05", eyebrow: "SINGA WORLD｜ARCHIVE INCIDENT", title: "原理カード消失", principle: "第5の催眠事件", hook: "信じていたミオは、本当に最初から二人を騙していた？", teaser: "カードが消え、ミオが残した短い映像だけが見つかった。", cta: "事件の漫画を見る →", note: "EPISODE 05｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep5/manga-v1/0${n}.webp`, alt: `原理カード消失とミオの失踪を追う漫画 ${n}ページ目` })) },
+    ], cta: "空の保管庫へ入る →" }, briefing: { caseNo: "CASE 05", eyebrow: "SINGA WORLD｜ARCHIVE INCIDENT", title: "原理カード消失", principle: "第5の催眠事件", hook: "カードを持ち出したミオは、本当に最初から二人を騙していた？", teaser: "映像にはミオが映っている。けれど、目的まではまだ分からない。", cta: "事件の漫画を見る →", note: "EPISODE 05｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(5) },
     { kind: "experience", title: "予想を裏切られた場面を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "ミオがカードを持ち出した事実は分かりました。けれどリンクが本当に望むのは、関係を切ることではなく、なぜそうしたのか本人の理由を確かめることです。" },
       { who: "link", text: "裏切られた気持ちは消えません。でも、全部嘘だったと決める前に、本当の理由は知りたい。あなたなら、どんな時に答えを急ぎますか？" },

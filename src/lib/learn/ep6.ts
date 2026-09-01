@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP6_ADVENTURE } from "./ep6-adventure";
+import { EP6_ADVENTURE_V2 as EP6_ADVENTURE } from "./erickson-adventures-v2";
 import { EP6_FOUNDATION } from "./ep6-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -47,7 +48,7 @@ export const EP6: Episode = {
       { who: "teacher", tone: "example", text: "{{userName}}の入学願書には『周りの普通を自分の声だと思い、本当の望みが分からなくなった』とあります。" },
       { who: "link", tone: "reaction", text: "だからこの学校で、自分にかかった催眠を見抜こうとしたんだ。" },
       { who: "teacher", tone: "address", text: "そして、誰もが受け入れる前提を自分で選べる世界をつくる。その最初の校外実習が始まります。" },
-    ], cta: "入学の理由から事件へ →" }, briefing: { caseNo: "CASE 06", eyebrow: "SINGA WORLD｜FIRST FIELDWORK", title: "見えない命令", principle: "変態催眠学者の催眠の極意", hook: "言われていないのに、なぜ一人で行かなければと思った？", teaser: "ミオの映像を追う二人へ、旧校舎から一文だけが届く。", cta: "事件の漫画を見る →", note: "EPISODE 06｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep6/manga-v1/0" + n + ".webp", alt: "文化的催眠と旧校舎の暗示を追う漫画 " + n + "ページ目" })) },
+    ], cta: "入学の理由から事件へ →" }, briefing: { caseNo: "CASE 06", eyebrow: "SINGA WORLD｜THE UNSAID RULE", title: "『仲間なら一人で』", principle: "変態催眠学者の催眠の極意", hook: "一人で行くことは、本当に仲間の証明なのか？", teaser: "送信者不明の一文へ、自分たちで意味を足していた。", cta: "事件の漫画を見る →", note: "EPISODE 06｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(6) },
     { kind: "experience", title: "自分の中に残る言葉を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "昔のあなたも、助けを求めることや本当の望みを話すことを止め、周囲の言葉を自分の本心だと思って苦しみました。" },
       { who: "link", text: "だから入学したんだ。誰かの普通に従うためじゃなく、自分が望む条件を選び直すために。今も自分を止める『当然』はありますか？" },

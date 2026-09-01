@@ -12,9 +12,9 @@ export const EP6_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-betray-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "message", title: "届いた一文", summary: "『カードを取り戻したいなら、旧校舎へ』と表示された", detail: "書かれているのは行き先と条件だけ。一人で来い、今すぐ来い、ミオを信じるなとは書かれていない。", icon: "1", image: "/learn/ep6/manga-v1/02.webp", imageAlt: "端末に旧校舎へ来るよう表示された漫画" },
-    { id: "location", title: "送信位置", summary: "映像は旧校舎の資料室から送られていた", detail: "位置情報は送信場所を示す。ミオ本人が送ったか、そこに今もいるかまでは示さない。", icon: "2", image: "/learn/ep6/manga-v1/03.webp", imageAlt: "旧校舎の位置情報を確認する漫画" },
-    { id: "video-frame", title: "映像の端", summary: "切れた映像にミオ以外の影が一瞬映った", detail: "別の人がいる可能性はある。ただし誰か、味方か敵かは、この一場面だけでは決められない。", icon: "3", image: "/learn/ep6/manga-v1/04.webp", imageAlt: "ミオの映像の端に別の影が映る漫画" },
+    { id: "message", title: "送信者不明の一文", summary: "『本当に仲間なら、一人で旧校舎へ来られるよね』と書かれていた", detail: "一人で来る条件は明記されている。しかし、それが仲間の証明になる根拠は書かれていない。", icon: "1", sceneId: "ep6-canon-1" },
+    { id: "location", title: "淳が覚えていた常識", summary: "『迷惑をかけるな、自分で何とかしろ』で助けを求められなかった", detail: "これは淳が自分で語った過去。プレイヤー本人の過去として勝手に決めてはいない。", icon: "2", sceneId: "ep6-canon-3" },
+    { id: "video-frame", title: "端末の送信履歴", summary: "送信元はミオではなく、学校の自動審査システムだった", detail: "二人は匿名の文をミオの命令だと推測していた。履歴によって、その推測が外れたと分かる。", icon: "3", sceneId: "ep6-canon-5" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep6-adv-01", scene: "校外からの暗示", camera: "link", line: { id: "ep6-adv-01", who: "link", face: "think", text: "『カードを取り戻したいなら、旧校舎へ』。ミオは僕らだけで来いと言ってる。すぐ行こう。" }, nextLabel: "言葉を読み直す" },

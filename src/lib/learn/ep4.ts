@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP4_ADVENTURE } from "./ep4-adventure";
+import { EP4_ADVENTURE_V2 as EP4_ADVENTURE } from "./erickson-adventures-v2";
 import { EP4_FOUNDATION } from "./ep4-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -47,7 +48,7 @@ export const EP4: Episode = {
       { who: "teacher", tone: "reveal", text: "人前では堂々と話すべき、という文化的催眠です。ミオは足と呼吸という二つの事実から始めました。" },
       { who: "link", tone: "reaction", text: "ただ事実を言うだけで、催眠の言葉になるんですか？" },
       { who: "teacher", tone: "address", text: "{{userName}}。三人で初めて実習をつないだ順番を、あなたが完成させてください。" },
-    ], cta: "公開実習を見る →" }, briefing: { caseNo: "CASE 04", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "声が出ない公開実習", principle: "第4の催眠事件", hook: "『落ち着いて』で固まったリンクが、なぜ一言を話せた？", teaser: "ミオは二つの事実を言い、その続きに一つだけ提案した。", cta: "事件の漫画を見る →", note: "EPISODE 04｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep4/manga-v1/0${n}.webp`, alt: `リンクとミオの公開催眠実習を追う漫画 ${n}ページ目` })) },
+    ], cta: "公開実習を見る →" }, briefing: { caseNo: "CASE 04", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "声が出ない公開実習", principle: "第4の催眠事件", hook: "『落ち着いて』で固まったリンクが、なぜ最初の問いを話せた？", teaser: "ミオは二つの事実を言い、その続きに一つだけ提案した。", cta: "事件の漫画を見る →", note: "EPISODE 04｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(4) },
     { kind: "experience", title: "言葉が届かなかった場面を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "目標は、緊張を消すことではありません。緊張したままでも、本人が伝えたい最初の一言を口にできることです。" },
       { who: "link", text: "あなたなら、誰がどんな時に言葉を失う場面を助けたいですか？" },
@@ -69,7 +70,7 @@ export const EP4: Episode = {
       L("ep4-out-05", "ありがとうございました。ミオ、原理カードを保管庫へ戻すのも手伝ってくれる？", { face: "smile" }),
       T("ep4-out-06", "鍵はいつもの場所です。三人で片づけてください。", { face: "smile" }),
     ] },
-    { kind: "teaser", manga: [{ rows: [{ panels: [{ art: "empty-vault", narr: "翌朝。保管庫の扉が開いていた。" }] }, { panels: [{ art: "link-shock", say: { who: "リンク", text: "カードが……全部ない。" } }, { art: "mio-key", sub: "机には、鍵の印。" }] }] }], hook: ["積み上げた原理カードが、すべて消えた。", "信じていたミオも、学校からいなくなった。"], next: { no: "第5話", title: "信じていた相手に予想を裏切られた時、催眠をどう解く？", series: "変態催眠学者の催眠の極意05", principle: "混乱を結論で埋めず、事実から選択を取り戻す" }, preview: { caseNo: "NEXT CASE 05", first: { who: "清瀬リンク", text: "ミオがいない。カードも全部ない。" }, teacher: "意味は、まだ決めない。今分かる事実を三つ言ってください。" }, unlock: ["🔒 70コインで解放"] },
+    { kind: "teaser", manga: [{ rows: [{ panels: [{ art: "empty-vault", narr: "翌朝。保管庫の扉が開いていた。" }] }, { panels: [{ art: "link-shock", say: { who: "リンク", text: "カードが……全部ない。" } }, { art: "mio-key", sub: "机には、鍵の印。" }] }] }], hook: ["積み上げた原理カードが、すべて消えた。", "信じていたミオも、学校からいなくなった。"], next: { no: "第5話", title: "信じていた相手に予想を裏切られた時、催眠をどう解く？", series: "変態催眠学者の催眠の極意05", principle: "混乱を結論で埋めず、事実から選択を取り戻す" }, preview: { caseNo: "NEXT CASE 05", first: { who: "清瀬リンク", text: "ミオがいない。カードも全部ない。" }, teacher: "意味は、まだ決めない。今分かる事実を三つ言ってください。" }, unlock: ["🔒 次の話は準備中"] },
   ],
   sceneSummaries: ["第4話は、緊張している相手へ、二つの確認できる事実と一つの小さな提案を順番に置く催眠を学ぶ。", "公開実習でリンクが固まり、抽象的な励ましは届かなかった。", "ミオが足と呼吸を言葉にし、リンクは次の一言を自分で選べた。", "プレイヤーはミオへ自分の催眠の一言を作り、相手の反応から順番の意味を考える。", "三人の信頼が深まり、ミオは原理カードを保管庫へ戻す作業へ加わる。", "ペーシングとリーディングは相手を操る方法ではなく、同意と観察を保ったまま次の一歩を提案する順番として扱う。"],
 };

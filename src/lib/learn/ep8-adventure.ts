@@ -12,9 +12,9 @@ export const EP8_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-worry-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "bird-one", title: "鍵を運ぶ鳥", summary: "鳥は森の鍵を持ち出し、仲間から泥棒と呼ばれた", detail: "鳥が鍵を持ち出した事実と、仲間が泥棒だと意味づけた場面。理由はまだ語られない。", icon: "1", image: "/learn/ep8/manga-v1/02.webp", imageAlt: "鍵を運ぶ鳥が仲間から泥棒と呼ばれる物語の漫画" },
-    { id: "bird-two", title: "燃える保管庫", summary: "鳥が飛び去った後、鍵を狙う火が保管庫を包んだ", detail: "鳥は火事の前に鍵を運んでいた。偶然か、危険を知っていたかは次の場面まで不明。", icon: "2", image: "/learn/ep8/manga-v1/03.webp", imageAlt: "鳥が去った後に保管庫が燃える物語の漫画" },
-    { id: "bird-three", title: "森の外の箱", summary: "鳥は鍵を壊さず、森の外の箱へ隠していた", detail: "物語の鳥は、鍵を奪って自分のものにしたのではなく、火から離して守った。", icon: "3", image: "/learn/ep8/manga-v1/04.webp", imageAlt: "鳥が森の外の箱へ鍵を隠す物語の漫画" },
+    { id: "bird-one", title: "鍵を預かった司書", summary: "司書は町の人から大切な本の鍵を預かった", detail: "物語の出発点。ミオの現実と同じだとは、まだ決めない。", icon: "1", sceneId: "ep8-canon-1" },
+    { id: "bird-two", title: "販売の注文書", summary: "本の言葉を『人を従わせる手引き』として売る注文があった", detail: "司書は鍵を隠したが、仲間へ相談しなかった。守ろうとしたことと問題のある手段が両方描かれている。", icon: "2", sceneId: "ep8-canon-2" },
+    { id: "bird-three", title: "物語の結末", summary: "本は守られたが、仲間の信頼は傷ついた", detail: "物語は司書を無条件に正当化していない。守ったものと壊したものを並べている。", icon: "3", sceneId: "ep8-canon-3" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep8-adv-01", scene: "答えのない物語", camera: "link", line: { id: "ep8-adv-01", who: "link", face: "think", text: "鳥、火事、鍵。ミオは何を言いたいんだ。答えを書けばいいのに、また分からなくしてる。" }, nextLabel: "最初の印象を話す" },

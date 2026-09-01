@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP7_ADVENTURE } from "./ep7-adventure";
+import { EP7_ADVENTURE_V2 as EP7_ADVENTURE } from "./erickson-adventures-v2";
 import { EP7_FOUNDATION } from "./ep7-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -47,7 +48,7 @@ export const EP7: Episode = {
       { who: "teacher", tone: "reveal", text: "選択肢の違いへ注意を向けると、両方に共通する前提が見えなくなります。" },
       { who: "link", tone: "reaction", text: "旧校舎の扉も同じだ。今か一分後かは選べても、一人で入ることは決まってる。" },
       { who: "teacher", tone: "address", text: "{{userName}}。用意された二択の外から、安全な第三の道を見つけてください。" },
-    ], cta: "旧校舎の扉へ →" }, briefing: { caseNo: "CASE 07", eyebrow: "SINGA WORLD｜THE FALSE CHOICE", title: "逃げ道のない二択", principle: "変態催眠学者の催眠の極意", hook: "『今入る』『一分後に入る』。本当に選べている？", teaser: "一人で入ることだけは、どちらにも書かれていた。", cta: "事件の漫画を見る →", note: "EPISODE 07｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep7/manga-v1/0" + n + ".webp", alt: "旧校舎の二択と第三の道を探す漫画 " + n + "ページ目" })) },
+    ], cta: "二つの選択を見る →" }, briefing: { caseNo: "CASE 07", eyebrow: "SINGA WORLD｜THE THIRD CHOICE", title: "追うか、諦めるか", principle: "変態催眠学者の催眠の極意", hook: "用意された二択が、どちらも自分の望みでない時は？", teaser: "まずリンクの望みを聞き、その望みを守る二つの道を作り直した。", cta: "事件の漫画を見る →", note: "EPISODE 07｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(7) },
     { kind: "experience", title: "自分を狭める二択を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "扉の二択は、時間を選ばせながら、一人で入ることを前提にしていました。" },
       { who: "link", text: "仕事を我慢するか辞めるかみたいに、人生でも第三の道が消えることがあります。あなたにも近い二択はありますか？" },

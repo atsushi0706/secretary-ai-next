@@ -12,9 +12,9 @@ export const EP5_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-betray-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "empty-vault", title: "空の保管庫", summary: "原理カードが保管庫からなくなっていた", detail: "扉は開き、カードはない。ただし、誰がいつ持ち出したかはこの時点では分からない。", icon: "1", image: "/learn/ep5/manga-v1/01.webp", imageAlt: "空になった原理カード保管庫の漫画" },
-    { id: "key-note", title: "鍵の印と短い紙", summary: "ミオの机に鍵の印と『教えてくれてありがとう』が残った", detail: "ミオがいないこと、印と紙があることは事実。紙の意味はまだ一つに決められない。", icon: "2", image: "/learn/ep5/manga-v1/02.webp", imageAlt: "ミオの机に鍵の印とメモが残る漫画" },
-    { id: "recorded-confession", title: "途中で切れた映像", summary: "ミオはカードを持ち出したと話した", detail: "持ち出した事実は確定したが、目的とカードの場所は説明されないまま映像が切れた。", icon: "3", image: "/learn/ep5/manga-v1/04.webp", imageAlt: "ミオがカードを持ち出したと告げる映像の漫画" },
+    { id: "empty-vault", title: "空の保管庫", summary: "カードがなく、ミオもいない。机には金属の鍵がある", detail: "この時点で分かるのは三つだけ。誰が何のために持ち出したかは、まだ分からない。", icon: "1", sceneId: "ep5-canon-1" },
+    { id: "key-note", title: "外部送信の予約記録", summary: "カードを『従わせる会話テンプレート』として送る予約があった", detail: "外部送信の予約は事実。ただし、予約した人物とミオが知っていたかは未確定。", icon: "2", sceneId: "ep5-canon-4" },
+    { id: "recorded-confession", title: "保管庫の映像", summary: "ミオ本人がカードを鞄へ入れ、『誰にも渡さない』と言った", detail: "持ち出した人物は確定した。しかし、誰から何を守ろうとしたかは、この一言だけでは決められない。", icon: "3", sceneId: "ep5-canon-5" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep5-adv-01", scene: "保管庫事件", camera: "link", line: { id: "ep5-adv-01", who: "link", face: "think", text: "カードが全部ない。ミオもいない。僕らを最初から騙してたんだ。そうとしか思えない。" }, nextLabel: "今ある記憶を話す" },

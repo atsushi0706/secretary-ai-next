@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP10_ADVENTURE } from "./ep10-adventure";
+import { EP10_ADVENTURE_V2 as EP10_ADVENTURE } from "./erickson-adventures-v2";
 import { EP10_FOUNDATION } from "./ep10-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -47,7 +48,7 @@ export const EP10: Episode = {
       { who: "teacher", tone: "reveal", text: "技法が効くことと、使ってよいことは別です。最後の試験は、催眠を使う強さではありません。" },
       { who: "link", tone: "example", text: "ミオはカードを返したい。でも『戻れ』と命令されることは拒んでいます。" },
       { who: "teacher", tone: "address", text: "{{userName}}。カードより先に守るものを決め、三人の選択で扉を開けてください。" },
-    ], cta: "最後の扉へ →" }, briefing: { caseNo: "CASE 10", eyebrow: "SINGA WORLD｜THE LAST DOOR", title: "使えば開く扉", principle: "変態催眠学者の催眠の極意", hook: "相手を一度動かせば全部戻る。それでも使う？", teaser: "勝つための暗示には、本人の同意だけがなかった。", cta: "最終事件の漫画を見る →", note: "EPISODE 10｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep10/manga-v1/0" + n + ".webp", alt: "同意のない催眠を使うか選ぶ最終事件漫画 " + n + "ページ目" })) },
+    ], cta: "最後の条件を見る →" }, briefing: { caseNo: "CASE 10", eyebrow: "SINGA WORLD｜THE LAST CONDITION", title: "事実でない告白", principle: "変態催眠学者の催眠の極意", hook: "目的に賛成していても、その方法まで同意したことになる？", teaser: "カードを戻す目的と、学校の責任を隠す告白を分けて選ぶ。", cta: "最終事件の漫画を見る →", note: "EPISODE 10｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(10) },
     { kind: "experience", title: "正しい目的で急ぐ場面を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "カードを戻したいという目的は同じでした。しかし、ミオは命令されて戻る方法を選んでいません。良い結果を望むことと、その方法への同意は別です。" },
       { who: "link", text: "助けたい、成功してほしい。その気持ちが強い時ほど、相手のためと思って方法まで決めてしまうことはありますか？" },

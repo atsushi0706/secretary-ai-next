@@ -12,9 +12,9 @@ export const EP4_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-neutral-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "abstract-help", title: "『落ち着いて』と言われた時", summary: "リンクは何を確かめればよいか分からなかった", detail: "落ち着くことも、いつも通りでいることも、緊張しているリンクにはまだ確かめられなかった。", icon: "1", image: "/learn/ep4/manga-v1/02.webp", imageAlt: "抽象的な励ましが届かず固まるリンクの漫画" },
-    { id: "two-facts", title: "二つの事実を聞いた時", summary: "足が床にある、息を吐ける、と確かめられた", detail: "ミオはリンクの心情を決めつけず、目の前で確認できる足と呼吸を言葉にした。", icon: "2", image: "/learn/ep4/manga-v1/03.webp", imageAlt: "ミオが足と呼吸を確かめる漫画" },
-    { id: "one-next", title: "次の一言だけを頼まれた時", summary: "リンクは最初の挨拶を自分で言えた", detail: "二つの事実の後で、一言だけ試す提案が置かれ、リンクは実習を始めた。", icon: "3", image: "/learn/ep4/manga-v1/04.webp", imageAlt: "リンクが一言を話し三人で実習をつなぐ漫画" },
+    { id: "abstract-help", title: "公開実習で止まった時", summary: "リンクは前に立ったまま声が出なかった", detail: "失敗への恐れはリンクの心の声。外から見える事実は、前に立ち、まだ話せていないこと。", icon: "1", sceneId: "ep4-canon-1" },
+    { id: "two-facts", title: "二つの事実を聞いた時", summary: "足が床にあることと、声が聞こえることを確かめた", detail: "ミオは心を当てず、リンクが今うなずける事実を二つ確かめた。", icon: "2", sceneId: "ep4-canon-2" },
+    { id: "one-next", title: "名前だけを提案された時", summary: "リンクは名前と最初の問いを話した", detail: "ミオは完璧な実習を求めず、名前だけを選べる形で提案した。リンクはその後、最初の問いも自分で話した。", icon: "3", sceneId: "ep4-canon-3" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep4-adv-01", scene: "公開実習", camera: "link", line: { id: "ep4-adv-01", who: "link", face: "shy", text: "人前に出た瞬間、頭が真っ白になりました。『落ち着いて』も『大丈夫』も、何をすればいいか分からなかった。" }, nextLabel: "場面を思い出す" },

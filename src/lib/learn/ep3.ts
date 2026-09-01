@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP3_ADVENTURE } from "./ep3-adventure";
+import { EP3_ADVENTURE_V2 as EP3_ADVENTURE } from "./erickson-adventures-v2";
 import { EP3_FOUNDATION } from "./ep3-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -48,7 +49,7 @@ export const EP3: Episode = {
       { who: "teacher", tone: "reveal", text: "自分の声のように選択を止める。それが文化的催眠です。止めずに、次の合図へ変えます。" },
       { who: "link", tone: "reaction", text: "その声を消さなくても、自分がやりたい方へ戻れるんですか？" },
       { who: "teacher", tone: "address", text: "{{userName}}。新しい実習生ミオと、声が合図へ変わった夜を見てください。" },
-    ], cta: "ミオの事件を見る →" }, briefing: { caseNo: "CASE 03", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "自分の声に聞こえる常識", principle: "第3の催眠事件", hook: "『こんなので、本当に変われるわけない』が消えていないのに、なぜミオは席を立てた？", teaser: "文化的催眠を論破せず、その声が浮かんだ後に自分へ戻る道を作った。", cta: "事件の漫画を見る →", note: "EPISODE 03｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: `/learn/ep3/manga-v1/0${n}.webp`, alt: `雨宮ミオが文化的催眠の声から自分の選択へ戻る漫画 ${n}ページ目` })) },
+    ], cta: "ミオの事件を見る →" }, briefing: { caseNo: "CASE 03", eyebrow: "変態催眠学者｜MILTON H. ERICKSON", title: "自分の声に聞こえる常識", principle: "第3の催眠事件", hook: "否定の声が消えていないのに、なぜミオは下書きを作れた？", teaser: "文化的催眠を論破せず、その声が浮かんだ後に自分へ戻る道を作った。", cta: "事件の漫画を見る →", note: "EPISODE 03｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(3) },
     { kind: "experience", title: "自分の頭の声を一つ選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "ミオが望んだのは、頭を完全に空にすることではありません。考えが浮かんでも、休む時や次の行動へ自分で戻れることでした。" },
       { who: "link", text: "考えは残ってるのに、ミオは息を一つ確かめて、次の実習を手伝うと決められた。僕たちにも似た場面はありますか？" },
@@ -70,7 +71,7 @@ export const EP3: Episode = {
       L("ep3-out-05", "先生。言葉を作れても、人前で緊張した相手には順番を間違えそうです。何から言えばいいんですか？", { face: "think" }),
       T("ep3-out-06", "次は、相手が今確かめられる二つの事実から始めます。ミオにも、観察役を頼みましょう。", { face: "smile" }),
     ] },
-    { kind: "teaser", manga: [{ rows: [{ panels: [{ art: "link-worry", say: { who: "リンク", text: "……声が出ない。" } }, { art: "mio-observe", say: { who: "ミオ", text: "足は床についてる。" } }] }, { panels: [{ art: "erickson-say", say: { who: "エリクソン", text: "二つ合わせて、一つ導きます。" } }] }] }], hook: ["人前で固まり、声が出ないリンク。", "『落ち着いて』では届かない時、何から言う？"], next: { no: "第4話", title: "緊張している相手へ、催眠の言葉をどの順番でかける？", series: "変態催眠学者の催眠の極意04", principle: "今確かめられる事実へ合わせ、次の一動作へ導く" }, preview: { caseNo: "NEXT CASE 04", first: { who: "清瀬リンク", text: "人前に出たら、声が出なくなりました。" }, teacher: "足は床にある。息は吐ける。その後に、次の一言だけです。" }, unlock: ["🔒 70コインで解放"] },
+    { kind: "teaser", manga: [{ rows: [{ panels: [{ art: "link-worry", say: { who: "リンク", text: "……声が出ない。" } }, { art: "mio-observe", say: { who: "ミオ", text: "足は床についてる。" } }] }, { panels: [{ art: "erickson-say", say: { who: "エリクソン", text: "二つ合わせて、一つ導きます。" } }] }] }], hook: ["人前で固まり、声が出ないリンク。", "『落ち着いて』では届かない時、何から言う？"], next: { no: "第4話", title: "緊張している相手へ、催眠の言葉をどの順番でかける？", series: "変態催眠学者の催眠の極意04", principle: "今確かめられる事実へ合わせ、次の一動作へ導く" }, preview: { caseNo: "NEXT CASE 04", first: { who: "清瀬リンク", text: "人前に出たら、声が出なくなりました。" }, teacher: "足は床にある。息は吐ける。その後に、次の一言だけです。" }, unlock: ["🔒 次の話は準備中"] },
   ],
   sceneSummaries: ["第3話は、止まらない内的対話を消さず、呼吸へ戻る合図として使う催眠を学ぶ。", "新しい実習生の雨宮ミオは、考えを止めようとするほど疲れていた。", "考えは残ったが、一つ浮かぶたびに息を一つ確かめ、席を立てた。", "プレイヤーは漫画を三段階で読み返し、考えの次に何が変わったかを推理する。", "プレイヤーはミオへ一言を作り、相手の反応を見て理由を言葉にする。", "内的対話のユーティライゼーションは治療の保証ではなく、現在の体験から注意を戻す短い練習として扱う。"],
 };

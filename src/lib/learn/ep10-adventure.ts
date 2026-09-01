@@ -12,9 +12,9 @@ export const EP10_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-neutral-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "door-command", title: "扉の命令", summary: "『ミオへ戻れと暗示すれば、保管室を開く』と表示された", detail: "扉を開く条件が、ミオへの暗示になっている。ミオの同意は条件に含まれていない。", icon: "1", image: "/learn/ep10/manga-v1/02.webp", imageAlt: "ミオへ暗示を使えば扉が開くと表示される漫画" },
-    { id: "mio-choice", title: "ミオの意思", summary: "ミオはカードを返したいが、命令されて戻るのは怖いと話した", detail: "カードを返す目的は共有できる。一方、戻る命令には同意していない。", icon: "2", image: "/learn/ep10/manga-v1/03.webp", imageAlt: "ミオがカードを返したいが命令は怖いと話す漫画" },
-    { id: "manual-release", title: "三人で押す解除板", summary: "扉の横に三人で同時に押せる手動解除板がある", detail: "暗示を使わず、三人が自分の意思で協力して扉を開けられる。", icon: "3", image: "/learn/ep10/manga-v1/04.webp", imageAlt: "三人で押せる手動解除板を見つける漫画" },
+    { id: "door-command", title: "事実でない告白の条件", summary: "ミオが学校の責任を否定する録画をすれば、記録を戻すと表示された", detail: "学校の審査システムが提示した条件。ミオの同意はまだ確認されていない。", icon: "1", sceneId: "ep10-canon-1" },
+    { id: "mio-choice", title: "目的と方法への別々の意思", summary: "カードを返す目的には賛成し、事実でない告白は拒否した", detail: "一つの目的への賛成を、すべての方法への同意として扱わない。", icon: "2", sceneId: "ep10-canon-2" },
+    { id: "manual-release", title: "催眠を使わない判断", summary: "記録を保全し、第三者調査を依頼すると決めた", detail: "暗示を成功させることではなく、使わない判断と学校側の責任を物語の結末にした。", icon: "3", sceneId: "ep10-canon-3" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep10-adv-01", scene: "勝てる暗示", camera: "link", line: { id: "ep10-adv-01", who: "link", face: "think", text: "ミオへ『戻れ』と一言暗示すれば、カードが戻る。本人も返したいなら、一度くらい使ってもいいのかな。" }, nextLabel: "守るものを思い出す" },

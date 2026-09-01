@@ -12,9 +12,9 @@ export const EP7_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-betray-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "door-choice", title: "扉の二択", summary: "『今一人で入る／一分後に一人で入る』と表示された", detail: "時間は選べるが、一人で入ることは両方に共通している。入らない、二人で入る選択は画面にない。", icon: "1", image: "/learn/ep7/manga-v1/02.webp", imageAlt: "旧校舎の扉に二つの選択肢が表示される漫画" },
-    { id: "lock", title: "遠隔操作の錠", summary: "正面扉の錠は外から操作されている", detail: "表示された二択を選ばなくても、扉の管理方法を調べることはできる。", icon: "2", image: "/learn/ep7/manga-v1/03.webp", imageAlt: "旧校舎の遠隔操作された錠を調べる漫画" },
-    { id: "side-route", title: "管理用通路", summary: "二人で通れる管理用の通路が見つかった", detail: "正面扉の二択以外にも進む方法がある。今入らず、学校へ戻る選択も残っている。", icon: "3", image: "/learn/ep7/manga-v1/04.webp", imageAlt: "旧校舎の横に管理用通路を見つける漫画" },
+    { id: "door-choice", title: "審査システムの二択", summary: "『今すぐ一人で追う／追跡をやめる』の二つしかなかった", detail: "どちらもリンクの『急かさずに無事を確かめたい』という望みを含んでいない。", icon: "1", sceneId: "ep7-canon-1" },
+    { id: "lock", title: "リンクが言った望み", summary: "理由を聞きたいが、今は無事だけ分かればいい", detail: "支援側が決めた目標ではなく、リンク本人が言葉にした現在の望み。", icon: "2", sceneId: "ep7-canon-3" },
+    { id: "side-route", title: "返信を強制しない連絡", summary: "説明を急がせず、場所と時間をミオへ返した", detail: "リンクは二つの安全な案から今夜送る方を選び、自分の言葉で連絡した。", icon: "3", sceneId: "ep7-canon-4" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep7-adv-01", scene: "選ばされる扉", camera: "link", line: { id: "ep7-adv-01", who: "link", face: "think", text: "『今入る』『一分後に入る』。時間を選べるなら、無理やりじゃないよね。どっちにしよう。" }, nextLabel: "二択を読み直す" },

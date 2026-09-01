@@ -12,9 +12,9 @@ export const EP9_ADVENTURE = defineAdventureScenario({
   guestSprite: "/learn/chars/mio-worry-v1.webp",
   guestName: "雨宮ミオ",
   evidence: [
-    { id: "mio-words", title: "ミオの二つの言葉", summary: "『戻りたい。でも戻れば二人の学びを壊す』と話した", detail: "戻りたい望みと、戻ることへの怖さが同時にある。どちらか一方だけが本心とは決められない。", icon: "1", image: "/learn/ep9/manga-v1/02.webp", imageAlt: "ミオが戻りたいが戻れないと話す漫画" },
-    { id: "mio-body", title: "出口を見る視線", summary: "戻れないと言いながら、ミオは何度も出口を見た", detail: "体は出口へ注意を向けている。戻る意思の証明ではないが、選べる方向の手がかりになる。", icon: "2", image: "/learn/ep9/manga-v1/03.webp", imageAlt: "ミオが出口を何度も見る漫画" },
-    { id: "distance", title: "出口まで三歩", summary: "ミオの場所から出口まで三歩で、扉は開いている", detail: "三歩で外へ出られる。出るかどうかはミオが選べる。最初の一歩だけを試すこともできる。", icon: "3", image: "/learn/ep9/manga-v1/04.webp", imageAlt: "ミオと開いた出口の間に三歩の距離がある漫画" },
+    { id: "mio-words", title: "ミオが話した二つの気持ち", summary: "戻りたい。同時に、二人に合わせる顔がない", detail: "どちらもナレーションや推測ではなく、ミオ本人が声に出した。", icon: "1", sceneId: "ep9-canon-1" },
+    { id: "mio-body", title: "口にしなかった『戻って』", summary: "リンクは言いたいと思ったが、声にはしていない", detail: "心の声と実際の発言を分ける。ミオが命令で固まったという出来事は起きていない。", icon: "2", sceneId: "ep9-canon-2" },
+    { id: "distance", title: "話す・黙る自由", summary: "淳は戻ることを求めず、理由だけ話すか黙るかを残した", detail: "その後、ミオは理由を話す方を自分で選んだ。歩いたことを催眠成功の証拠にはしていない。", icon: "3", sceneId: "ep9-canon-3" },
   ],
   nodes: [
     { kind: "dialogue", id: "ep9-adv-01", scene: "見つけたミオ", camera: "mio", line: { id: "ep9-adv-01", who: "mio", face: "think", text: "カードは守っています。でも私は戻れない。戻れば、あなたたちが学んだものまで壊します。" }, nextLabel: "聞こえた望みを話す" },

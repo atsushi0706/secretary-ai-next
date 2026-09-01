@@ -1,8 +1,9 @@
 import type { Episode, Line, Scene, Slide } from "./types";
-import { EP8_ADVENTURE } from "./ep8-adventure";
+import { EP8_ADVENTURE_V2 as EP8_ADVENTURE } from "./erickson-adventures-v2";
 import { EP8_FOUNDATION } from "./ep8-foundation";
 import { assertEpisodeLearningFlow } from "./episode-review";
 import { assertEpisodeExperience } from "./episode-experience-review";
+import { canonicalMangaFrames } from "./erickson-canon";
 
 const T = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "teacher", text, ...extra });
 const L = (id: string, text: string, extra: Partial<Line> = {}): Line => ({ id, who: "link", text, ...extra });
@@ -47,7 +48,7 @@ export const EP8: Episode = {
       { who: "teacher", tone: "reveal", text: "間違いを正論で責めても、次の話は聞けません。本人が自分で別の見方を見つける物語を使う催眠があります。" },
       { who: "link", tone: "example", text: "資料室に、ミオが残した『鍵を運ぶ鳥』の話があります。答えは書いてません。" },
       { who: "teacher", tone: "address", text: "{{userName}}。一場面ずつ読み、見方が変わる瞬間を自分で見つけてください。" },
-    ], cta: "ミオの物語を開く →" }, briefing: { caseNo: "CASE 08", eyebrow: "SINGA WORLD｜THE STORY IN THE ARCHIVE", title: "鍵を運ぶ鳥", principle: "変態催眠学者の催眠の極意", hook: "盗んだ鳥は、なぜ鍵を壊さず隠した？", teaser: "物語の続きを見るたび、ミオの行動の意味が変わっていく。", cta: "事件の漫画を見る →", note: "EPISODE 08｜漫画は1ページずつ進みます" }, frames: [1,2,3,4,5].map((n) => ({ img: "/learn/ep8/manga-v1/0" + n + ".webp", alt: "鍵を運ぶ鳥とミオの意味を読む漫画 " + n + "ページ目" })) },
+    ], cta: "ミオの物語を開く →" }, briefing: { caseNo: "CASE 08", eyebrow: "SINGA WORLD｜THE STORY IN THE ARCHIVE", title: "鍵を隠した司書", principle: "変態催眠学者の催眠の極意", hook: "守ったものと、壊したもの。その両方がある物語をどう読む？", teaser: "物語を証拠とは決めず、ミオ本人へ重なる点を聞く。", cta: "事件の漫画を見る →", note: "EPISODE 08｜漫画は1ページずつ進みます" }, frames: canonicalMangaFrames(8) },
     { kind: "experience", title: "説明が届かなかった場面を選ぶ", minutes: 2, bridge: { beats: [
       { who: "teacher", text: "鳥の物語は、ミオが善人だと説明してはいません。リンク自身が、間違えた事実より、見直してここまで来た行動へ気づく体験になりました。" },
       { who: "link", text: "一度間違えても、聞き直して調査を続けられる。あなたも、正しい説明をされるほど心が閉じたことはありますか？" },

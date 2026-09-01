@@ -82,9 +82,16 @@ export type Row = {
 
 export type MangaPage = { rows: Row[] };
 
-/** コマ割り済みの1ページがスマホ1画面に収まる、文字焼き込み済み漫画ページ */
+export type CanonicalMangaCharacter = "jun" | "link" | "mio" | "teacher";
+
+/**
+ * 第3話以降の漫画は、絵に台詞を焼き込まない。
+ * sceneId から正史の場面を描き、同じ台詞を証拠確認でも再利用する。
+ * これにより、漫画・証拠・講義で「誰が何を言ったか」がずれない。
+ */
 export type MangaFrame = {
-  img: string;
+  img?: string;
+  sceneId?: string;
   alt: string;
 };
 

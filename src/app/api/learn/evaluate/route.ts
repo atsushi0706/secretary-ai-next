@@ -27,6 +27,8 @@ export async function POST(request: Request) {
   const answer = String(body?.answer ?? "").trim().slice(0, 1200);
   const correctCriteria = String(body?.correctCriteria ?? "").trim().slice(0, 600);
   const incorrectCriteria = String(body?.incorrectCriteria ?? "").trim().slice(0, 600);
+  const episode = String(body?.episode ?? "").trim().slice(0, 20);
+  const context = String(body?.context ?? "").trim().slice(0, 1800);
   if (!question || !answer || !correctCriteria || !incorrectCriteria) {
     return NextResponse.json({ error: "required fields are missing" }, { status: 400 });
   }
@@ -38,13 +40,16 @@ export async function POST(request: Request) {
       max_tokens: 180,
       system: `あなたは催眠学習ゲームの回答判定者です。学習者の自由回答を、提示された基準だけで判定してください。
 - 表現の上手さではなく、必要な考えが含まれるかを見る。
+- 問いの主語・状況・本人が実際に言ったことを、場面情報から確認する。
+- 単語が一つ一致しただけでは正解にしない。提案全体が安全で、本人の意思を守るかを見る。
+- 危険な行動、同意のない操作、結果の断定が混ざる回答は、他が合っていても不正解にする。
 - 学習者が言っていない内容を補って正解にしない。
 - 不正解でも責めず、どこを一つ直せばよいか具体的に返す。
 - JSON以外は書かない。
 出力形式：{"correct":trueまたはfalse,"feedback":"50文字程度の日本語"}`,
       messages: [{
         role: "user",
-        content: `問い：${question}\n正解の基準：${correctCriteria}\n不正解の基準：${incorrectCriteria}\n学習者の回答：${answer}`,
+        content: `話：${episode || "未指定"}\n場面：${context || "場面情報なし"}\n問い：${question}\n正解の基準：${correctCriteria}\n不正解の基準：${incorrectCriteria}\n学習者の回答：${answer}`,
       }],
     });
     const raw = responseText(result).replace(/^```json\s*|\s*```$/g, "");

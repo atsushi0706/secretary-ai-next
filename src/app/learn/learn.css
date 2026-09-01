@@ -146,6 +146,50 @@
   display: flex; align-items: center; justify-content: center; background: #080a0f;
 }
 .lrn-manga-frame img { width: 100%; height: 100%; object-fit: contain; display: block; user-select: none; }
+.lrn-canon-manga {
+  position: relative; width: 100%; height: 100%; max-width: 520px; overflow: hidden; color: #fff;
+  background: #07101f; isolation: isolate; font-family: "Noto Sans JP", "Yu Gothic", sans-serif;
+}
+.lrn-canon-bg { position: absolute; inset: 0; z-index: -3; width: 100%; height: 100%; object-fit: cover !important; filter: brightness(.58) saturate(.85); }
+.lrn-canon-atmosphere { position: absolute; inset: 0; z-index: -2; background: linear-gradient(180deg, rgba(3,8,17,.08), rgba(3,8,17,.3) 48%, rgba(3,7,14,.96) 82%); }
+.lrn-canon-manga.setting-archive .lrn-canon-bg { filter: brightness(.38) sepia(.22) saturate(.72); transform: scale(1.05); }
+.lrn-canon-manga.setting-control-room .lrn-canon-bg { filter: brightness(.26) hue-rotate(16deg) saturate(1.25); transform: scale(1.08); }
+.lrn-canon-manga.setting-old-school .lrn-canon-bg { filter: brightness(.28) grayscale(.45) saturate(.7); transform: scale(1.1); }
+.lrn-canon-manga.setting-after-school .lrn-canon-bg { filter: brightness(.48) sepia(.12) saturate(.88); }
+.lrn-canon-scene-label { position: absolute; z-index: 4; top: 14px; left: 14px; display: flex; align-items: center; gap: 8px; padding: 6px 9px; background: rgba(4,9,18,.84); border-left: 3px solid #78dcff; box-shadow: 0 5px 16px rgba(0,0,0,.35); }
+.lrn-canon-scene-label b { color: #78dcff; font-size: .68rem; letter-spacing: .13em; }
+.lrn-canon-scene-label span { color: #e8edf4; font-size: .7rem; }
+.lrn-canon-narration { position: absolute; z-index: 4; top: 56px; left: 16px; right: 16px; margin: 0; padding: 10px 12px; color: #fff; background: rgba(7,10,16,.9); border: 1px solid rgba(244,190,76,.6); font: 800 .86rem/1.65 "Hiragino Mincho ProN", "Yu Mincho", serif; text-align: left; }
+.lrn-canon-cast { position: absolute; z-index: 1; inset: 84px 0 184px; display: flex; align-items: end; justify-content: center; gap: 0; overflow: hidden; }
+.lrn-canon-narration + .lrn-canon-cast { top: 120px; }
+.lrn-canon-character { width: auto !important; height: 82% !important; max-width: 56%; object-fit: contain !important; object-position: center bottom; filter: drop-shadow(0 12px 18px rgba(0,0,0,.76)); transform-origin: center bottom; }
+.lrn-canon-character.is-focus { z-index: 2; height: 94% !important; opacity: 1; }
+.lrn-canon-character.is-support { z-index: 1; height: 73% !important; opacity: .5; filter: grayscale(.32) brightness(.72) drop-shadow(0 10px 18px #000); }
+.lrn-canon-character.is-link { max-width: 38%; }
+.lrn-canon-character.is-jun { max-width: 48%; }
+.lrn-canon-cast.count-4 .lrn-canon-character { margin-inline: -9%; }
+.lrn-canon-cast.count-3 .lrn-canon-character { margin-inline: -5%; }
+.lrn-canon-lines { position: absolute; z-index: 5; left: 12px; right: 12px; bottom: 14px; display: grid; gap: 7px; }
+.lrn-canon-line { padding: 9px 11px; background: rgba(6,10,18,.94); border: 1px solid rgba(255,255,255,.3); border-left: 4px solid #f1bf55; box-shadow: 0 8px 22px rgba(0,0,0,.42); text-align: left; }
+.lrn-canon-line.is-link { border-left-color: #78dcff; }
+.lrn-canon-line.is-mio { border-left-color: #e1a0d6; }
+.lrn-canon-line.is-jun { border-left-color: #69d7c1; }
+.lrn-canon-line.is-thought { border-style: dashed; background: rgba(18,22,31,.9); }
+.lrn-canon-line b { display: block; margin-bottom: 2px; color: #f1bf55; font-size: .62rem; letter-spacing: .04em; }
+.lrn-canon-line.is-link b { color: #78dcff; }
+.lrn-canon-line.is-mio b { color: #eeb4e4; }
+.lrn-canon-line.is-jun b { color: #7ce5d1; }
+.lrn-canon-line span { display: block; font-size: .9rem; font-weight: 800; line-height: 1.62; }
+.lrn-canon-manga.is-compact { aspect-ratio: 9 / 12; min-height: 360px; }
+.lrn-canon-manga.is-compact .lrn-canon-line span { font-size: .74rem; }
+.lrn-canon-manga.is-compact .lrn-canon-cast { bottom: 150px; }
+@media (max-height: 680px) {
+  .lrn-canon-narration { font-size: .74rem; line-height: 1.5; }
+  .lrn-canon-cast { inset-block: 78px 160px; }
+  .lrn-canon-narration + .lrn-canon-cast { top: 108px; }
+  .lrn-canon-line { padding: 7px 9px; }
+  .lrn-canon-line span { font-size: .78rem; line-height: 1.48; }
+}
 .lrn-manga-counter {
   position: absolute; top: 10px; right: 12px; z-index: 3; padding: 5px 10px; border-radius: 999px;
   background: rgba(5,7,12,.78); border: 1px solid rgba(255,255,255,.25); color: #fff;

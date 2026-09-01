@@ -1,21 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { EP1 } from "@/lib/learn/ep1";
-import { EP2 } from "@/lib/learn/ep2";
-import { EP3 } from "@/lib/learn/ep3";
-import { EP4 } from "@/lib/learn/ep4";
-import { EP5 } from "@/lib/learn/ep5";
-import { EP6 } from "@/lib/learn/ep6";
-import { EP7 } from "@/lib/learn/ep7";
-import { EP8 } from "@/lib/learn/ep8";
-import { EP9 } from "@/lib/learn/ep9";
-import { EP10 } from "@/lib/learn/ep10";
+import { EPISODES } from "@/lib/learn";
 import { LearnPlayer } from "@/components/learn/LearnPlayer";
 
 type EpisodeKey = "ep1" | "ep2" | "ep3" | "ep4" | "ep5" | "ep6" | "ep7" | "ep8" | "ep9" | "ep10";
-
-const EPISODES = { ep1: EP1, ep2: EP2, ep3: EP3, ep4: EP4, ep5: EP5, ep6: EP6, ep7: EP7, ep8: EP8, ep9: EP9, ep10: EP10 } as const;
 
 /** 通信を偽物にして、本物の LearnPlayer を動かす */
 export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episodeKey?: EpisodeKey }) {
@@ -41,14 +30,17 @@ export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episo
         const forcesCompliance = /(目を閉じ(?:て|ろ)|絶対|必ず|信じて|従って|気づかれないよう)/.test(answer);
         const correct = (() => {
           if (episodeKey === "ep2") return acceptsRefusal && invitesObservation && !forcesCompliance;
-          if (episodeKey === "ep3") return /(考え|言葉|浮か)/.test(answer) && /(息|呼吸|感覚)/.test(answer) && !/(考えるな|止めろ|頭を空)/.test(answer);
-          if (episodeKey === "ep4") return /(足|床|息|呼吸|声|椅子|震え)/.test(answer) && /(名前|一言|試|してみ)/.test(answer) && !/(全部|必ず|落ち着け)/.test(answer);
-          if (episodeKey === "ep5") return /(カード|印|映像|事実|見える)/.test(answer) && /(確認|次|選)/.test(answer) && !/(犯人|全部嘘|忘れろ)/.test(answer);
-          if (episodeKey === "ep6") return /(言った|見た|書い|事実|分から)/.test(answer) && /(前提|決めつけ|確認|推測)/.test(answer) && !/(絶対|本当は|に違いない)/.test(answer);
-          if (episodeKey === "ep7") return /(断|待|保留|別|一緒)/.test(answer) && !/(必ず|絶対|一人で)/.test(answer);
-          if (episodeKey === "ep8") return /(物語|たとえ|話|場面)/.test(answer) && /(思う|重な|どこ|どう感じ)/.test(answer) && !/(答えは|つまり.+だ)/.test(answer);
-          if (episodeKey === "ep9") return /(しなくても|選べ|一歩|そのまま|待って)/.test(answer) && !/(戻れ|必ず|証明|今すぐ)/.test(answer);
-          if (episodeKey === "ep10") return /(目的|カード)/.test(answer) && /(選ぶ|同意|止め|断)/.test(answer) && !/(必ず|同意してる|一度だけ)/.test(answer);
+          if (episodeKey === "ep3") return /(浮か|考え|言葉|声)/.test(answer) && /(息|呼吸|吐|一行|下書|書い|感覚|触れ)/.test(answer) && !/(考えるな|何も考えない|頭を空|今すぐ送)/.test(answer);
+          if (episodeKey === "ep4") {
+            const sensoryWords = answer.match(/(足|床|息|呼吸|声|椅子|手|触れ|聞こえ|見え|重さ|温度)/g) ?? [];
+            return new Set(sensoryWords).size >= 2 && /(言って|試して|してみ|一つ|だけ|できますか|できる)/.test(answer) && !/(絶対|必ず|落ち着け|全部)/.test(answer);
+          }
+          if (episodeKey === "ep5") return /(ショック|今|事実|未確定|分から)/.test(answer) && /(確認|調べ|記録|次|選)/.test(answer) && !/(犯人|絶対|全部嘘|善人だから)/.test(answer);
+          if (episodeKey === "ep6") return /(相談|共有|一緒|先生|リンク|安全|確認)/.test(answer) && !/(証明するため|黙って一人|絶対一人)/.test(answer);
+          if (episodeKey === "ep7") return /(返信|送る|文|明朝|今夜|待|一緒|保留)/.test(answer) && !/(必ず|絶対|一人で追|従)/.test(answer);
+          if (episodeKey === "ep8") return /(何|なぜ|どこ|どう|現実|守|起き)/.test(answer) && !/(答えは|善人|悪人|絶対.+だ)/.test(answer);
+          if (episodeKey === "ep9") return /(戻らなくても|話しても|黙|待|今は.+ない|選べ)/.test(answer) && !/(戻れ|必ず|今すぐ戻|許される)/.test(answer);
+          if (episodeKey === "ep10") return /(使わ|調査|記録|保全|第三者|相談)/.test(answer) && !/(一度だけ従|同意してる|無理に)/.test(answer);
           return !/(全部(?:やれ|やる|終わら|完成)|終わるまで|できるまで|理由を.*考|頑張れ)/.test(answer);
         })();
         const feedback = correct
@@ -56,21 +48,21 @@ export function LearnHarness({ part, episodeKey = "ep1" }: { part: number; episo
           : episodeKey === "ep2"
             ? "拒否を認める言葉と、今確かめられる感覚を一つ入れてください。"
             : episodeKey === "ep3"
-              ? "考えを止めず、浮かんだことを呼吸などの感覚へつないでください。"
+              ? "声を止める命令ではなく、一呼吸や一行を書くなど、本人が今選べる動作へつないでください。"
               : episodeKey === "ep4"
                 ? "今分かる事実を二つ、その続きに選べる一動作を一つ入れてください。"
                 : episodeKey === "ep5"
-                  ? "犯人や意味を決めず、今分かる事実から次の確認行動へつないでください。"
+                  ? "犯人や目的を断定せず、今分かる事実と、本人が選べる次の確認行動を入れてください。"
                   : episodeKey === "ep6"
-                    ? "起きた事実と、自分が読み取った前提を分け、まだ分からない点を確認してください。"
+                    ? "仲間を証明する条件へ従わず、相談・共有・安全確認のどれかを入れてください。"
                     : episodeKey === "ep7"
-                      ? "二択に共通する前提を見て、断る・待つ・別案のいずれかを戻してください。"
+                      ? "リンクの望みに近づき、ミオの返事を急がせない二つの案を作ってください。"
                       : episodeKey === "ep8"
-                        ? "教訓を決めつけず、似た物語を示して本人に重なった場面を聞いてください。"
+                        ? "物語を証拠にせず、本人へ重なる点か現実に起きたことを開いて聞いてください。"
                         : episodeKey === "ep9"
-                          ? "今の気持ちを認め、しない自由と、一つの小さな可能性を残してください。"
+                          ? "戻るよう求めず、今は話す・黙る・待つ自由のいずれかを残してください。"
                           : episodeKey === "ep10"
-                            ? "共有する目的、具体的な方法、断る・止める自由を本人へ確認してください。"
+                            ? "拒否された催眠は使わず、記録保全・相談・第三者確認など別の方法を選んでください。"
                             : "完成ではなく、今すぐできる一動作まで小さくしてください。";
         return new Response(JSON.stringify({ correct, feedback }), {
           status: 200, headers: { "Content-Type": "application/json" },

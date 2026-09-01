@@ -22,6 +22,8 @@ const evidenceSchema = z.object({
   icon: z.string().min(1),
   image: z.string().min(1).optional(),
   imageAlt: z.string().min(1).optional(),
+  /** 正史の漫画場面を、そのまま証拠確認に再表示する。 */
+  sceneId: z.string().min(1).optional(),
 });
 
 const dialogueNodeSchema = z.object({
@@ -317,8 +319,8 @@ export function reviewAdventureScenario(input: unknown): QualityReport {
 
   const evidenceIds = new Set(scenario.evidence.map((e) => e.id));
   if (evidenceIds.size !== scenario.evidence.length) push("error", "system", "証拠IDが重複しています。");
-  if (scenario.evidence.some((e) => !e.image || !e.imageAlt)) {
-    push("error", "game", "各証拠には、元の漫画場面と状況が分かる代替文を付けてください。文字だけの証拠は禁止です。");
+  if (scenario.evidence.some((e) => (!e.sceneId && !e.image) || (!e.sceneId && !e.imageAlt))) {
+    push("error", "game", "各証拠には、正史のsceneId、または元の漫画画像と代替文を付けてください。文字だけの証拠は禁止です。");
   }
   scenario.nodes.forEach((node) => {
     if (node.kind === "investigate") node.spots.forEach((spot) => {

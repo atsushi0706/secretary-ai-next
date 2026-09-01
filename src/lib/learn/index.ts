@@ -1,13 +1,6 @@
 import { EP1 } from "./ep1";
 import { EP2 } from "./ep2";
-import { EP3 } from "./ep3";
-import { EP4 } from "./ep4";
-import { EP5 } from "./ep5";
-import { EP6 } from "./ep6";
-import { EP7 } from "./ep7";
-import { EP8 } from "./ep8";
-import { EP9 } from "./ep9";
-import { EP10 } from "./ep10";
+import { EP3_V2 as EP3, EP4_V2 as EP4, EP5_V2 as EP5, EP6_V2 as EP6, EP7_V2 as EP7, EP8_V2 as EP8, EP9_V2 as EP9, EP10_V2 as EP10 } from "./erickson-episodes-v2";
 import { EP1_FOUNDATION } from "./ep1-foundation";
 import { EP2_FOUNDATION } from "./ep2-foundation";
 import { EP3_FOUNDATION } from "./ep3-foundation";

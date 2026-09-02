@@ -611,7 +611,7 @@ ${memBlock}` : system;
           const openLine = customWork
             ? `（本人が作ったワーク「${customWork.name}」をいま始める。まず intro（「${customWork.intro || "はじめよう"}」）を自分の言葉で言ってから、1歩目へ。過去の別の話は持ち出さない）`
             : mode === "parts" && partColor
-            ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。**しくみの説明は画面がもう見せたので繰り返さない**。前置きも断り書きも要らない。【1】①の問い（その守り手はどんな感覚か・身体のどこにあるか）だけを、1つ投げかけて）`
+            ? `（「内なる子の神殿」で、${PARTS[partColor].defense.name}（${PARTS[partColor].defense.title}）のワークをいま始める。過去の別の話は持ち出さない。**しくみの説明は画面がもう見せたので繰り返さない**。前置きも断り書きも要らない。【1】①の問い「その守り手は、いま身体のどこにいる？」だけを、1つ投げかけて）`
             : mode === "shadow"
             ? `（「ミラーオブワールド」をいま始める。しくみの説明は画面がもう見せたので繰り返さない。${shadowSafety === "boundary" ? "境界線優先モード：鏡や幻獣の話はせず、" : ""}まず「いま現実で、関係が悪い人・ネックになってる人のことを、好きなように話してみて」とだけ、やさしく誘って。質問攻めにしない。<shadow_step>1</shadow_step> を付けて）`
             : mode

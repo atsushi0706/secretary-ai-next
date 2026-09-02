@@ -22,6 +22,7 @@ import { PartArt } from "./PartsTemple";
 export type ChatCardData =
   | { t: "beast"; pair: string }                                    // 幻獣が現れた
   | { t: "light"; pair: string; own?: string }                      // 光を取り戻した
+  | { t: "keeper"; color: PartColor }                               // 守り手が姿を見せた（会話から見立てたとき）
   | { t: "child"; color: PartColor }                                // 内なる子に会った
   | { t: "guardian"; color: PartColor; from?: string }              // 守り手が解き放たれた
   | { t: "skill"; title: string; body?: string; rarity?: "gold" | "silver" | "bronze"; source?: string }
@@ -84,20 +85,24 @@ export function ChatCard({ data, at }: { data: ChatCardData; at?: string }) {
     );
   }
 
-  if (data.t === "child" || data.t === "guardian") {
+  if (data.t === "child" || data.t === "guardian" || data.t === "keeper") {
     const trio = PARTS[data.color];
-    const face = data.t === "guardian" ? trio.guardian : trio.child;
+    const face = data.t === "guardian" ? trio.guardian : data.t === "keeper" ? trio.defense : trio.child;
     return (
       <div className={`cc ${data.t === "guardian" ? "is-guardian" : "is-child"}`} style={{ ["--cc" as any]: trio.hue }}>
         <div className="cc-head">
-          <span className="cc-kicker">{data.t === "guardian" ? "守り手が解き放たれた" : "内なる子に出会った"}</span>
+          <span className="cc-kicker">{data.t === "guardian" ? "守り手が解き放たれた" : data.t === "keeper" ? "守り手が姿を見せた" : "内なる子に出会った"}</span>
           <span className="cc-at">{stamp}</span>
         </div>
         <div className="cc-body">
           <PartArt face={face} color={data.color} size={54} glow={data.t === "guardian"} />
           <div className="cc-text">
             <b>{face.name}（{face.title}）</b>
-            <span>{data.t === "guardian" ? (data.from ? `${data.from} が役目を終えた` : trio.guardian.message) : "この子を守るために、守り手は前に立っていた。"}</span>
+            <span>{data.t === "guardian"
+              ? (data.from ? `${data.from} が役目を終えた` : trio.guardian.message)
+              : data.t === "keeper"
+              ? `こういうとき前に出る：${trio.cue}`
+              : "この子を守るために、守り手は前に立っていた。"}</span>
           </div>
         </div>
       </div>

@@ -36,7 +36,7 @@ import { StepCounter, type StepCounterHandle } from "./StepCounter";
 import { WorkMaker, CardDrawOverlay } from "./WorkMaker";
 import { WeightPanel } from "./WeightPanel";
 import { type CustomWork, type OwnCard } from "@/lib/custom-work-types";
-import type { PartColor, PartsStep } from "@/lib/parts";
+import { isPartColor, type PartColor, type PartsStep } from "@/lib/parts";
 import { DreamKiller } from "./DreamKiller";
 import { DirectionRadar, dirSentence, type DirPick } from "./DirectionRadar";
 import { TalkBoundary } from "./TalkBoundary";
@@ -1053,6 +1053,15 @@ export function ShingaWorld({
               setChildReveal(color);
               dropCard({ t: "child", color });
             }
+          }
+        } else if (name === "parts_pick") {
+          // 「どれかわからない」で入ったとき、AIが会話から見立てた守り手。
+          // これが無いと帯は「さがしている…」のまま、キャラが最後まで一度も出なかった。
+          const c = data?.color;
+          if (isPartColor(c) && partColorRef.current !== c) {
+            partColorRef.current = c;
+            setPartColor(c);
+            dropCard({ t: "keeper", color: c });
           }
         } else if (name === "money_step") {
           if (typeof data?.step === "number") setMoneyStep(Math.max(1, Math.min(7, data.step)));

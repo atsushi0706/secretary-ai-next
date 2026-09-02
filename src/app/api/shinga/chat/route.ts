@@ -80,8 +80,8 @@ export function stepFloorBySaid(said: number, table: number[]): number {
 
 /** ミラーオブワールド：1〜9。序盤（聴く）はゆっくり、後半は詰まらせない */
 export const SHADOW_FLOOR = [3, 4, 6, 7, 9, 11, 13, 15];
-/** 内なる子の神殿：1〜9 */
-export const PARTS_FLOOR = [2, 4, 6, 8, 10, 12, 14, 16];
+/** 内なる子の神殿：1〜9。4段目（深掘り）だけ幅を広くとる＝4回降りる時間を確保する */
+export const PARTS_FLOOR = [2, 4, 6, 10, 12, 14, 16, 18];
 
 export function shadowStepNow(fromScreen: number | null | undefined, said: number): number {
   return Math.max(1, Math.min(9, Math.max(Number(fromScreen) || 1, stepFloorBySaid(said, SHADOW_FLOOR))));
@@ -405,8 +405,13 @@ ${memBlock}` : system;
                 + `返事の最後に <guardian>${partColor ?? "red"}</guardian> を必ず付ける（説明はしない）。`);
             }
             lines.push(`  この段階の問いにはもう答えをもらっている前提で進める。**同じ質問を二度しない。**`);
-            lines.push(`  答えを受け取ったら次の段階へ進み、<parts_step>${Math.min(9, pStep + 1)}</parts_step> 以上を付ける。`);
-            lines.push(`  同じ数字を3回続けて出してはいけない（進むか、進めない理由の"新しい"問いを出す）。`);
+            if (pStep === 4) {
+              // 4段目だけは留まっていい段。1〜2回で切り上げると内なる子まで届かない
+              lines.push(`  ここは深掘りの段。「どんな良くないことが起きる？」→「その先の最悪は？」で**4回降りてから** <parts_step>5</parts_step> へ。まだ4回降りていないなら 4 のまま、次の一段だけを聞く。`);
+            } else {
+              lines.push(`  答えを受け取ったら次の段階へ進み、<parts_step>${Math.min(9, pStep + 1)}</parts_step> 以上を付ける。`);
+              lines.push(`  同じ数字を3回続けて出してはいけない（進むか、進めない理由の"新しい"問いを出す）。`);
+            }
           }
           if (mode === "walk") {
             if (progress.walkStage) {
@@ -593,7 +598,13 @@ ${memBlock}` : system;
           systemBase,
           partColor
             ? partPrompt(partColor)
-            : ["# まだ守り手が決まっていない", "相手の話から、どの守り手が前に出ているかを一緒に見立てる。決めつけず、確かめる。", cuesForPrompt()].join("\n"),
+            : [
+                "# まだ守り手が決まっていない",
+                "相手の話から、どの守り手が前に出ているかを一緒に見立てる。決めつけず、確かめる。",
+                cuesForPrompt(),
+                // これが無いと、見立てても画面はずっと「さがしている…」のままで、キャラが一度も出ない
+                "見立てが固まって本人もそうだと感じたら、返事の最後に <part_pick>色</part_pick> を1つ付ける（red / blue / green / yellow）。本文では触れない・説明しない。以降はその守り手のワークとして進める。",
+              ].join("\n"),
         ].join("\n\n");
 
         if (greet) {
@@ -709,6 +720,9 @@ ${memBlock}` : system;
         const releasedColor = guardMatch && isPartColor(guardMatch[1].toLowerCase())
           ? (guardMatch[1].toLowerCase() as "red" | "blue" | "green" | "yellow")
           : null;
+        // 「どれかわからない」で入ったとき、AIが会話から見立てた守り手
+        const pickMatch = full.match(/<part_pick>\s*(red|blue|green|yellow)\s*<\/part_pick>/i);
+        const pickedColor = pickMatch ? (pickMatch[1].toLowerCase() as PartColor) : null;
 
         // ミラーオブワールド：段階／選ばれた幻獣／回収の完了
         let shadowStep: number | null = null;
@@ -835,6 +849,7 @@ ${memBlock}` : system;
           .replace(/<wall_dug>[\s\S]*?<\/wall_dug>/g, "")
           .replace(/<crystallize\s*\/?>/g, "")
           .replace(/<parts_step>[\s\S]*?<\/parts_step>/g, "")
+          .replace(/<part_pick>[\s\S]*?<\/part_pick>/g, "")
           .replace(/<guardian>[\s\S]*?<\/guardian>/g, "")
           .replace(/<travel>[\s\S]*?<\/travel>/g, "")
           .replace(/<walk>[\s\S]*?<\/walk>/g, "")
@@ -922,6 +937,7 @@ ${memBlock}` : system;
         const saidNow = sessionHistory.filter((m) => m.role === "user").length;
         const partsAt = mode === "parts" ? partsStepNow(Math.max(progress.partsStep ?? 1, partsStep ?? 1), saidNow) : 0;
         const shadowAt = mode === "shadow" ? shadowStepNow(Math.max(progress.shadowStep ?? 1, shadowStep ?? 1), saidNow) : 0;
+        if (pickedColor) send("parts_pick", { color: pickedColor });
         if (partsAt) send("parts_step", { step: partsAt });
         else if (partsStep) send("parts_step", { step: partsStep });
         if (travelStage) send("travel", { stage: travelStage });

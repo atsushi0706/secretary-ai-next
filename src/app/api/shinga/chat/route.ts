@@ -80,8 +80,8 @@ export function stepFloorBySaid(said: number, table: number[]): number {
 
 /** ミラーオブワールド：1〜9。序盤（聴く）はゆっくり、後半は詰まらせない */
 export const SHADOW_FLOOR = [3, 4, 6, 7, 9, 11, 13, 15];
-/** 内なる子の神殿：1〜9。4段目（深掘り）だけ幅を広くとる＝4回降りる時間を確保する */
-export const PARTS_FLOOR = [2, 4, 6, 10, 12, 14, 16, 18];
+/** 内なる子の神殿：1〜9。【1】は3問・【4】は4回降りる・【8】は3問あるので、その段だけ幅を広くとる */
+export const PARTS_FLOOR = [3, 5, 7, 11, 13, 15, 17, 20];
 
 export function shadowStepNow(fromScreen: number | null | undefined, said: number): number {
   return Math.max(1, Math.min(9, Math.max(Number(fromScreen) || 1, stepFloorBySaid(said, SHADOW_FLOOR))));
@@ -265,7 +265,9 @@ ${WALK_SCENERY_PROMPT}`
               todayStr: today,
               hero,
               // 段階制のワークは、いま立っている段階の指示だけを渡す（先を見せない）
-              stage: mode === "breakthrough" ? wallStageNow(progress.wallStage, saidInWalk) : null,
+              stage: mode === "breakthrough" ? wallStageNow(progress.wallStage, saidInWalk)
+                : mode === "parts" ? partsStepNow(progress.partsStep, saidInWalk)
+                : null,
               turns: saidInWalk,
             });
 
@@ -399,19 +401,14 @@ ${memBlock}` : system;
           if (mode === "parts" && progress.partsStep) {
             // 段はコードで数える（AIの自己申告だけだと途中で止まり、最後のカードまで着かない）
             const pStep = partsStepNow(progress.partsStep, sessionHistory.filter((m) => m.role === "user").length);
-            lines.push(`- 内なる子の神殿：いま段階 ${pStep}/9（画面に表示中）。`);
+            lines.push(`- 内なる子の神殿：いま段階 ${pStep}/9（画面に表示中）。上に渡した「いまの段」の指示だけをやる。`);
             if (pStep >= 9) {
               lines.push(`  **もう最後の段。** ここで締める。今日の一歩をひとつ決めて、`
                 + `返事の最後に <guardian>${partColor ?? "red"}</guardian> を必ず付ける（説明はしない）。`);
             }
-            lines.push(`  この段階の問いにはもう答えをもらっている前提で進める。**同じ質問を二度しない。**`);
-            if (pStep === 4) {
-              // 4段目だけは留まっていい段。1〜2回で切り上げると内なる子まで届かない
-              lines.push(`  ここは深掘りの段。直前の本人の言葉を問いに入れて「〔それ〕が起きると、さらにどうなるの？」の連鎖で**4回降りてから** <parts_step>5</parts_step> へ。まだ4回降りていないなら 4 のまま、次の一段だけを聞く。`);
-            } else {
-              lines.push(`  答えを受け取ったら次の段階へ進み、<parts_step>${Math.min(9, pStep + 1)}</parts_step> 以上を付ける。`);
-              lines.push(`  同じ数字を3回続けて出してはいけない（進むか、進めない理由の"新しい"問いを出す）。`);
-            }
+            lines.push(`  すでに答えをもらった問いは、二度と聞かない。`);
+            lines.push(`  いまの段のやることが全部済んだら次へ進み、<parts_step>${Math.min(9, pStep + 1)}</parts_step> を付ける。`);
+            lines.push(`  まだ済んでいないなら <parts_step>${pStep}</parts_step> のままでいい（1つの段に何回かかってもいい）。`);
           }
           if (mode === "walk") {
             if (progress.walkStage) {
